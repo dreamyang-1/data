@@ -1,0 +1,4 @@
+vector_store
+vector_store/*
+**/__pycache__/
+logs

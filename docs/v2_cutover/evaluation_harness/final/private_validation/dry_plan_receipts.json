@@ -1,0 +1,159 @@
+{
+  "same_raw_runtime_entry": false,
+  "receipts": [
+    {
+      "case_id": "PV81-002",
+      "turn_index": 0,
+      "logical_input_hash": "c1f7035d13fa7e60fe837213c29903b639ebbf5c8d01701b3d0f138f97d86c26",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "f822cf2018dac06d08e1567cd79562d5682428fca77e3a71cd5e60cc445d51ce",
+      "native_result_hash": "47ca30b1eb487a6874770e69a0d07becf694e49e8ba27a339bdcb948c861781f",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-003",
+      "turn_index": 0,
+      "logical_input_hash": "efeaee2bd1922d8ba302ef23c402211cc3e47cac5257f59af301ed8cd023fcd6",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "98b7b2e4a21696c0eab3d11bbfe5f121ce72566febc06cfde9e835e575081d3d",
+      "native_result_hash": "0a862c18980b7e3591cf9dfcb79fa22039ed3216a2e109651bcc13ef228bd89e",
+      "native_success": false,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-005",
+      "turn_index": 0,
+      "logical_input_hash": "c5baeef1c891cc20be298bff1ea6302e541860b278f56d03275bb9e5ba56fa3f",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "741e2fb690206297db3dfd56b7185b4e81dc1a1c73444b20769f41e42b0c640d",
+      "native_result_hash": "c1f5ee0142fa620064da2dc55bb5d896168e4fc99b52138e023e97967e03fcae",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-005",
+      "turn_index": 1,
+      "logical_input_hash": "429fbf8fbd4a97ed88b8be9f493253f02720145d7c75f8b9471cdf34460a713a",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "5ad8ebb131792d72280be5f565338cc2f4b97b4d50347f09131db1cb250827f6",
+      "native_result_hash": "7021fd98dc6184e9fbc9e6207ad1068f5ffc47431e665fe2f54683000ebf7636",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-006",
+      "turn_index": 0,
+      "logical_input_hash": "cd98fb6e7af47080f911e3c48f05bb2a049af411fb8f0085600200ee00a93aa0",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "7a0660179028bfdafdedbcd2006b678e571ef18c64d27d0bd5bd3978bdd9b63b",
+      "native_result_hash": "8d6c809b9db2a9326d47f7e04324ad82debebee74a2fbeb293e970278501a620",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-008",
+      "turn_index": 0,
+      "logical_input_hash": "cece69b8e46d91b2acf64d56faeb9b0c57013cf7f0b26160e32d87a2e4bfbb67",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "d17f0b4ccfb667afe5dd299cf7926debc9f2ca677f1a07b3b3bef8c2a3ecea33",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-011",
+      "turn_index": 0,
+      "logical_input_hash": "0d002f2b74c4bea3c9054b18e57c6f6da632521def9423b396066ed5b40107a4",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "1c1f380f6afdc01f4cc9ab147791c00a1d482aeaf8a9a8b5070c75a05e9c2ce9",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-012",
+      "turn_index": 0,
+      "logical_input_hash": "86694d5f52730c7e8ec776da159651061a71f9444926d9853d3483f37158f966",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "31be0a1f3c2d8ef4b0f7683590d2ca97e171e937d4fb1651e9df34a2c401b5ed",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-014",
+      "turn_index": 0,
+      "logical_input_hash": "1c3adf6cee59cbcfb07d6d1a3f61d5d60f98cfa18782a7cd717db686cea581fd",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "9cf75859266a10d4fa44a3aee38bccaadc55ef64d94613df951993724cfe592e",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-015",
+      "turn_index": 0,
+      "logical_input_hash": "3970342e5e73f67b013b9fd1fd1ca1b4ae50fef0bc76e1db1fba16773b7308c8",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "dc05e2d67da7c9077fbd038b2f6d37a52fdeab700fd70240a20917a567bb59f2",
+      "native_result_hash": "62d0de798deab0ae5b70bc570e55d38ef5886b536f0f4f3bc1442f91df890294",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-017",
+      "turn_index": 0,
+      "logical_input_hash": "991e80c53e657ac7ea3ba1dd760d6440a47a0c70c4e79d53a4858cce1e07f97a",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "06953a4f6983ecf59a05493dc2ccc3870f066c235318ebacd44c24adff3e4cab",
+      "native_result_hash": "0a862c18980b7e3591cf9dfcb79fa22039ed3216a2e109651bcc13ef228bd89e",
+      "native_success": false,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-018",
+      "turn_index": 0,
+      "logical_input_hash": "146aca5fdda151b1dcc97020a4f3e06bd5b3d922b9f60359696427b0fd462948",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "3b9349c5747d3e11ea5b2481f07969c5c92dfd6451b8a1db5945ca71c97a7b99",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-020",
+      "turn_index": 0,
+      "logical_input_hash": "20d027272dc54f366b2642f7865246920a01bdacfaf86525a6db5992a72724c7",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "b5835a2470d505adbdd8512406d825c9e8980549705346e6eac06222e67d890d",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "PV81-023",
+      "turn_index": 0,
+      "logical_input_hash": "5b6ad0f901654c5cce70ee58e030ae1f77e614152f230821b818fd1b1b61baa4",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "2f994ae6eb045c360b8640fe0861008138a74ca056d3cd2d73a6aba8a09832f4",
+      "native_result_hash": "0a862c18980b7e3591cf9dfcb79fa22039ed3216a2e109651bcc13ef228bd89e",
+      "native_success": false,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    }
+  ]
+}

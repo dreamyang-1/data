@@ -1,0 +1,40 @@
+{
+  "baseline": "bf3e8dbb9adb3abe40a4a53f8475f27799cf3da9",
+  "production_files": [
+    "app/semantic_v2/catalog_bridge.py",
+    "app/semantic_v2/source_value_probe.py",
+    "app/semantic_v2/source_value_recognition.py",
+    "Oagnet/catalog_publication.py",
+    "Oagnet/catalog_value_candidates.py"
+  ],
+  "changed_files": [
+    "Oagnet/catalog_publication.py",
+    "Oagnet/catalog_value_candidates.py",
+    "Oagnet/tests/test_catalog_value_candidates.py",
+    "app/semantic_v2/catalog_bridge.py",
+    "app/semantic_v2/source_value_probe.py",
+    "app/semantic_v2/source_value_recognition.py",
+    "docs/v2_cutover/semantic_round5_3/catalog_healthy_slice.json",
+    "docs/v2_cutover/semantic_round5_3/catalog_time_contract.json",
+    "docs/v2_cutover/semantic_round5_3/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_3/closure_report.md",
+    "docs/v2_cutover/semantic_round5_3/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_3/live_coverage.json",
+    "docs/v2_cutover/semantic_round5_3/performance_receipt.json",
+    "docs/v2_cutover/semantic_round5_3/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_3/root_closure.json",
+    "docs/v2_cutover/semantic_round5_3/round5_3_manifest.json",
+    "docs/v2_cutover/semantic_round5_3/source_value_current_path.json",
+    "docs/v2_cutover/semantic_round5_3/test_delta.json",
+    "docs/v2_cutover/semantic_round5_3/validation_receipt.json",
+    "docs/v2_cutover/semantic_round5_3/verify_round5_3.py",
+    "docs/v2_cutover/semantic_round5_3/workspace_git_hash_verification.json",
+    "tests/test_round53_fixture_integrity.py",
+    "tests/test_v2_targeted_source_values.py",
+    "tools/cutover/round53_healthy_cases.py",
+    "tools/cutover/round53_live_recheck.py",
+    "tools/cutover/round53_source_evidence.py"
+  ],
+  "procedure": "Revert the introducing commit on an isolated branch; synchronize only its explicit source manifest. No catalog, schema migration, index, production-state or configuration rollback required.",
+  "final_commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_3/git_commit_manifest.json"
+}

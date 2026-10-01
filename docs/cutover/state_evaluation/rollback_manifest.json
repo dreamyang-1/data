@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "66c11a1bfa414ba63b4592cb5ff3713492a5b324",
+  "rollback": "Revert the feature commit after review to remove this offline evaluator and evidence; no production service, deployment, route or state was changed.",
+  "native_publication_performed": false,
+  "redis_mutation_performed": false,
+  "production_route_changed": false,
+  "user_git_changes_preserved": true,
+  "original_oagnet_index_sha256": "ce14d88f7b52b4adf4f0f54114f15635dafdbba672c256fd05f06a2b564fba0b"
+}

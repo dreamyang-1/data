@@ -1,0 +1,19 @@
+{
+  "baseline_commit": "116ffe06d12812f849ba60eaa644df17cbc89f8a",
+  "parent_draft_pr": 62,
+  "base_branch": "semantic-grounding-round5-3-20260910t052350z",
+  "feature_branch": "semantic-filter-round5-4-20260910t063432z",
+  "title": "semantic: export structured filter operand contracts",
+  "final_commit": {
+    "resolution": "Commit introducing this manifest",
+    "command": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_4/git_commit_manifest.json"
+  },
+  "publication": {
+    "remote": "https://github.com/dreamyang-1/data",
+    "head": "semantic-filter-round5-4-20260910t063432z",
+    "base": "semantic-grounding-round5-3-20260910t052350z",
+    "draft": true,
+    "auto_merge": false,
+    "receipt": "Post-publication receipt outside committed tree"
+  }
+}

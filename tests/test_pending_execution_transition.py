@@ -12,6 +12,7 @@ from app.domain.models import (
     ChatRequest,
     ConversationControl,
     MetricRef,
+    PendingState,
     PrimaryIntent,
     TimeRange,
     TrustedIdentity,
@@ -94,6 +95,30 @@ class CountingHybridClassifier:
         return self.rules.merge_clarification(previous, answer)
 
 
+async def seed_time_pending(sessions, conversation_id: str, question: str = "查询销售额") -> None:
+    """Seed a genuine missing-``time_range`` pending through the official contract.
+
+    The rule default now injects ``DEFAULT_TIME_RANGE=LATEST_ONE_YEAR`` (or an
+    all-time business scope), so a natural first report turn no longer leaves a
+    missing time slot. The scenarios below therefore seed the exact pending
+    shape via ``PendingState``/``SessionStore.put_pending`` instead of relying
+    on the obsolete natural first-turn assumption.
+    """
+    seeded = RuleBasedIntentClassifier().classify(question, IDENTITY, conversation_id)
+    seeded.semantic_model_id = 81
+    seeded.application_id = "app-1"
+    seeded.time_range = None
+    seeded.missing_slots = ["time_range"]
+    seeded.assumptions = [
+        assumption for assumption in seeded.assumptions
+        if not assumption.startswith(("DEFAULT_TIME_RANGE", "TIME_SCOPE"))
+    ]
+    await sessions.put_pending(
+        PendingState(request=seeded, clarification_rounds=1, state_version=1),
+        expected_version=0,
+    )
+
+
 def pending_partner_request() -> CanonicalAnalysisRequest:
     return CanonicalAnalysisRequest(
         conversation_id="collection-delta",
@@ -169,23 +194,22 @@ def test_time_clarification_unions_explicit_dimension_delta_only():
 async def test_closed_form_pending_reply_skips_async_intent_model_path():
     defaults = build_mock_adapters()
     classifier = CountingHybridClassifier()
+    sessions = InMemorySessionStore()
     agent = DataAnalysisOrchestrator(
         settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=True),
         classifier=classifier,
         adapters=defaults,
-        sessions=InMemorySessionStore(),
+        sessions=sessions,
     )
-    first = await agent.handle(
-        ChatRequest(
-            application_id="app-1", conversation_id="fast-slot",
-            message_id="message-1", question="查询销售额",
-        ),
-        IDENTITY,
-    )
-    assert first.status == "NEEDS_CLARIFICATION"
+    # The default time policy now fills the first report turn, so the genuine
+    # missing-time pending is seeded through the official SessionStore contract.
+    await seed_time_pending(sessions, "fast-slot")
+    seeded = await sessions.get_pending("tenant-1", "user-1", "app-1", "fast-slot")
+    assert seeded is not None
+    assert seeded.request.missing_slots == ["time_range"]
     classifier.model_path_calls = 0
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="fast-slot",
             message_id="message-2", question="本月",
         ),
@@ -200,20 +224,12 @@ async def test_filled_slot_can_transition_to_asl_clarification_then_complete():
     retrieval = AmbiguousThenSuccessfulRetrieval()
     agent, sessions = service(retrieval)
 
-    first = await agent.handle(
-        ChatRequest(
-            application_id="app-1",
-            conversation_id="multi-stage",
-            message_id="message-1",
-            question="帮我查销售额",
-        ),
-        IDENTITY,
-    )
-    assert first.status == "NEEDS_CLARIFICATION"
-    assert first.missing_slots == ["time_range"]
+    # Seed the legally clarifiable missing-time pending instead of relying on
+    # the obsolete natural first-turn assumption.
+    await seed_time_pending(sessions, "multi-stage", question="帮我查销售额")
 
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="multi-stage",
             message_id="message-2",
@@ -240,24 +256,32 @@ async def test_filled_slot_can_transition_to_asl_clarification_then_complete():
     assert "指标：销售额" in pending.request.rewritten_question
     assert "时间范围：" in pending.request.rewritten_question
 
+    # Selecting the full catalog candidate exercises the governed choice
+    # path, which applies the selection to the original metric slot, restores
+    # the original task and clears the pending state. (The bare "含税" answer
+    # no longer renders a confirmation line: the default one-year time scope
+    # makes the isolated answer parse as a structured change.)
     third = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="multi-stage",
             message_id="message-3",
-            question="含税",
+            question="含税销售额",
         ),
         IDENTITY,
     )
 
     assert third.status == "COMPLETED"
+    assert third.intent == PrimaryIntent.METRIC_QUERY
     assert len(retrieval.requests) == 2
     final_request = retrieval.requests[-1]
+    assert final_request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert [metric.input for metric in final_request.metrics] == ["含税销售额"]
     assert "补充：本月" in final_request.original_question
-    assert "补充：含税" in final_request.original_question
+    # Confirmed choices enrich the completed question, not the source wording.
+    assert final_request.original_question == pending.request.original_question
     assert "补充：" not in final_request.rewritten_question
-    assert "指标：销售额" in final_request.rewritten_question
-    assert "用户对语义歧义的确认：含税" in final_request.rewritten_question
+    assert "指标：含税销售额" in final_request.rewritten_question
     assert (
         await sessions.get_pending(
             "tenant-1", "user-1", "app-1", "multi-stage"
@@ -271,17 +295,12 @@ async def test_terminal_dependency_failure_clears_resolved_pending_state():
     retrieval = FailingRetrieval()
     agent, sessions = service(retrieval)
 
-    await agent.handle(
-        ChatRequest(
-            application_id="app-1",
-            conversation_id="terminal-failure",
-            message_id="message-1",
-            question="帮我查销售额",
-        ),
-        IDENTITY,
-    )
+    # Seed the missing-time pending directly; the only user turn is the date
+    # answer, so a terminal retrieval failure must happen exactly once.
+    await seed_time_pending(sessions, "terminal-failure", question="帮我查销售额")
+
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="terminal-failure",
             message_id="message-2",
@@ -306,19 +325,14 @@ async def test_terminal_dependency_failure_clears_resolved_pending_state():
 @pytest.mark.asyncio
 async def test_corrected_pending_request_sends_no_negated_metric_to_retrieval():
     retrieval = FailingRetrieval()
-    agent, _ = service(retrieval)
+    agent, sessions = service(retrieval)
 
-    first = await agent.handle(
-        ChatRequest(
-            application_id="app-1", conversation_id="metric-correction",
-            message_id="message-1", question="查询销售额",
-        ),
-        IDENTITY,
-    )
-    assert first.status == "NEEDS_CLARIFICATION"
+    # Seed the missing-time pending for the original metric so the correction
+    # turn answers an existing clarification instead of starting a new task.
+    await seed_time_pending(sessions, "metric-correction", question="查询销售额")
 
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="metric-correction",
             message_id="message-2", question="不是销售额，是订单量，查2026年7月",
         ),
@@ -340,7 +354,7 @@ async def test_correction_after_completed_turn_replaces_old_dimension():
     agent, _ = service(retrieval)
 
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="dimension-correction",
             message_id="message-1",
             question="查询2026年7月按区域拆分销售额",
@@ -350,7 +364,7 @@ async def test_correction_after_completed_turn_replaces_old_dimension():
     assert first.status == "COMPLETED"
 
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="dimension-correction",
             message_id="message-2", question="不看区域了，按渠道拆分",
         ),

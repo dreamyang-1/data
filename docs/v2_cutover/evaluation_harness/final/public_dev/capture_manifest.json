@@ -1,0 +1,542 @@
+[
+  {
+    "case_id": "G81-001",
+    "turn_index": 0,
+    "hash": "dd49aea9b0fdcc614208c075d0c753a9ef69114de9ad4abbe0eb6bd10d042e82"
+  },
+  {
+    "case_id": "G81-002",
+    "turn_index": 0,
+    "hash": "0ffc322df7f07025b8c2a05cb69f522f8e94aa4e6a01ea96020e9fdf00c705d6"
+  },
+  {
+    "case_id": "G81-003",
+    "turn_index": 0,
+    "hash": "828c671c3d0e8af08cd2d5480fecb31cc183f7c96ce2ce4b9ae2819da619d258"
+  },
+  {
+    "case_id": "G81-004",
+    "turn_index": 0,
+    "hash": "93f7bd5cd18557c83ab97cb49608f78082c193c87ddbd05172c3b1691532668e"
+  },
+  {
+    "case_id": "G81-005",
+    "turn_index": 0,
+    "hash": "1ac9903f6f1bd59b814246e12e389cde239936e89bf8321197b52852c4ca285e"
+  },
+  {
+    "case_id": "G81-006",
+    "turn_index": 0,
+    "hash": "8db5eece6372cc004071c3d4e82d938c8a0928e0b8a7693ee3a8863632e8728a"
+  },
+  {
+    "case_id": "G81-007",
+    "turn_index": 0,
+    "hash": "77dc0e763acbff72cecf1d3f4b9398fd7cb006b0213702b068bfc5b7f0422b4c"
+  },
+  {
+    "case_id": "G81-008",
+    "turn_index": 0,
+    "hash": "1c59c902b6fddcabd2b12e043b639c3b64b9ecbddde6c0c8ee20f282defbfd9c"
+  },
+  {
+    "case_id": "G81-009",
+    "turn_index": 0,
+    "hash": "ef4f1c917a4d9a9ee70ff46c406d7abbfee26d087eec6f4a05b404889fdbe734"
+  },
+  {
+    "case_id": "G81-010",
+    "turn_index": 0,
+    "hash": "8fa3be77c408b2fc053f337a65b5edde93532ab5f976de84e9730668abb02aab"
+  },
+  {
+    "case_id": "G81-011",
+    "turn_index": 0,
+    "hash": "fcd628f4c8595a0b06f978cfb6c3f46c25217a6a378bb3764b088dee2b63546f"
+  },
+  {
+    "case_id": "G81-012",
+    "turn_index": 0,
+    "hash": "eb5a5b394d7ea97339ec4b327fba2cfb813af3f895e119d774f67e4720fb552a"
+  },
+  {
+    "case_id": "G81-013",
+    "turn_index": 0,
+    "hash": "d4b7bf6d1d92be8e099b8fc2983813a0742daa199b3a826927311d463939846f"
+  },
+  {
+    "case_id": "G81-014",
+    "turn_index": 0,
+    "hash": "638de970b92e6170aea23482d25cd12c294bf7713cd6d843abd746b834869fa2"
+  },
+  {
+    "case_id": "G81-015",
+    "turn_index": 0,
+    "hash": "3434331adb70c7cd0a7995df3fab2efc6ffef6fd9e27194575f2c6b19030e1be"
+  },
+  {
+    "case_id": "G81-016",
+    "turn_index": 0,
+    "hash": "d586c52e8fe93a49426ec6e60bd94bc6241c070964a8ec6f931bb4935a816a2a"
+  },
+  {
+    "case_id": "G81-017",
+    "turn_index": 0,
+    "hash": "4105b18aca70f18c63947a8dba79713ef89bc669c57f32b7bfe271baa8163e35"
+  },
+  {
+    "case_id": "G81-018",
+    "turn_index": 0,
+    "hash": "c6a33d4092e2ed69b9d35356d557c3c36f50bf795f310875bb46d44995fbceed"
+  },
+  {
+    "case_id": "G81-019",
+    "turn_index": 0,
+    "hash": "aea2b0d43feb81ee2d4549b9e4243684adaa759aef1a7b3da25ea42dd5e9452e"
+  },
+  {
+    "case_id": "G81-020",
+    "turn_index": 0,
+    "hash": "49069f68dbe16c1a053d2126daef496a2ef58aec6eb9ecfa740faa42de7f5091"
+  },
+  {
+    "case_id": "G81-021",
+    "turn_index": 0,
+    "hash": "c979b27a6bd87a913063a210b9b253534b89a36295942be251e3c4f0afa80106"
+  },
+  {
+    "case_id": "G81-022",
+    "turn_index": 0,
+    "hash": "3163dfac1812049cb150446467112c0529feadcc4efe885b2a81ed758dc41d3b"
+  },
+  {
+    "case_id": "G81-023",
+    "turn_index": 0,
+    "hash": "d3df6fe112a4ddc9f14a7da5d346f038e508cf783fff139435323c425f9ff56c"
+  },
+  {
+    "case_id": "G81-024",
+    "turn_index": 0,
+    "hash": "34ac110524b9c1de902a2d683b7bbf5389eff9a7bc273260067b2acb6df0f65b"
+  },
+  {
+    "case_id": "G81-025",
+    "turn_index": 0,
+    "hash": "db607dd1599dd84f2c33376dd77fb411e3b8456c84256bdd4b30dfc832d8aa11"
+  },
+  {
+    "case_id": "G81-026",
+    "turn_index": 0,
+    "hash": "3c8cf3ee58d7a165e8736e3fe5276551bb22c2fac0af98cdf6b8c56020882b0c"
+  },
+  {
+    "case_id": "G81-027",
+    "turn_index": 0,
+    "hash": "d27d85a7e9cf39ed9d014c871c2ea223b83f895d63808f9dea4c8c7f81e6618f"
+  },
+  {
+    "case_id": "G81-028",
+    "turn_index": 0,
+    "hash": "b1db96fb3ab9b82e79bebf2739963747f0a7e3595db803462f5f893334ca1c1c"
+  },
+  {
+    "case_id": "G81-029",
+    "turn_index": 0,
+    "hash": "e650c109c30c8224e09674f3fa53a9a8fca4a78be3f3617f3f5059d883e57721"
+  },
+  {
+    "case_id": "G81-030",
+    "turn_index": 0,
+    "hash": "4ab660ca3ca91742b601b7acc9f3e5e698eb0f4bacf684fe2668f697c7bd7152"
+  },
+  {
+    "case_id": "G81-031",
+    "turn_index": 0,
+    "hash": "187fa26352d88a2fce7d03bb2cf5c95f59e8238160e3aa1fa15d545d944d3601"
+  },
+  {
+    "case_id": "G81-032",
+    "turn_index": 0,
+    "hash": "11f4dc172bd0d031ecf1e0f4a7d625f96356bc5bdaf62ce9055fe3c79711f07b"
+  },
+  {
+    "case_id": "G81-033",
+    "turn_index": 0,
+    "hash": "6919a12279bf19de90c2815873b3852c9a4708037949630fa019e42eadbc6603"
+  },
+  {
+    "case_id": "G81-034",
+    "turn_index": 0,
+    "hash": "7463f6f3d4d410c2393b949758a835f83e434b263db61ecfbd1740e330d1a74c"
+  },
+  {
+    "case_id": "G81-035",
+    "turn_index": 0,
+    "hash": "71bd4effbb02e48e1df9edb17560b3dcd2f77ea914b5870547912072108487ed"
+  },
+  {
+    "case_id": "G81-036",
+    "turn_index": 0,
+    "hash": "37097e4f881788f4f21c80b1e32f2cdbf190fe89e62575597466a815730212c0"
+  },
+  {
+    "case_id": "G81-037",
+    "turn_index": 0,
+    "hash": "5166391db3836c2380c45b50b4cb73bd512b068d12e5bdad6df44d20bb116a80"
+  },
+  {
+    "case_id": "G81-038",
+    "turn_index": 0,
+    "hash": "98fddfaa0c7bc92d9580498f92249841aa0c17e1736e6498c0e2bc79092e5572"
+  },
+  {
+    "case_id": "G81-039",
+    "turn_index": 0,
+    "hash": "ca5bed7a6f7042ef3d6cfd41818587385df2d5c10567e8ab1b6e090199e41205"
+  },
+  {
+    "case_id": "G81-040",
+    "turn_index": 0,
+    "hash": "08313229c9d9879cef028ab17657dc908292e9a50cd8cf9e325f1843e77c9ba7"
+  },
+  {
+    "case_id": "G81-041",
+    "turn_index": 0,
+    "hash": "5417ab42fb0c8860c731ea19c1a1fb3a064e61309e14dc945aa50b5e8e4dafd9"
+  },
+  {
+    "case_id": "G81-042",
+    "turn_index": 0,
+    "hash": "cc666142e882eccec680885bb6c6b07fc9e1b535e5dc59ad77d36300dfbb79f5"
+  },
+  {
+    "case_id": "G81-043",
+    "turn_index": 0,
+    "hash": "50daa85191c7c31ec51311e0ffbb5c98294127176df39aabd4d995629145cb2a"
+  },
+  {
+    "case_id": "G81-044",
+    "turn_index": 0,
+    "hash": "d5eef2633c7a22866ed250e82f5b3f32e3712962ee673046ee714da2ed64554b"
+  },
+  {
+    "case_id": "G81-045",
+    "turn_index": 0,
+    "hash": "6bd2af2eb34d2aa90ee596a4cc1833635e888819dd3536bce3d08dd8d567c9aa"
+  },
+  {
+    "case_id": "G81-046",
+    "turn_index": 0,
+    "hash": "c2622fa91631fc3cb3f611c5817a38c82cea55413e2e927930bc1693d8ea1d1f"
+  },
+  {
+    "case_id": "G81-047",
+    "turn_index": 0,
+    "hash": "e1db2e650fbfdaf98c954cef97f9c539a0819bf7c6af89e5be69c7d5a30aec96"
+  },
+  {
+    "case_id": "G81-048",
+    "turn_index": 0,
+    "hash": "8d40f5da4250b83808c2005684de1ce9c4f67bbea13758feb2b037391448b91d"
+  },
+  {
+    "case_id": "G81-049",
+    "turn_index": 0,
+    "hash": "a72b9204b354815e282022cd9b399f1217bbb1eb599d65061867996e63a07b7d"
+  },
+  {
+    "case_id": "G81-050",
+    "turn_index": 0,
+    "hash": "b1547452aa3bfea73c49ca683259031f366c00042892b93eed4127d58a288edd"
+  },
+  {
+    "case_id": "G81-051",
+    "turn_index": 0,
+    "hash": "402440b910128509b1329364c17606a428e4afd51e2be470fb8a03f1198a5941"
+  },
+  {
+    "case_id": "G81-052",
+    "turn_index": 0,
+    "hash": "89dc929cb4ebdb24a147c89a9128eb21779d37706f3962fdf14fe317a1f71746"
+  },
+  {
+    "case_id": "G81-053",
+    "turn_index": 0,
+    "hash": "10a4ebac8597a137a96d2bce5f4f54e752a46b17ff12b3ba75883dfa5885e174"
+  },
+  {
+    "case_id": "G81-053",
+    "turn_index": 1,
+    "hash": "6077006edc9249e68914ae0257a8d907c52c1db7ca4c6f677a7afe7173c513f5"
+  },
+  {
+    "case_id": "G81-054",
+    "turn_index": 0,
+    "hash": "b0b0cce977ba31eb5af2da4de78476bea704a929631a4e3ff64b48bfda72f2f7"
+  },
+  {
+    "case_id": "G81-054",
+    "turn_index": 1,
+    "hash": "baf7fc775ac52c3e50eb7b69a156c5cb6788a3a4df721ce019f4d0f00584ed50"
+  },
+  {
+    "case_id": "G81-055",
+    "turn_index": 0,
+    "hash": "e261f60021c759bf7c1db481f6b25afcead627e312e929f3e174ddcb77f7eb2c"
+  },
+  {
+    "case_id": "G81-055",
+    "turn_index": 1,
+    "hash": "d112dd18e4f3106f11b5f290ee7fb8c03879faf37a1d5392ca2b420953280fbe"
+  },
+  {
+    "case_id": "G81-056",
+    "turn_index": 0,
+    "hash": "0a5a2fb86d1a25cfa522031c362a99080829182c1018362835496a5c635bc72c"
+  },
+  {
+    "case_id": "G81-057",
+    "turn_index": 0,
+    "hash": "e75b3201bdd36c4b70c863340ebceeabe8c763c9e79408ff7ffa5b9b3c1dbbce"
+  },
+  {
+    "case_id": "G81-058",
+    "turn_index": 0,
+    "hash": "cf5d3ace4ecce6bbc7004c9aa2e1a9cd99e8d861dd00a6e5602565d344ab101d"
+  },
+  {
+    "case_id": "G81-059",
+    "turn_index": 0,
+    "hash": "a4a71d2e6fa3f2a4f6a4aafa89d3630df8f4ebfd3354fcb7888e3e11aaade83c"
+  },
+  {
+    "case_id": "G81-060",
+    "turn_index": 0,
+    "hash": "55a2023d6ef28a22685e7ef328eabd5e21fe67dc860cf7cbd2fac8e089589e88"
+  },
+  {
+    "case_id": "G81-061",
+    "turn_index": 0,
+    "hash": "70a5b8a69c569b68ffaa382506cbd0d80142d76373a53a7a9729b20ab578f522"
+  },
+  {
+    "case_id": "G81-062",
+    "turn_index": 0,
+    "hash": "80e534c5355cd06565b0995593ba3b81cbd96c932a651dd19967d9a6128a7d26"
+  },
+  {
+    "case_id": "G81-063",
+    "turn_index": 0,
+    "hash": "5d4ed721fde36ec7a56330a1b65b9ef6bfacb1372aa0913abba5450f2eb60dc0"
+  },
+  {
+    "case_id": "G81-064",
+    "turn_index": 0,
+    "hash": "adf2f13c3160bad6b8bc61671cbb68dbdd2a30090bd3020af75e42f2afaf2f12"
+  },
+  {
+    "case_id": "G81-065",
+    "turn_index": 0,
+    "hash": "886753c793bd65c06d6952df6ae9e140ddee9a8e276993ba63e15a6c109b42f3"
+  },
+  {
+    "case_id": "G81-066",
+    "turn_index": 0,
+    "hash": "6577d44b328c2cfc42fa80e8f592f15eb37ee82c87f2a4d4c5b7b88f1f251c21"
+  },
+  {
+    "case_id": "G81-067",
+    "turn_index": 0,
+    "hash": "22ab044cb4c58f8447fa4987fad19327475a158d4bcd00bbe87872bd541667c7"
+  },
+  {
+    "case_id": "G81-068",
+    "turn_index": 0,
+    "hash": "ba82782ce223be3806deef555c733296fb26ab5b8e0519d837612d33943fcdfe"
+  },
+  {
+    "case_id": "G81-069",
+    "turn_index": 0,
+    "hash": "d099c42b5044147b0389b2d2c02628cbf9c3f44d343bf30fec1b9bb0f95afee0"
+  },
+  {
+    "case_id": "G81-070",
+    "turn_index": 0,
+    "hash": "d703e4d3c80e84708d9c4753d173e5a0e9a36b908996c94d31e23f7eb3b98efc"
+  },
+  {
+    "case_id": "G81-071",
+    "turn_index": 0,
+    "hash": "6c0f06df795c8083ae4ffa869e2a2cc4c7da03895f96413bd1b3d814debef69b"
+  },
+  {
+    "case_id": "G81-072",
+    "turn_index": 0,
+    "hash": "6ea8459a44aa61551af4af10fb58f53b81e04a72988294c58124e3fef5949b0b"
+  },
+  {
+    "case_id": "G81-072",
+    "turn_index": 1,
+    "hash": "f60367a373a5bac9ef6e594cae20da9cbbdefc61a44a2dd507b8715f37fab229"
+  },
+  {
+    "case_id": "G81-073",
+    "turn_index": 0,
+    "hash": "ec444df3b988bb5f84164b1b607c04d44e0966696fa1bd6100792bb0d5452785"
+  },
+  {
+    "case_id": "G81-074",
+    "turn_index": 0,
+    "hash": "38752242c5da17f0defc8884085580a0fb0cd281e15ff0e9818d4b5c0bea93f2"
+  },
+  {
+    "case_id": "G81-075",
+    "turn_index": 1,
+    "hash": "5ef3402d488871779b3dad90e2506dc489f5451c79af5cc9ce025e18f03ca563"
+  },
+  {
+    "case_id": "G81-077",
+    "turn_index": 0,
+    "hash": "e251c76585b6529a8f80158f77986653ee0c5bbc74d211686da9a0022e42e5b0"
+  },
+  {
+    "case_id": "G81-077",
+    "turn_index": 1,
+    "hash": "f3c0c42adab76eefd53d48bf90d2077ceaca41ced6d5ecd9a3d36de62767e1d3"
+  },
+  {
+    "case_id": "G81-078",
+    "turn_index": 0,
+    "hash": "e30069220871912e815ab642547bbf6e049592fc89338edbf8bc577e8e7e1286"
+  },
+  {
+    "case_id": "G81-079",
+    "turn_index": 0,
+    "hash": "f2a57767154f1ebcb5010b2f59b9f05d1f24a3f65622c7e4d0c2dd1a78c30e9c"
+  },
+  {
+    "case_id": "G81-079",
+    "turn_index": 1,
+    "hash": "2f475392a8762a34c28bd66d0f646a8d6da4d484832159bf90e8da1df2b279a2"
+  },
+  {
+    "case_id": "G81-080",
+    "turn_index": 0,
+    "hash": "22cc742636b0b1847aef55981b2b37f668e7456fc8750c6d82876b24128b3f51"
+  },
+  {
+    "case_id": "G81-081",
+    "turn_index": 0,
+    "hash": "8a99e79b24c3e0972d727d6bab6f47844a4ca2f4547010462e8ca8fa2c79dba6"
+  },
+  {
+    "case_id": "G81-081",
+    "turn_index": 1,
+    "hash": "2e1ba16417793aae812716a52bf9ac4cf6d7ea2f679ee09e183087d3477c9b07"
+  },
+  {
+    "case_id": "G81-082",
+    "turn_index": 0,
+    "hash": "ec00e883b79cf3961b14d3e5d936cfa3489faa6ba1982136b0f79bac2413ce02"
+  },
+  {
+    "case_id": "G81-082",
+    "turn_index": 1,
+    "hash": "a380e1b5a08efe015db0223d86fc8d659c4438010ea6b2db5bfd878429792bcd"
+  },
+  {
+    "case_id": "G81-083",
+    "turn_index": 0,
+    "hash": "ca1c435fbf69eb371ccd4610d3c007362c8127e74ab5895b623a32ce3a386605"
+  },
+  {
+    "case_id": "G81-083",
+    "turn_index": 1,
+    "hash": "e09da9447c85f5e430ece0258b618361fc0aab0150ea1d197601b10c6c9a6d63"
+  },
+  {
+    "case_id": "G81-084",
+    "turn_index": 0,
+    "hash": "cbfc42a7ebac7c35e18cbfc86fa526cb4deecef75a27eb6bdcf82d01655a8450"
+  },
+  {
+    "case_id": "G81-085",
+    "turn_index": 0,
+    "hash": "ec79ab0a5b2aaecb69bc8cce2ac5ad23b6ff7798d14745e5cc671e0d4b334998"
+  },
+  {
+    "case_id": "G81-086",
+    "turn_index": 0,
+    "hash": "fe6208120c1b5da14912ff88bdf7382feeae1d8aaaa7a2051f7d94a846ce9a14"
+  },
+  {
+    "case_id": "G81-086",
+    "turn_index": 1,
+    "hash": "0d661ee2a0250c5de0c129ad16a6d5e7c3da3f6522e7c6283e31349295bb3e71"
+  },
+  {
+    "case_id": "G81-087",
+    "turn_index": 0,
+    "hash": "223538eac027d304393fa2e61dded5d143a46dacb5814ff12e80a15e4e543803"
+  },
+  {
+    "case_id": "G81-089",
+    "turn_index": 0,
+    "hash": "9a4ae19a0b4da206bbcb5a9cc05332003e76223344329acaf9d039a5cd0083cb"
+  },
+  {
+    "case_id": "G81-089",
+    "turn_index": 1,
+    "hash": "c60825f95e65a8d692f4b3894478892cda825ac9015ea5d08c37508c9ff2bf37"
+  },
+  {
+    "case_id": "G81-090",
+    "turn_index": 0,
+    "hash": "edf06dd1fae575ad434257df897a0d317eef93851dcbe765453dce902021fac6"
+  },
+  {
+    "case_id": "G81-092",
+    "turn_index": 0,
+    "hash": "c380be182a1681368eae08a26aa443f0787cd1a87eeef981cff3ff1b1091c629"
+  },
+  {
+    "case_id": "G81-093",
+    "turn_index": 0,
+    "hash": "a7e15f5cba5538fe41331e45fa8732ee8d954b842187e3f82d67f73f16732a06"
+  },
+  {
+    "case_id": "G81-094",
+    "turn_index": 0,
+    "hash": "d053d9657a13f7ac290384273b2f57e29a27008d3f94a0fa6d9b2a7b2dd42d08"
+  },
+  {
+    "case_id": "G81-095",
+    "turn_index": 0,
+    "hash": "6ce7bb9f29abfb6638430197b04cca764578ffd36f146007f20fe115d5b33c67"
+  },
+  {
+    "case_id": "G81-096",
+    "turn_index": 0,
+    "hash": "7ed0cd825f4981157fcd9dc8244c14ec24616d0c967ee9f34dabcbf9caa607ba"
+  },
+  {
+    "case_id": "G81-097",
+    "turn_index": 0,
+    "hash": "5e47c0b80c47f56e190692831dcfe18dfc0260f8cae50caa63e7f202a0c2681c"
+  },
+  {
+    "case_id": "G81-098",
+    "turn_index": 0,
+    "hash": "928f733a38c5bd4578369196803e896b9378f4a45e263dea6c20ad944d57e67a"
+  },
+  {
+    "case_id": "G81-099",
+    "turn_index": 0,
+    "hash": "66728c604cb28ad09db9b0693998143086c14ae2591dd49da96cbabbff75abac"
+  },
+  {
+    "case_id": "G81-100",
+    "turn_index": 0,
+    "hash": "02bbb779e6fec79b153af683cbdcd639bafc49ae7b824b6ed646010fa59ad5c7"
+  }
+]

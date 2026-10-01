@@ -1,0 +1,750 @@
+[
+  {
+    "case_id": "S81-001",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-001",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "含税销售总额",
+          "销售总数量"
+        ],
+        "dimension_surfaces": [],
+        "canonical_metrics": [
+          "METRIC:sales_total_including_tax",
+          "METRIC:sales_total_quantity"
+        ],
+        "canonical_dimensions": [],
+        "target_task": "NEW",
+        "turn_relation": "NEW_TASK",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "ADD"
+        ],
+        "metric_operations": [
+          "ADD"
+        ],
+        "dimension_operations": []
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 1,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-001",
+    "turn_index": 1,
+    "phase": "CURRENT",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-001",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "订单笔数",
+          "含税销售总额",
+          "销售总数量"
+        ],
+        "dimension_surfaces": [],
+        "canonical_metrics": [
+          "METRIC:order_count",
+          "METRIC:sales_total_including_tax",
+          "METRIC:sales_total_quantity"
+        ],
+        "canonical_dimensions": [],
+        "target_task": "PREVIOUS",
+        "turn_relation": "FOLLOW_UP",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "ADD"
+        ],
+        "metric_operations": [
+          "ADD"
+        ],
+        "dimension_operations": []
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 2,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-002",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "含税销售总额",
+          "销售总数量"
+        ],
+        "dimension_surfaces": [],
+        "canonical_metrics": [
+          "METRIC:sales_total_including_tax",
+          "METRIC:sales_total_quantity"
+        ],
+        "canonical_dimensions": [],
+        "target_task": "NEW",
+        "turn_relation": "NEW_TASK",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "ADD"
+        ],
+        "metric_operations": [
+          "ADD"
+        ],
+        "dimension_operations": []
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 1,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 1,
+    "phase": "CURRENT",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-002",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "订单笔数"
+        ],
+        "dimension_surfaces": [],
+        "canonical_metrics": [
+          "METRIC:order_count"
+        ],
+        "canonical_dimensions": [],
+        "target_task": "PREVIOUS",
+        "turn_relation": "RETURN_TO_TOPIC",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "REPLACE"
+        ],
+        "metric_operations": [
+          "REPLACE"
+        ],
+        "dimension_operations": []
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 2,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-003",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "订单笔数",
+          "含税销售总额"
+        ],
+        "dimension_surfaces": [],
+        "canonical_metrics": [
+          "METRIC:order_count",
+          "METRIC:sales_total_including_tax"
+        ],
+        "canonical_dimensions": [],
+        "target_task": "NEW",
+        "turn_relation": "NEW_TASK",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "ADD"
+        ],
+        "metric_operations": [
+          "ADD"
+        ],
+        "dimension_operations": []
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 1,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 1,
+    "phase": "CURRENT",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-003",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "含税销售总额"
+        ],
+        "dimension_surfaces": [],
+        "canonical_metrics": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "canonical_dimensions": [],
+        "target_task": "PREVIOUS",
+        "turn_relation": "FOLLOW_UP",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "REMOVE"
+        ],
+        "metric_operations": [
+          "REMOVE"
+        ],
+        "dimension_operations": []
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 2,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-004",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "error_type": "SourceValuesUnavailable",
+    "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-005",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "error_type": "SourceValuesUnavailable",
+    "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-006",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "error_type": "RecognitionFailure",
+    "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-007",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "error_type": "RecognitionFailure",
+    "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-008",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "error_type": "RecognitionFailure",
+    "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-009",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "error_type": "SourceValuesUnavailable",
+    "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-010",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "error_type": "SourceValuesUnavailable",
+    "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-011",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "含税销售总额"
+        ],
+        "dimension_surfaces": [
+          "医院"
+        ],
+        "canonical_metrics": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "canonical_dimensions": [
+          "DIMENSION:hospital"
+        ],
+        "target_task": "NEW",
+        "turn_relation": "NEW_TASK",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "ADD"
+        ],
+        "metric_operations": [
+          "ADD"
+        ],
+        "dimension_operations": [
+          "ADD"
+        ]
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 1,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 1,
+    "phase": "CURRENT",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-011",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "含税销售总额"
+        ],
+        "dimension_surfaces": [
+          "城市",
+          "医院"
+        ],
+        "canonical_metrics": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "canonical_dimensions": [
+          "DIMENSION:city",
+          "DIMENSION:hospital"
+        ],
+        "target_task": "PREVIOUS",
+        "turn_relation": "FOLLOW_UP",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "ADD"
+        ],
+        "metric_operations": [],
+        "dimension_operations": [
+          "ADD"
+        ]
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 2,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-012",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "含税销售总额"
+        ],
+        "dimension_surfaces": [
+          "医院"
+        ],
+        "canonical_metrics": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "canonical_dimensions": [
+          "DIMENSION:hospital"
+        ],
+        "target_task": "NEW",
+        "turn_relation": "NEW_TASK",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "ADD"
+        ],
+        "metric_operations": [
+          "ADD"
+        ],
+        "dimension_operations": [
+          "ADD"
+        ]
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 1,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 1,
+    "phase": "CURRENT",
+    "error_type": "RecognitionFailure",
+    "reason": "V2_SLOT_OPERATION_CONFLICT",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-013",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "含税销售总额"
+        ],
+        "dimension_surfaces": [
+          "城市",
+          "业务员"
+        ],
+        "canonical_metrics": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "canonical_dimensions": [
+          "DIMENSION:city",
+          "DIMENSION:salesperson"
+        ],
+        "target_task": "NEW",
+        "turn_relation": "NEW_TASK",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "ADD"
+        ],
+        "metric_operations": [
+          "ADD"
+        ],
+        "dimension_operations": [
+          "ADD"
+        ]
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 1,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 1,
+    "phase": "CURRENT",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-013",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "含税销售总额"
+        ],
+        "dimension_surfaces": [
+          "城市"
+        ],
+        "canonical_metrics": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "canonical_dimensions": [
+          "DIMENSION:city"
+        ],
+        "target_task": "PREVIOUS",
+        "turn_relation": "FOLLOW_UP",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "REMOVE"
+        ],
+        "metric_operations": [],
+        "dimension_operations": [
+          "REMOVE"
+        ]
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 2,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "error_type": "RecognitionFailure",
+    "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-015",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "error_type": "RecognitionFailure",
+    "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+    "last_model_stage": "v2_semantic_edits"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 0,
+    "phase": "HISTORY",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-017",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "含税销售总额"
+        ],
+        "dimension_surfaces": [],
+        "canonical_metrics": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "canonical_dimensions": [],
+        "target_task": "NEW",
+        "turn_relation": "NEW_TASK",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [],
+        "metric_operations": [],
+        "dimension_operations": []
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 1,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 1,
+    "phase": "HISTORY",
+    "result_type": "RecognizedPlan",
+    "observation": {
+      "case_id": "S81-017",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "component": "V2_RAW_TURN_PLANNER",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "status": "OK",
+      "axes": {
+        "metric_surfaces": [
+          "销售总成本"
+        ],
+        "dimension_surfaces": [],
+        "canonical_metrics": [
+          "METRIC:sales_total_cost"
+        ],
+        "canonical_dimensions": [],
+        "target_task": "NEW",
+        "turn_relation": "NEW_TASK",
+        "clarification_decision": "NO_ASK",
+        "slot_operations": [
+          "ADD"
+        ],
+        "metric_operations": [
+          "ADD"
+        ],
+        "dimension_operations": []
+      },
+      "safety": {},
+      "evidence": {
+        "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+        "backend_mode": "SHADOW_ONLY",
+        "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+        "state_version": 2,
+        "full_pipeline_executed": false
+      }
+    }
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 2,
+    "phase": "CURRENT",
+    "error_type": "RecognitionFailure",
+    "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+    "last_model_stage": "v2_semantic_edits"
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "47608b0a8db4a20b54973d717bf4176e621d1b2a",
+  "feature_branch": "cutover-v2-recognition-20260908-01",
+  "rollback": "Reviewed revert of raw-recognition source commit, explicit manifest resync and affected V2/critical regression checks",
+  "live_operations_performed": false,
+  "production_traffic_rollback_proven": false,
+  "auto_merge": false
+}

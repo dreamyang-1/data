@@ -1,0 +1,2658 @@
+import json
+from types import SimpleNamespace
+
+import pytest
+import agent
+
+from agent import (
+    _administrative_mention_level,
+    _apply_intent_asl_contract,
+    _apply_surface_mention_normalization,
+    _normalize_surface_detail_projections,
+    _contract_filter_candidates,
+    _repair_contract_filter,
+    _select_surface_mention_match,
+    _validate_asl_output,
+    _validate_intent_asl_contract,
+)
+from asl_contract import ASLValidationError
+
+
+def _entity(code: str, name: str, field: str, attr_name: str):
+    table, column = field.split(".", 1)
+    return SimpleNamespace(metadata={
+        "entity_code": code,
+        "entity_name": name,
+        "attributes": json.dumps([{
+            "attr_code": column,
+            "attr_name": attr_name,
+            "field_mapping": {"mappingTable": table, "mappingColumn": column},
+            "is_display_name": attr_name.endswith("名称"),
+        }], ensure_ascii=False),
+    })
+
+
+def _detail_ast(subject: str = "sales_order") -> str:
+    return json.dumps({
+        "version": "2.0",
+        "intent": "query",
+        "subject": {"entity": subject},
+        "metrics": [],
+        "dimensions": [],
+        "filters": [],
+        "time_context": None,
+        "sort": None,
+        "limit": None,
+        "having": [],
+        "ambiguity": [],
+    }, ensure_ascii=False)
+
+
+def test_geographic_contract_filter_prefers_query_object_relation_path():
+    knowledge = {
+        "entities": [
+            _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+            _entity("hospital", "医院", "hospital.business_city", "业务城市"),
+            _entity("city", "城市", "dim_city.city_name", "城市名称"),
+        ],
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "city",
+            "dim_name": "城市",
+            "synonyms": ["市", "地级市"],
+            "bind_entities": [{
+                "entity": "city",
+                "mappingTable": "dim_city",
+                "mappingColumn": "city_name",
+            }],
+        })],
+        "relations": [
+            SimpleNamespace(metadata={
+                "parent": "dealer",
+                "target_entity": "city",
+                "join_key": {
+                    "source_field": "dealer.city_id",
+                    "target_field": "dim_city.city_id",
+                },
+            }),
+            SimpleNamespace(metadata={
+                "parent": "hospital",
+                "target_entity": "city",
+                "join_key": {
+                    "source_field": "hospital.city_id",
+                    "target_field": "dim_city.city_id",
+                },
+            }),
+        ],
+    }
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "经销商",
+        "metric_required": True,
+        "required_metric_codes": ["cooperating_hospital_count"],
+        "required_projections": [],
+        "required_groupings": ["经销商"],
+        "filters": [{"field": "业务城市", "operator": "EQ", "value": "上海市"}],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "cooperating_hospital_count"}]
+    ast["dimensions"] = [{"name": "dealer.dealer_name"}]
+    ast["filters"] = [{
+        "field": "hospital.business_city", "operator": "=", "value": "上海市",
+    }]
+
+    repaired, _repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+    repaired_ast = json.loads(repaired)
+
+    assert repaired_ast["filters"] == [{
+        "field": "dim_city.city_name", "operator": "=", "value": "上海市",
+    }]
+    _validate_intent_asl_contract(repaired, contract, knowledge)
+
+
+@pytest.mark.parametrize(
+    "query_object,projection,entity_code,entity_name,field,attr_name",
+    (
+        ("经销商", "经销商名称", "dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+        ("医院", "医院名称", "hospital", "医院", "hospital.hospital_name", "医院名称"),
+        ("商品", "商品名称", "product", "商品", "product.product_name", "商品名称"),
+        ("厂家", "厂家名称", "manufacturer", "厂家", "manufacturer.manufacturer_name", "厂家名称"),
+        ("商品", "商品规格", "product", "商品", "product.specification", "商品规格"),
+    ),
+)
+def test_detail_projection_is_repaired_from_recalled_metadata(
+    query_object, projection, entity_code, entity_name, field, attr_name
+):
+    knowledge = {"entities": [_entity(entity_code, entity_name, field, attr_name)]}
+    contract = {
+        "version": "1.0",
+        "intent": "DETAIL_QUERY",
+        "query_object": query_object,
+        "metric_required": False,
+        "required_metrics": [],
+        "required_metric_codes": [],
+        "required_projections": [projection],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(_detail_ast(entity_code), knowledge, contract)
+    ast = json.loads(repaired)
+
+    assert [item["name"] for item in ast["dimensions"]] == [field]
+    assert repairs == [{
+        "type": "ADD_REQUIRED_PROJECTION",
+        "semantic_label": projection,
+        "resolved_field": field,
+        "source": "RECALLED_SEMANTIC_METADATA",
+    }]
+    validated = _validate_asl_output(repaired, knowledge, required_metric_codes=[])
+    _validate_intent_asl_contract(validated, contract)
+
+
+def test_detail_projection_missing_has_precise_structured_error():
+    contract = {
+        "version": "1.0",
+        "intent": "DETAIL_QUERY",
+        "query_object": "经销商",
+        "metric_required": False,
+        "required_metrics": [],
+        "required_metric_codes": [],
+        "required_projections": ["经销商名称"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    with pytest.raises(ASLValidationError) as exc:
+        _apply_intent_asl_contract(_detail_ast("dealer"), {}, contract)
+
+    assert exc.value.code == "ASL_DETAIL_PROJECTION_MISSING"
+    assert exc.value.field == "dimensions"
+    assert exc.value.code != "ASL_METRIC_SELECTION_INVALID"
+
+
+def test_metricless_attribute_detail_uses_registered_subject_event_time(monkeypatch):
+    knowledge = {
+        "entities": [SimpleNamespace(metadata={
+            "entity_code": "device_inspection_data",
+            "entity_name": "设备检测数据",
+            "business_domain_id": 217,
+            "attributes": json.dumps([
+                {
+                    "attr_code": "detection_value",
+                    "attr_name": "检测值",
+                    "field_mapping": "device_daily.detection_value",
+                },
+                {
+                    "attr_code": "detection_unit",
+                    "attr_name": "检测单位",
+                    "field_mapping": "device_daily.detection_unit",
+                },
+            ], ensure_ascii=False),
+        })],
+        "attributes": [],
+    }
+    ast = json.loads(_detail_ast("device_inspection_data"))
+    ast["ambiguity"] = [{
+        "type": "metric",
+        "question": "指标目录为空，是否需要补充指标？",
+        "candidates": [],
+    }]
+    contract = {
+        "version": "1.0",
+        "intent": "DETAIL_QUERY",
+        "query_object": "设备检测数据",
+        "metric_required": False,
+        "required_metrics": [],
+        "required_metric_codes": [],
+        "required_projections": ["检测值", "检测单位"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+        "time_policy": "REQUIRED",
+        "canonical_time_range": {
+            "start": "2026-07-02", "end": "2026-09-02",
+        },
+    }
+    monkeypatch.setattr(agent, "get_table_field_by_scope", lambda *_, **_kwargs: {
+        "tables": [{
+            "table_name": "device_daily",
+            "semantic_model_id": 85,
+            "fields": [
+                {"field_name": "create_time", "data_type": "DATETIME"},
+                {"field_name": "data_date", "data_type": "DATE"},
+                {"field_name": "collection_time", "data_type": "DATETIME"},
+            ],
+        }],
+    })
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract, 85, 217
+    )
+    result = json.loads(repaired)
+
+    assert result["metrics"] == []
+    assert result["ambiguity"] == []
+    assert [item["name"] for item in result["dimensions"]] == [
+        "device_daily.detection_value", "device_daily.detection_unit",
+        "device_daily.collection_time",
+    ]
+    assert result["time_context"] == {
+        "type": "custom",
+        "start": "2026-07-02",
+        "end": "2026-09-02",
+        "value": None,
+        "unit": "day",
+        "anchor": "device_daily.collection_time",
+    }
+    assert result["sort"] == {
+        "field": "device_daily.collection_time",
+        "field_type": "field",
+        "direction": "ASC",
+    }
+    assert any(
+        item.get("type") == "REMOVE_IRRELEVANT_METRIC_AMBIGUITY"
+        for item in repairs
+    )
+    assert any(
+        item.get("type") == "BIND_CANONICAL_TIME_RANGE"
+        and item.get("source") == "MYSQL_SEMANTIC_FIELD_REGISTRY"
+        for item in repairs
+    )
+    assert any(
+        item.get("type") == "ADD_TIME_CONTEXT_PROJECTION"
+        for item in repairs
+    )
+    validated = _validate_asl_output(repaired, knowledge, required_metric_codes=[])
+    _validate_intent_asl_contract(validated, contract, knowledge)
+
+
+def test_unique_logical_dimension_wins_over_multiple_equivalent_physical_fields():
+    knowledge = {
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "dealer",
+            "dim_name": "经销商名称",
+            "synonyms": json.dumps(["经销商", "合作经销商"], ensure_ascii=False),
+        })],
+        "entities": [
+            _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+            _entity("dealer_result", "经销商画像", "dealer_result.dealer_name", "经销商名称"),
+        ],
+    }
+    contract = {
+        "intent": "DETAIL_QUERY", "query_object": "经销商",
+        "metric_required": False, "required_projections": ["经销商名称"],
+        "required_metric_codes": [], "filters": [], "negative_filters": [],
+        "sorting": None, "time_dimension_required": False,
+    }
+    repaired, _ = _apply_intent_asl_contract(_detail_ast("dealer"), knowledge, contract)
+    assert json.loads(repaired)["dimensions"] == [{
+        "name": "dealer", "attr": None, "level": None, "granularity": None,
+    }]
+
+
+def test_detail_name_projections_do_not_use_code_backed_dimensions():
+    def entity(code, name, attributes):
+        return SimpleNamespace(metadata={
+            "entity_code": code,
+            "entity_name": name,
+            "attributes": json.dumps(attributes, ensure_ascii=False),
+        })
+
+    knowledge = {
+        "entities": [
+            entity("product", "商品", [{
+                "attribute_id": "product-name-id",
+                "attr_code": "product_name",
+                "attr_name": "商品名称",
+                "field_mapping": "product.product_name",
+                "is_main_attribute": True,
+            }]),
+            entity("department", "科室", [
+                {
+                    "attribute_id": "department-code-id",
+                    "attr_code": "dept_code",
+                    "attr_name": "科室编码",
+                    "field_mapping": "department.dept_code",
+                },
+                {
+                    "attribute_id": "department-name-id",
+                    "attr_code": "dept_name",
+                    "attr_name": "科室名称",
+                    "field_mapping": "department.dept_name",
+                },
+            ]),
+            entity("product_category", "产品分类", [{
+                "attr_code": "product_type",
+                "attr_name": "产品类别",
+                "field_mapping": "product_category.product_type",
+            }]),
+        ],
+        "dimensions": [
+            SimpleNamespace(metadata={
+                "dim_code": "product",
+                "dim_name": "商品",
+                "synonyms": ["产品", "商品名称"],
+                "bind_entities": [{
+                    "attr": "product-code-id", "attrName": "商品编码",
+                }],
+            }),
+            SimpleNamespace(metadata={
+                "dim_code": "applicable_department",
+                "dim_name": "适用科室",
+                "bind_entities": [{
+                    "attr": "department-code-id", "attrName": "科室编码",
+                }],
+            }),
+        ],
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["dimensions"] = [
+        {"name": "applicable_department", "attr": "department-code-id"},
+        {"name": "product_category.product_type", "attr": None},
+        {"name": "product.product_name", "attr": None},
+    ]
+    contract = {
+        "intent": "DETAIL_QUERY",
+        "query_object": "产品",
+        "metric_required": False,
+        "required_metric_codes": [],
+        "required_projections": ["商品名称", "适用科室"],
+        "required_groupings": [],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+
+    assert [item["name"] for item in json.loads(repaired)["dimensions"]] == [
+        "product.product_name", "department.dept_name",
+    ]
+    assert any(
+        item.get("type") == "ADD_REQUIRED_PROJECTION"
+        and item.get("resolved_field") == "department.dept_name"
+        for item in repairs
+    )
+
+
+def test_surface_detail_projection_uses_unique_display_attribute():
+    def entity(code, name, attributes):
+        return SimpleNamespace(metadata={
+            "entity_code": code,
+            "entity_name": name,
+            "attributes": json.dumps(attributes, ensure_ascii=False),
+        })
+
+    knowledge = {
+        "entities": [
+            entity("department", "科室", [
+                {
+                    "attribute_id": "department-code-id",
+                    "attr_code": "dept_code",
+                    "attr_name": "科室编码",
+                    "field_mapping": "department.dept_code",
+                },
+                {
+                    "attribute_id": "department-name-id",
+                    "attr_code": "dept_name",
+                    "attr_name": "科室名称",
+                    "field_mapping": "department.dept_name",
+                },
+            ]),
+        ],
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "applicable_department",
+            "dim_name": "适用科室",
+            "bind_entities": [{
+                "attr": "department-code-id",
+                "attrName": "科室编码",
+            }],
+        })],
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["dimensions"] = [{
+        "name": "applicable_department",
+        "attr": "department-code-id",
+        "level": None,
+        "granularity": None,
+        "alias": "适用科室",
+    }]
+
+    repaired, repairs = _normalize_surface_detail_projections(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        "请提供百特Prismaflex M60 set使用科室。",
+    )
+
+    assert json.loads(repaired)["dimensions"] == [{
+        "name": "department.dept_name",
+        "attr": None,
+        "level": None,
+        "granularity": None,
+        "alias": "适用科室",
+    }]
+    assert repairs == [{
+        "type": "REPLACE_CODE_BACKED_DETAIL_PROJECTION",
+        "original_dimension": "applicable_department",
+        "resolved_field": "department.dept_name",
+        "source": "SURFACE_CATALOG_DISPLAY_ATTRIBUTE",
+    }]
+
+
+def test_selected_query_object_attribute_wins_over_overlapping_global_dimension():
+    knowledge = {
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "department",
+            "dim_name": "科室",
+            "synonyms": json.dumps(["主要适用科室"], ensure_ascii=False),
+        })],
+        "entities": [
+            _entity(
+                "product",
+                "商品",
+                "product.main_department",
+                "主要适用科室",
+            ),
+            _entity(
+                "department",
+                "科室",
+                "department.dept_name",
+                "科室名称",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["metrics"] = [{"name": "order_count"}]
+    ast["dimensions"] = [{
+        "name": "product.main_department",
+        "attr": None,
+        "level": None,
+        "granularity": None,
+    }]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "商品",
+        "metric_required": True,
+        "required_metrics": ["订单笔数"],
+        "required_metric_codes": ["order_count"],
+        "required_projections": [],
+        "required_groupings": ["主要适用科室"],
+        "semantic_entity_mentions": [],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": {"required": True, "direction": "DESC", "limit": None},
+        "time_policy": "OPTIONAL",
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+
+    assert json.loads(repaired)["dimensions"] == ast["dimensions"]
+    assert not any(
+        item.get("type") in {
+            "ADD_REQUIRED_GROUPING", "REMOVE_UNCONTRACTED_GROUPINGS",
+        }
+        for item in repairs
+    )
+    _validate_intent_asl_contract(repaired, contract, knowledge)
+
+
+def test_detail_contract_removes_model_invented_metric_without_weakening_projection_gate():
+    knowledge = {
+        "entities": [_entity("dealer", "经销商", "dealer.dealer_name", "经销商名称")]
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["metrics"] = [{"name": "invented_metric"}]
+    contract = {
+        "intent": "DETAIL_QUERY", "query_object": "经销商",
+        "metric_required": False, "required_projections": ["经销商名称"],
+        "required_metric_codes": [], "filters": [], "negative_filters": [],
+        "sorting": None, "time_dimension_required": False,
+    }
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract
+    )
+    result = json.loads(repaired)
+    assert result["metrics"] == []
+    assert result["dimensions"][0]["name"] == "dealer.dealer_name"
+    assert [item["type"] for item in repairs] == [
+        "REMOVE_UNREQUESTED_METRICS", "ADD_REQUIRED_PROJECTION",
+    ]
+
+
+def test_negative_filter_polarity_is_part_of_contract_validation():
+    ast = json.loads(_detail_ast("dealer"))
+    ast["dimensions"] = [{"name": "dealer.dealer_name"}]
+    ast["filters"] = [{"field": "manufacturer.name", "operator": "=", "value": "B厂家"}]
+    contract = {
+        "intent": "DETAIL_QUERY", "query_object": "经销商",
+        "metric_required": False, "required_projections": ["经销商名称"],
+        "required_metric_codes": [], "filters": [],
+        "negative_filters": [{"field": "厂家名称", "operator": "NE", "value": "B厂家"}],
+        "sorting": None, "time_dimension_required": False,
+    }
+    with pytest.raises(ASLValidationError) as exc:
+        _validate_intent_asl_contract(json.dumps(ast, ensure_ascii=False), contract)
+    assert exc.value.code == "ASL_FILTER_INVALID"
+
+
+def test_required_filter_is_repaired_from_recalled_semantic_metadata():
+    knowledge = {
+        "entities": [
+            _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+            _entity("product", "商品", "product.product_name", "商品名称"),
+        ],
+    }
+    contract = {
+        "intent": "DETAIL_QUERY", "query_object": "经销商",
+        "metric_required": False, "required_projections": ["经销商名称"],
+        "required_metric_codes": [],
+        "filters": [{"field": "商品名称", "operator": "EQ", "value": "A产品"}],
+        "negative_filters": [], "sorting": None,
+        "time_dimension_required": False,
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        _detail_ast("dealer"), knowledge, contract,
+    )
+    ast = json.loads(repaired)
+
+    assert ast["filters"] == [{
+        "field": "product.product_name", "operator": "=", "value": "A产品",
+    }]
+    assert any(item["type"] == "ADD_REQUIRED_FILTER" for item in repairs)
+    validated = _validate_asl_output(repaired, knowledge, required_metric_codes=[])
+    _validate_intent_asl_contract(validated, contract, knowledge)
+
+
+def _province_order_count_contract() -> dict:
+    return {
+        "intent": "METRIC_QUERY",
+        "query_object": None,
+        "metric_required": True,
+        "required_metric_codes": ["order_count"],
+        "required_projections": [],
+        "required_groupings": [],
+        "filters": [{"field": "省份名称", "operator": "EQ", "value": "江苏省"}],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+
+
+def test_unique_contract_filter_repair_clears_stale_field_only_ambiguity():
+    knowledge = {
+        "entities": [
+            _entity("province", "省份", "dim_province.province_name", "省份名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "order_count"}]
+    ast["ambiguity"] = [{
+        "type": "filter",
+        "question": (
+            "强制筛选条件中的‘省份名称’字段在当前召回实体元数据中"
+            "未找到对应属性映射，请确认正确字段。"
+        ),
+        "candidates": [],
+    }]
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        _province_order_count_contract(),
+    )
+    result = json.loads(repaired)
+
+    assert result["filters"] == [{
+        "field": "dim_province.province_name",
+        "operator": "=",
+        "value": "江苏省",
+    }]
+    assert result["ambiguity"] == []
+    assert any(
+        item["type"] == "ADD_REQUIRED_FILTER"
+        and item["cleared_stale_ambiguities"] == 1
+        for item in repairs
+    )
+    _validate_intent_asl_contract(repaired, _province_order_count_contract(), knowledge)
+
+
+def test_province_contract_rejects_recalled_city_binding_and_uses_published_level(
+    monkeypatch,
+):
+    knowledge = {
+        "entities": [],
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "province",
+            "dim_name": "省份名称",
+            "bind_entities": [{
+                "entity": "city",
+                "mappingTable": "dim_city",
+                "mappingColumn": "city_name",
+            }],
+        })],
+    }
+    monkeypatch.setattr(
+        agent,
+        "get_registered_entity_attributes",
+        lambda *_args: [{
+            "entity_code": "province",
+            "attr_code": "province_name",
+            "attr_name": "省份名称",
+            "field_mapping": "dim_province.province_name",
+            "is_main_attribute": True,
+        }],
+    )
+    monkeypatch.setattr(
+        agent,
+        "get_table_field_by_scope",
+        lambda **_kwargs: {
+            "tables": [{
+                "table_name": "dim_province",
+                "fields": [{"field_name": "province_name"}],
+            }],
+        },
+    )
+
+    candidates = _contract_filter_candidates(
+        "省份名称",
+        knowledge,
+        semantic_model_id=81,
+        domain_scope=205,
+        query_object="经销商",
+    )
+
+    assert candidates == ["dim_province.province_name"]
+
+
+def test_contract_filter_repair_keeps_unrelated_filter_ambiguity():
+    knowledge = {
+        "entities": [
+            _entity("province", "省份", "dim_province.province_name", "省份名称"),
+            _entity("product", "商品", "product.product_name", "商品名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "order_count"}]
+    unrelated = {
+        "type": "filter",
+        "question": "商品名称存在多个候选字段，请确认商品口径。",
+        "candidates": ["product.product_name", "product.short_name"],
+    }
+    ast["ambiguity"] = [unrelated]
+
+    repaired, _repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        _province_order_count_contract(),
+    )
+
+    assert json.loads(repaired)["ambiguity"] == [unrelated]
+
+
+def test_contract_filter_repair_does_not_match_generic_physical_field_tail():
+    knowledge = {
+        "entities": [
+            _entity("customer", "客户", "customer.name", "客户名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "order_count"}]
+    unrelated = {
+        "type": "filter",
+        "question": "另一个 name 字段存在歧义，请确认商品口径。",
+        "candidates": [],
+    }
+    ast["ambiguity"] = [unrelated]
+    contract = _province_order_count_contract()
+    contract["filters"] = [{
+        "field": "客户名称", "operator": "EQ", "value": "甲客户",
+    }]
+
+    repaired, _repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        contract,
+    )
+
+    assert json.loads(repaired)["ambiguity"] == [unrelated]
+
+
+def test_existing_exact_contract_filter_clears_stale_same_field_ambiguity():
+    knowledge = {
+        "entities": [
+            _entity("province", "省份", "dim_province.province_name", "省份名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "order_count"}]
+    ast["filters"] = [{
+        "field": "dim_province.province_name",
+        "operator": "EQ",
+        "value": "江苏省",
+    }]
+    ast["ambiguity"] = [{
+        "type": "filter",
+        "question": "province_name 字段未找到对应属性映射。",
+        "candidates": [],
+    }]
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        _province_order_count_contract(),
+    )
+    result = json.loads(repaired)
+
+    assert result["filters"] == [{
+        "field": "dim_province.province_name",
+        "operator": "=",
+        "value": "江苏省",
+    }]
+    assert result["ambiguity"] == []
+    assert repairs == []
+
+
+def test_filter_resolution_prefers_governed_name_over_synonym_collision():
+    knowledge = {
+        "entities": [SimpleNamespace(metadata={
+            "entity_code": "sales_order",
+            "entity_name": "销售订单",
+            "attributes": json.dumps([
+                {
+                    "attr_code": "business_city",
+                    "attr_name": "业务市",
+                    "synonyms": ["地区", "城市"],
+                    "field_mapping": {
+                        "mappingTable": "sales_order",
+                        "mappingColumn": "business_city",
+                    },
+                },
+                {
+                    "attr_code": "business_province",
+                    "attr_name": "业务省",
+                    "synonyms": ["地区", "业务城市"],
+                    "field_mapping": {
+                        "mappingTable": "sales_order",
+                        "mappingColumn": "business_province",
+                    },
+                },
+            ], ensure_ascii=False),
+        })],
+    }
+
+    assert _contract_filter_candidates("业务城市", knowledge) == [
+        "sales_order.business_city"
+    ]
+
+
+@pytest.mark.parametrize(
+    "label,field,entity_name,attr_name",
+    (
+        ("医院名称", "hospital.hospital_name", "医院", "医院名称"),
+        (
+            "厂家名称",
+            "manufacturer.manufacturer_name",
+            "生产厂家",
+            "厂家名称",
+        ),
+    ),
+)
+def test_filter_contract_falls_back_to_current_registered_attribute(
+    monkeypatch, label, field, entity_name, attr_name
+):
+    table, column = field.split(".", 1)
+    monkeypatch.setattr(agent, "get_registered_entity_attributes", lambda *_args: [{
+        "entity_code": table,
+        "entity_name": entity_name,
+        "entity_alias": [],
+        "business_domain_id": 205,
+        "data_source_id": 58,
+        "attr_code": column,
+        "attr_name": attr_name,
+        "description": attr_name,
+        "field_mapping": field,
+        "is_main_attribute": True,
+        "is_primary_key": False,
+        "is_unique": False,
+    }])
+    monkeypatch.setattr(agent, "get_table_field_by_scope", lambda **_kwargs: {
+        "tables": [{
+            "table_name": table,
+            "fields": [{"field_name": column}],
+        }],
+    })
+
+    assert _contract_filter_candidates(
+        label,
+        {},
+        semantic_model_id=81,
+        domain_scope=[205],
+    ) == [field]
+
+
+def test_required_negative_filter_preserves_exclusion_polarity():
+    knowledge = {
+        "entities": [
+            _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+            _entity(
+                "manufacturer", "厂家", "manufacturer.manufacturer_name", "厂家名称",
+            ),
+        ],
+    }
+    contract = {
+        "intent": "DETAIL_QUERY", "query_object": "经销商",
+        "metric_required": False, "required_projections": ["经销商名称"],
+        "required_metric_codes": [], "filters": [],
+        "negative_filters": [
+            {"field": "厂家名称", "operator": "NE", "value": "B厂家"},
+        ],
+        "sorting": None, "time_dimension_required": False,
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        _detail_ast("dealer"), knowledge, contract,
+    )
+    assert json.loads(repaired)["filters"] == [{
+        "field": "manufacturer.manufacturer_name",
+        "operator": "!=",
+        "value": "B厂家",
+    }]
+    assert any(item["type"] == "ADD_REQUIRED_NEGATIVE_FILTER" for item in repairs)
+
+
+def test_filter_repair_refuses_ambiguous_metadata_mapping():
+    knowledge = {
+        "entities": [
+            _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+            _entity("product", "商品", "product.product_name", "商品名称"),
+            _entity("order", "订单商品", "sales_order.product_name", "商品名称"),
+        ],
+    }
+    contract = {
+        "intent": "DETAIL_QUERY", "query_object": "经销商",
+        "metric_required": False, "required_projections": ["经销商名称"],
+        "required_metric_codes": [],
+        "filters": [{"field": "商品名称", "operator": "EQ", "value": "A产品"}],
+        "negative_filters": [], "sorting": None,
+        "time_dimension_required": False,
+    }
+
+    with pytest.raises(ASLValidationError) as exc:
+        _apply_intent_asl_contract(_detail_ast("dealer"), knowledge, contract)
+    assert exc.value.code == "ASL_FILTER_INVALID"
+    assert len(exc.value.details["candidates"]) == 2
+
+
+def test_filter_repair_uses_fact_subject_to_disambiguate_shared_business_role():
+    knowledge = {
+        "entities": [
+            _entity("sales_order", "销售订单", "sales_order.business_city", "业务城市"),
+            _entity("hospital", "医院", "hospital.business_city", "业务城市"),
+        ],
+    }
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "经销商",
+        "metric_required": True,
+        "required_metric_codes": [],
+        "required_groupings": [],
+        "required_projections": [],
+        "filters": [{"field": "业务城市", "operator": "EQ", "value": "上海市"}],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        _detail_ast("sales_order"), knowledge, contract,
+    )
+
+    assert json.loads(repaired)["filters"] == [{
+        "field": "sales_order.business_city", "operator": "=", "value": "上海市",
+    }]
+    assert any(
+        item["type"] == "ADD_REQUIRED_FILTER"
+        and item["resolved_field"] == "sales_order.business_city"
+        for item in repairs
+    )
+
+
+def test_filter_contract_uses_current_source_value_to_break_name_field_tie(
+    monkeypatch,
+):
+    knowledge = {
+        "entities": [
+            _entity("dealer", "经销商", "dealer.dealer_name", "名称"),
+            _entity("company", "公司", "company.company_name", "名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["dimensions"] = [{
+        "name": "dealer.dealer_name",
+        "granularity": None,
+    }]
+    ast["filters"] = [{
+        "field": "legacy.dealer_name",
+        "operator": "=",
+        "value": "杭州琅骏医疗科技有限公司",
+    }]
+    ast["ambiguity"] = [{
+        "type": "filter",
+        "question": "经销商名称=杭州琅骏医疗科技有限公司未召回到字段",
+        "candidates": ["销售公司"],
+    }]
+    contract = {
+        "intent": "DETAIL_QUERY",
+        "query_object": "dealer",
+        "metric_required": False,
+        "required_projections": [],
+        "required_metric_codes": [],
+        "filters": [{
+            "field": "名称",
+            "operator": "EQ",
+            "value": "杭州琅骏医疗科技有限公司",
+        }],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    published = [
+        {"entity_code": "dealer", "field": "dealer.dealer_name"},
+        {"entity_code": "company", "field": "company.company_name"},
+    ]
+    monkeypatch.setattr(
+        agent, "load_published_entity_attribute_candidates", lambda *_args: published,
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_exact_entity_attribute_value_fields",
+        lambda _model, _domains, candidates, _literal: [
+            item["field"]
+            for item in candidates
+            if item["field"] == "dealer.dealer_name"
+        ],
+    )
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        contract,
+        semantic_model_id=81,
+    )
+
+    assert json.loads(repaired)["filters"] == [{
+        "field": "dealer.dealer_name",
+        "operator": "=",
+        "value": "杭州琅骏医疗科技有限公司",
+    }]
+    assert any(item["type"] == "ADD_REQUIRED_FILTER" for item in repairs)
+    assert json.loads(repaired)["ambiguity"] == []
+    _validate_asl_output(repaired, knowledge, required_metric_codes=[])
+
+
+def test_filter_contract_prefers_unique_published_main_attribute_for_value_tie(
+    monkeypatch,
+):
+    knowledge = {"entities": []}
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "annual_total_sales"}]
+    ast["filters"] = []
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "sales_order",
+        "metric_required": True,
+        "required_metric_codes": ["annual_total_sales"],
+        "required_projections": [],
+        "required_groupings": [],
+        "filters": [{"field": "地区", "operator": "EQ", "value": "四川省"}],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    published = [
+        {
+            "entity_code": "province",
+            "field": "dim_province.province_name",
+            "is_main_attribute": True,
+        },
+        {
+            "entity_code": "all_hospital",
+            "field": "all_hospital.province",
+            "is_main_attribute": False,
+        },
+    ]
+    monkeypatch.setattr(
+        agent, "load_published_entity_attribute_candidates", lambda *_args: published,
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_exact_entity_attribute_value_fields",
+        lambda _model, _domains, candidates, _literal: [
+            item["field"] for item in candidates
+        ],
+    )
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        contract,
+        semantic_model_id=81,
+    )
+
+    assert json.loads(repaired)["filters"] == [{
+        "field": "dim_province.province_name",
+        "operator": "=",
+        "value": "四川省",
+    }]
+    assert any(item["type"] == "ADD_REQUIRED_FILTER" for item in repairs)
+
+
+def test_filter_contract_uses_registry_main_attribute_when_value_payload_omits_it(
+    monkeypatch,
+):
+    ast = json.loads(_detail_ast("sales_order"))
+    expected = {"field": "商品名称", "operator": "EQ", "value": "血液净化管路"}
+    candidates = ["product.product_code", "product.product_name"]
+    monkeypatch.setattr(
+        agent, "_contract_filter_candidates", lambda *_args, **_kwargs: candidates,
+    )
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [
+            {"entity_code": "product", "field": field} for field in candidates
+        ],
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_exact_entity_attribute_value_fields",
+        lambda _model, _domains, batch, _literal: [
+            item["field"] for item in batch
+        ],
+    )
+    monkeypatch.setattr(
+        agent,
+        "get_registered_entity_attributes",
+        lambda *_args: [
+            {
+                "field_mapping": "product.product_code",
+                "is_main_attribute": False,
+            },
+            {
+                "field_mapping": "product.product_name",
+                "is_main_attribute": True,
+            },
+        ],
+    )
+
+    repaired = _repair_contract_filter(
+        ast,
+        expected,
+        {},
+        negative=False,
+        semantic_model_id=81,
+    )
+
+    assert repaired["type"] == "ADD_REQUIRED_FILTER"
+    assert repaired["resolved_field"] == "product.product_name"
+    assert ast["filters"] == [{
+        "field": "product.product_name",
+        "operator": "=",
+        "value": "血液净化管路",
+    }]
+
+
+def test_filter_contract_resolves_human_city_role_to_name_not_id(monkeypatch):
+    ast = json.loads(_detail_ast("dealer"))
+    expected = {"field": "业务城市", "operator": "EQ", "value": "上海市"}
+    candidates = ["dim_city.city_id", "dim_city.city_name"]
+    monkeypatch.setattr(
+        agent, "_contract_filter_candidates", lambda *_args, **_kwargs: candidates,
+    )
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [{"field": field} for field in candidates],
+    )
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", lambda *_args: [],
+    )
+
+    repaired = _repair_contract_filter(
+        ast,
+        expected,
+        {},
+        negative=False,
+        semantic_model_id=81,
+    )
+
+    assert repaired["resolved_field"] == "dim_city.city_name"
+    assert ast["filters"] == [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海市",
+    }]
+
+
+def test_product_brand_role_prefers_published_brand_attribute():
+    knowledge = {
+        "entities": [
+            _entity(
+                "manufacturer", "厂家",
+                "manufacturer.parent_brand", "母品牌",
+            ),
+            _entity(
+                "product", "商品",
+                "product.product_name", "商品名称",
+            ),
+        ],
+    }
+
+    assert _contract_filter_candidates("商品品牌", knowledge) == [
+        "manufacturer.parent_brand"
+    ]
+
+
+def test_filter_contract_keeps_multiple_human_name_fields_ambiguous(monkeypatch):
+    ast = json.loads(_detail_ast("dealer"))
+    expected = {"field": "商品", "operator": "EQ", "value": "透析器"}
+    candidates = ["product.product_name", "product.short_name"]
+    monkeypatch.setattr(
+        agent, "_contract_filter_candidates", lambda *_args, **_kwargs: candidates,
+    )
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [{"field": field} for field in candidates],
+    )
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", lambda *_args: [],
+    )
+
+    with pytest.raises(ASLValidationError) as exc:
+        _repair_contract_filter(
+            ast,
+            expected,
+            {},
+            negative=False,
+            semantic_model_id=81,
+        )
+
+    assert exc.value.code == "ASL_FILTER_INVALID"
+
+
+def test_contract_removes_unrequested_main_identity_filter_from_asl_draft(
+    monkeypatch,
+):
+    knowledge = {
+        "entities": [
+            _entity(
+                "sales_order", "销售订单",
+                "sales_order.business_province", "业务省份",
+            ),
+            _entity(
+                "manufacturer", "厂家",
+                "manufacturer.manufacturer_name", "厂家名称",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "annual_total_sales"}]
+    ast["filters"] = [
+        {
+            "field": "sales_order.business_province",
+            "operator": "=",
+            "value": "国外",
+        },
+        {
+            "field": "manufacturer.manufacturer_name",
+            "operator": "=",
+            "value": "Unrelated Example Manufacturer",
+        },
+    ]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "sales_order",
+        "metric_required": True,
+        "required_metric_codes": ["annual_total_sales"],
+        "required_projections": [],
+        "required_groupings": [],
+        "filters": [{
+            "field": "业务省份",
+            "operator": "EQ",
+            "value": "国外",
+        }],
+        "negative_filters": [],
+        "semantic_entity_mentions": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [
+            {
+                "entity_code": "sales_order",
+                "field": "sales_order.business_province",
+                "is_main_attribute": False,
+            },
+            {
+                "entity_code": "manufacturer",
+                "field": "manufacturer.manufacturer_name",
+                "is_main_attribute": True,
+            },
+        ],
+    )
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        contract,
+        semantic_model_id=81,
+    )
+
+    assert json.loads(repaired)["filters"] == [{
+        "field": "sales_order.business_province",
+        "operator": "=",
+        "value": "国外",
+    }]
+    assert any(
+        item["type"] == "REMOVE_UNCONTRACTED_IDENTITY_FILTERS"
+        for item in repairs
+    )
+
+
+def test_contract_removes_unrequested_non_main_brand_filter():
+    knowledge = {
+        "entities": [
+            _entity(
+                "product", "商品",
+                "product.product_name", "商品名称",
+            ),
+            _entity(
+                "manufacturer", "厂家",
+                "manufacturer.parent_brand", "母厂牌",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["dimensions"] = [{"name": "dealer.dealer_name"}]
+    ast["filters"] = [
+        {
+            "field": "product.product_name",
+            "operator": "=",
+            "value": "空心纤维血液透析器",
+        },
+        {
+            "field": "manufacturer.parent_brand",
+            "operator": "=",
+            "value": "费森尤斯",
+        },
+    ]
+    contract = {
+        "intent": "DETAIL_QUERY",
+        "query_object": "经销商",
+        "metric_required": False,
+        "required_projections": [],
+        "required_groupings": [],
+        "filters": [{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器",
+        }],
+        "negative_filters": [],
+        "forbidden_filters": [{
+            "field": "母厂牌",
+            "operator": "EQ",
+            "value": "费森尤斯",
+        }],
+        "semantic_entity_mentions": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+    result = json.loads(repaired)
+
+    assert result["filters"] == [{
+        "field": "product.product_name",
+        "operator": "=",
+        "value": "空心纤维血液透析器",
+    }]
+    assert any(
+        item["type"] == "REMOVE_UNCONTRACTED_IDENTITY_FILTERS"
+        for item in repairs
+    )
+    _validate_intent_asl_contract(repaired, contract, knowledge)
+
+
+def test_distinct_entity_list_uses_time_as_filter_without_projecting_anchor():
+    knowledge = {
+        "entities": [
+            _entity(
+                "dealer", "经销商",
+                "dealer.dealer_name", "经销商名称",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["dimensions"] = [{"name": "dealer.dealer_name"}]
+    ast["time_context"] = {
+        "type": "custom",
+        "start": "2025-09-07",
+        "end": "2026-09-07",
+        "value": None,
+        "unit": "day",
+        "anchor": "sales_order.created_date",
+    }
+    contract = {
+        "intent": "DETAIL_QUERY",
+        "query_object": "经销商",
+        "metric_required": False,
+        "required_projections": ["经销商名称"],
+        "required_groupings": [],
+        "projection_mode": "DISTINCT",
+        "filters": [],
+        "negative_filters": [],
+        "forbidden_filters": [],
+        "semantic_entity_mentions": [],
+        "sorting": None,
+        "time_dimension_required": False,
+        "time_policy": "REQUIRED",
+        "canonical_time_range": {
+            "start": "2025-09-07", "end": "2026-09-07",
+        },
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+    result = json.loads(repaired)
+
+    assert [item["name"] for item in result["dimensions"]] == [
+        "dealer.dealer_name",
+    ]
+    assert result["sort"] is None
+    assert result["time_context"]["anchor"] == "sales_order.created_date"
+    assert not any(
+        item["type"] in {"ADD_TIME_CONTEXT_PROJECTION", "ADD_TIME_CONTEXT_SORT"}
+        for item in repairs
+    )
+    _validate_intent_asl_contract(repaired, contract, knowledge)
+
+
+def test_relationship_contract_binds_transaction_fact_anchor():
+    knowledge = {
+        "entities": [
+            _entity(
+                "sales_order", "销售订单",
+                "sales_order.order_key", "订单标识",
+            ),
+            _entity(
+                "dealer", "经销商",
+                "dealer.dealer_name", "经销商名称",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["dimensions"] = [{
+        "name": "dealer.dealer_name",
+        "granularity": None,
+    }]
+    contract = {
+        "intent": "DETAIL_QUERY",
+        "query_object": "dealer",
+        "metric_required": False,
+        "required_metric_codes": [],
+        "required_projections": ["经销商名称"],
+        "required_groupings": [],
+        "projection_mode": "DISTINCT",
+        "relationship_anchor": "销售订单",
+        "filters": [],
+        "negative_filters": [],
+        "semantic_entity_mentions": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+
+    assert json.loads(repaired)["subject"] == {"entity": "sales_order"}
+    assert any(item["type"] == "BIND_RELATIONSHIP_ANCHOR" for item in repairs)
+    _validate_intent_asl_contract(repaired, contract, knowledge)
+
+
+def test_metric_relationship_contract_uses_physical_grouping_from_fact_anchor():
+    knowledge = {
+        "entities": [
+            _entity(
+                "sales_order", "销售订单",
+                "sales_order.order_key", "订单标识",
+            ),
+            _entity(
+                "dealer", "经销商",
+                "dealer.dealer_name", "经销商名称",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["metrics"] = [{"name": "annual_total_sales"}]
+    ast["dimensions"] = [{
+        "name": "dealer",
+        "attr": "stale-binding",
+        "level": None,
+        "granularity": None,
+    }]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "dealer",
+        "metric_required": True,
+        "required_metric_codes": ["annual_total_sales"],
+        "required_projections": [],
+        "required_groupings": ["经销商"],
+        "relationship_anchor": "销售订单",
+        "filters": [],
+        "negative_filters": [],
+        "semantic_entity_mentions": [],
+        "sorting": {"required": True, "direction": "DESC", "limit": None},
+        "time_dimension_required": False,
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+    repaired_ast = json.loads(repaired)
+
+    assert repaired_ast["subject"] == {"entity": "sales_order"}
+    assert repaired_ast["dimensions"] == [{
+        "name": "dealer.dealer_name",
+        "attr": None,
+        "level": None,
+        "granularity": None,
+    }]
+    assert any(item["type"] == "BIND_RELATIONSHIP_ANCHOR" for item in repairs)
+    assert any(item["type"] == "ADD_REQUIRED_GROUPING" for item in repairs)
+    _validate_intent_asl_contract(repaired, contract, knowledge)
+
+
+def test_detail_contract_removes_default_time_and_nonrequested_projection():
+    knowledge = {
+        "entities": [
+            _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+            _entity("product", "商品", "product.product_name", "商品名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["dimensions"] = [
+        {"name": "product.product_name", "granularity": None},
+    ]
+    ast["time_context"] = {
+        "type": "range", "start": "2025-09-01", "end": "2026-09-01",
+        "unit": "day", "anchor": "sales_order.created_date",
+    }
+    ast["ambiguity"] = [{"type": "time_anchor", "message": "ambiguous"}]
+    contract = {
+        "intent": "DETAIL_QUERY", "query_object": "经销商",
+        "metric_required": False, "required_projections": ["经销商名称"],
+        "required_metric_codes": [], "filters": [], "negative_filters": [],
+        "sorting": None, "time_dimension_required": False,
+        "time_policy": "FORBIDDEN",
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+    result = json.loads(repaired)
+
+    assert [item["name"] for item in result["dimensions"]] == ["dealer.dealer_name"]
+    assert result["time_context"] is None
+    assert result["ambiguity"] == []
+    assert {item["type"] for item in repairs} >= {
+        "ADD_REQUIRED_PROJECTION",
+        "REMOVE_UNREQUESTED_PROJECTIONS",
+        "REMOVE_DEFAULT_TIME_SCOPE",
+    }
+
+
+def test_metric_contract_repairs_required_grouping_from_semantic_metadata():
+    knowledge = {
+        "entities": [
+            _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "annual_total_sales", "alias": "整体业务规模"}]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "经销商",
+        "metric_required": True,
+        "required_metrics": ["整体业务规模"],
+        "required_metric_codes": ["annual_total_sales"],
+        "required_projections": [],
+        "required_groupings": ["经销商"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": {"required": True, "direction": "DESC", "limit": None},
+        "time_dimension_required": False,
+        "time_policy": "OPTIONAL",
+    }
+    ast["sort"] = {
+        "field_type": "metric", "field": "annual_total_sales", "direction": "DESC",
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+    result = json.loads(repaired)
+
+    assert [item["name"] for item in result["dimensions"]] == [
+        "dealer.dealer_name",
+    ]
+    assert any(item["type"] == "ADD_REQUIRED_GROUPING" for item in repairs)
+    _validate_intent_asl_contract(repaired, contract, knowledge)
+
+
+def test_time_bound_contract_rejects_asl_without_registered_anchor():
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "销售订单",
+        "metric_required": True,
+        "required_metrics": ["销售额"],
+        "required_metric_codes": ["annual_total_sales"],
+        "required_projections": [],
+        "required_groupings": [],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+        "time_policy": "REQUIRED",
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "annual_total_sales"}]
+
+    with pytest.raises(ASLValidationError) as exc:
+        _validate_intent_asl_contract(
+            json.dumps(ast, ensure_ascii=False), contract,
+        )
+
+    assert exc.value.code == "ASL_TIME_ANCHOR_MISSING"
+
+
+def test_untyped_entity_mention_is_bound_to_unique_source_catalog_value(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity("product", "product", "product.product_name", "product name"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["ambiguity"] = [{
+        "type": "filter",
+        "question": "heart lung system has multiple catalog candidates",
+        "candidates": [
+            "product.product_name=heart-lung system",
+            "product.product_name=heart-lung system disposable kit",
+        ],
+    }]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "sales order",
+        "metric_required": True,
+        "required_metrics": ["sales quantity"],
+        "required_metric_codes": ["sales_total_quantity"],
+        "required_projections": [],
+        "required_groupings": [],
+        "semantic_entity_mentions": ["heart lung system"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_policy": "OPTIONAL",
+    }
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", lambda *_args: [],
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [
+            {
+                "field": "product.product_name",
+                "canonical_value": "heart-lung system",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+            {
+                "field": "product.product_name",
+                "canonical_value": "heart-lung system disposable kit",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+        ],
+    )
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast), knowledge, contract, semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(repaired)["filters"] == [{
+        "field": "product.product_name",
+        "operator": "=",
+        "value": "heart-lung system",
+    }]
+    assert json.loads(repaired)["ambiguity"] == []
+    assert repairs[-1]["type"] == "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
+
+
+def test_existing_surface_filter_is_replaced_by_source_canonical_value(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity("dim_city", "城市", "dim_city.city_name", "城市名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海",
+    }]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "sales order",
+        "metric_required": True,
+        "required_metrics": ["销售数量"],
+        "required_metric_codes": ["sales_total_quantity"],
+        "required_projections": [],
+        "required_groupings": [],
+        "semantic_entity_mentions": ["上海"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_policy": "OPTIONAL",
+    }
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", lambda *_args: [],
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": "dim_city.city_name",
+            "canonical_value": "上海市",
+            "match_type": "CANONICAL_CONTAINS_MENTION",
+        }],
+    )
+
+    repaired, _ = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+        semantic_model_id=81, domain_scope=205,
+    )
+
+    assert json.loads(repaired)["filters"] == [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海市",
+    }]
+
+
+def test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter(
+    monkeypatch,
+):
+    knowledge = {
+        "entities": [
+            _entity("manufacturer", "厂家", "manufacturer.manufacturer_name", "厂家名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = [{
+        "field": "manufacturer.manufacturer_name",
+        "operator": "=",
+        "value": "Intuitive Surgical,Inc.直观医疗公司",
+    }]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "sales order",
+        "metric_required": True,
+        "required_metrics": ["sales quantity"],
+        "required_metric_codes": ["sales_total_quantity"],
+        "required_projections": [],
+        "required_groupings": [],
+        "semantic_entity_mentions": [
+            "IntuitiveSurgical,Inc.直观医疗公司",
+        ],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_policy": "OPTIONAL",
+    }
+    monkeypatch.setattr(
+        agent,
+        "resolve_exact_entity_attribute_value_fields",
+        lambda *_args: pytest.fail("bound whitespace variant must not be resolved twice"),
+    )
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        contract,
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(repaired)["filters"] == ast["filters"]
+    assert repairs == []
+
+
+def test_untyped_entity_mention_searches_all_catalog_chunks(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity(
+                f"entity_{index:02d}",
+                f"entity {index:02d}",
+                f"table_{index:02d}.display_name",
+                "display name",
+            )
+            for index in range(40)
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "sales order",
+        "metric_required": True,
+        "required_metrics": ["sales quantity"],
+        "required_metric_codes": ["sales_total_quantity"],
+        "required_projections": [],
+        "required_groupings": [],
+        "semantic_entity_mentions": ["Fresenius"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_policy": "OPTIONAL",
+    }
+    chunk_sizes = []
+    catalog_chunk_sizes = []
+
+    def resolve_exact(_model_id, _domain_scope, candidates, _literal):
+        chunk_sizes.append(len(candidates))
+        return [
+            item["field"]
+            for item in candidates
+            if item["field"] == "table_39.display_name"
+        ]
+
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", resolve_exact,
+    )
+
+    def resolve_catalog(_model_id, _domain_scope, candidates, _literal):
+        catalog_chunk_sizes.append(len(candidates))
+        return [{
+            "field": item["field"],
+            "canonical_value": "Fresenius Medical Care",
+            "match_type": "EXACT",
+        } for item in candidates if item["field"] == "table_39.display_name"]
+
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        resolve_catalog,
+    )
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast), knowledge, contract, semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert chunk_sizes == [32, 8]
+    assert catalog_chunk_sizes == [32, 8]
+    assert json.loads(repaired)["filters"] == [{
+        "field": "table_39.display_name",
+        "operator": "=",
+        "value": "Fresenius Medical Care",
+    }]
+    assert repairs[-1]["type"] == "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
+
+
+def test_untyped_entity_mention_falls_back_to_current_published_attributes(
+    monkeypatch,
+):
+    knowledge = {
+        "entities": [
+            _entity("product", "product", "product.product_name", "product name"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "sales order",
+        "metric_required": True,
+        "required_metrics": ["sales quantity"],
+        "required_metric_codes": ["sales_total_quantity"],
+        "required_projections": [],
+        "required_groupings": [],
+        "semantic_entity_mentions": ["Fresenius"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_policy": "OPTIONAL",
+    }
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [{
+            "entity_code": "brand",
+            "business_domain_id": 205,
+            "field": "brand.brand_name",
+        }],
+    )
+
+    def resolve_exact(_model_id, _domain_scope, candidates, _literal):
+        return [
+            item["field"]
+            for item in candidates
+            if item["field"] == "brand.brand_name"
+        ]
+
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", resolve_exact,
+    )
+    monkeypatch.setattr(
+        agent, "resolve_entity_attribute_catalog_matches", lambda *_args: [],
+    )
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast), knowledge, contract, semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    payload = json.loads(repaired)
+    assert payload["filters"] == [{
+        "field": "brand.brand_name",
+        "operator": "=",
+        "value": "Fresenius",
+    }]
+    assert any(
+        item["type"] == "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
+        for item in repairs
+    )
+def test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique(
+    monkeypatch,
+):
+    knowledge = {
+        "entities": [
+            _entity("product", "product", "product.product_name", "product name"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "sales order",
+        "metric_required": True,
+        "required_metrics": ["sales quantity"],
+        "required_metric_codes": ["sales_total_quantity"],
+        "required_projections": [],
+        "required_groupings": [],
+        "semantic_entity_mentions": ["device"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_policy": "OPTIONAL",
+    }
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", lambda *_args: [],
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [
+            {
+                "field": "product.product_name",
+                "canonical_value": "device A",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+            {
+                "field": "product.product_name",
+                "canonical_value": "device B",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+        ],
+    )
+
+    with pytest.raises(ASLValidationError) as exc:
+        _apply_intent_asl_contract(
+            json.dumps(ast), knowledge, contract, semantic_model_id=81,
+            domain_scope=205,
+        )
+
+    assert exc.value.code == "ASL_ENTITY_MENTION_UNRESOLVED"
+
+
+def test_surface_mention_unique_hit_is_normalized_to_canonical_value(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity("dim_city", "城市", "dim_city.city_name", "城市名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = [{
+        "field": "dim_city.city_name", "operator": "=", "value": "上海",
+    }]
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": "dim_city.city_name",
+            "canonical_value": "上海市",
+            "match_type": "CANONICAL_CONTAINS_MENTION",
+        }],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "上海"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海市",
+    }]
+    assert repairs == [{
+        "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
+        "mention": "上海",
+        "canonical_value": "上海市",
+        "resolved_field": "dim_city.city_name",
+        "source": "SURFACE_MENTION_RECALL",
+    }]
+    assert knowledge["_source_canonical_values"]["上海"] == "上海市"
+
+
+@pytest.mark.parametrize(
+    ("surface", "canonical", "semantic_field", "resolved_field", "entity_name"),
+    (
+        ("上海", "上海市", "城市", "dim_city.city_name", "城市"),
+        ("北京", "北京市", "城市", "dim_city.city_name", "城市"),
+        ("安徽", "安徽省", "省份", "dim_province.province_name", "省份"),
+    ),
+)
+def test_contract_filter_uses_source_canonical_administrative_value(
+    monkeypatch, surface, canonical, semantic_field, resolved_field, entity_name,
+):
+    entity_code = resolved_field.split(".", 1)[0]
+    knowledge = {
+        "entities": [
+            _entity(
+                entity_code,
+                entity_name,
+                resolved_field,
+                f"{entity_name}名称",
+            ),
+        ],
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "administrative_area",
+            "dim_name": semantic_field,
+            "bind_entities": [{
+                "entity": entity_code,
+                "mappingTable": resolved_field.split(".", 1)[0],
+                "mappingColumn": resolved_field.split(".", 1)[1],
+            }],
+        })],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["filters"] = [{
+        "field": resolved_field, "operator": "=", "value": surface,
+    }]
+    expected = {"field": semantic_field, "operator": "EQ", "value": surface}
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args, **_kwargs: [{
+            "entity_code": entity_code,
+            "field": resolved_field,
+            "is_main_attribute": True,
+        }],
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": resolved_field,
+            "canonical_value": canonical,
+            "match_type": "CANONICAL_CONTAINS_MENTION",
+        }],
+    )
+
+    repair = _repair_contract_filter(
+        ast,
+        expected,
+        knowledge,
+        negative=False,
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert repair == {
+        "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
+        "mention": surface,
+        "canonical_value": canonical,
+        "resolved_field": resolved_field,
+        "source": "SOURCE_CATALOG_CONTRACT_NORMALIZATION",
+    }
+    assert ast["filters"] == [{
+        "field": resolved_field,
+        "operator": "=",
+        "value": canonical,
+    }]
+    assert knowledge["_source_canonical_values"][surface] == canonical
+
+
+def test_surface_mention_role_hint_prefers_brand_over_project(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity(
+                "manufacturer", "厂家",
+                "manufacturer.parent_brand", "母品牌",
+            ),
+            _entity(
+                "project", "项目",
+                "project.project_name", "项目名称",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["filters"] = []
+    seen_fields = []
+
+    def resolve(_model, _domains, candidates, _literal):
+        seen_fields.extend(item["field"] for item in candidates)
+        return [{
+            "field": "manufacturer.parent_brand",
+            "canonical_value": "万益特",
+            "match_type": "EXACT",
+        }]
+
+    monkeypatch.setattr(
+        agent,
+        "_contract_filter_candidates",
+        lambda role, *_args, **_kwargs: (
+            ["manufacturer.parent_brand"] if role == "母品牌" else []
+        ),
+    )
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", resolve)
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "万益特", "role_hint": "母品牌"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert seen_fields == ["manufacturer.parent_brand"]
+    assert json.loads(normalized)["filters"] == [{
+        "field": "manufacturer.parent_brand",
+        "operator": "=",
+        "value": "万益特",
+    }]
+    assert repairs[0]["resolved_field"] == "manufacturer.parent_brand"
+
+
+def test_surface_brand_role_falls_back_within_manufacturer_not_project(monkeypatch):
+    manufacturer = _entity(
+        "manufacturer", "厂家", "manufacturer.parent_brand", "母品牌"
+    )
+    manufacturer_attributes = json.loads(manufacturer.metadata["attributes"])
+    manufacturer_attributes.append({
+        "attr_code": "manufacturer_name",
+        "attr_name": "厂家名称",
+        "field_mapping": {
+            "mappingTable": "manufacturer",
+            "mappingColumn": "manufacturer_name",
+        },
+        "is_display_name": True,
+    })
+    manufacturer.metadata["attributes"] = json.dumps(
+        manufacturer_attributes, ensure_ascii=False
+    )
+    knowledge = {
+        "entities": [
+            manufacturer,
+            _entity("project", "项目", "project.project_name", "项目名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    seen_batches = []
+
+    def resolve(_model, _domains, candidates, _literal):
+        fields = [item["field"] for item in candidates]
+        seen_batches.append(fields)
+        if "manufacturer.manufacturer_name" in fields:
+            return [{
+                "field": "manufacturer.manufacturer_name",
+                "canonical_value": "万益特医疗用品有限公司",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+                "is_main_attribute": True,
+            }]
+        if "project.project_name" in fields:
+            return [{
+                "field": "project.project_name",
+                "canonical_value": "万益特急重症",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+                "is_main_attribute": True,
+            }]
+        return []
+
+    monkeypatch.setattr(
+        agent,
+        "_contract_filter_candidates",
+        lambda role, *_args, **_kwargs: (
+            ["manufacturer.parent_brand"] if role == "商品品牌" else []
+        ),
+    )
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", resolve)
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "万益特", "role_hint": "商品品牌"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert ["manufacturer.parent_brand"] in seen_batches
+    assert any(
+        "manufacturer.manufacturer_name" in batch for batch in seen_batches
+    )
+    assert all("project.project_name" not in batch for batch in seen_batches)
+    assert json.loads(normalized)["filters"] == [{
+        "field": "manufacturer.manufacturer_name",
+        "operator": "=",
+        "value": "万益特医疗用品有限公司",
+    }]
+    assert repairs[0]["resolved_field"] == "manufacturer.manufacturer_name"
+
+
+def test_surface_product_name_hint_finds_published_specification(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity(
+                "product", "product",
+                "product.product_name", "product name",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_including_tax"}]
+    ast["filters"] = [{
+        "field": "product.product_name",
+        "operator": "=",
+        "value": "MMT-866A",
+    }]
+    seen_batches = []
+
+    def resolve(_model, _domains, candidates, _literal):
+        fields = [item["field"] for item in candidates]
+        seen_batches.append(fields)
+        if "product.specification" in fields:
+            return [{
+                "field": "product.specification",
+                "canonical_value": "MMT-866A",
+                "match_type": "EXACT",
+                "is_main_attribute": False,
+            }]
+        return []
+
+    monkeypatch.setattr(
+        agent,
+        "_contract_filter_candidates",
+        lambda role, *_args, **_kwargs: (
+            ["product.product_name"] if role == "product name" else []
+        ),
+    )
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [
+            {
+                "entity_code": "product",
+                "business_domain_id": 205,
+                "field": "product.product_name",
+            },
+            {
+                "entity_code": "product",
+                "business_domain_id": 205,
+                "field": "product.specification",
+            },
+            {
+                "entity_code": "project",
+                "business_domain_id": 205,
+                "field": "project.project_name",
+            },
+        ],
+    )
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", resolve)
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "MMT-866A", "role_hint": "product name"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert any("product.specification" in batch for batch in seen_batches)
+    assert all("project.project_name" not in batch for batch in seen_batches)
+    assert json.loads(normalized)["filters"] == [{
+        "field": "product.specification",
+        "operator": "=",
+        "value": "MMT-866A",
+    }]
+    assert repairs[-1]["resolved_field"] == "product.specification"
+
+
+def test_exact_vector_value_identity_overrides_wrong_surface_role(monkeypatch):
+    product = _entity(
+        "product", "product", "product.product_name", "product name",
+    )
+    product_attributes = json.loads(product.metadata["attributes"])
+    product_attributes.append({
+        "attr_code": "specification",
+        "attr_name": "specification",
+        "field_mapping": {
+            "mappingTable": "product",
+            "mappingColumn": "specification",
+        },
+        "is_main_attribute": False,
+    })
+    product.metadata["attributes"] = json.dumps(product_attributes)
+    knowledge = {
+        "entities": [
+            product,
+            _entity(
+                "manufacturer", "manufacturer",
+                "manufacturer.parent_brand", "brand",
+            ),
+        ],
+        "entity_attribute_values": [SimpleNamespace(metadata={
+            "entity_code": "product",
+            "attr_code": "specification",
+            "canonical_value": "MMT-866A",
+        })],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_including_tax"}]
+    ast["filters"] = [{
+        "field": "product.product_name",
+        "operator": "=",
+        "value": "MMT-866A",
+    }]
+    seen_fields = []
+
+    def resolve(_model, _domains, candidates, _literal):
+        fields = [item["field"] for item in candidates]
+        seen_fields.extend(fields)
+        return [{
+            "field": "product.specification",
+            "canonical_value": "MMT-866A",
+            "match_type": "EXACT",
+            "is_main_attribute": False,
+        }] if "product.specification" in fields else []
+
+    monkeypatch.setattr(
+        agent,
+        "_contract_filter_candidates",
+        lambda *_args, **_kwargs: ["manufacturer.parent_brand"],
+    )
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", resolve)
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast),
+        knowledge,
+        {"mentions": [{"text": "MMT-866A", "role_hint": "product name"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert seen_fields == ["product.specification"]
+    assert json.loads(normalized)["filters"] == [{
+        "field": "product.specification",
+        "operator": "=",
+        "value": "MMT-866A",
+    }]
+    assert repairs[-1]["resolved_field"] == "product.specification"
+
+
+def test_surface_role_containment_does_not_bind_short_id_inside_model_code():
+    selected = _select_surface_mention_match(
+        "AT75242",
+        [{
+            "field": "product.id",
+            "canonical_value": "7",
+            "match_type": "MENTION_CONTAINS_CANONICAL",
+        }],
+        {"product.id"},
+        allow_role_containment=True,
+    )
+
+    assert selected is None
+
+
+def test_surface_mention_multiple_hits_pick_highest_similarity(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity("product", "商品", "product.product_name", "商品名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = [{
+        "field": "product.product_name", "operator": "=", "value": "透析器",
+    }]
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [
+            {
+                "field": "product.product_name",
+                "canonical_value": "透析器耗材",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+            {
+                "field": "product.product_name",
+                "canonical_value": "空心纤维血液透析器",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+        ],
+    )
+    selected = _select_surface_mention_match(
+        "空心纤维血液透析器",
+        [
+            {
+                "field": "product.product_name",
+                "canonical_value": "透析器耗材",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+            {
+                "field": "product.product_name",
+                "canonical_value": "空心纤维血液透析器",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+        ],
+        {"product.product_name"},
+    )
+    assert selected == ("product.product_name", "空心纤维血液透析器")
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "透析器"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+    assert json.loads(normalized)["filters"][0]["value"] in {
+        "透析器耗材", "空心纤维血液透析器",
+    }
+    assert repairs[0]["type"] == "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
+
+
+def test_surface_mention_tied_similarity_picks_one_deterministically_bounded():
+    candidates = {"product.product_name"}
+    matches = [
+        {
+            "field": "product.product_name",
+            "canonical_value": "A型透析器",
+            "match_type": "EXACT",
+        },
+        {
+            "field": "product.product_name",
+            "canonical_value": "B型透析器",
+            "match_type": "EXACT",
+        },
+    ]
+    selected = _select_surface_mention_match(
+        "A型透析器", matches, candidates
+    )
+    assert selected is not None
+    assert selected[1] == "A型透析器"
+
+    tied = _select_surface_mention_match(
+        "透析器",
+        [
+            {
+                "field": "product.product_name",
+                "canonical_value": "A型透析器",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+            },
+            {
+                "field": "product.product_name",
+                "canonical_value": "B型透析器",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+            },
+        ],
+        candidates,
+    )
+    assert tied is not None and tied[1] in {"A型透析器", "B型透析器"}
+
+
+def test_surface_mention_administrative_tie_break_prefers_city_level(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity("dim_city", "城市", "dim_city.city_name", "城市名称"),
+            _entity("dim_province", "省份", "dim_province.province_name", "省份名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = []
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [
+            {
+                "field": "dim_province.province_name",
+                "canonical_value": "上海市",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+            },
+            {
+                "field": "dim_city.city_name",
+                "canonical_value": "上海市",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+            },
+        ],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "上海"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海市",
+    }]
+    assert repairs[0]["resolved_field"] == "dim_city.city_name"
+    assert _administrative_mention_level("上海") is None
+    assert _administrative_mention_level("江苏省") == "province"
+    assert _administrative_mention_level("浦东新区") == "district"
+
+
+def test_surface_mention_suffix_stated_level_wins_the_tie(monkeypatch):
+    field_kinds = {
+        "dim_city.city_name": "city",
+        "dim_province.province_name": "province",
+    }
+    matches = [
+        {
+            "field": "dim_city.city_name",
+            "canonical_value": "上海市",
+            "match_type": "EXACT",
+        },
+        {
+            "field": "dim_province.province_name",
+            "canonical_value": "上海市",
+            "match_type": "EXACT",
+        },
+    ]
+    assert _select_surface_mention_match(
+        "江苏省", matches, set(field_kinds), field_kinds
+    ) == ("dim_province.province_name", "上海市")
+    knowledge = {
+        "entities": [
+            _entity("product", "商品", "product.product_name", "商品名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = [{
+        "field": "product.product_name", "operator": "=", "value": "不存在的东西",
+    }]
+    monkeypatch.setattr(
+        agent, "resolve_entity_attribute_catalog_matches", lambda *_args: [],
+    )
+    monkeypatch.setattr(
+        agent, "load_published_entity_attribute_candidates", lambda *_args: [],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "不存在的东西"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == []
+    assert repairs == [{
+        "type": "DROP_UNMATCHED_SURFACE_MENTION",
+        "mention": "不存在的东西",
+        "source": "SURFACE_MENTION_RECALL",
+    }]
+
+
+def test_nonexact_projection_label_is_recall_only_not_a_filter(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity(
+                "department", "department",
+                "department.dept_name", "department name",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["dimensions"] = [{
+        "name": "department.dept_name",
+        "attr": None,
+        "level": None,
+        "granularity": None,
+    }]
+    # Simulate a draft predicate invented from the return-object word.
+    ast["filters"] = [{
+        "field": "department.dept_name",
+        "operator": "=",
+        "value": "科室",
+    }]
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": "department.dept_name",
+            "canonical_value": "通用科室",
+            "match_type": "CANONICAL_CONTAINS_MENTION",
+        }],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{
+            "text": "科室",
+            "role_hint": "department.dept_name",
+        }]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == []
+    assert repairs == [{
+        "type": "DROP_NONEXACT_PROJECTION_FILTER",
+        "mention": "科室",
+        "canonical_value": "通用科室",
+        "resolved_field": "department.dept_name",
+        "source": "SURFACE_MENTION_RECALL",
+    }]
+
+
+def test_exact_projected_value_can_still_be_an_explicit_filter(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity(
+                "department", "department",
+                "department.dept_name", "department name",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["dimensions"] = [{
+        "name": "department.dept_name",
+        "attr": None,
+        "level": None,
+        "granularity": None,
+    }]
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": "department.dept_name",
+            "canonical_value": "通用科室",
+            "match_type": "EXACT",
+        }],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{
+            "text": "通用科室",
+            "role_hint": "department.dept_name",
+        }]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == [{
+        "field": "department.dept_name",
+        "operator": "=",
+        "value": "通用科室",
+    }]
+    assert repairs[-1]["type"] == "ADD_SOURCE_RESOLVED_ENTITY_FILTER"

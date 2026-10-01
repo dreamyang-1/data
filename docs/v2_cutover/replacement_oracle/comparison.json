@@ -1,0 +1,111 @@
+{
+  "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
+  "gold_hash": "f9307933e72e2c85fe189dcdad6855edfa09dce85926e761539beee2f621f825",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "before_evidence": "../task_context/live_final_evaluation.json",
+  "final_observation_counts": {
+    "OK": 5,
+    "FAILED": 11,
+    "NOT_RUN": 4
+  },
+  "full_corpus_case_S81_002": {
+    "case_id": "S81-002",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "OK",
+    "axes": {
+      "metric_surfaces": [
+        "订单笔数"
+      ],
+      "dimension_surfaces": [],
+      "canonical_metrics": [
+        "METRIC:order_count"
+      ],
+      "canonical_dimensions": [],
+      "target_task": "PREVIOUS",
+      "turn_relation": "RETURN_TO_TOPIC",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "REPLACE"
+      ],
+      "metric_operations": [
+        "REPLACE"
+      ],
+      "dimension_operations": []
+    },
+    "safety": {},
+    "evidence": {
+      "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+      "backend_mode": "SHADOW_ONLY",
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "state_version": 2,
+      "full_pipeline_executed": false
+    }
+  },
+  "targeted_repeat_case_S81_002": {
+    "case_id": "S81-002",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "OK",
+    "axes": {
+      "metric_surfaces": [
+        "订单笔数"
+      ],
+      "dimension_surfaces": [],
+      "canonical_metrics": [
+        "METRIC:order_count"
+      ],
+      "canonical_dimensions": [],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "REPLACE"
+      ],
+      "metric_operations": [
+        "REPLACE"
+      ],
+      "dimension_operations": []
+    },
+    "safety": {},
+    "evidence": {
+      "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+      "backend_mode": "SHADOW_ONLY",
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "state_version": 2,
+      "full_pipeline_executed": false
+    }
+  },
+  "targeted_repeat_replaces_full_corpus_prediction": false,
+  "whole_case_S81_002": "FAIL_ON_TURN_RELATION_IN_FULL_RUN; targeted repeat separately matches the labeled axes",
+  "model_output_variation": "HISTORICAL versus MODIFY continuation signals vary; preserve both measurements. The repeat emitted an array, so it is not proof that singleton normalization executed in that live request.",
+  "metric_operations": {
+    "passed": 3,
+    "denominator": 3,
+    "unobserved": 0,
+    "value": 1.0
+  },
+  "real_model_requests": 52,
+  "all_http200": true,
+  "source_reads_denied": 4,
+  "source_SQL_executions": 0,
+  "production_external_writes": 0,
+  "whole_semantic_plan_gate": "NOT_EVALUATED",
+  "production_cutover_pass": false
+}

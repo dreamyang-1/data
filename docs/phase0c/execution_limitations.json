@@ -1,0 +1,14 @@
+{
+  "full_process_attempts": [
+    "initial_test_gate.json",
+    "revised_test_gate.json",
+    "final_candidate_test_gate.json",
+    "verified_test_gate_v1.json",
+    "final_test_gate.json",
+    "final_verified_test_gate.json"
+  ],
+  "final_authoritative_result": "bounded_suite_final/aggregate.json",
+  "host_failure": "Observed MemoryError/internal pytest abort and git archive inflate out of memory; some terminated attempts produced no JSON",
+  "resolution": "Serial batches of six test modules; all 1880 node IDs accounted for; bounded Git reads",
+  "unverified": "Single-process regression equivalence and deployed cross-service integration"
+}

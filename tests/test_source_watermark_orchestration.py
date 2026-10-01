@@ -50,13 +50,9 @@ def test_source_watermark_marks_request_outside_available_business_data() -> Non
     value = request(date(2026, 1, 1), date(2027, 1, 1))
 
     payload = DataAnalysisOrchestrator._source_watermark_payload(value, dataset())
-    note = DataAnalysisOrchestrator._source_watermark_note(value, dataset())
 
     assert payload["requested_time_coverage"] == "OUTSIDE_SOURCE_WATERMARK"
     assert payload["source_data_as_of"] == "2025-12-30"
-    assert "空结果不能解释为业务没有发生" in note
-    assert "按销售记录时间统计" in note
-    assert "sales_order.created_date" not in note
 
 
 def test_source_watermark_keeps_fully_covered_request_high_reliability() -> None:
@@ -96,7 +92,7 @@ def test_missing_source_watermark_downgrades_time_query_without_failing_it() -> 
     assert any("未提供可验证的业务数据水位" in item for item in reliability.warnings)
 
 
-def test_system_default_trend_is_reanchored_to_latest_complete_source_months() -> None:
+def test_obsolete_default_trend_is_not_reanchored_to_twelve_months() -> None:
     value = CanonicalAnalysisRequest(
         conversation_id="watermark-default-trend",
         tenant_id="tenant",
@@ -114,9 +110,7 @@ def test_system_default_trend_is_reanchored_to_latest_complete_source_months() -
         value, dataset()
     )
 
-    assert reanchored is not None
-    assert reanchored.start == date(2024, 12, 1)
-    assert reanchored.end_exclusive == date(2025, 12, 1)
+    assert reanchored is None
 
 
 def test_explicit_trend_time_is_never_reanchored_by_source_watermark() -> None:

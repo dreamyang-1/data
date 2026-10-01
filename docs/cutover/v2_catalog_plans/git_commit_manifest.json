@@ -1,0 +1,15 @@
+{
+  "baseline_commit": "5583d8c48db49e22d236e2ee543b26dc89fa3264",
+  "feature_branch": "cutover-v2-catalog-plans-20260908-01",
+  "base_branch": "cutover-v2-slot-edits-20260908-01",
+  "implementation_commit": "0d156c066db4ab1ef1c9468bf581dfb5d1665e7e",
+  "oagnet_commit": "ce84736ab7878488595b1d470d9a4e87ba95dc86",
+  "agent_commit": "0d156c066db4ab1ef1c9468bf581dfb5d1665e7e",
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

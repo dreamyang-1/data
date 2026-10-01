@@ -1,0 +1,11 @@
+{
+  "status": "PASS_PRECOMMIT_WORKSPACE_ALIGNMENT",
+  "baseline_commit": "47608b0a8db4a20b54973d717bf4176e621d1b2a",
+  "implementation_commit": "ab3c7fe5613699872b5c5d5e048fff3b590708ee",
+  "feature_branch": "cutover-v2-recognition-20260908-01",
+  "tracked_and_manifest_files": 930,
+  "unexpected_source_drift": 0,
+  "normalization": "Development CRLF normalized to published LF; exact hashes in change_manifest.json",
+  "final_commit": "Commit containing this report",
+  "final_commit_gate": "Post-commit verification checks every Git blob, development file, clean version tree and original Oagnet staged diff"
+}

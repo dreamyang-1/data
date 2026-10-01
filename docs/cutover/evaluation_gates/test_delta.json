@@ -1,0 +1,59 @@
+{
+  "DataAnalysis_Agent": {
+    "baseline": {
+      "passed": 2697,
+      "failed": 27
+    },
+    "final": {
+      "passed": 2735,
+      "failed": 27
+    },
+    "old_pass_new_fail": [],
+    "old_fail_new_pass": [],
+    "new_tests": 38,
+    "collection_errors": []
+  },
+  "Oagnet": {
+    "baseline": {
+      "passed": 663,
+      "failed": 8
+    },
+    "final": {
+      "passed": 663,
+      "failed": 8
+    },
+    "old_pass_new_fail": [],
+    "old_fail_new_pass": [],
+    "new_tests": 0,
+    "collection_errors": []
+  },
+  "SQL_Translator": {
+    "baseline": {
+      "passed": 381
+    },
+    "final": {
+      "passed": 381
+    },
+    "old_pass_new_fail": [],
+    "old_fail_new_pass": [],
+    "new_tests": 0,
+    "collection_errors": []
+  },
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "critical_tests": {
+    "passed": 15
+  },
+  "new_tests_total": 38,
+  "critical_suite": {
+    "total": 160,
+    "passed": 160,
+    "modules": [
+      "tests/test_phase0b_regressions.py",
+      "tests/test_phase0c_scope_contract.py",
+      "tests/test_single_domain_integration.py"
+    ]
+  }
+}

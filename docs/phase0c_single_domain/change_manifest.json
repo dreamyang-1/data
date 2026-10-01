@@ -1,0 +1,438 @@
+{
+  "baseline_commit": "8711a3f93a088c63053dcd447d68c2c1b2f9bbcc",
+  "feature_branch": "phase0c-single-domain-execution-20260908-01",
+  "files": [
+    {
+      "repository_path": "sql-translator/api_server_prod.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\api_server_prod.py",
+      "source_sha256": "36b2efd7a4e5f8d3953d4d7914b5413cf022184d3c37450dda109c9e4467d8af",
+      "published_sha256": "36b2efd7a4e5f8d3953d4d7914b5413cf022184d3c37450dda109c9e4467d8af",
+      "baseline_sha256": "e9603440432701855e04c60f2088a4d27e8a4e788955f88b1e4fbddb3e23f46d",
+      "action": "MODIFIED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "sql-translator/semantic_scope.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\semantic_scope.py",
+      "source_sha256": "6337339039c9747a2c3f09e0df5300842d7f97dee257c69f04eea4d01bb8ff01",
+      "published_sha256": "6337339039c9747a2c3f09e0df5300842d7f97dee257c69f04eea4d01bb8ff01",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "sql-translator/test_semantic_scope_contract.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_semantic_scope_contract.py",
+      "source_sha256": "3fd0689ce6b3e144a49930a73643ead241659541b28486fc3ee1a94c897b2c01",
+      "published_sha256": "3fd0689ce6b3e144a49930a73643ead241659541b28486fc3ee1a94c897b2c01",
+      "baseline_sha256": "f1eba6cc946fd3164671bc505ae7f6bf8b1c392d80c4ff92084a4760e9416270",
+      "action": "MODIFIED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "sql-translator/test_single_domain_execution.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_single_domain_execution.py",
+      "source_sha256": "9a5089eead2a2c871fa2a98175e468bdd448657e840441669a54fedd49004760",
+      "published_sha256": "9a5089eead2a2c871fa2a98175e468bdd448657e840441669a54fedd49004760",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "sql-translator/README.md",
+      "source_path": "E:\\YouoAgent\\sql-translator\\README.md",
+      "source_sha256": "56cb437f6d6635709e2321d6f11bad4a8765aebddacc4238fbfc9376037dd666",
+      "published_sha256": "56cb437f6d6635709e2321d6f11bad4a8765aebddacc4238fbfc9376037dd666",
+      "baseline_sha256": "f4a1f58171748b51ba46371e7db357ad169886bdbcd7875515efa8c7529edee4",
+      "action": "MODIFIED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "app/adapters/http.py",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\app\\adapters\\http.py",
+      "source_sha256": "608d7e468cff07c6b9ce64079eaee1b454da1dc473bcd54df66887585d979573",
+      "published_sha256": "608d7e468cff07c6b9ce64079eaee1b454da1dc473bcd54df66887585d979573",
+      "baseline_sha256": "50faf94f19cdfffea706b7d960fc8fe8e00495a0f1f753738d4432f55f2e7e12",
+      "action": "MODIFIED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "app/intent/classifier.py",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\app\\intent\\classifier.py",
+      "source_sha256": "62c3a159c50214f094013176b0d1e6750f3b56d258d6e0fc9876e8bc1916f432",
+      "published_sha256": "62c3a159c50214f094013176b0d1e6750f3b56d258d6e0fc9876e8bc1916f432",
+      "baseline_sha256": "76ed596868bff6951858cd53776986a10c4ee28a6962046e7e5d4a3f5b9cbb05",
+      "action": "MODIFIED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "app/services/orchestrator.py",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\app\\services\\orchestrator.py",
+      "source_sha256": "0f4a538caf4777c7cc5be1b0dfe1ecbb27d37a0e42b3131ecef2db92bb3953a3",
+      "published_sha256": "0f4a538caf4777c7cc5be1b0dfe1ecbb27d37a0e42b3131ecef2db92bb3953a3",
+      "baseline_sha256": "38b928f1b39ba3754061e49f44f40dc910fc682f5ef8dbf1ecdd74dfb8f03631",
+      "action": "MODIFIED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "tests/test_phase0c_scope_contract.py",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\tests\\test_phase0c_scope_contract.py",
+      "source_sha256": "1a8d675a7228b02c0104fa92586008c6ed1e2ec6ccb50932744e3946b053af78",
+      "published_sha256": "1a8d675a7228b02c0104fa92586008c6ed1e2ec6ccb50932744e3946b053af78",
+      "baseline_sha256": "7547b338db163f27014e66b136f22a68573f66ab1590434b49afd2cd0a0873e6",
+      "action": "MODIFIED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "tests/test_single_domain_integration.py",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\tests\\test_single_domain_integration.py",
+      "source_sha256": "3737a95edab7b337cdbf37116536da1c534c2ae80adb8390b31b2c5ef91d52d1",
+      "published_sha256": "3737a95edab7b337cdbf37116536da1c534c2ae80adb8390b31b2c5ef91d52d1",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "README.md",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\README.md",
+      "source_sha256": "ad52eabacf1aff84d83f243b9b540c23cb6a7f47b4eabe2f11a81f0aad8c96ff",
+      "published_sha256": "ad52eabacf1aff84d83f243b9b540c23cb6a7f47b4eabe2f11a81f0aad8c96ff",
+      "baseline_sha256": "c422b1cbfbad96828d9fdae25099a0f7f235c08a4a2e8cf962bcbfc2b12a4f0a",
+      "action": "MODIFIED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c\\trust_semantic_scope_contract.md",
+      "source_sha256": "f18a57ed2df42acca21f6288d7e68c7840e06b60decc909cf210fba1675ad999",
+      "published_sha256": "f18a57ed2df42acca21f6288d7e68c7840e06b60decc909cf210fba1675ad999",
+      "baseline_sha256": "c0b5bc5d53b4db356ffb9182acd2f8d134cb2b71226f6b1ccb8edfbe930640b9",
+      "action": "MODIFIED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/closure_report.md",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\closure_report.md",
+      "source_sha256": "340f660c6e4cba4b0b997707fbff1887e330f910c1db6d3e7ade9dba7b5fc189",
+      "published_sha256": "340f660c6e4cba4b0b997707fbff1887e330f910c1db6d3e7ade9dba7b5fc189",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/test_delta.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\test_delta.json",
+      "source_sha256": "43d6736e67e0dcb7ade49accab33c2783e663eef28136c3fd12055a136c367d6",
+      "published_sha256": "4243a2cc2e3d56e8df190759151eb91d7643afb54ca52ddaa9c640cfb6d07741",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "CRLF_TO_LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_sql.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_sql.json",
+      "source_sha256": "caaee2284708a2610f772860f55f9ca575e304b4311e6376405eac90fe2cdcff",
+      "published_sha256": "caaee2284708a2610f772860f55f9ca575e304b4311e6376405eac90fe2cdcff",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_sql.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_sql.json",
+      "source_sha256": "0f917c7857c32598473eed7a4ce22963360050a734c9535af8572c7155c14237",
+      "published_sha256": "0f917c7857c32598473eed7a4ce22963360050a734c9535af8572c7155c14237",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_oagnet.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_oagnet.json",
+      "source_sha256": "b5a274ae45987be43a7fa4dace4b117cf0a99e83abd0dc6d28bbd09ad0fb0645",
+      "published_sha256": "b5a274ae45987be43a7fa4dace4b117cf0a99e83abd0dc6d28bbd09ad0fb0645",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/aggregate.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\aggregate.json",
+      "source_sha256": "0a5d8eacec11cc080b5c3165a33e44a7379a200c1131505d9e3e64d0daafcd97",
+      "published_sha256": "a78313a2fc47540c3191ba01495a4751df87e03c07db2876398330bdc13590b6",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "CRLF_TO_LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_001.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_001.json",
+      "source_sha256": "ff2d8fa28585715d2a478a5b19bd680e31fe18ce80a0f74ee5a52a884e8f0ec3",
+      "published_sha256": "ff2d8fa28585715d2a478a5b19bd680e31fe18ce80a0f74ee5a52a884e8f0ec3",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_002.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_002.json",
+      "source_sha256": "9997de18a898db7ccc8e81610c82f36576be268388a75094f216f73129b6f022",
+      "published_sha256": "9997de18a898db7ccc8e81610c82f36576be268388a75094f216f73129b6f022",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_003.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_003.json",
+      "source_sha256": "e7cf4a1645d3186f9eaa53c919176187f1ae367c3c256b2314a9f28357a99fc5",
+      "published_sha256": "e7cf4a1645d3186f9eaa53c919176187f1ae367c3c256b2314a9f28357a99fc5",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_004.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_004.json",
+      "source_sha256": "bf27695bf1ef629adb577a291b52e3978e1ae7509322e8a9e611925c8630dc9b",
+      "published_sha256": "bf27695bf1ef629adb577a291b52e3978e1ae7509322e8a9e611925c8630dc9b",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_005.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_005.json",
+      "source_sha256": "26b5078c53abc28158b4cc92b1eca20af361886d0c4fa29f8eee24cd1b66eb28",
+      "published_sha256": "26b5078c53abc28158b4cc92b1eca20af361886d0c4fa29f8eee24cd1b66eb28",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_006.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_006.json",
+      "source_sha256": "b0ba976ea7f60c667488a27f11446a030b02f576b243dbb48a1060d51ecede1c",
+      "published_sha256": "b0ba976ea7f60c667488a27f11446a030b02f576b243dbb48a1060d51ecede1c",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_007.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_007.json",
+      "source_sha256": "cf5b41864876ee9aa60ab88ea71920cbf33501def32ba7386e590b6ab55063d6",
+      "published_sha256": "cf5b41864876ee9aa60ab88ea71920cbf33501def32ba7386e590b6ab55063d6",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_008.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_008.json",
+      "source_sha256": "e3c2b90b533ccb524b1675d98e7bf44c7f2f8d7c3f85c659f92783ff0ceca65f",
+      "published_sha256": "e3c2b90b533ccb524b1675d98e7bf44c7f2f8d7c3f85c659f92783ff0ceca65f",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_009.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_009.json",
+      "source_sha256": "6a92d76562ce513cbac3ce241b6fdde44993dbc0a4aedf5a2c5ee5cfa08b8f5e",
+      "published_sha256": "6a92d76562ce513cbac3ce241b6fdde44993dbc0a4aedf5a2c5ee5cfa08b8f5e",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_010.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_010.json",
+      "source_sha256": "985b0e81c676f5cacd5bc9740aa6caf6f370a632261a04b445e9047235e7fc14",
+      "published_sha256": "985b0e81c676f5cacd5bc9740aa6caf6f370a632261a04b445e9047235e7fc14",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_011.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_011.json",
+      "source_sha256": "dd4827b0967383b32b0384bc8fa93c28782b607d471ce53d52957e9e8f38dbdb",
+      "published_sha256": "dd4827b0967383b32b0384bc8fa93c28782b607d471ce53d52957e9e8f38dbdb",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_012.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_012.json",
+      "source_sha256": "86b35f41ee1b53d0d7ca9fd98167ccacf3f4b2c193645a35fc00490d9fe21a51",
+      "published_sha256": "86b35f41ee1b53d0d7ca9fd98167ccacf3f4b2c193645a35fc00490d9fe21a51",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_013.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_013.json",
+      "source_sha256": "269d91dbc57d5cd4a38788f038e0f4eae3cf43ab197a8db59c94648dd9f12640",
+      "published_sha256": "269d91dbc57d5cd4a38788f038e0f4eae3cf43ab197a8db59c94648dd9f12640",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/baseline_data/batch_014.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\baseline_data\\batch_014.json",
+      "source_sha256": "d16d5b915e5339671a05c202bf5324d2244d2a184382925504f2e43b8d977b6d",
+      "published_sha256": "d16d5b915e5339671a05c202bf5324d2244d2a184382925504f2e43b8d977b6d",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/aggregate.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\aggregate.json",
+      "source_sha256": "0ee4999ecace369dbab77a58d9fe26c074d370f2f0aadf97cf433adae0f24dc3",
+      "published_sha256": "952480f395ac167cf6a4e671df5e5207e5201a4cfe0dd2899e981dbf40ed152d",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "CRLF_TO_LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_001.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_001.json",
+      "source_sha256": "f73993cd0df42581f453d01d115f3c2796a6931befc19ee2b7d469655445b95a",
+      "published_sha256": "f73993cd0df42581f453d01d115f3c2796a6931befc19ee2b7d469655445b95a",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_002.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_002.json",
+      "source_sha256": "45912d8eb1d432fb326fe12cae2331e8aa3fe6e3d73f9bad11ace2b02292b358",
+      "published_sha256": "45912d8eb1d432fb326fe12cae2331e8aa3fe6e3d73f9bad11ace2b02292b358",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_003.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_003.json",
+      "source_sha256": "c94c5279d76c68abb3ff7fd547c5c7887a6e90c3f556b351b409e05286a50857",
+      "published_sha256": "c94c5279d76c68abb3ff7fd547c5c7887a6e90c3f556b351b409e05286a50857",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_004.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_004.json",
+      "source_sha256": "b0287692b99850a6764bf23ee19fe73a8589da33dd059e773bede6952aa8879e",
+      "published_sha256": "b0287692b99850a6764bf23ee19fe73a8589da33dd059e773bede6952aa8879e",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_005.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_005.json",
+      "source_sha256": "19468058f2365aca817bcd38d664ef845430beab9e0cac5fc5365e37918cd54c",
+      "published_sha256": "19468058f2365aca817bcd38d664ef845430beab9e0cac5fc5365e37918cd54c",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_006.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_006.json",
+      "source_sha256": "e03f21b7ab8825223bd317e623d69fd497dd847c8992082613f3f69866fdcd6b",
+      "published_sha256": "e03f21b7ab8825223bd317e623d69fd497dd847c8992082613f3f69866fdcd6b",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_007.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_007.json",
+      "source_sha256": "0218f001425410a74b9348e6a6f964452945453462a83fbc9d86f9963b64b12a",
+      "published_sha256": "0218f001425410a74b9348e6a6f964452945453462a83fbc9d86f9963b64b12a",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_008.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_008.json",
+      "source_sha256": "7e46bbff06f92454b017b924d830e13d620b9599bd020bd3c39332261fdbaac1",
+      "published_sha256": "7e46bbff06f92454b017b924d830e13d620b9599bd020bd3c39332261fdbaac1",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_009.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_009.json",
+      "source_sha256": "6c89fd6915828c9c4934aa795fd3b5cbecb5999fe800bdcd314433b8335e81a8",
+      "published_sha256": "6c89fd6915828c9c4934aa795fd3b5cbecb5999fe800bdcd314433b8335e81a8",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_010.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_010.json",
+      "source_sha256": "f4b9bc7796b4347be83f1365ae23e8ebe8501acda4d16458197880f274813a2f",
+      "published_sha256": "f4b9bc7796b4347be83f1365ae23e8ebe8501acda4d16458197880f274813a2f",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_011.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_011.json",
+      "source_sha256": "e3d9a1ed3ea90193682194f76339817d17ed039a4a558dff9bf7a078c42a16b4",
+      "published_sha256": "e3d9a1ed3ea90193682194f76339817d17ed039a4a558dff9bf7a078c42a16b4",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_012.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_012.json",
+      "source_sha256": "f02c5f3eb1fbf51c6ee2be1a0ac285cb4f65bc34ec2d9b5546549d33cecbb4f5",
+      "published_sha256": "f02c5f3eb1fbf51c6ee2be1a0ac285cb4f65bc34ec2d9b5546549d33cecbb4f5",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_013.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_013.json",
+      "source_sha256": "0c86473c93e203e10557ceceb95c2f6ed9dc785d43c75c45b164d0407d44eb40",
+      "published_sha256": "0c86473c93e203e10557ceceb95c2f6ed9dc785d43c75c45b164d0407d44eb40",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    },
+    {
+      "repository_path": "docs/phase0c_single_domain/final_data/batch_014.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_single_domain\\final_data\\batch_014.json",
+      "source_sha256": "5fe7a3258afd90a387e0c4550d4b273547d1552e1c61b71da731932819a81a87",
+      "published_sha256": "5fe7a3258afd90a387e0c4550d4b273547d1552e1c61b71da731932819a81a87",
+      "baseline_sha256": null,
+      "action": "ADDED",
+      "line_endings": "LF"
+    }
+  ],
+  "secret_pattern_findings": 0,
+  "source_policy": "Developed in service workspaces, synced individual listed files; original Oagnet index untouched",
+  "excluded": [
+    ".env/credentials",
+    "logs/caches/runtime results",
+    "intermediate failed test runs",
+    "backups"
+  ],
+  "manifest_self_hash": "Git blob identity; no circular embedded final commit hash"
+}

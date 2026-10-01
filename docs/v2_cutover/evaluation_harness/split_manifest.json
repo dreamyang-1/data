@@ -1,0 +1,46 @@
+{
+  "version": "sequestered-contract-splits-v1",
+  "created_at": "2026-09-09T09:30:43.424785+00:00",
+  "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "label_version": "explicit-metric-operation-contract-v1",
+  "label_source": [
+    "BUSINESS_CONTRACT",
+    "CATALOG_PROVEN",
+    "DETERMINISTIC_RULE"
+  ],
+  "creation_method": "PROGRAMMATIC_COMPOSITION_AFTER_PROMPT_FREEZE",
+  "independent_human_adjudication": false,
+  "representativeness": "EVIDENCE_INSUFFICIENT",
+  "splits": {
+    "PRIVATE_VALIDATION": {
+      "case_count": 24,
+      "case_ids_hash": "7aa5f2681d4f643510ccd7d0f15afd8e6c8aa63d0485470313df5941f464b9a0",
+      "manifest_hash": "782c9c7b01a848d04f6a0ec72115b0f9979b6fd1e362050f6c05d7ec862732a2",
+      "file_sha256": "a9c975fdfe703c30d4b7a808bd8343a8e670dd40a8e2ec36735024c9df83bca8",
+      "public_overlap": 0,
+      "access_status": "SEALED_NOT_VIEWED_OR_RUN",
+      "original_utterances_published": false,
+      "prompt_or_rule_training_use": false
+    },
+    "BLIND_HOLDOUT": {
+      "case_count": 24,
+      "case_ids_hash": "39eef8f5ce03cd83b2c88638b999bf0291c91324608be1fc2b5d7a8cace6b0ae",
+      "manifest_hash": "faa347cd76fe9e8482358213863f4e4652ab34b23f62d3646787e51cd9353eef",
+      "file_sha256": "206dcc76c50852bb2fd810ab04e3a1c8131d88dad674d343b37f2b60285233d1",
+      "public_overlap": 0,
+      "access_status": "SEALED_NOT_VIEWED_OR_RUN",
+      "original_utterances_published": false,
+      "prompt_or_rule_training_use": false
+    }
+  },
+  "holdout_manifest_hash": "faa347cd76fe9e8482358213863f4e4652ab34b23f62d3646787e51cd9353eef",
+  "manifest_hash": "a2bf2cbd1564107101271139914165d3c8f45a1f992ca9ece554eebc0ff9e447"
+}

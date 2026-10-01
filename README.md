@@ -1,5 +1,9 @@
 # DataAnalysis Agent 架构设计
 
+> 当前业务边界（2026-09-08）：认证、用户权限及角色授权由业务后端决定，Agent 仅执行本轮必传的严格正整数 `semantic_model_id` 和可选业务域。空域为 `MODEL_WIDE`；显式多域当前必须拒绝。`conversation_id` 由后端保证全局唯一；没有稳定用户身份时不启用跨会话个人长期记忆。
+>
+> 当前实现与验收结果见 [单域执行闭合报告](docs/phase0c_single_domain/closure_report.md)，后续开发遵守 [工程合同](AGENTS.md)。下方早期设计中要求 Agent/Oagnet 推导用户数据权限、通过角色扩大业务域或支持显式多域的提议已废止。
+
 > 文档状态：架构设计稿 1.82（发布前收敛实施版）  
 > 项目位置：`DataAnalysis_Agent`（独立部署，复用 `New_Agent` 平台基础设施模式并通过 API 集成现有服务）  
 > 建设范围：架构与接口设计，不包含实现代码  
@@ -934,7 +938,7 @@ flowchart LR
 按 6 个 Unicode 字符拆成 `type=message_chunk`、`step=output` 的片段依次推送；
 最后一片可少于 6 个字符，随后发送 `answer` 和 `complete` 终态事件。
 
-Java 网关必须从登录态注入 `X-Tenant-Id`、`X-User-Id`、`X-Application-Id`，可选注入逗号分隔的 `X-Roles`；应用 Header 必须与 Body 一致。
+Java 网关通过现有服务 Bearer 凭证调用，并保证 `conversation_id` 全局唯一。`X-Tenant-Id`、`X-User-Id` 是可选兼容状态元数据：完整稳定身份沿用原状态键；缺失、不完整或默认身份使用当前应用和会话派生的隔离键，不启用跨会话个人长期记忆。`X-Application-Id` 在生产环境必传，且必须与 Body 一致；`X-Roles` 仍可选，不能扩大本轮 Semantic Scope。请求 Body、响应 JSON 和 data-only SSE 格式不变。
 
 ```json
 {
@@ -950,7 +954,7 @@ Java 网关必须从登录态注入 `X-Tenant-Id`、`X-User-Id`、`X-Application
 }
 ```
 
-`semantic_model_id`用于确定整套语义模型，数据查询时必须提供。业务域现在是可选范围：不传`business_domain_id`且`business_domain_ids=[]`时，Oagnet在该语义模型下自动选择一个或多个相关业务域；传`business_domain_id`用于兼容旧调用并会规范化为单元素数组；新调用也可传`business_domain_ids`。旧字段和新字段同时传但不一致时返回HTTP 422。跨域查询是否真正可执行，仍由语义层已配置的实体关系和Join路径决定。
+`semantic_model_id` 必传且为严格正整数，不能从历史或默认配置继承。不传业务域或传空数组表示后端授权本轮模型内的 `MODEL_WIDE`；单域输入归一化成单元素数组，两个字段同时显式传入必须一致。显式多域当前 Fail Closed。单域查询现使用受范围限制的 SQL 目录与规划，并在执行前重新核对 ASL、SQL 和数据源。Agent 必须核验服务返回的 `single-domain-v1` 范围证明；旧服务、缺失证明或范围不一致时安全终止，不追问用户指标。
 
 响应会回显`semantic_model_id`、`requested_business_domain_ids`和`business_domain_selection_mode`（`AUTO`或`EXPLICIT`），便于后端和日志确认本轮采用的是自动路由还是显式范围。
 

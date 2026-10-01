@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "fc7c5fc2fe63c9dd4284a88d6c268a10b6b72c52",
+  "feature_branch": "cutover-v2-slot-edits-20260908-01",
+  "rollback": "Reviewed revert of structured-edit source commit, explicit manifest resync and affected V2/critical checks; invalidate opt-in 0.2.2 states containing null time ranges if any were subsequently stored before rollback.",
+  "current_runtime_states_written": 0,
+  "live_operations_performed": false,
+  "production_traffic_rollback_proven": false,
+  "auto_merge": false
+}

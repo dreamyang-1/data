@@ -1,0 +1,90 @@
+{
+  "baseline_commit": "5583d8c48db49e22d236e2ee543b26dc89fa3264",
+  "actual_read_only_capture": {
+    "observed_at": "2026-09-08T13:42:55.992753+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "c054d927062b4728fe40d28efa87bd45336f230f62282c257b4c13233a664d92",
+    "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+    "status": "ACTUAL_READ_ONLY_CAPTURE_LOCAL_PLACEHOLDER_BUILD",
+    "entity_count": 14,
+    "entities_by_main_attribute_count": {
+      "1": 14
+    },
+    "declared_main_attributes": 14,
+    "relation_count": 24,
+    "cardinalities": {
+      "ONE_TO_MANY": 11,
+      "MANY_TO_ONE": 13
+    },
+    "relation_endpoints_present": 24,
+    "relation_join_pairs_present": 24,
+    "generated_records": 290,
+    "coverage": {
+      "contract": "catalog-generation-v1",
+      "catalog_version": "c054d927062b4728fe40d28efa87bd45336f230f62282c257b4c13233a664d92",
+      "source_counts": {
+        "domain_documents": 1,
+        "physical_data_sources": 1
+      },
+      "by_type": {
+        "entity": 14,
+        "attribute": 89,
+        "relation": 24,
+        "scoped_dimension": 13,
+        "scoped_enum": 15,
+        "metric": 11,
+        "table": 14,
+        "field": 110
+      },
+      "records_generated": 290,
+      "explicit_exclusions": {
+        "MODEL_WIDE_SHARED_ORIGINAL": 28
+      },
+      "capability_coverage_verified": false,
+      "excluded_dependencies": [
+        "external_entity_values",
+        "data_source_routing",
+        "SQL_independent_catalog_reads"
+      ]
+    },
+    "real_embedding_calls": 0,
+    "real_model_calls": 0,
+    "production_external_writes": 0,
+    "native_publication": false,
+    "private_snapshot_committed": false
+  },
+  "local_typed_acceptance": {
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "c054d927062b4728fe40d28efa87bd45336f230f62282c257b4c13233a664d92",
+    "accepted": {
+      "detail": 14,
+      "relation_forward": 24,
+      "relation_reverse": 24
+    },
+    "status": "ACTUAL_CAPTURE_OFFLINE_TYPED_PLAN_ACCEPTANCE",
+    "semantic_recognition_evaluated": false,
+    "multi_hop_evaluated": false,
+    "native_index_publication": false,
+    "model_calls": 0,
+    "real_embedding_calls": 0,
+    "production_external_writes": 0,
+    "raw_business_records_committed": false
+  },
+  "previous_recorded_catalog_version": "74de30abbbc4b3022e69fafcfee4bea036d8e49d6780f9fa232bfbd7c82e737c",
+  "publication_candidate_requires_reprepare": true,
+  "reason": "Preserving declared relation_type changes captured content identity; previous PR20 candidate is historical and must not be published without fresh preparation and validation.",
+  "native_collection_or_marker_changes": 0,
+  "scope_selection_is_not_publication_approval": true
+}

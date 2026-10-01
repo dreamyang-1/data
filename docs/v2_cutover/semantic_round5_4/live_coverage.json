@@ -1,0 +1,336 @@
+{
+  "cases": [
+    {
+      "case_id": "HC54-A",
+      "capability": "REGION_REPLACE",
+      "status": "FAIL",
+      "declared_turns": 2,
+      "turns": [
+        "73de003cd145373786a7a509",
+        "0c98e75aa51e44831455fa61"
+      ],
+      "blocked_by": "0c98e75aa51e44831455fa61",
+      "reached_turns": 2,
+      "first_divergence": "CANONICAL_BINDING",
+      "reason": "SOURCE_VALUE_FILTER_FIELD_MISMATCH",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-B",
+      "capability": "TIME_REPLACE",
+      "status": "NOT_RUN",
+      "declared_turns": 2,
+      "first_divergence": null,
+      "reason": "LIVE_TARGET_BUDGET_EXHAUSTED_WITH_INCOMPLETE_CURRENT_COVERAGE",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-C",
+      "capability": "ADD",
+      "status": "PASS",
+      "declared_turns": 2,
+      "turns": [
+        "73de003cd145373786a7a509",
+        "f21a75524ae64d7441970393"
+      ],
+      "blocked_by": null,
+      "reached_turns": 2,
+      "first_divergence": null,
+      "reason": "DECLARED_AXES_MATCH",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-D",
+      "capability": "REMOVE",
+      "status": "PASS",
+      "declared_turns": 3,
+      "turns": [
+        "73de003cd145373786a7a509",
+        "f21a75524ae64d7441970393",
+        "f83a37c35422f1306874f00d"
+      ],
+      "blocked_by": null,
+      "reached_turns": 3,
+      "first_divergence": null,
+      "reason": "DECLARED_AXES_MATCH",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-E",
+      "capability": "CLEAR_NO_RESURRECTION",
+      "status": "NOT_RUN",
+      "declared_turns": 3,
+      "turns": [
+        "73de003cd145373786a7a509",
+        "3344fc7309211b5600786fb7"
+      ],
+      "blocked_by": "MODEL_BUDGET_EXHAUSTED",
+      "reached_turns": 2,
+      "first_divergence": null,
+      "reason": "LIVE_TARGET_BUDGET_EXHAUSTED_WITH_INCOMPLETE_CURRENT_COVERAGE",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-F",
+      "capability": "CORRECTION",
+      "status": "NOT_RUN",
+      "declared_turns": 2,
+      "first_divergence": null,
+      "reason": "LIVE_TARGET_BUDGET_EXHAUSTED_WITH_INCOMPLETE_CURRENT_COVERAGE",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-G",
+      "capability": "NEW_TASK",
+      "status": "NOT_RUN",
+      "declared_turns": 2,
+      "first_divergence": null,
+      "reason": "LIVE_TARGET_BUDGET_EXHAUSTED_WITH_INCOMPLETE_CURRENT_COVERAGE",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-H",
+      "capability": "HISTORICAL_RETURN",
+      "status": "NOT_RUN",
+      "declared_turns": 3,
+      "first_divergence": null,
+      "reason": "LIVE_TARGET_BUDGET_EXHAUSTED_WITH_INCOMPLETE_CURRENT_COVERAGE",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-I",
+      "capability": "PENDING_NEW_TASK",
+      "status": "NOT_RUN",
+      "declared_turns": 1,
+      "first_divergence": null,
+      "reason": "LIVE_TARGET_BUDGET_EXHAUSTED_WITH_INCOMPLETE_CURRENT_COVERAGE",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-J",
+      "capability": "TRUE_AMBIGUITY",
+      "status": "NOT_RUN",
+      "declared_turns": 3,
+      "first_divergence": null,
+      "reason": "LIVE_TARGET_BUDGET_EXHAUSTED_WITH_INCOMPLETE_CURRENT_COVERAGE",
+      "downstream_effects": []
+    },
+    {
+      "case_id": "HC54-K",
+      "capability": "SELF_CONTAINED_NEW_TASK",
+      "status": "NOT_RUN",
+      "declared_turns": 2,
+      "first_divergence": null,
+      "reason": "LIVE_TARGET_BUDGET_EXHAUSTED_WITH_INCOMPLETE_CURRENT_COVERAGE",
+      "downstream_effects": []
+    }
+  ],
+  "turns": [
+    {
+      "case_id": "HC54-A",
+      "turn_id": "0c98e75aa51e44831455fa61",
+      "question": "换成北京市",
+      "status": "FAIL",
+      "relation": "REPLACE",
+      "target_correct": true,
+      "state_input_unchanged": true,
+      "observed_stages": [
+        "AuthorizedSemanticScope",
+        "CandidateSet",
+        "CanonicalBinding",
+        "CatalogSnapshot",
+        "CurrentClock",
+        "CurrentTurnParseInput",
+        "HistoricalTasks",
+        "ModelInput",
+        "TaskPatchInput",
+        "TurnResolutionInput"
+      ],
+      "first_divergence": "CANONICAL_BINDING",
+      "first_rejecting_boundary": "source_filter_patch -> validate_source_value_fields",
+      "reason": "SOURCE_VALUE_FILTER_FIELD_MISMATCH",
+      "origin": "ACTUAL_LIVE_MODEL + NATIVE_RUNTIME + FROZEN_SOURCE",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "HC54-C",
+      "turn_id": "f21a75524ae64d7441970393",
+      "question": "再加销售总数量",
+      "status": "PASS",
+      "relation": "ADD",
+      "target_correct": true,
+      "state_input_unchanged": true,
+      "observed_stages": [
+        "AuthorizedSemanticScope",
+        "CandidateSet",
+        "CanonicalBinding",
+        "CatalogSnapshot",
+        "CurrentClock",
+        "CurrentTurnParseInput",
+        "HistoricalTasks",
+        "LogicalPlan",
+        "ModelInput",
+        "SemanticQueryIR",
+        "SemanticResolutionInput",
+        "TaskPatchInput",
+        "TaskSemanticState",
+        "TurnResolutionInput"
+      ],
+      "first_divergence": null,
+      "first_rejecting_boundary": null,
+      "reason": null,
+      "origin": "ACTUAL_LIVE_MODEL + NATIVE_RUNTIME + FROZEN_SOURCE",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "HC54-D",
+      "turn_id": "f83a37c35422f1306874f00d",
+      "question": "不要销售总数量",
+      "status": "PASS",
+      "relation": "REMOVE",
+      "target_correct": true,
+      "state_input_unchanged": true,
+      "observed_stages": [
+        "AuthorizedSemanticScope",
+        "CandidateSet",
+        "CanonicalBinding",
+        "CatalogSnapshot",
+        "CurrentClock",
+        "CurrentTurnParseInput",
+        "HistoricalTasks",
+        "LogicalPlan",
+        "ModelInput",
+        "SemanticQueryIR",
+        "SemanticResolutionInput",
+        "TaskPatchInput",
+        "TaskSemanticState",
+        "TurnResolutionInput"
+      ],
+      "first_divergence": null,
+      "first_rejecting_boundary": null,
+      "reason": null,
+      "origin": "ACTUAL_LIVE_MODEL + NATIVE_RUNTIME + FROZEN_SOURCE",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "HC54-E",
+      "turn_id": "3344fc7309211b5600786fb7",
+      "question": "不限地区",
+      "status": "PASS",
+      "relation": "REMOVE",
+      "target_correct": true,
+      "state_input_unchanged": true,
+      "observed_stages": [
+        "AuthorizedSemanticScope",
+        "CandidateSet",
+        "CanonicalBinding",
+        "CatalogSnapshot",
+        "CurrentClock",
+        "CurrentTurnParseInput",
+        "HistoricalTasks",
+        "LogicalPlan",
+        "ModelInput",
+        "SemanticQueryIR",
+        "SemanticResolutionInput",
+        "TaskPatchInput",
+        "TaskSemanticState",
+        "TurnResolutionInput"
+      ],
+      "first_divergence": null,
+      "first_rejecting_boundary": null,
+      "reason": null,
+      "origin": "ACTUAL_LIVE_MODEL + NATIVE_RUNTIME + FROZEN_SOURCE",
+      "whole_plan_gold": false
+    }
+  ],
+  "counts": {
+    "FAIL": 1,
+    "NOT_RUN": 8,
+    "PASS": 2
+  },
+  "declared_cases": 11,
+  "declared_turns": 25,
+  "actual_new_valid_turns": 4,
+  "actual_new_valid_turn_pass": 3,
+  "actual_new_valid_turn_fail": 1,
+  "distinct_reused_prior_prefix_turns": 1,
+  "reused_prefix_is_new_live_turn": false,
+  "related_cases_share_prefix_and_ADD": true,
+  "live_requests_total": 8,
+  "model_calls_total": 12,
+  "valid_live_requests": 4,
+  "valid_model_calls": 8,
+  "invalid_configuration_requests": 4,
+  "invalid_utf8_requests": 0,
+  "invalid_attempts": {
+    "classification": "EVALUATOR_CONFIG_ISOLATION_GAP",
+    "http_status": 401,
+    "requests": 4,
+    "origin": "Oagnet/config.py loads E:/YouoAgent/.env generic API_KEY before delayed Agent Settings read",
+    "corrected": "Capture Agent Settings before fixture import; stop later requests on 401/403",
+    "credential_or_env_files_changed": false,
+    "excluded_from_semantic_denominator": true,
+    "audit": {
+      "cause": "WORKSPACE_ROOT_DOTENV_IMPORTED_BY_OAGNET_CONFIG",
+      "key_changed": true,
+      "after_matches_workspace_generic_key": true,
+      "model_same": true,
+      "endpoint_same": true,
+      "no_keys_or_key_hashes_recorded": true,
+      "model_calls": 0
+    }
+  },
+  "context": {
+    "relation_error": {
+      "n": 0,
+      "N": 4
+    },
+    "target_error": {
+      "n": 0,
+      "N": 4
+    },
+    "wrong_inheritance": {
+      "n": 0,
+      "N": 3
+    },
+    "ADD": "PASS_CURRENT_LIVE",
+    "REMOVE": "PASS_CURRENT_LIVE",
+    "REPLACE": "SAFE_REJECT_SOURCE_FIELD_MISMATCH",
+    "CLEAR": "CURRENT_DELETION_AND_BARRIER_PASS; subsequent modification NOT_RUN",
+    "TIME_MODIFY": "NOT_RUN_VALID_CURRENT_LIVE",
+    "historical_return": "NOT_RUN",
+    "pending_new_task": "NOT_RUN",
+    "true_ambiguity": "NOT_RUN",
+    "self_contained_new_task": "NOT_RUN",
+    "clear_resurrection": "INCOMPLETE_CURRENT_LIVE; prior Round5.2 evidence retained",
+    "remove_resurrection": "INCOMPLETE_NO_SUBSEQUENT_TURN"
+  },
+  "semantic": {
+    "mention_error": 0,
+    "role_error": 0,
+    "slot_operation_error": 0,
+    "filter_operation_error": 0,
+    "grounding_error": 0,
+    "binding_error": 1,
+    "patch_error": 0,
+    "reducer_error": 0,
+    "state_error": 0,
+    "ir_error": 0,
+    "plan_error": 0,
+    "denominator": "4 observed valid current turns; downstream stages unobserved on rejected A",
+    "source_field_selection_error": 1,
+    "wrong_silent_plan": {
+      "n": 0,
+      "N": 3
+    },
+    "scope_expansion": {
+      "n": 0,
+      "N": 3
+    },
+    "fabricated_catalog_id": {
+      "n": 0,
+      "N": 3
+    }
+  },
+  "clarification": "No current live Pending/New or ambiguity observation; do not extrapolate component regression"
+}

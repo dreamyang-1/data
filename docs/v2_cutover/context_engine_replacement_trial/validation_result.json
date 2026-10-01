@@ -1,0 +1,65 @@
+{
+  "schema_version": "v2-context-engine-replacement-trial-v1",
+  "status": "V2_CONTEXT_ENGINE_REPLACEMENT_TRIAL_COMPLETE_LIMITED_SCALAR",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [205],
+    "data_source_id": 58,
+    "runtime": "8088_INTERNAL_TEST"
+  },
+  "cases": {
+    "A_TIME_FOLLOWUP": "PASS",
+    "B_ADD_METRIC": "PASS",
+    "C_REMOVE_METRIC": "PASS",
+    "D_NEW_TASK_ISOLATION": "PASS",
+    "E_HISTORICAL_RETURN": "PASS"
+  },
+  "bridge_validation": {
+    "original_json_route": "PASS",
+    "original_sse_route": "PASS",
+    "sse_same_canonical_request": "PASS",
+    "redis_cross_process_task_version": "PASS",
+    "same_message_no_duplicate_model_plan_or_query": "PASS",
+    "completed_question_from_executed_semantics": "PASS"
+  },
+  "idempotent_replay": {
+    "redis_unchanged": true,
+    "revision_before": 20,
+    "revision_after": 20,
+    "task_versions_before": [2, 1],
+    "task_versions_after": [2, 1],
+    "attempt_count_before": 4,
+    "attempt_count_after": 4,
+    "dataset_count_before": 4,
+    "dataset_count_after": 4,
+    "message_count_before": 4,
+    "message_count_after": 4,
+    "plan_count_before": 2,
+    "plan_count_after": 2
+  },
+  "v1_comparison": {
+    "completed_common_denominator": 0,
+    "observed_v1_request": "NO_TERMINAL_WITHIN_150_SECONDS",
+    "accuracy_ranking": "NOT_AVAILABLE",
+    "reason": "No completed V1 outcome; no fabricated comparison"
+  },
+  "limits": [
+    "LIMITED_SCALAR_ONLY",
+    "AMBIGUOUS_ORDER_SHORTHAND_SAFE_REJECT",
+    "MODEL_OUTPUT_STABILITY_NOT_PROVEN",
+    "NOT_A_PRODUCTION_CUTOVER"
+  ],
+  "private_receipt_sha256": {
+    "case_a_first": "e0d6fa549a95ceb9501e1c8deaf88151b1b45c6d9e2075411db8e18903cc87ba",
+    "case_a_followup_sse": "5e8cbcd08b863725de99b54424a64078930a9db2d49c862e425f7b401509a8c4",
+    "case_b_first": "f68ca006600d91d29bb4ea6ee9381a739b59c1f558e0a598d24640958d91f4a5",
+    "case_b_add": "3a3679fe532488a8f0eb6906ea101ab8b01bc931b40f0a6310db61ed82bf2efe",
+    "case_c_first": "2d657c9a865d9baeb8d76a8f5e53ad696582314e9679be5609705858726a2c12",
+    "case_c_remove": "ca19e519f211c136875e46e4f6d742b54eb3a331162845a75fde81edd1d8b70d",
+    "case_d_new_topic": "03ad1abb945bb904fa2ee36949d5098041f01012c883b642e3a5e22012f8d185",
+    "case_e_json": "0f468c5cc0d2e41ea925d998b1fd5f471c76ad76e880522624e808808c729536",
+    "case_e_sse_replay": "0d599809a2e2d101892a1a7b1c97d63b58a83abd7061e82485343d9d1dd854b7",
+    "case_e_state_before": "4080d053730f78244fbdfd47baad1ed6c72cdd82d8c38b28784d61587fab9b6e",
+    "case_e_state_after": "4080d053730f78244fbdfd47baad1ed6c72cdd82d8c38b28784d61587fab9b6e"
+  }
+}

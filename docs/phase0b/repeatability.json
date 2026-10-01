@@ -1,0 +1,386 @@
+[
+  {
+    "nodeid": "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-01-run-1.json",
+      "docs/phase0b/independent_runs/failure-01-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-02-run-1.json",
+      "docs/phase0b/independent_runs/failure-02-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-03-run-1.json",
+      "docs/phase0b/independent_runs/failure-03-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-04-run-1.json",
+      "docs/phase0b/independent_runs/failure-04-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_clarification_quality.py::test_negated_dimension_is_replaced_by_explicit_new_dimension",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-05-run-1.json",
+      "docs/phase0b/independent_runs/failure-05-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_clarification_quality.py::test_model_cannot_invent_detail_fields_or_entity_not_in_user_text",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-06-run-1.json",
+      "docs/phase0b/independent_runs/failure-06-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-07-run-1.json",
+      "docs/phase0b/independent_runs/failure-07-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-08-run-1.json",
+      "docs/phase0b/independent_runs/failure-08-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_openapi_contract.py::test_openapi_marks_always_required_trusted_identity_headers",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-09-run-1.json",
+      "docs/phase0b/independent_runs/failure-09-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_openapi_contract.py::test_openapi_marks_application_header_required_in_production",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-10-run-1.json",
+      "docs/phase0b/independent_runs/failure-10-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-11-run-1.json",
+      "docs/phase0b/independent_runs/failure-11-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-12-run-1.json",
+      "docs/phase0b/independent_runs/failure-12-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-13-run-1.json",
+      "docs/phase0b/independent_runs/failure-13-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-14-run-1.json",
+      "docs/phase0b/independent_runs/failure-14-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_pending_execution_transition.py::test_correction_after_completed_turn_replaces_old_dimension",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-15-run-1.json",
+      "docs/phase0b/independent_runs/failure-15-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-16-run-1.json",
+      "docs/phase0b/independent_runs/failure-16-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-17-run-1.json",
+      "docs/phase0b/independent_runs/failure-17-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-18-run-1.json",
+      "docs/phase0b/independent_runs/failure-18-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-19-run-1.json",
+      "docs/phase0b/independent_runs/failure-19-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-20-run-1.json",
+      "docs/phase0b/independent_runs/failure-20-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-21-run-1.json",
+      "docs/phase0b/independent_runs/failure-21-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-22-run-1.json",
+      "docs/phase0b/independent_runs/failure-22-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-23-run-1.json",
+      "docs/phase0b/independent_runs/failure-23-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-24-run-1.json",
+      "docs/phase0b/independent_runs/failure-24-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-25-run-1.json",
+      "docs/phase0b/independent_runs/failure-25-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-26-run-1.json",
+      "docs/phase0b/independent_runs/failure-26-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_workflow.py::test_workflow_clarify_then_complete",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-27-run-1.json",
+      "docs/phase0b/independent_runs/failure-27-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-28-run-1.json",
+      "docs/phase0b/independent_runs/failure-28-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-29-run-1.json",
+      "docs/phase0b/independent_runs/failure-29-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-30-run-1.json",
+      "docs/phase0b/independent_runs/failure-30-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-31-run-1.json",
+      "docs/phase0b/independent_runs/failure-31-run-2.json"
+    ]
+  },
+  {
+    "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+    "outcomes": [
+      "failed",
+      "failed"
+    ],
+    "repeatability": "DETERMINISTIC",
+    "evidence": [
+      "docs/phase0b/independent_runs/failure-32-run-1.json",
+      "docs/phase0b/independent_runs/failure-32-run-2.json"
+    ]
+  }
+]

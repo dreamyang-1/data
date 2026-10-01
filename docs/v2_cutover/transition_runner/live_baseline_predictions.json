@@ -1,0 +1,342 @@
+[
+  {
+    "case_id": "S81-001",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "V2_MODEL_OUTPUT_INVALID"
+  },
+  {
+    "case_id": "S81-002",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "V2_HISTORICAL_TARGET_NOT_OFFERED"
+  },
+  {
+    "case_id": "S81-003",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+  },
+  {
+    "case_id": "S81-004",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-005",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-006",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-007",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-008",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-009",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-010",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-011",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "V2_HISTORICAL_TARGET_NOT_OFFERED"
+  },
+  {
+    "case_id": "S81-012",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "V2_HISTORICAL_TARGET_NOT_OFFERED"
+  },
+  {
+    "case_id": "S81-013",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+  },
+  {
+    "case_id": "S81-014",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-015",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-016",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "NOT_RUN",
+    "axes": {},
+    "safety": {},
+    "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED"
+  },
+  {
+    "case_id": "S81-017",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+  },
+  {
+    "case_id": "S81-018",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "NOT_RUN",
+    "axes": {},
+    "safety": {},
+    "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED"
+  },
+  {
+    "case_id": "S81-019",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "NOT_RUN",
+    "axes": {},
+    "safety": {},
+    "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED"
+  },
+  {
+    "case_id": "S81-020",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "NOT_RUN",
+    "axes": {},
+    "safety": {},
+    "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED"
+  }
+]

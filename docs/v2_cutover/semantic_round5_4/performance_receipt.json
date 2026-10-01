@@ -1,0 +1,63 @@
+{
+  "unit": "valid input requests; HTTP401 excluded from token/latency semantic comparison",
+  "valid_requests": 4,
+  "calls_per_request": 2,
+  "input_token_mean": 26725.75,
+  "output_token_mean": 626,
+  "recognition_seconds": {
+    "mean": 11.480250000196975,
+    "p95": 12.203000000212342,
+    "n": 4
+  },
+  "request_seconds": {
+    "mean": 11.78149999998277,
+    "p95": 12.5,
+    "n": 4
+  },
+  "valid_http_statuses": {
+    "200": 8
+  },
+  "all_calls": 12,
+  "invalid_auth_calls": 4,
+  "provider_timeout": 0,
+  "schema_failure": 0,
+  "grounding_latency": "NOT_MEASURED: frozen lookup observation, not production retrieval latency",
+  "current_targeted_retrieval_calls": 0,
+  "candidate_count": "A: one exact city source value; source field/target mismatch rejects binding",
+  "valid_timing_comparison_to_prior": "UNMATCHED_SMALL_SAMPLE; NO_SPEEDUP_CLAIM",
+  "normal_path_extra_model_stages": 0,
+  "per_request": [
+    {
+      "turn_id": "0c98e75aa51e44831455fa61",
+      "calls": 2,
+      "input_tokens": 24168,
+      "output_tokens": 625,
+      "recognition_seconds": 11.515000000130385,
+      "request_seconds": 11.766000000061467
+    },
+    {
+      "turn_id": "f21a75524ae64d7441970393",
+      "calls": 2,
+      "input_tokens": 21278,
+      "output_tokens": 675,
+      "recognition_seconds": 12.203000000212342,
+      "request_seconds": 12.5
+    },
+    {
+      "turn_id": "f83a37c35422f1306874f00d",
+      "calls": 2,
+      "input_tokens": 21082,
+      "output_tokens": 621,
+      "recognition_seconds": 11.140000000363216,
+      "request_seconds": 11.469000000040978
+    },
+    {
+      "turn_id": "3344fc7309211b5600786fb7",
+      "calls": 2,
+      "input_tokens": 40375,
+      "output_tokens": 583,
+      "recognition_seconds": 11.063000000081956,
+      "request_seconds": 11.390999999828637
+    }
+  ]
+}

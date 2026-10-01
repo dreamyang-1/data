@@ -1,0 +1,9 @@
+Require every chat/import request to supply a strict positive semantic model from an authenticated business backend. Use the existing service Bearer token convention and backend tenant/user headers for state isolation. Bind Pending, task/last-request state, DAG checkpoints, caches, datasets and report artifacts to the current authorized semantic scope.
+
+The audited Oagnet implementation accepts domain arrays but adds shared domain `-1` to explicit retrieval. Reject those queries before upstream access with `EXPLICIT_DOMAIN_NOT_SUPPORTED` or `EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED`. Keep model-wide retrieval inside the supplied model. Reject unsupported explicit-scope metadata retrieval and unprovable display discovery. No user permission lookup or role-derived grant is introduced.
+
+Validation: 88/88 scope acceptance tests; complete serial offline suite 1853 passed, 27 preexisting failed, zero collection errors, missing baseline nodes or old-pass-to-new-fail. Host MemoryError prevented a completed final single-process run, so the retained aggregate lists every batch and node ID. Source/checkout/commit byte verification passed. No real model calls, production data writes, prompt/regex changes, V2 routing changes or cross-repository patches.
+
+Full semantic-scope acceptance remains blocked on the external strict-domain contract and deployment integration. The backend must provision `DATA_AGENT_TRUSTED_BACKEND_TOKEN` and forward stable tenant/user headers (matching application header in production). Existing cached answers/datasets without current scope provenance are not reused.
+
+Stacked on the Phase 0B branch. Keep this PR in draft; do not merge automatically. See `docs/phase0c/trust_semantic_scope_contract.md`, `external_service_fix_candidates.md`, `scope_safety_gate.json` and `test_delta_report.md`.

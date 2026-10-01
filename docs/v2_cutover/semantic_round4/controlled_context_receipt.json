@@ -1,0 +1,1120 @@
+{
+  "cases": 8,
+  "turns": 18,
+  "rows": [
+    {
+      "case_id": "CFCS-01",
+      "turn_index": 0,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [],
+        "CONTEXT_SUMMARY_HASH": "de78cee662e4bc4ce82866f91a74c726ffb6b534f21b96ca23ad712ba15543cc",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-01",
+      "turn_index": 1,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "MODIFY",
+        "MODEL_TARGET_PROPOSAL": "task:turn0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "1640ed0afc970d597cdb6b1c1036e70fa1b07d0041ed356e16c5f2d2739423d7",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "MODIFY",
+        "FINAL_TARGET": "task:turn0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-02",
+      "turn_index": 0,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [],
+        "CONTEXT_SUMMARY_HASH": "de78cee662e4bc4ce82866f91a74c726ffb6b534f21b96ca23ad712ba15543cc",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-02",
+      "turn_index": 1,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "MODIFY",
+        "MODEL_TARGET_PROPOSAL": "task:turn0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "1640ed0afc970d597cdb6b1c1036e70fa1b07d0041ed356e16c5f2d2739423d7",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "MODIFY",
+        "FINAL_TARGET": "task:turn0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-03",
+      "turn_index": 0,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [],
+        "CONTEXT_SUMMARY_HASH": "de78cee662e4bc4ce82866f91a74c726ffb6b534f21b96ca23ad712ba15543cc",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-03",
+      "turn_index": 1,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "MODIFY",
+        "MODEL_TARGET_PROPOSAL": "task:turn0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "d93058ffc366ef8793ea6c069d456a094981587bc7486af8ecc117217077d620",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "MODIFY",
+        "FINAL_TARGET": "task:turn0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-04",
+      "turn_index": 0,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [],
+        "CONTEXT_SUMMARY_HASH": "de78cee662e4bc4ce82866f91a74c726ffb6b534f21b96ca23ad712ba15543cc",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-04",
+      "turn_index": 1,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "MODIFY",
+        "MODEL_TARGET_PROPOSAL": "task:turn0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "1640ed0afc970d597cdb6b1c1036e70fa1b07d0041ed356e16c5f2d2739423d7",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "MODIFY",
+        "FINAL_TARGET": "task:turn0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-04",
+      "turn_index": 2,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "MODIFY",
+        "MODEL_TARGET_PROPOSAL": "task:turn0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn0",
+            "task_version": 2,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "eb1273d68dd0bb871396a3e343242aefb266d71ccb8fa36c9bff3681a31dd2e1",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "MODIFY",
+        "FINAL_TARGET": "task:turn0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-05",
+      "turn_index": 0,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [],
+        "CONTEXT_SUMMARY_HASH": "de78cee662e4bc4ce82866f91a74c726ffb6b534f21b96ca23ad712ba15543cc",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-05",
+      "turn_index": 1,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "MODIFY",
+        "MODEL_TARGET_PROPOSAL": "task:turn0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "62923380c9003fb2de6139ac25a1d94cafe427faf1fae4908259ba6bf335167d",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "MODIFY",
+        "FINAL_TARGET": "task:turn0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-06",
+      "turn_index": 0,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [],
+        "CONTEXT_SUMMARY_HASH": "de78cee662e4bc4ce82866f91a74c726ffb6b534f21b96ca23ad712ba15543cc",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-06",
+      "turn_index": 1,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "MODIFY",
+        "MODEL_TARGET_PROPOSAL": "task:turn0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "0ca4a371f07cb0cb8fc5c216b1b6e14f0bdc4cc2bca7dbb4dfb929813e64d78d",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "MODIFY",
+        "FINAL_TARGET": "task:turn0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-07",
+      "turn_index": 0,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [],
+        "CONTEXT_SUMMARY_HASH": "de78cee662e4bc4ce82866f91a74c726ffb6b534f21b96ca23ad712ba15543cc",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-07",
+      "turn_index": 1,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "0ca4a371f07cb0cb8fc5c216b1b6e14f0bdc4cc2bca7dbb4dfb929813e64d78d",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-07",
+      "turn_index": 2,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "RETURN_TO_TOPIC",
+        "MODEL_TARGET_PROPOSAL": "task:turn0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn1",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          },
+          {
+            "task_id": "task:turn0",
+            "task_version": 1,
+            "candidate_source": [
+              "RECENT"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "75e6094c1db2535515dee9fc524a4132cd345a41573d63485d663f8bdbdae313",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "HISTORICAL_TARGET_IS_NON_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "RETURN_TO_TOPIC",
+        "FINAL_TARGET": "task:turn0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-08",
+      "turn_index": 0,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [],
+        "CONTEXT_SUMMARY_HASH": "de78cee662e4bc4ce82866f91a74c726ffb6b534f21b96ca23ad712ba15543cc",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    },
+    {
+      "case_id": "CFCS-08",
+      "turn_index": 1,
+      "arm": "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS",
+      "proposal_source": "CONTROLLED_BUSINESS_CONTRACT; NOT_LIVE_MODEL",
+      "native_next_state_identical": true,
+      "arbitration": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE",
+              "PENDING"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "c93379ec729647bd1e0fc6dd4d1a2c6e1da30fa966dd0226d3fab46741b8f92f",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "external_socket_attempts": 0
+    }
+  ],
+  "act_only_controls": [
+    {
+      "act": "CONTINUE",
+      "target": "task:turn0",
+      "status": "ACCEPTED_CONTROLLED",
+      "current_explicit_delta_preserved": true
+    },
+    {
+      "act": "MODIFY",
+      "target": "task:turn0",
+      "status": "ACCEPTED_CONTROLLED",
+      "current_explicit_delta_preserved": true
+    },
+    {
+      "act": "CORRECT",
+      "target": "task:turn0",
+      "status": "ACCEPTED_CONTROLLED",
+      "current_explicit_delta_preserved": true
+    },
+    {
+      "act": "ADD",
+      "target": "task:turn0",
+      "status": "ACCEPTED_CONTROLLED",
+      "current_explicit_delta_preserved": true
+    },
+    {
+      "act": "REPLACE",
+      "target": "task:turn0",
+      "status": "ACCEPTED_CONTROLLED",
+      "current_explicit_delta_preserved": true
+    }
+  ],
+  "production_changes": 0,
+  "native_state_equal": 18,
+  "controlled_improvement": 5,
+  "real_model_calls": 0
+}

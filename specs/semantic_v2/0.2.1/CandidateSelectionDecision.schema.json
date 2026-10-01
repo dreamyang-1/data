@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ResolutionStatus": {
+      "enum": [
+        "ACCEPTED",
+        "REJECTED",
+        "AMBIGUOUS",
+        "UNRESOLVED"
+      ],
+      "title": "ResolutionStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Candidate Id"
+    },
+    "status": {
+      "$ref": "#/$defs/ResolutionStatus"
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "CandidateSelectionDecision",
+  "type": "object"
+}

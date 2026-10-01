@@ -1,0 +1,94 @@
+[
+  {
+    "case_id": "G81-015",
+    "receipt": {
+      "case_id": "G81-015",
+      "turn_index": 0,
+      "mode": "RECORDED_MODEL_PIPELINE",
+      "source_capture_hash": "3434331adb70c7cd0a7995df3fab2efc6ffef6fd9e27194575f2c6b19030e1be",
+      "oracle_outputs_hash": null,
+      "model_stages": [
+        {
+          "stage": "v2_current_turn",
+          "context_matches_recording": true,
+          "output_changed": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_matches_recording": true,
+          "output_changed": false
+        }
+      ],
+      "failure": null,
+      "real_model_calls": 0,
+      "source_SQL_executions": 0,
+      "production_writes": 0,
+      "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+      "source_observations_replayed": 0,
+      "model_accuracy_established": false,
+      "production_cutover_pass": false,
+      "external_call_attempts": {
+        "model_attempts": 0,
+        "database_attempts": 0,
+        "network_attempts": 0,
+        "redis_attempts": 0
+      },
+      "equality": {
+        "byte_equal": true,
+        "semantic_equal": true,
+        "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+      },
+      "production_state_mutations": 0,
+      "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+    },
+    "strict_replay": "PASS",
+    "query_shape": "SCALAR_AGGREGATE",
+    "new_gold_pass": false
+  },
+  {
+    "case_id": "G81-089",
+    "receipt": {
+      "case_id": "G81-089",
+      "turn_index": 0,
+      "mode": "RECORDED_MODEL_PIPELINE",
+      "source_capture_hash": "9a4ae19a0b4da206bbcb5a9cc05332003e76223344329acaf9d039a5cd0083cb",
+      "oracle_outputs_hash": null,
+      "model_stages": [
+        {
+          "stage": "v2_current_turn",
+          "context_matches_recording": true,
+          "output_changed": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_matches_recording": true,
+          "output_changed": false
+        }
+      ],
+      "failure": null,
+      "real_model_calls": 0,
+      "source_SQL_executions": 0,
+      "production_writes": 0,
+      "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+      "source_observations_replayed": 0,
+      "model_accuracy_established": false,
+      "production_cutover_pass": false,
+      "external_call_attempts": {
+        "model_attempts": 0,
+        "database_attempts": 0,
+        "network_attempts": 0,
+        "redis_attempts": 0
+      },
+      "equality": {
+        "byte_equal": true,
+        "semantic_equal": true,
+        "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+      },
+      "production_state_mutations": 0,
+      "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+    },
+    "strict_replay": "PASS",
+    "query_shape": "SCALAR_AGGREGATE",
+    "new_gold_pass": false
+  }
+]

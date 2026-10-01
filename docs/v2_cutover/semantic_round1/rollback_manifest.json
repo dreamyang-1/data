@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "6cc55e217574a68d7faa66e6d4c4de4c101341c9",
+  "procedure": [
+    "Resolve final commit using git_commit_manifest.json.",
+    "On an isolated review branch, git revert that one Round 1 commit.",
+    "Verify production source diff remains empty and run the affected offline checks."
+  ],
+  "production_rollback_required": false,
+  "production_logic_changed": false,
+  "database_migration": false,
+  "credentials_or_private_payloads_in_git": false,
+  "reset_clean_or_force_push_allowed": false
+}

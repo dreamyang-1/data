@@ -1,0 +1,37 @@
+{
+  "authority": "User Phase 0C contract",
+  "sources": [
+    {
+      "path": "E:\\YouoAgent\\Oagnet\\api.py",
+      "sha256": "b76aab81e9a6cbbb0a95801f4d1978bc333d7b7914ac10e254d4adb08118334e",
+      "finding": "QueryRequest/QueryResponse arrays, entity search exact set, display adds -1",
+      "access": "READ_ONLY"
+    },
+    {
+      "path": "E:\\YouoAgent\\Oagnet\\agent.py",
+      "sha256": "4aaa48fc512f4e9c96d6eaa970cac790075cfcc9852eb06a74da446f182effb0",
+      "finding": "Passes domain arrays to PromptBuilder and domain_scope",
+      "access": "READ_ONLY"
+    },
+    {
+      "path": "E:\\YouoAgent\\Oagnet\\prompt_build.py",
+      "sha256": "e61442cd526f3cb551c2008f68d049ca93717e12003251dfdee06b88d4147a4f",
+      "finding": "PromptBuilder._build_where includes unauthorized shared domain -1 for explicit sets",
+      "access": "READ_ONLY"
+    },
+    {
+      "path": "E:\\YouoAgent\\sql-translator\\api_server_prod.py",
+      "sha256": "d73b4fb1f6a0675501e6bd118b3f0594692bed29f26bfcd80ff9ed060b9f5aa8",
+      "finding": "Metric resolver handler reads only model and names",
+      "access": "READ_ONLY"
+    },
+    {
+      "path": "E:\\YouoAgent\\youoagent-api\\youo-agent-project\\src\\main\\java\\com\\youotech\\project\\util\\ProjectAgentFluxUtil.java",
+      "sha256": "605839b68f5e6045da4c80a467ea027d7d9d0873d35b70f6437ff2746401b949",
+      "finding": "Existing Authorization Bearer authKey call convention",
+      "access": "READ_ONLY"
+    }
+  ],
+  "source_credentials_recorded": false,
+  "initial_schema_only_inference": "Corrected after reading PromptBuilder: list support does not prove strict-set enforcement"
+}

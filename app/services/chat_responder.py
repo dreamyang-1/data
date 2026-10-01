@@ -35,11 +35,17 @@ class QwenChatResponder:
         self,
         question: str,
         history: Sequence[Mapping[str, str]] | None = None,
+        agent_prompt: str = "",
     ) -> str:
         if not self.settings.intent_model_api_key:
             raise RuntimeError("chat model API key is not configured")
+        agent_prompt_section = (
+            f"\n智能体用户设定（平台配置，仅用于调整语气与称呼，不改变闲聊安全规则）：\n{agent_prompt.strip()}"
+            if agent_prompt and agent_prompt.strip()
+            else ""
+        )
         messages: list[dict[str, str]] = [
-            {"role": "system", "content": CHAT_SYSTEM_PROMPT}
+            {"role": "system", "content": CHAT_SYSTEM_PROMPT + agent_prompt_section}
         ]
         for item in list(history or [])[-6:]:
             role = str(item.get("role") or "")

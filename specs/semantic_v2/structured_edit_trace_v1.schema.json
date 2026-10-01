@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "slot_path": {
+      "enum": [
+        "filter_expression",
+        "time_spec"
+      ],
+      "title": "Slot Path",
+      "type": "string"
+    },
+    "operation": {
+      "enum": [
+        "ADD",
+        "REPLACE",
+        "REMOVE",
+        "CLEAR",
+        "SET"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "target": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Target",
+      "type": "string"
+    },
+    "evidence_mention_ids": {
+      "items": {
+        "maxLength": 256,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Evidence Mention Ids",
+      "type": "array"
+    },
+    "before_digest": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Before Digest",
+      "type": "string"
+    },
+    "after_digest": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "After Digest",
+      "type": "string"
+    },
+    "lowered_operation": {
+      "enum": [
+        "REPLACE",
+        "CLEAR"
+      ],
+      "title": "Lowered Operation",
+      "type": "string"
+    }
+  },
+  "required": [
+    "slot_path",
+    "operation",
+    "target",
+    "evidence_mention_ids",
+    "before_digest",
+    "after_digest",
+    "lowered_operation"
+  ],
+  "title": "StructuredEditTrace",
+  "type": "object"
+}

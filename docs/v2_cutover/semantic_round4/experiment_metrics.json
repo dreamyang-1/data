@@ -1,0 +1,1550 @@
+{
+  "experiment": "ROUND4_CONTEXT_PROPOSAL_DIAGNOSTIC",
+  "formal_gold_rescored": false,
+  "original_live_schema_version": "context-proposal-experiment-v1",
+  "current_schema_export_version": "context-proposal-experiment-v1.1",
+  "current_schema_export_live_tested": false,
+  "corpus": "PUBLIC_DEV_TRANSITION_9_PLUS_NEW_PUBLIC_CONTRAST_3",
+  "case_count": 12,
+  "arms": {
+    "A_CURRENT_HYBRID": {
+      "attempts": 12,
+      "valid_decision_outputs": 12,
+      "schema_or_runtime_rejected": 0,
+      "target_task_exact_match": {
+        "n": 11,
+        "N": 11
+      },
+      "relation_semantic_match": {
+        "n": 11,
+        "N": 12
+      },
+      "follow_up_recall": {
+        "n": 6,
+        "N": 7
+      },
+      "new_task_precision": {
+        "n": 2,
+        "N": 2
+      },
+      "historical_return": {
+        "n": 1,
+        "N": 1
+      },
+      "wrong_inheritance": {
+        "n": null,
+        "N": 0,
+        "status": "NO_STATE_IN_RELATION_ONLY_ARM"
+      },
+      "unnecessary_clarification": {
+        "n": null,
+        "N": 0,
+        "status": "NO_USER_QUESTION_OUTPUT_IN_RELATION_ONLY_ARM"
+      }
+    },
+    "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+      "attempts": 12,
+      "valid_decision_outputs": 11,
+      "schema_or_runtime_rejected": 1,
+      "target_task_exact_match": {
+        "n": 11,
+        "N": 11
+      },
+      "relation_semantic_match": {
+        "n": 11,
+        "N": 11
+      },
+      "follow_up_recall": {
+        "n": 7,
+        "N": 7
+      },
+      "new_task_precision": {
+        "n": 2,
+        "N": 2
+      },
+      "historical_return": {
+        "n": 1,
+        "N": 1
+      },
+      "wrong_inheritance": {
+        "n": null,
+        "N": 0,
+        "status": "NO_STATE_IN_RELATION_ONLY_ARM"
+      },
+      "unnecessary_clarification": {
+        "n": null,
+        "N": 0,
+        "status": "NO_USER_QUESTION_OUTPUT_IN_RELATION_ONLY_ARM"
+      }
+    },
+    "C_RULE_ONLY_DIAGNOSTIC": {
+      "attempts": 12,
+      "valid_decision_outputs": 12,
+      "schema_or_runtime_rejected": 0,
+      "target_task_exact_match": {
+        "n": 10,
+        "N": 11
+      },
+      "relation_semantic_match": {
+        "n": 10,
+        "N": 12
+      },
+      "follow_up_recall": {
+        "n": 7,
+        "N": 7
+      },
+      "new_task_precision": {
+        "n": 2,
+        "N": 2
+      },
+      "historical_return": {
+        "n": 0,
+        "N": 1
+      },
+      "wrong_inheritance": {
+        "n": null,
+        "N": 0,
+        "status": "NO_STATE_IN_RELATION_ONLY_ARM"
+      },
+      "unnecessary_clarification": {
+        "n": null,
+        "N": 0,
+        "status": "NO_USER_QUESTION_OUTPUT_IN_RELATION_ONLY_ARM"
+      }
+    }
+  },
+  "rows": [
+    {
+      "case_id": "S81-001",
+      "source": "PUBLIC_DEV_TRANSITION",
+      "expected_relation": "FOLLOW_UP",
+      "expected_target": "task:turn-0",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "FROZEN_ACTUAL_RUNTIME"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 1,
+      "context_hash": "98bde659b5d07b57d0eeaf70faded06ea5bb571aacdb74407163649556dfe671",
+      "context_characters": 1130,
+      "proposal_seconds": 27.563000000081956,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "ADD",
+        "MODEL_TARGET_PROPOSAL": "task:turn-0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn-0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "98bde659b5d07b57d0eeaf70faded06ea5bb571aacdb74407163649556dfe671",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "ADD",
+        "FINAL_TARGET": "task:turn-0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "be4e55450f09787eb863ef97b7f3d6165ba497cb6775bda4bb475e760e088d2b"
+    },
+    {
+      "case_id": "S81-002",
+      "source": "PUBLIC_DEV_TRANSITION",
+      "expected_relation": "FOLLOW_UP",
+      "expected_target": "task:turn-0",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "RETURN_TO_TOPIC",
+          "target": "task:turn-0",
+          "source": "FROZEN_ACTUAL_RUNTIME"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 1,
+      "context_hash": "98bde659b5d07b57d0eeaf70faded06ea5bb571aacdb74407163649556dfe671",
+      "context_characters": 1130,
+      "proposal_seconds": 7.141000000061467,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "REPLACE",
+        "MODEL_TARGET_PROPOSAL": "task:turn-0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn-0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "98bde659b5d07b57d0eeaf70faded06ea5bb571aacdb74407163649556dfe671",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "REPLACE",
+        "FINAL_TARGET": "task:turn-0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "b59db70e4d511192569f3a7458c216f9914a22ff13083bb298034205204a3688"
+    },
+    {
+      "case_id": "S81-003",
+      "source": "PUBLIC_DEV_TRANSITION",
+      "expected_relation": "FOLLOW_UP",
+      "expected_target": "task:turn-0",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "FROZEN_ACTUAL_RUNTIME"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 1,
+      "context_hash": "eef3294a95cce729ef1efe3b97a2570466f4074da12f2a841f08ee8544104fb5",
+      "context_characters": 1129,
+      "proposal_seconds": 7.469000000040978,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "MODIFY",
+        "MODEL_TARGET_PROPOSAL": "task:turn-0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn-0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "eef3294a95cce729ef1efe3b97a2570466f4074da12f2a841f08ee8544104fb5",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "MODIFY",
+        "FINAL_TARGET": "task:turn-0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "02a2ae2a8278c28ee21a8bec3ebc248ffaaa38fc73a21a5cf04bd765ffa60e2e"
+    },
+    {
+      "case_id": "S81-011",
+      "source": "PUBLIC_DEV_TRANSITION",
+      "expected_relation": "FOLLOW_UP",
+      "expected_target": "task:turn-0",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "FROZEN_ACTUAL_RUNTIME"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 1,
+      "context_hash": "8061245f1987dbe93005475d5818598a4c95cabfdca5fe0a3f6b7ffeaee8260b",
+      "context_characters": 1130,
+      "proposal_seconds": 6.922000000020489,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "ADD",
+        "MODEL_TARGET_PROPOSAL": "task:turn-0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn-0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "8061245f1987dbe93005475d5818598a4c95cabfdca5fe0a3f6b7ffeaee8260b",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "ADD",
+        "FINAL_TARGET": "task:turn-0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "8aecdbd16183660b7d9796ed9fb815d89ee1ee325121a76f90975b76087c6528"
+    },
+    {
+      "case_id": "S81-012",
+      "source": "PUBLIC_DEV_TRANSITION",
+      "expected_relation": "FOLLOW_UP",
+      "expected_target": "task:turn-0",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "FROZEN_ACTUAL_RUNTIME"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 1,
+      "context_hash": "8061245f1987dbe93005475d5818598a4c95cabfdca5fe0a3f6b7ffeaee8260b",
+      "context_characters": 1130,
+      "proposal_seconds": 7.0,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "REPLACE",
+        "MODEL_TARGET_PROPOSAL": "task:turn-0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn-0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "8061245f1987dbe93005475d5818598a4c95cabfdca5fe0a3f6b7ffeaee8260b",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "REPLACE",
+        "FINAL_TARGET": "task:turn-0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "513fe9a4c81d70a9ca4e4d012da496790ce6d28cd6855920433b2bdc85ef1445"
+    },
+    {
+      "case_id": "S81-013",
+      "source": "PUBLIC_DEV_TRANSITION",
+      "expected_relation": "FOLLOW_UP",
+      "expected_target": "task:turn-0",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "FROZEN_ACTUAL_RUNTIME"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 1,
+      "context_hash": "0d208c3b0f320b2839817b2f78de498a0794e2548b9f1f2d84f46589b054c3a5",
+      "context_characters": 1196,
+      "proposal_seconds": 7.719000000040978,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "REMOVE",
+        "MODEL_TARGET_PROPOSAL": "task:turn-0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn-0",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "0d208c3b0f320b2839817b2f78de498a0794e2548b9f1f2d84f46589b054c3a5",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "REMOVE",
+        "FINAL_TARGET": "task:turn-0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "12b7637a025a42b834d82354e0ef8bcb6a4f1cc3b5e65872d305a3d82766af07"
+    },
+    {
+      "case_id": "S81-014",
+      "source": "PUBLIC_DEV_TRANSITION",
+      "expected_relation": "FOLLOW_UP",
+      "expected_target": "task:turn-0",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "FROZEN_ACTUAL_RUNTIME"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "FOLLOW_UP",
+          "target": "task:turn-0",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 1,
+      "context_hash": "d014e0deca54c6077c2b418ea95dcaeeb93f47fc7443583324ba680a0ca1fd05",
+      "context_characters": 1541,
+      "proposal_seconds": 7.766000000061467,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "ADD",
+        "MODEL_TARGET_PROPOSAL": "task:turn-0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn-0",
+            "task_version": 2,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "d014e0deca54c6077c2b418ea95dcaeeb93f47fc7443583324ba680a0ca1fd05",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CURRENT_RELATION_TARGET_IS_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "ADD",
+        "FINAL_TARGET": "task:turn-0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "3c3b0eeb0518230d410675b1e061e466e5c2550662cb0523a8eae184a1894cb9"
+    },
+    {
+      "case_id": "S81-016",
+      "source": "PUBLIC_DEV_TRANSITION",
+      "expected_relation": "NEW_TASK",
+      "expected_target": "task:turn-1",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "NEW_TASK",
+          "target": "task:turn-1",
+          "source": "FROZEN_ACTUAL_RUNTIME"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "NEW_TASK",
+          "target": "task:turn-1",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "NEW_TASK",
+          "target": "task:turn-1",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 1,
+      "context_hash": "ca4734c0b12bbc8b49cc29469a9c9bf3eb38186aa7b81874b287b05d56a26263",
+      "context_characters": 1457,
+      "proposal_seconds": 7.5939999998081475,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "fixture-task:S81-016",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE",
+              "PENDING"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "ca4734c0b12bbc8b49cc29469a9c9bf3eb38186aa7b81874b287b05d56a26263",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "41d86552ece0bd16d8378c4ec971ce7f8bb46f4e4aaae1b3faf1d4d0445c17ed"
+    },
+    {
+      "case_id": "S81-017",
+      "source": "PUBLIC_DEV_TRANSITION",
+      "expected_relation": "RETURN_TO_TOPIC",
+      "expected_target": "task:turn-0",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "RETURN_TO_TOPIC",
+          "target": "task:turn-0",
+          "source": "FROZEN_ACTUAL_RUNTIME"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "RETURN_TO_TOPIC",
+          "target": "task:turn-0",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "UNRESOLVED",
+          "target": null,
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 2,
+      "context_hash": "bd76256071555f7006dd6cba612d6b57233e765d15f8195aefd0060ed19e45f7",
+      "context_characters": 1743,
+      "proposal_seconds": 9.764999999897555,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "RETURN_TO_TOPIC",
+        "MODEL_TARGET_PROPOSAL": "task:turn-0",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn-1",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          },
+          {
+            "task_id": "task:turn-0",
+            "task_version": 1,
+            "candidate_source": [
+              "RECENT"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "bd76256071555f7006dd6cba612d6b57233e765d15f8195aefd0060ed19e45f7",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "HISTORICAL_TARGET_IS_NON_ACTIVE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "RETURN_TO_TOPIC",
+        "FINAL_TARGET": "task:turn-0",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "3f326dd20280bf8d03e8d4ffc35e04e5023971fe43acc27b78ebcfb62df04255"
+    },
+    {
+      "case_id": "R4L-010",
+      "source": "NEW_PUBLIC_CONTRAST",
+      "expected_relation": "NEW_TASK",
+      "expected_target": "task:turn-2",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "NEW_TASK",
+          "target": "task:turn-2",
+          "source": "SAME_RECORDED_OUTPUT_NATIVE_REPAIR_THEN_RESOLVER"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "NEW_TASK",
+          "target": "task:turn-2",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "NEW_TASK",
+          "target": "task:turn-2",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 2,
+      "context_hash": "bd76256071555f7006dd6cba612d6b57233e765d15f8195aefd0060ed19e45f7",
+      "context_characters": 1743,
+      "proposal_seconds": 7.141000000061467,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "NEW_TASK",
+        "MODEL_TARGET_PROPOSAL": null,
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "task:turn-1",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          },
+          {
+            "task_id": "task:turn-0",
+            "task_version": 1,
+            "candidate_source": [
+              "RECENT"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "bd76256071555f7006dd6cba612d6b57233e765d15f8195aefd0060ed19e45f7",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "NEW_TASK",
+        "FINAL_TARGET": null,
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "7def76ab684c7def9be26bc6cd4a479280c79bd5933651002a0256ed89b11c8b"
+    },
+    {
+      "case_id": "R4L-011",
+      "source": "NEW_PUBLIC_CONTRAST",
+      "expected_relation": "UNRESOLVED",
+      "expected_target": null,
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "UNRESOLVED",
+          "target": null,
+          "source": "LIVE_PARSE_NATIVE_RESOLVER; NO_DRAFT_TARGET"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "UNRESOLVED",
+          "target": null,
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": "RecognitionFailure:V2_MODEL_OUTPUT_INVALID"
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "UNRESOLVED",
+          "target": null,
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 2,
+      "context_hash": "bd76256071555f7006dd6cba612d6b57233e765d15f8195aefd0060ed19e45f7",
+      "context_characters": 1743,
+      "proposal_seconds": 6.547000000020489,
+      "trace": null,
+      "model_error": "RecognitionFailure:V2_MODEL_OUTPUT_INVALID",
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "95707e7889d1019a237fad293a6f22e41a06cce96540c451bd9695f15ec82508"
+    },
+    {
+      "case_id": "R4L-012",
+      "source": "NEW_PUBLIC_CONTRAST",
+      "expected_relation": "ANSWER_PENDING",
+      "expected_target": "fixture-task:S81-016",
+      "arms": {
+        "A_CURRENT_HYBRID": {
+          "relation": "ANSWER_PENDING",
+          "target": "fixture-task:S81-016",
+          "source": "LIVE_PARSE_NATIVE_PENDING_GATE"
+        },
+        "B_MODEL_PROPOSAL_PLUS_HARD_CONSTRAINTS": {
+          "relation": "ANSWER_PENDING",
+          "target": "fixture-task:S81-016",
+          "source": "LIVE_CONTEXT_PROPOSAL_VALIDATED",
+          "error": null
+        },
+        "C_RULE_ONLY_DIAGNOSTIC": {
+          "relation": "FOLLOW_UP",
+          "target": "fixture-task:S81-016",
+          "source": "EXISTING_V1_RULE_RELATION_ONLY"
+        }
+      },
+      "candidate_count": 1,
+      "context_hash": "ca4734c0b12bbc8b49cc29469a9c9bf3eb38186aa7b81874b287b05d56a26263",
+      "context_characters": 1457,
+      "proposal_seconds": 8.422000000020489,
+      "trace": {
+        "MODEL_RELATION_PROPOSAL": "ANSWER_CLARIFICATION",
+        "MODEL_TARGET_PROPOSAL": "fixture-task:S81-016",
+        "MODEL_STATUS": "ACCEPTED",
+        "CONTEXT_CANDIDATES": [
+          {
+            "task_id": "fixture-task:S81-016",
+            "task_version": 1,
+            "candidate_source": [
+              "ACTIVE",
+              "PENDING"
+            ],
+            "candidate_scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS",
+              "database_id": null,
+              "knowledge_base_names": [],
+              "source": "TRUSTED_UPSTREAM_BACKEND"
+            }
+          }
+        ],
+        "CONTEXT_SUMMARY_HASH": "ca4734c0b12bbc8b49cc29469a9c9bf3eb38186aa7b81874b287b05d56a26263",
+        "HARD_CONSTRAINT_RESULTS": [
+          {
+            "constraint": "CURRENT_SCOPE_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_SNAPSHOT_UNCHANGED",
+            "passed": true
+          },
+          {
+            "constraint": "STATE_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "CANDIDATE_MEMBERSHIP",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_EXISTS",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_USABLE",
+            "passed": true
+          },
+          {
+            "constraint": "TASK_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "PENDING_VERSION_MATCH",
+            "passed": true
+          },
+          {
+            "constraint": "PENDING_ANSWER_ADMISSIBLE",
+            "passed": true
+          }
+        ],
+        "SOFT_EVIDENCE": [],
+        "FINAL_RELATION": "ANSWER_CLARIFICATION",
+        "FINAL_TARGET": "fixture-task:S81-016",
+        "FINAL_STATUS": "ACCEPTED",
+        "OVERRIDE_DIRECTION": "NONE",
+        "OVERRIDE_REASON": [],
+        "CURRENT_DELTA_AND_BARRIERS": "DEFERRED_TO_NATIVE_PATCH_REDUCER; NOT_CHECKED_BY_RELATION_VALIDATOR"
+      },
+      "model_error": null,
+      "source_reads_attempted": 0,
+      "state_execution": "NOT_RUN_RELATION_DIAGNOSTIC",
+      "semantic_delta_evaluation": "UNSCORED_NEW_PARSE; CANNOT_PROVE_NONREGRESSION",
+      "capture_hash": "994318a0d84a76c9fc6922cd8a13a9f25ea4e3bf5dd3428279b3ebaa05f59038"
+    }
+  ],
+  "observer_corrections": [
+    {
+      "case_id": "R4L-010",
+      "arm": "A_CURRENT_HYBRID",
+      "before": {
+        "relation": null,
+        "target": null,
+        "error": "ValueError"
+      },
+      "after": {
+        "relation": "NEW_TASK",
+        "target": "task:turn-2",
+        "source": "SAME_RECORDED_OUTPUT_NATIVE_REPAIR_THEN_RESOLVER"
+      },
+      "repairs": [
+        {
+          "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+          "mention_id": "m-turn-2-0",
+          "field": "mention.span",
+          "before": [
+            7,
+            11
+          ],
+          "after": [
+            6,
+            10
+          ]
+        }
+      ],
+      "record_hash": "667484b835c9d5878a4958c2f81b43de4df4754810045b1f34ce115a2ae69949",
+      "new_model_calls": 0,
+      "reason": "DIAGNOSTIC_ADAPTER_OMITTED_EXISTING_REPAIR"
+    }
+  ],
+  "latency": {
+    "unit": "SECONDS_FIRST_PROPOSAL_CALL",
+    "count": 12,
+    "minimum": 6.547000000020489,
+    "median": 7.531499999924563,
+    "maximum": 27.563000000081956,
+    "incremental_latency": "UNKNOWN_NO_SAME_CONDITIONS_PAIRED_BASELINE; TOKENIZER_NOT_PINNED"
+  },
+  "live_first_stage_calls": 15,
+  "live_downstream_calls": 11,
+  "real_model_calls": 26,
+  "native_reviews": [
+    {
+      "case_id": "S81-001",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "ACCEPTED",
+      "failure": null,
+      "label_checks": {
+        "metric_surfaces": true,
+        "canonical_metrics": true,
+        "turn_relation": true,
+        "target_task": true,
+        "metric_operations": true
+      },
+      "unobserved_axes": [],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "623dfd94818ffdc957e069aa9e21fd5f4919f5af119d7d51f1b00aa0b1e1e146",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "S81-002",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "ACCEPTED",
+      "failure": null,
+      "label_checks": {
+        "metric_surfaces": true,
+        "turn_relation": true,
+        "target_task": true,
+        "metric_operations": true
+      },
+      "unobserved_axes": [],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "0b03087a29e753298c81e26a42915a25edb86295bb14f0dc9e4c086ef4035a40",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "S81-003",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "ACCEPTED",
+      "failure": null,
+      "label_checks": {
+        "metric_surfaces": true,
+        "turn_relation": true,
+        "target_task": true,
+        "metric_operations": true
+      },
+      "unobserved_axes": [],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "9b7b948dfcc2ed91cd94113e3b190bd18d7b3e9b93e9e30b3caa266381299650",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "S81-011",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "ACCEPTED",
+      "failure": null,
+      "label_checks": {
+        "metric_surfaces": true,
+        "dimension_surfaces": true,
+        "target_task": true,
+        "dimension_operations": true
+      },
+      "unobserved_axes": [],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "286c31f84c9083a14be571664503a2541ea8d51aee1e8c8d6b93b65873422a57",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "S81-012",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "REJECTED",
+      "failure": null,
+      "label_checks": {
+        "metric_surfaces": true,
+        "dimension_surfaces": true,
+        "target_task": true,
+        "dimension_operations": true
+      },
+      "unobserved_axes": [],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "ccc462026c5b8b93c3a9b34d78ad662749fec82179af5ecc4ad6975871a5489c",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "S81-013",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "ACCEPTED",
+      "failure": null,
+      "label_checks": {
+        "metric_surfaces": true,
+        "dimension_surfaces": true,
+        "target_task": true,
+        "dimension_operations": true
+      },
+      "unobserved_axes": [],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "cc602491572974c1310dbd262c212769e3094694a991d6fd08a6999eae376001",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "S81-014",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "ACCEPTED",
+      "failure": null,
+      "label_checks": {
+        "metric_surfaces": true,
+        "target_task": true
+      },
+      "unobserved_axes": [
+        "time_relation"
+      ],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "1bdb4e336e4e1c77f1cca8e730044f7d28d70078cc9ad10349c01f8bc5ad6453",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "S81-016",
+      "status": "REJECTED",
+      "baseline_status": "REJECTED",
+      "failure": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "label_checks": {},
+      "unobserved_axes": [
+        "turn_relation",
+        "target_task",
+        "metric_surfaces",
+        "pending_action"
+      ],
+      "labeled_state_axes_correct": null,
+      "unnecessary_clarification": null,
+      "record_hash": "f3922a3649f9fd784a959c080975808024fb19a84a8957eb0381bc3f3f241e96",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "S81-017",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "ACCEPTED",
+      "failure": null,
+      "label_checks": {
+        "turn_relation": true,
+        "target_task": true,
+        "metric_surfaces": true
+      },
+      "unobserved_axes": [],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "fc76ea25fce76f5bcec89c2c03182012c403ddc0c933c8c447bfe5060b4fda54",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "R4L-010",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "NO_PRIOR_RUNTIME_BASELINE",
+      "failure": null,
+      "label_checks": {
+        "target_id": true,
+        "turn_relation": true,
+        "canonical_metrics": true,
+        "no_history_inheritance": true
+      },
+      "unobserved_axes": [],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "81e81efb11f65c81e5e8bfcb79adb0cd831d7d656d71013e8280dcb276e61e06",
+      "native_state_written_only_to_returned_artifact": true
+    },
+    {
+      "case_id": "R4L-011",
+      "status": "NOT_RUN_PROPOSAL_REJECTED",
+      "label_checks": {},
+      "unobserved_axes": [
+        "ALL_NATIVE_STATE_AXES"
+      ]
+    },
+    {
+      "case_id": "R4L-012",
+      "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "baseline_status": "NO_PRIOR_RUNTIME_BASELINE",
+      "failure": null,
+      "label_checks": {
+        "target_id": true,
+        "turn_relation": true,
+        "pending_action": true
+      },
+      "unobserved_axes": [],
+      "labeled_state_axes_correct": true,
+      "unnecessary_clarification": false,
+      "record_hash": "b5b708e3bb4be466b245df9695d0b2240f1995537c9787c1577f2f72b89eee18",
+      "native_state_written_only_to_returned_artifact": true
+    }
+  ],
+  "native_status_counts": {
+    "REJECTED": 1,
+    "NOT_RUN_PROPOSAL_REJECTED": 1,
+    "ACCEPTED_DIAGNOSTIC_ONLY": 10
+  },
+  "native_old_accept_to_reject": [],
+  "native_labeled_state_wrong": [],
+  "source_sql_calls": 0,
+  "production_state_writes": 0,
+  "private_remaining_access": 0,
+  "blind_access": 0,
+  "comparison_limits": [
+    "A_9_FROZEN_NOT_CONTEMPORANEOUS",
+    "NEW_CONTRAST_A_NO_SECOND_STAGE_HISTORICAL_SELECTOR",
+    "C_RELATION_ONLY_NOT_WHOLE_V1",
+    "B_REUSES_NATIVE_STATE_BUT_CHANGED_PARSE_AND_LIVE_DRAFT",
+    "PER_TURN_FIXED_PRECONDITIONS_NOT_COUNTERFACTUAL_FULL_ROLLOUT",
+    "ONLY_ONE_OF_ORIGINAL_15_IN_LIVE_B",
+    "SCHEMA_REJECTION_NOT_CORRECT_AMBIGUITY",
+    "INCOMPLETE_FULL_SEMANTIC_LABEL_AXES"
+  ]
+}

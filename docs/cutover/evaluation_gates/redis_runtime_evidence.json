@@ -1,0 +1,44 @@
+{
+  "observed_at": "2026-09-09T01:18:28.118356+00:00",
+  "service": "DataAnalysis_Agent",
+  "settings_env": "development",
+  "settings_source": "Current process environment plus Settings env_file precedence; not running-process introspection",
+  "mode": "redis",
+  "effective_mode": "redis",
+  "host_hash": "ce0097a2b96999f7c281f9184235a007810932d8f20c8128bfb21d347aad278c",
+  "port": 6379,
+  "db": 3,
+  "tls": false,
+  "credential_present": true,
+  "explicit_url_present": false,
+  "session_key_prefix": "youo:data-analysis:v2",
+  "session_ttl": 7200,
+  "response_ttl": 7200,
+  "target_identity_hash": "2d8b18897188eff788c8edd61ced2df9fe33247168ff66f56377cf5b5ab95cdf",
+  "production_writes": 0,
+  "persistence": {
+    "loading": 0,
+    "rdb_changes_since_last_save": 1280306,
+    "rdb_last_save_time": 1786605342,
+    "rdb_last_bgsave_status": "ok",
+    "aof_enabled": 0,
+    "aof_last_write_status": "ok"
+  },
+  "replication": {
+    "role": "master",
+    "connected_slaves": 0
+  },
+  "config": {
+    "appendonly": "no",
+    "appendfsync": "everysec",
+    "save": "",
+    "dir": {
+      "value_hash": "81ce9ab86d722f21bec14b093ff6ac32939cdea3317cca484b539825b26b24a5",
+      "present": true
+    },
+    "dbfilename": "dump.rdb"
+  },
+  "status": "READ_ONLY_RUNTIME_VERIFIED",
+  "production_process_revision_verified": false,
+  "deployment_volume_or_restore_drill_verified": false
+}

@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "119d84d70d46867f655e8de2bf44838f44d2cd46",
+  "feature_branch": "phase0c-dataset-lineage-20260908-01",
+  "strategy": "Revert the stage commit on a new branch after inspecting user changes, sync only manifest paths to the development workspace, and rerun dataset/critical contract tests.",
+  "data_migrations": false,
+  "external_service_changes": false,
+  "state_note": "Existing immutable snapshots are not modified. Reverting the reader removes the new completeness protection; never use a rollback to claim incomplete sources support global results.",
+  "forbidden": ["reset --hard", "git clean", "force push", "whole-directory overwrite"]
+}

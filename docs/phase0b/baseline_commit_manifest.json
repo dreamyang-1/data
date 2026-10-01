@@ -1,0 +1,381 @@
+{
+  "files": [
+    {
+      "path": "tools/phase0/run_offline.py",
+      "workspace_hash": "be637c46805295acff4a8b17dc17ba3dab45b39b289c4f192a97ff92c4d7bd8e",
+      "previous_git_hash": null
+    },
+    {
+      "path": "tools/phase0/repeat_failures.py",
+      "workspace_hash": "3e5f633cb87c7dc9ec63faecbec6db7f8fcdc154d8a040013916859d2a41ba8b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "tools/phase0/failure_inventory.py",
+      "workspace_hash": "9809131f417e3c7e807cf6e5ddaa2b5c3fe7cbb8cede95bb5ff57671b77d3568",
+      "previous_git_hash": null
+    },
+    {
+      "path": "tests/test_phase0b_critical.py",
+      "workspace_hash": "9313da62208aecf9494996066937ecc33b3b8a475029433483106bb5a5d35596",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/baseline_test_gate.json",
+      "workspace_hash": "2528e4ddbe8ae92b6bf4a329df39d6215c72ddec6a642f1960166c347b95b6ae",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/critical_before.json",
+      "workspace_hash": "8f91b87c8498b9904cb8a46f0546b01f0a584d714550a836a58615d63b947a8d",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/critical_multiturn_scenarios.jsonl",
+      "workspace_hash": "66cd137972bcf1702bc094c61c4d952e2ba911372baf0969c308dae80d80938f",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/failure_universe.csv",
+      "workspace_hash": "d924128a9914d503c02c713d3c84c96e09fa117df8fac93db566d9654099972b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/failure_universe.json",
+      "workspace_hash": "c78ade3101e1eb77a29941786a47168bcc66baed6055d25d733b3d23746930c3",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/phase0a_baseline_verification.json",
+      "workspace_hash": "9ca945b777ebbd44d35cfbdc3dbb9a4b3f085077341e21537a14929d323d0627",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/repeatability.json",
+      "workspace_hash": "da6df9e38873c9fd94ca795c763ad22a5695618551b2f20b127e96a1b0a825a3",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-01-run-1.json",
+      "workspace_hash": "67e31e052d8858f9d07b34eeab3bb13922a6bf52a2cb46a040d4e299a93603e0",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-01-run-2.json",
+      "workspace_hash": "67e31e052d8858f9d07b34eeab3bb13922a6bf52a2cb46a040d4e299a93603e0",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-02-run-1.json",
+      "workspace_hash": "fefd921d5146872d33eb7889d83f8247e9beb4ca63ac4304636dd2f76d3713e7",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-02-run-2.json",
+      "workspace_hash": "fefd921d5146872d33eb7889d83f8247e9beb4ca63ac4304636dd2f76d3713e7",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-03-run-1.json",
+      "workspace_hash": "5fef77fb7cdf0cc5544b930e94ce564f726f3d1208d63b4f095143a049f95f7f",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-03-run-2.json",
+      "workspace_hash": "5fef77fb7cdf0cc5544b930e94ce564f726f3d1208d63b4f095143a049f95f7f",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-04-run-1.json",
+      "workspace_hash": "54ce47183ed737969e5755d8ec97314b334f82d1465c88567ac46a84db5634ea",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-04-run-2.json",
+      "workspace_hash": "54ce47183ed737969e5755d8ec97314b334f82d1465c88567ac46a84db5634ea",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-05-run-1.json",
+      "workspace_hash": "69dbbaaac6a0aee39a766ead95bb603ffd65c613a08113d9fdaef214c12d8e6b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-05-run-2.json",
+      "workspace_hash": "69dbbaaac6a0aee39a766ead95bb603ffd65c613a08113d9fdaef214c12d8e6b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-06-run-1.json",
+      "workspace_hash": "37e52649718d65cc93fa7f430fda989153fffab48cdbfa1b48948977c11584a1",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-06-run-2.json",
+      "workspace_hash": "ca4e5527aef756cb6d5ef146abb17fb85e153e22ee677f1422f5030d7afb78ac",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-07-run-1.json",
+      "workspace_hash": "ec2a07beb49c35836f5f9585ff73cc7e81c7d57247a3f3865fdbd6cb696c6a1b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-07-run-2.json",
+      "workspace_hash": "ec2a07beb49c35836f5f9585ff73cc7e81c7d57247a3f3865fdbd6cb696c6a1b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-08-run-1.json",
+      "workspace_hash": "8ef18294c00fbf6e5ed1eb885c7566ce1f561646f9a8c9761147698c9ac7293a",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-08-run-2.json",
+      "workspace_hash": "8ef18294c00fbf6e5ed1eb885c7566ce1f561646f9a8c9761147698c9ac7293a",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-09-run-1.json",
+      "workspace_hash": "12623edeb5a4456e7f03ea0c32e7003832895abad9894cc5328319f26119433d",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-09-run-2.json",
+      "workspace_hash": "12623edeb5a4456e7f03ea0c32e7003832895abad9894cc5328319f26119433d",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-10-run-1.json",
+      "workspace_hash": "939f4dd53b889c164b7556e112186cd1853662db0f1c7a18865a5fbba04563e6",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-10-run-2.json",
+      "workspace_hash": "939f4dd53b889c164b7556e112186cd1853662db0f1c7a18865a5fbba04563e6",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-11-run-1.json",
+      "workspace_hash": "90f750c88fe1f0bf1d5816e84c06d2bc22b846f999c3a0fa86266ce4052e88d4",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-11-run-2.json",
+      "workspace_hash": "90f750c88fe1f0bf1d5816e84c06d2bc22b846f999c3a0fa86266ce4052e88d4",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-12-run-1.json",
+      "workspace_hash": "73b44f72dc53872ca3f2487c98a5957b52479ca401bc4edc3d3598cf551aee1f",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-12-run-2.json",
+      "workspace_hash": "73b44f72dc53872ca3f2487c98a5957b52479ca401bc4edc3d3598cf551aee1f",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-13-run-1.json",
+      "workspace_hash": "383f4336711826ffed46e6069862a8c4013a2e1a8ad24caa35d7592d291a75fb",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-13-run-2.json",
+      "workspace_hash": "8b02e85fcf54b9aaf1411991c9f8ee25907ea1b97913bd10360d47154ca0c030",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-14-run-1.json",
+      "workspace_hash": "597ae33ecb6532a7b787857d2aea0d3b531a69b5d3ceb26bafa4014ca3994985",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-14-run-2.json",
+      "workspace_hash": "597ae33ecb6532a7b787857d2aea0d3b531a69b5d3ceb26bafa4014ca3994985",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-15-run-1.json",
+      "workspace_hash": "f6affc1cc3108d32f4f0f9f5077788c91f80d4dc584b24ef3b02cc5273d4329e",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-15-run-2.json",
+      "workspace_hash": "f6affc1cc3108d32f4f0f9f5077788c91f80d4dc584b24ef3b02cc5273d4329e",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-16-run-1.json",
+      "workspace_hash": "122ec0155006b024c82b82be6638f66d9482ff36985d137700733695ce87679a",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-16-run-2.json",
+      "workspace_hash": "122ec0155006b024c82b82be6638f66d9482ff36985d137700733695ce87679a",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-17-run-1.json",
+      "workspace_hash": "0b932dd032b746fe06497497f29bdc69069dc9c8df60fc65da5226efc9f1464c",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-17-run-2.json",
+      "workspace_hash": "0b932dd032b746fe06497497f29bdc69069dc9c8df60fc65da5226efc9f1464c",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-18-run-1.json",
+      "workspace_hash": "494ae62d7fefc554e2ff3e8aa1ddfdd41b24df93bbf3937105f36d76a9039f3a",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-18-run-2.json",
+      "workspace_hash": "ee38690106765e8713fe63650a8dc4b45c5257247b41a25b606da2629151085f",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-19-run-1.json",
+      "workspace_hash": "e4f4a88bd1e1b8a71972a6d70e09830e696e5a7d1550dcff4dde10a98f8f89f7",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-19-run-2.json",
+      "workspace_hash": "a90db3caa0ea8a3afe09210c166afad160823d0cf2048f0fb86631be533d2867",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-20-run-1.json",
+      "workspace_hash": "fe727486c121fb08668f3a3c1df75f885024d59df5741b66062a198f364e93ac",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-20-run-2.json",
+      "workspace_hash": "eecbd8332bb5dc835d06ead3582200145182f8847756208b080c9d5035b1af72",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-21-run-1.json",
+      "workspace_hash": "83e1c0beec481b50d553f40fb3dc6a51b4b840c8ad4ffd7e63befde06fd9fdc9",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-21-run-2.json",
+      "workspace_hash": "bc2ff652c09c4f12e532d9faa173bd18b2dfa45c6aef3024fef0793808eacd88",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-22-run-1.json",
+      "workspace_hash": "af9dee6eb01a90ead4bc9b7ca9c5693b5739870b0d8f23c32272739eb049280e",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-22-run-2.json",
+      "workspace_hash": "2670a74614dc63c643f0cf3c7bfca95addf4c2c6a5b9f6440fa20f928acca156",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-23-run-1.json",
+      "workspace_hash": "0db7b9994805791e2509cdeb0c3588efb9841e7ef3e8fe54d841f89dd805533b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-23-run-2.json",
+      "workspace_hash": "40b9bb22291a2b96999a4925e8d44868d950526722625d7b955cd9496ab05b00",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-24-run-1.json",
+      "workspace_hash": "2b18850b5b38c62f85d304f42c9d0e7332d328984613dfbe57f8afeb37a0010e",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-24-run-2.json",
+      "workspace_hash": "2b18850b5b38c62f85d304f42c9d0e7332d328984613dfbe57f8afeb37a0010e",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-25-run-1.json",
+      "workspace_hash": "2a8d1065cf0b3f3f81e7203e0c73a3b587f4693d6eace2a740fef6373f6dcca0",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-25-run-2.json",
+      "workspace_hash": "aa6a18bd3d63bca226cdce4b90ac6ad27d20d3f01b6acaec1f09cc45df73455b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-26-run-1.json",
+      "workspace_hash": "4ce8e626ffdcab31880722bdc85b6a38c415afec8cfda00eceb5d1c305c4c65d",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-26-run-2.json",
+      "workspace_hash": "4ce8e626ffdcab31880722bdc85b6a38c415afec8cfda00eceb5d1c305c4c65d",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-27-run-1.json",
+      "workspace_hash": "125edd0497594854b3470b8106912212dbe3a9a825438e4e0bee4ae3c526352c",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-27-run-2.json",
+      "workspace_hash": "125edd0497594854b3470b8106912212dbe3a9a825438e4e0bee4ae3c526352c",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-28-run-1.json",
+      "workspace_hash": "c239b31101537b1388ce14c45d52592d8f4befc097512c8df240dde2540fe7f0",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-28-run-2.json",
+      "workspace_hash": "c239b31101537b1388ce14c45d52592d8f4befc097512c8df240dde2540fe7f0",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-29-run-1.json",
+      "workspace_hash": "a81b3490206fe5c51719c880818a513ca19a16e1fa4fd04c384ec6c30c8dafd3",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-29-run-2.json",
+      "workspace_hash": "a81b3490206fe5c51719c880818a513ca19a16e1fa4fd04c384ec6c30c8dafd3",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-30-run-1.json",
+      "workspace_hash": "6f560d54848d5a2eddae066bcc6c3d84b8505e75d994b1414d31b4562cae9de4",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-30-run-2.json",
+      "workspace_hash": "6f560d54848d5a2eddae066bcc6c3d84b8505e75d994b1414d31b4562cae9de4",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-31-run-1.json",
+      "workspace_hash": "42dce176974a7340d3a1c0eb860d5884f4be9a9409792ab3a8ca763964ab1584",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-31-run-2.json",
+      "workspace_hash": "42dce176974a7340d3a1c0eb860d5884f4be9a9409792ab3a8ca763964ab1584",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-32-run-1.json",
+      "workspace_hash": "2620bdea9387702fd2c9c55fab79f68050a1a068b1db976c87614f09414b2ca1",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-32-run-2.json",
+      "workspace_hash": "2620bdea9387702fd2c9c55fab79f68050a1a068b1db976c87614f09414b2ca1",
+      "previous_git_hash": null
+    }
+  ],
+  "credential_scan": "PASS",
+  "synchronization": "EXPLICIT_PATHS_ONLY"
+}

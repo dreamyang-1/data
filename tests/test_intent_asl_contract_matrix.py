@@ -26,7 +26,8 @@ MATRIX = (
     (2, "查询紫杉醇释放冠脉球囊导管产品合作医院", PrimaryIntent.DETAIL_QUERY, "医院", False, None, "医院名称", "商品名称", None, False),
     (3, "查询振德医疗厂家产品", PrimaryIntent.DETAIL_QUERY, "商品", False, None, "商品名称", "厂家名称", None, False),
     (4, "查询紫杉醇释放冠脉球囊导管产品厂家", PrimaryIntent.DETAIL_QUERY, "厂家", False, None, "厂家名称", "商品名称", None, False),
-    (5, "查询上海经销商", PrimaryIntent.DETAIL_QUERY, "经销商", False, None, "经销商名称", "业务城市", None, False),
+    # STALE_TEST: the user explicitly requires dealer location for 上海经销商.
+    (5, "查询上海经销商", PrimaryIntent.DETAIL_QUERY, "经销商", False, None, "经销商名称", "经销商城市", None, False),
     (6, "查询紫杉醇释放冠脉球囊导管产品规格", PrimaryIntent.DETAIL_QUERY, "商品", False, None, "商品规格", "商品名称", None, False),
     (7, "查询紫杉醇释放冠脉球囊导管产品销售额", PrimaryIntent.METRIC_QUERY, "产品", True, "销售额", None, "商品名称", None, False),
     (8, "查询紫杉醇释放冠脉球囊导管产品销售量", PrimaryIntent.METRIC_QUERY, "产品", True, "销售量", None, "商品名称", None, False),
@@ -42,7 +43,7 @@ EXPECTED_FILTERS = {
     2: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     3: ([{"field": "厂家名称", "operator": "EQ", "value": "振德医疗"}], []),
     4: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
-    5: ([{"field": "业务城市", "operator": "EQ", "value": "上海市"}], []),
+    5: ([{"field": "经销商城市", "operator": "EQ", "value": "上海市"}], []),
     6: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     7: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     8: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
@@ -200,6 +201,27 @@ def test_all_history_monthly_statistic_allows_time_projection_without_range():
     assert contract["intent"] == PrimaryIntent.METRIC_QUERY.value
     assert contract["time_policy"] == "OPTIONAL"
     assert contract["canonical_time_range"] is None
+    assert validate_intent_asl_contract_definition(contract) == []
+
+
+def test_province_filter_does_not_hide_city_grouping_or_query_object():
+    request = RuleBasedIntentClassifier().classify(
+        "查看2025年安徽省下各个城市每月销售趋势",
+        IDENTITY,
+        "province-city-trend-contract",
+    )
+    # Reproduce the structured model's provisional entity choice that used to
+    # override the explicit city grouping in the downstream ASL contract.
+    request.entity = "省份名称"
+    request.dimensions = ["城市"]
+    request.filters = [{
+        "field": "业务省份", "operator": "EQ", "value": "安徽省",
+    }]
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["query_object"] == "城市"
+    assert contract["required_groupings"] == ["城市"]
     assert validate_intent_asl_contract_definition(contract) == []
 
 
@@ -381,6 +403,37 @@ def test_ranked_business_scale_contract_keeps_partner_grouping():
         "limit": None,
     }
     assert validate_intent_asl_contract_definition(contract) == []
+
+
+def test_monthly_granularity_dimension_never_displaces_product_query_object():
+    # Real platform failure: “按月份分析上海地区费森尤斯产品最近一年的销售趋势。”
+    # ended in SAFE_FALLBACK with INTENT_ASL_CONTRACT_INCOMPLETE /
+    # EXPLICIT_QUERY_OBJECT_MISSING because the contract promoted the
+    # structured-model time-granularity dimension 月份 to query_object and the
+    # completeness gate rejected it against the explicit object 产品.
+    question = "按月份分析上海地区费森尤斯产品最近一年的销售趋势。"
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "monthly-grain-query-object"
+    )
+    # Reproduce the structured path's published shape: the month bucket is a
+    # time granularity, while 产品 is the explicit query object.
+    request.entity = "产品"
+    request.dimensions = ["月份"]
+    request.turn_admission = TurnAdmissionGate().evaluate(
+        question=question,
+        current=request,
+        previous=None,
+        message_id="monthly-grain-message",
+    )
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["intent"] == PrimaryIntent.TREND_ANALYSIS.value
+    assert contract["query_object"] == "产品"
+    assert "月份" not in contract["required_groupings"]
+    assert contract["time_dimension_required"] is True
+    assert validate_intent_asl_contract_definition(contract) == []
+    assert validate_intent_asl_contract_completeness(contract, request) == []
 
 
 def test_contract_completeness_accepts_authoritative_vector_filter_rebinding():

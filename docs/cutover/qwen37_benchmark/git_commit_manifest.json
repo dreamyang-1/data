@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "037839d7df9127fa946b1580363ddf84d32c50bb",
+  "feature_branch": "cutover-qwen37-benchmark-20260909t031600z",
+  "final_commit": "Commit containing this manifest",
+  "planned_subject": "cutover: validate collection edits with exact catalog evidence",
+  "runtime_source_changed": true,
+  "evidence": "closure_report.md and test_delta.json",
+  "draft_pr_base": "cutover-qwen37-config-20260909t031200z"
+}

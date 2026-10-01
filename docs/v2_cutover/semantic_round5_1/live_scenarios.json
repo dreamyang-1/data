@@ -1,0 +1,606 @@
+{
+  "version": "round5-1-live-followup-v1",
+  "split": "PUBLIC_DEV",
+  "primary": [
+    {
+      "case_id": "LF51-A",
+      "semantic_type": "FOLLOW_UP",
+      "utterances": [
+        "查询去年上海销售额",
+        "那江苏呢"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "region": [
+          "江苏"
+        ],
+        "year": 2025
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-B",
+      "semantic_type": "ADD",
+      "utterances": [
+        "查询去年江苏销售额",
+        "再加订单笔数"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax",
+          "order_count"
+        ],
+        "region": [
+          "江苏"
+        ],
+        "year": 2025
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-C",
+      "semantic_type": "REMOVE",
+      "utterances": [
+        "查询去年江苏销售额和订单笔数",
+        "销售额不要了"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "order_count"
+        ],
+        "region": [
+          "江苏"
+        ],
+        "year": 2025
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-D",
+      "semantic_type": "CLEAR",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "不限地区",
+        "换今年"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "order_count"
+        ],
+        "region": [],
+        "year": 2026,
+        "clear_barrier": true
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-E",
+      "semantic_type": "REPLACE_TIME",
+      "utterances": [
+        "查询去年上海销售额",
+        "换今年"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "region": [
+          "上海"
+        ],
+        "year": 2026
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-F",
+      "semantic_type": "CORRECTION",
+      "utterances": [
+        "查询上海销售额",
+        "不是上海，是北京"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "region": [
+          "北京"
+        ]
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-G",
+      "semantic_type": "NEW_TASK",
+      "utterances": [
+        "查询上海销售额",
+        "江苏有哪些医院？"
+      ],
+      "expected_target": "NEW",
+      "expected": {
+        "metrics": [],
+        "region": [
+          "江苏"
+        ],
+        "subject": "hospital"
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-H",
+      "semantic_type": "HISTORICAL_RETURN",
+      "utterances": [
+        "查询上海销售额",
+        "查询医院销售额",
+        "还是看刚才上海那个"
+      ],
+      "expected_target": "HISTORY:0",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "region": [
+          "上海"
+        ]
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-I",
+      "semantic_type": "PENDING_RESPONSE",
+      "utterances": [
+        "销售额"
+      ],
+      "expected_target": "PENDING",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax"
+        ]
+      },
+      "initial_pending": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-J",
+      "semantic_type": "PENDING_NEW_TASK",
+      "utterances": [
+        "江苏有哪些医院？"
+      ],
+      "expected_target": "NEW",
+      "expected": {
+        "metrics": [],
+        "region": [
+          "江苏"
+        ],
+        "subject": "hospital"
+      },
+      "initial_pending": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-K",
+      "semantic_type": "AMBIGUOUS",
+      "utterances": [
+        "查询上海销售额",
+        "查询江苏销售额",
+        "查询今年北京订单笔数",
+        "前面两个销售额任务选一个继续，具体哪个我还没确定"
+      ],
+      "expected_target": null,
+      "expected": {},
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-L",
+      "semantic_type": "SELF_CONTAINED",
+      "utterances": [
+        "查询上海销售额",
+        "查询今年北京订单笔数"
+      ],
+      "expected_target": "NEW",
+      "expected": {
+        "metrics": [
+          "order_count"
+        ],
+        "region": [
+          "北京"
+        ],
+        "year": 2026
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-A2",
+      "semantic_type": "FOLLOW_UP",
+      "utterances": [
+        "查询去年上海销售额",
+        "江苏的呢"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "region": [
+          "江苏"
+        ],
+        "year": 2025
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-A3",
+      "semantic_type": "FOLLOW_UP",
+      "utterances": [
+        "查询去年上海销售额",
+        "换江苏看看"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "region": [
+          "江苏"
+        ],
+        "year": 2025
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-B2",
+      "semantic_type": "ADD",
+      "utterances": [
+        "查询去年江苏销售额",
+        "订单数也一起看"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax",
+          "order_count"
+        ],
+        "region": [
+          "江苏"
+        ],
+        "year": 2025
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-C2",
+      "semantic_type": "REMOVE",
+      "utterances": [
+        "查询去年江苏销售额和订单笔数",
+        "销售额先不要"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "order_count"
+        ],
+        "region": [
+          "江苏"
+        ],
+        "year": 2025
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-D2",
+      "semantic_type": "CLEAR",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "地区不限制",
+        "改成今年"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "order_count"
+        ],
+        "region": [],
+        "year": 2026,
+        "clear_barrier": true
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-F2",
+      "semantic_type": "CORRECTION",
+      "utterances": [
+        "查询上海销售额",
+        "不是这个，我说北京"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "region": [
+          "北京"
+        ]
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-G2",
+      "semantic_type": "NEW_TASK",
+      "utterances": [
+        "查询上海销售额",
+        "我换个问题，江苏有哪些医院"
+      ],
+      "expected_target": "NEW",
+      "expected": {
+        "metrics": [],
+        "region": [
+          "江苏"
+        ],
+        "subject": "hospital"
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "LF51-H2",
+      "semantic_type": "HISTORICAL_RETURN",
+      "utterances": [
+        "查询上海销售额",
+        "查询医院销售额",
+        "还是第一个"
+      ],
+      "expected_target": "HISTORY:0",
+      "expected": {
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "region": [
+          "上海"
+        ]
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ROUND5_1_DIRECTIVE + FROZEN_CATALOG_ALIASES + DETERMINISTIC_CALENDAR",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false
+    }
+  ],
+  "supplemental": [
+    {
+      "case_id": "LF51-LIVE-CONTROL",
+      "semantic_type": "ADD_THEN_REMOVE",
+      "utterances": [
+        "订单数也一起看",
+        "销售额先不要"
+      ],
+      "expected_target": "PREVIOUS",
+      "expected": {
+        "metrics": [
+          "order_count"
+        ]
+      },
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "truth_source": "USER_ADD_REMOVE_CONTRACT; ACTUAL_CURRENT_RUN_PENDING_ANSWER_PLAN",
+      "split": "PUBLIC_DEV",
+      "whole_plan_gold": false,
+      "seed_capture_hash": "fe725a64a65fa7f38303cbcc98bd9dd5e9dc4a25f67143175616775485d4110b",
+      "seed_turn": "ff6430cbb4b9288918389561",
+      "primary_cases_rescored": false
+    }
+  ],
+  "primary_freeze_hash": "af578f830baca14d1a611814ee456cadcb92974c0afb4dc5cb52b75b76040709",
+  "supplemental_freeze_hash": "a616b223cbb27759be3a16ca6ebe2acf860513a13d7b7f077d02e5780e8277a1",
+  "labels_provenance": "Current user explicit requirements; governed catalog metric aliases; fixed calendar; no system output labels",
+  "prefix_policy": "Identical prefixes share one actual scoped run. Failed prefixes remain blockers. No unexecuted history manufactured.",
+  "declared_turn_appearances": 46,
+  "primary_declared_turn_appearances": 44,
+  "unique_executed_turns": 9,
+  "performance_and_accuracy_denominators": "Actual requests n9; primary cases n20; supplemental n1 reported separately"
+}

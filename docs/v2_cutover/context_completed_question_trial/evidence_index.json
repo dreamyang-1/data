@@ -1,0 +1,63 @@
+{
+  "schema_version": "context-completed-question-api-validation-v1",
+  "status": "CONTEXT_COMPLETED_QUESTION_API_VALIDATION_COMPLETE",
+  "validation": {
+    "sse_same_canonical_request": "PASS",
+    "redis_task_version_restore": "PASS",
+    "same_message_no_duplicate_model_or_query": "PASS"
+  },
+  "tests": {
+    "focused_validation": {
+      "passed": 4,
+      "failed": 0
+    },
+    "affected_final": {
+      "passed": 148,
+      "failed": 0
+    },
+    "agent_full_before_compatibility_correction": {
+      "passed": 3586,
+      "failed": 37,
+      "baseline_known_failed": 27,
+      "new_failures": 10,
+      "new_failures_targeted_final": "10/10 PASS"
+    }
+  },
+  "runtime_changes_during_validation_checkpoint": {
+    "port_8088": 0,
+    "oagnet": 0,
+    "sql_translator": 0,
+    "redis_schema": 0,
+    "session_architecture": 0
+  },
+  "cross_process_diagnostic": {
+    "state_and_task_version_restore": "PASS",
+    "followup_completion": "BLOCKED_BY_RECORDED_DYNAMIC_HANDLE_REBINDING",
+    "production_bridge_defect_proven": false
+  },
+  "production_routing": "V1_UNCHANGED",
+  "artifact_sha256": {
+    ".env.example": "afa70bff48d855d476c2ea40e9a2ffec05cea5afada0321a1e040ffec1538404",
+    "app/adapters/http.py": "9bec1215242135bf8510a5eca13d7e0fdf5317230e265849ead165dca9463da1",
+    "app/api.py": "c25ca0aa15370267aabf247f4af4462afea3772f66ae5dcd63e8dce2bd02a3cd",
+    "app/config.py": "9ba96b01d3d577abf10c99e5d77a5daf85a568b4adea8c93497530d9ae1774c3",
+    "app/main.py": "f57a9e8b77a28098d75c9770688465bedf6bbbdf6db7cfbfc0d0d2b1ddee5e6b",
+    "app/semantic_v2/asl2.py": "6a33d6234a469b988a48ca18c8443b7f95a17f3d29121df4ae1679c8290797fe",
+    "app/semantic_v2/canonical_execution_bridge.py": "46c399416b8b3613067e581d7bfc37309d553cc54562eda41bf8ff23139a98d2",
+    "app/semantic_v2/completed_question.py": "0a3bd2ec5723a73c7a63499952af2c5108b537f7eee8d1b8c7cba8df39bd8004",
+    "app/semantic_v2/limited_scalar_runtime.py": "791cc4625e2eeb3df72438cdf1633cb146af1ac95d3a2df00c5ce9499a34ec83",
+    "app/semantic_v2/models.py": "34fcf5f303cb5dc62aa5d19c86a3533e53d4e0f0a6ed2cc1cf6fe6f4f8a00778",
+    "app/semantic_v2/persisted_scalar_api.py": "b73dfb73a6ee68219268d666e00bbccf299d0f07fe3fc683f000130df18bb0d0",
+    "app/semantic_v2/recognition.py": "84bbba9a6c1d816e33c3e44a308ff7f04e406c074025a1a261a09b4b78f5588e",
+    "app/semantic_v2/recognition_initialization.py": "01d6e6d98452788dcc245f21c0b0a9ee764a98c1d9a7e21c94d75c5d6141cee8",
+    "specs/semantic_v2/authorized_logical_plan_v0_2_2.schema.json": "e8cf1f9be46f5cd6def35ee944e92c47fbfc33419331de5f5fc1fa082283361c",
+    "tests/test_http_adapters.py": "a496b9adb0850c6c174d2b9a78aa7b3ddffb4589c459e6680225f346c06a2433",
+    "tests/test_v2_asl2_lowering.py": "226198a4d72be2752338e863f51e8e913aacb4b89fd60ffa860d02d15984caec",
+    "tests/test_v2_canonical_execution_bridge.py": "611808b62923f1710bc97950ae2b65e4ad015bdb39321a185e515af1d707571c",
+    "tests/test_v2_context_completed_question_trial.py": "52ed4ad497189fcf3ef80f1d0354fc1647da29e6b66d6dc99055c016be74b90a",
+    "tests/test_v2_fresh_filter_round57.py": "7ddb1f1d9e0e12d8f15fe4b54d5856b37eb49b948eed22027423be647e4f4d32",
+    "tests/test_v2_limited_scalar_deployment.py": "85c4cf62fd0c174d6380118f1e262f4662081bd84997cbf1253410645b246a21",
+    "docs/v2_cutover/context_completed_question_trial/closure_report.md": "4fb271282c8ca03d60fdd3f623b5fee498b8b4cc0f3b4995283322ce5190ca2f",
+    "docs/v2_cutover/context_completed_question_trial/checkpoint.md": "a2eb7789bcb9a15fa0e20975d9971a5191423f8f4ab5db4c317cb5cabd996c4b"
+  }
+}

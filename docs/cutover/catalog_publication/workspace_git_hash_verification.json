@@ -1,0 +1,11 @@
+{
+  "status": "PASS_PRECOMMIT_WORKSPACE_ALIGNMENT",
+  "baseline_commit": "3ab8b4336b290d3560756345c4328278ee1ca9b3",
+  "implementation_commit": "369a3619f64f9d8c5e7c47198547053af71026e6",
+  "feature_branch": "cutover-catalog-publication-20260908-01",
+  "tracked_and_manifest_files": 891,
+  "unexpected_source_drift": 0,
+  "normalization": "Development CRLF to published LF; exact source/published SHA-256 in change_manifest.json",
+  "final_commit": "Commit containing this report",
+  "final_commit_gate": "release.py verify checks all committed Git blobs against source, clean tree and original Oagnet index after final commit"
+}

@@ -1,0 +1,57 @@
+{
+  "baseline_commit": "d798dc6f7a9342f3090ed418439d2fa0672a6c54",
+  "reviewer": "Self-review; no sub-agent",
+  "source_files": [
+    {
+      "path": "app/semantic_v2/catalog_bridge.py",
+      "sha256": "c9fbfe993cbd02c3c17a903d55515f76462ab05cb5bb7bfe81470141bf00b144"
+    },
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "sha256": "57dbd4aa8bee55a5ea594c4de6282c0225ecb9fdd9f66f4c8dbb432f38d3c64f"
+    },
+    {
+      "path": "app/semantic_v2/pending_recognition.py",
+      "sha256": "c725e885be4000e171193a4eb79dddb201a05249aeb3fcded79f79c02ce80054"
+    },
+    {
+      "path": "tests/test_v2_pending_recognition.py",
+      "sha256": "9634964308bce869d2f7fa4de25b722138b033709b991f8f2e7cbc4848b61023"
+    },
+    {
+      "path": "specs/semantic_v2/semantic_task_draft_v2.schema.json",
+      "sha256": "67ef2ef741ad372575a91bda0e70565a7f13e72e81f620e2e42b88fde4ded222"
+    },
+    {
+      "path": "specs/semantic_v2/recognized_clarification_v1.schema.json",
+      "sha256": "55bfee9b548a43774aaad17497aee9641af67050c94e6096990719efcbdd3b2c"
+    },
+    {
+      "path": "specs/semantic_v2/pending_resume_v1.schema.json",
+      "sha256": "841fc99aeb6d71951c7171bef76f0c60b022e70f0f6b099d52bb1de42e11a056"
+    }
+  ],
+  "first_divergence": [
+    "PENDING_ADMISSION",
+    "SEMANTIC_GROUNDING"
+  ],
+  "verified": [
+    "Current pinned exact/alias membership and full option set before creating ambiguity",
+    "Unique name/alias repairs without user question; indistinguishable labels remain catalog gaps",
+    "Provisional task plus original operation/query-kind-bound Pending resume",
+    "Whole-answer name/ID/ordinal matching; explicit new request bypasses Pending",
+    "Existing deterministic StateMutation checks selected values and remaining blockers",
+    "Previous-state evidence checked before first-ask trace; no repeat relabeling",
+    "Full catalog acceptance before any question or next-state envelope leaves the session"
+  ],
+  "retained_gates": [
+    "Actual deployed catalog/trust, Gold and real-model quality",
+    "Full field-level/partial temporal edits, catalog default/relationship and analytical coverage",
+    "Arbitrary typed-value and compound same-slot decisions are not generalized from canonical-option support",
+    "No public response adapter or production state-store routing introduced"
+  ],
+  "user_io_unchanged": true,
+  "v1_behavior_unchanged": true,
+  "oagnet_source_unchanged": true,
+  "sql_source_unchanged": true
+}

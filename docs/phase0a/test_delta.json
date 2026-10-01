@@ -1,0 +1,13 @@
+{
+  "old_pass_changed": [],
+  "old_fail_changed": [],
+  "baseline_counts": {
+    "passed": 1696,
+    "failed": 32
+  },
+  "current_counts": {
+    "passed": 1696,
+    "failed": 32
+  },
+  "collection_errors": []
+}

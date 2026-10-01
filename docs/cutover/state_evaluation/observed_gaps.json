@@ -1,0 +1,145 @@
+[
+  {
+    "case_id": "S81-001",
+    "axis": "canonical_metrics",
+    "expected": [
+      "METRIC:sales_total_including_tax",
+      "METRIC:sales_total_quantity",
+      "METRIC:order_count"
+    ],
+    "observed": null,
+    "classification": "OBSERVATION_NOT_AVAILABLE",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-006",
+    "axis": "region_operations",
+    "expected": [
+      "REPLACE"
+    ],
+    "observed": [
+      "ADD"
+    ],
+    "classification": "OPERATION_TRACE_DIFFERS_FROM_EXPECTED_SLOT_ACTION",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-007",
+    "axis": "metric_surfaces",
+    "expected": [
+      "含税销售总额"
+    ],
+    "observed": [],
+    "classification": "SERVICE_BOUNDARY_STATE_DIFFERENCE",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-007",
+    "axis": "region_values",
+    "expected": [
+      "上海市",
+      "北京市",
+      "江苏省"
+    ],
+    "observed": [
+      "江苏省"
+    ],
+    "classification": "SERVICE_BOUNDARY_STATE_DIFFERENCE",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-007",
+    "axis": "target_task",
+    "expected": "PREVIOUS",
+    "observed": "NEW",
+    "classification": "SERVICE_BOUNDARY_STATE_DIFFERENCE",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-008",
+    "axis": "region_values",
+    "expected": [
+      "上海市"
+    ],
+    "observed": [
+      "北京市"
+    ],
+    "classification": "SERVICE_BOUNDARY_STATE_DIFFERENCE",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-008",
+    "axis": "region_operations",
+    "expected": [
+      "REMOVE"
+    ],
+    "observed": [
+      "ADD"
+    ],
+    "classification": "SERVICE_BOUNDARY_STATE_DIFFERENCE",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-011",
+    "axis": "dimension_surfaces",
+    "expected": [
+      "医院",
+      "城市"
+    ],
+    "observed": [
+      "城市"
+    ],
+    "classification": "SERVICE_BOUNDARY_STATE_DIFFERENCE",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-011",
+    "axis": "dimension_operations",
+    "expected": [
+      "ADD"
+    ],
+    "observed": [
+      "REPLACE"
+    ],
+    "classification": "SERVICE_BOUNDARY_STATE_DIFFERENCE",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-013",
+    "axis": "dimension_operations",
+    "expected": [
+      "REMOVE"
+    ],
+    "observed": [],
+    "classification": "OPERATION_TRACE_DIFFERS_FROM_EXPECTED_SLOT_ACTION",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-014",
+    "axis": "time_relation",
+    "expected": "ABSENT",
+    "observed": "SAME_AS_PREVIOUS",
+    "classification": "SERVICE_BOUNDARY_STATE_DIFFERENCE",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  },
+  {
+    "case_id": "S81-017",
+    "axis": "target_task",
+    "expected": "HISTORY:0",
+    "observed": "UNRESOLVED",
+    "classification": "HISTORICAL_SELECTOR_NOT_EXECUTED_AT_RULE_SEAM",
+    "full_production_bug_status": "UNKNOWN_NEEDS_FULL_ORCHESTRATOR_EVIDENCE",
+    "next_action": "Retain labels; compare the complete V1/V2 state path once corresponding observations exist. Do not patch frozen V1 from a partial rule-service result."
+  }
+]

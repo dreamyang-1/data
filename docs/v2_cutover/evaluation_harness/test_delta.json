@@ -1,0 +1,51 @@
+{
+  "data": {
+    "baseline": {
+      "passed": 3062,
+      "failed": 27
+    },
+    "final": {
+      "passed": 3136,
+      "failed": 27
+    },
+    "collection_errors": [],
+    "old_pass_to_new_fail": 0,
+    "changed_previous_outcomes": 0,
+    "new_tests": 74,
+    "critical": {
+      "passed": 160,
+      "failed": 0
+    },
+    "clarification_trace": {
+      "public_clarification_responses": 89,
+      "with_reason_trace": 89
+    },
+    "verification_strategy": "Full established batches; final dependent batch (1254 passing) after all evaluator, replay and safety review corrections. Final 69 harness tests after mid-run freeze guard. Final 97 harness/raw replay/oracle tests after runtime wrapper and pin lifecycle review. Final 100 affected harness/raw/oracle tests after precise inner-boundary classification."
+  },
+  "oagnet": {
+    "baseline": {
+      "passed": 677,
+      "failed": 8
+    },
+    "final": {
+      "passed": 677,
+      "failed": 8
+    },
+    "collection_errors": [],
+    "old_pass_to_new_fail": 0,
+    "changed_previous_outcomes": 0,
+    "new_tests": 0
+  },
+  "sql": {
+    "baseline": {
+      "passed": 381
+    },
+    "final": {
+      "passed": 381
+    },
+    "collection_errors": [],
+    "old_pass_to_new_fail": 0,
+    "changed_previous_outcomes": 0,
+    "new_tests": 0
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "version": "frozen-native-candidate-universe-v1",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "selection_contract": "RawTurnPlanner._candidates current mention role filter and opaque handles",
+  "live_retrieval_quality": "NOT_EVALUATED",
+  "snapshot_hash": "d7668b20c8f611570829a6b4115d8c7dd5d19e4b051bc271e93810579276d007",
+  "candidate_counts": {
+    "ATTRIBUTE": 89,
+    "DIMENSION": 13,
+    "ENTITY": 14,
+    "ENTITY_VALUE": 15,
+    "METRIC": 11,
+    "PHYSICAL_COLUMN": 110,
+    "PHYSICAL_TABLE": 14,
+    "RELATION": 24
+  },
+  "private_storage": ".eval_private/harness-20260909T083000Z/candidate_snapshot.json",
+  "source_catalog_snapshot_hash": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2"
+}

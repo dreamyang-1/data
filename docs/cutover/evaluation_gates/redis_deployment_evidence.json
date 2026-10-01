@@ -1,0 +1,112 @@
+{
+  "observed_at": "2026-09-09T01:22:23.024079+00:00",
+  "searched_files": 217,
+  "redis_related_files": [
+    {
+      "path": "workspace/youoagent-api/youo-agent-web/src/main/resources/application.yml",
+      "sha256": "0af27c19eefaaaeebea2eaf28123bb4f2c4e5734116fa1e35268053d9ccead49",
+      "keyword_line_evidence": {
+        "redis": [
+          48
+        ],
+        "volume": [],
+        "aof": [],
+        "rdb": [],
+        "restart": [],
+        "backup_restore": [
+          156
+        ]
+      },
+      "proves_target_deployment": false
+    },
+    {
+      "path": "workspace/youoagent-api/youo-agent-web/src/main/resources/application-prod.yml",
+      "sha256": "73be974576a4e86655cfd5c09ee5dbab02a2a9aa8399010764af561015a1196b",
+      "keyword_line_evidence": {
+        "redis": [
+          57
+        ],
+        "volume": [
+          193
+        ],
+        "aof": [],
+        "rdb": [],
+        "restart": [],
+        "backup_restore": []
+      },
+      "proves_target_deployment": false
+    },
+    {
+      "path": "workspace/youoagent-api/youo-agent-web/src/main/resources/application-local.yml",
+      "sha256": "12fb56ed7682e8834889d1acf7f9aa8e3ed771d4d8cb1a6be0f44197eca1cea4",
+      "keyword_line_evidence": {
+        "redis": [
+          37
+        ],
+        "volume": [
+          241
+        ],
+        "aof": [],
+        "rdb": [],
+        "restart": [],
+        "backup_restore": []
+      },
+      "proves_target_deployment": false
+    },
+    {
+      "path": "workspace/youoagent-api/youo-agent-web/src/main/resources/application-dev.yml",
+      "sha256": "eb13de889f25b5258f06afce075becd70aa615061a63c7e8b30a8fe98103eab7",
+      "keyword_line_evidence": {
+        "redis": [
+          37
+        ],
+        "volume": [
+          243
+        ],
+        "aof": [],
+        "rdb": [],
+        "restart": [],
+        "backup_restore": []
+      },
+      "proves_target_deployment": false
+    },
+    {
+      "path": "workspace/youoagent-api/youo-agent-web/src/main/resources/application-aliyun.yml",
+      "sha256": "2c353096dc1a46f60c0626708a02f7d755d11ba6165c2a0616481b978632e31e",
+      "keyword_line_evidence": {
+        "redis": [
+          37
+        ],
+        "volume": [
+          248
+        ],
+        "aof": [],
+        "rdb": [],
+        "restart": [],
+        "backup_restore": []
+      },
+      "proves_target_deployment": false
+    },
+    {
+      "path": "workspace/information_safety_test/docker_scripts/Dockerfile",
+      "sha256": "7125443d849671575b07ff7e732c8fceb836aeae72359c4d0990bc633bbad51a",
+      "keyword_line_evidence": {
+        "redis": [
+          86
+        ],
+        "volume": [],
+        "aof": [],
+        "rdb": [],
+        "restart": [],
+        "backup_restore": []
+      },
+      "proves_target_deployment": false
+    }
+  ],
+  "configured_agent_target_is_local_interface": false,
+  "scope": "Repository and accessible workspace deployment configuration only; keyword presence is not deployed-volume evidence",
+  "target_volume_verified": false,
+  "target_restart_policy_verified": false,
+  "backup_restore_drill_verified": false,
+  "writes": 0
+}

@@ -1,0 +1,18 @@
+{
+  "own_live_model_runs_completed": [
+    "PUBLIC_DEV",
+    "TRANSITION",
+    "PRIVATE_VALIDATION"
+  ],
+  "own_frozen_replays_completed": [
+    "PUBLIC_DEV 108",
+    "TRANSITION 27",
+    "PRIVATE_VALIDATION 37",
+    "historical 77"
+  ],
+  "unfinished_owned_tests_or_scripts": 0,
+  "production_servers_stopped_or_restarted": false,
+  "intermediate_reports_archived_under": ".eval_private/harness-20260909T083000Z/review_reports",
+  "private_capture_directories_are_not_tracked": true,
+  "production_code_temporary_patches_remaining": false
+}

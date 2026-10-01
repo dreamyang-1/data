@@ -1,0 +1,292 @@
+{
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "private_snapshot_sha256": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+  "catalog_mode": "Actual CatalogPublication code with existing in-memory test store/registry and frozen actual snapshot; no native publication or semantic vector quality measurement.",
+  "model_network_policy": "Only the validated configured model transport may connect; source lookup is denied; publication/state stores are in memory.",
+  "attempts": [
+    {
+      "change": "BEFORE_FIX",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "real_model_calls": 2,
+      "calls": [
+        {
+          "case_id": "S81-001",
+          "turn_index": 0,
+          "stage": "v2_current_turn",
+          "status": 200,
+          "model": "qwen3.7-max",
+          "usage": {
+            "completion_tokens": 556,
+            "prompt_tokens": 2115,
+            "prompt_tokens_details": {
+              "cached_tokens": 1152
+            },
+            "total_tokens": 2671
+          }
+        },
+        {
+          "case_id": "S81-001",
+          "turn_index": 0,
+          "stage": "v2_semantic_edits",
+          "status": 200,
+          "model": "qwen3.7-max",
+          "usage": {
+            "completion_tokens": 209,
+            "prompt_tokens": 14569,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "total_tokens": 14778
+          }
+        }
+      ],
+      "records": [
+        {
+          "case_id": "S81-001",
+          "turn_index": 0,
+          "error_type": "RecognitionFailure",
+          "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+          "last_model_stage": "v2_semantic_edits"
+        }
+      ],
+      "complete_transition_pass": false
+    },
+    {
+      "change": "AFTER_SINGLETON_FIX",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "real_model_calls": 2,
+      "calls": [
+        {
+          "case_id": "S81-001",
+          "turn_index": 0,
+          "stage": "v2_current_turn",
+          "status": 200,
+          "model": "qwen3.7-max",
+          "usage": {
+            "completion_tokens": 556,
+            "prompt_tokens": 2115,
+            "prompt_tokens_details": {
+              "cached_tokens": 1152
+            },
+            "total_tokens": 2671
+          }
+        },
+        {
+          "case_id": "S81-001",
+          "turn_index": 0,
+          "stage": "v2_semantic_edits",
+          "status": 200,
+          "model": "qwen3.7-max",
+          "usage": {
+            "completion_tokens": 209,
+            "prompt_tokens": 14569,
+            "prompt_tokens_details": {
+              "cached_tokens": 13824
+            },
+            "total_tokens": 14778
+          }
+        }
+      ],
+      "records": [
+        {
+          "case_id": "S81-001",
+          "turn_index": 0,
+          "error_type": "RecognitionFailure",
+          "reason": "V2_BINDING_OUTSIDE_EDIT_EVIDENCE",
+          "last_model_stage": "v2_semantic_edits"
+        }
+      ],
+      "complete_transition_pass": false
+    },
+    {
+      "change": "AFTER_BOTH_REPRESENTATION_FIXES",
+      "mode": "LIVE_MODEL_PLAN_ONLY",
+      "real_model_calls": 3,
+      "calls": [
+        {
+          "case_id": "S81-001",
+          "turn_index": 0,
+          "stage": "v2_current_turn",
+          "status": 200,
+          "model": "qwen3.7-max",
+          "usage": {
+            "completion_tokens": 556,
+            "prompt_tokens": 2115,
+            "prompt_tokens_details": {
+              "cached_tokens": 1152
+            },
+            "total_tokens": 2671
+          }
+        },
+        {
+          "case_id": "S81-001",
+          "turn_index": 0,
+          "stage": "v2_semantic_edits",
+          "status": 200,
+          "model": "qwen3.7-max",
+          "usage": {
+            "completion_tokens": 209,
+            "prompt_tokens": 14569,
+            "prompt_tokens_details": {
+              "cached_tokens": 13824
+            },
+            "total_tokens": 14778
+          }
+        },
+        {
+          "case_id": "S81-001",
+          "turn_index": 1,
+          "stage": "v2_current_turn",
+          "status": 200,
+          "model": "qwen3.7-max",
+          "usage": {
+            "completion_tokens": 491,
+            "prompt_tokens": 2113,
+            "prompt_tokens_details": {
+              "cached_tokens": 1152
+            },
+            "total_tokens": 2604
+          }
+        }
+      ],
+      "records": [
+        {
+          "case_id": "S81-001",
+          "turn_index": 0,
+          "result_type": "RecognizedPlan",
+          "observation": {
+            "case_id": "S81-001",
+            "scope": {
+              "semantic_model_id": 81,
+              "business_domain_ids": [
+                205
+              ],
+              "scope_mode": "EXPLICIT_DOMAINS"
+            },
+            "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+            "component": "V2_RAW_TURN_PLANNER",
+            "mode": "LIVE_MODEL_PLAN_ONLY",
+            "status": "OK",
+            "axes": {
+              "metric_surfaces": [
+                "含税销售总额",
+                "销售总数量"
+              ],
+              "dimension_surfaces": [],
+              "canonical_metrics": [
+                "METRIC:sales_total_including_tax",
+                "METRIC:sales_total_quantity"
+              ],
+              "canonical_dimensions": [],
+              "target_task": "NEW",
+              "turn_relation": "NEW_TASK",
+              "clarification_decision": "NO_ASK",
+              "slot_operations": [
+                "ADD"
+              ],
+              "metric_operations": [
+                "ADD"
+              ],
+              "dimension_operations": []
+            },
+            "safety": {},
+            "evidence": {
+              "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+              "backend_mode": "SHADOW_ONLY",
+              "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+              "state_version": 1,
+              "full_pipeline_executed": false
+            }
+          }
+        },
+        {
+          "case_id": "S81-001",
+          "turn_index": 1,
+          "error_type": "RecognitionFailure",
+          "reason": "V2_MODEL_OUTPUT_INVALID",
+          "last_model_stage": "v2_current_turn"
+        }
+      ],
+      "complete_transition_pass": false
+    }
+  ],
+  "recorded_history_replay": {
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "real_model_calls": 0,
+    "records": [
+      {
+        "case_id": "S81-001",
+        "turn_index": 0,
+        "result_type": "RecognizedPlan",
+        "observation": {
+          "case_id": "S81-001",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "component": "V2_RAW_TURN_PLANNER",
+          "mode": "RECORDED_MODEL_PIPELINE",
+          "status": "OK",
+          "axes": {
+            "metric_surfaces": [
+              "含税销售总额",
+              "销售总数量"
+            ],
+            "dimension_surfaces": [],
+            "canonical_metrics": [
+              "METRIC:sales_total_including_tax",
+              "METRIC:sales_total_quantity"
+            ],
+            "canonical_dimensions": [],
+            "target_task": "NEW",
+            "turn_relation": "NEW_TASK",
+            "clarification_decision": "NO_ASK",
+            "slot_operations": [
+              "ADD"
+            ],
+            "metric_operations": [
+              "ADD"
+            ],
+            "dimension_operations": []
+          },
+          "safety": {},
+          "evidence": {
+            "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+            "backend_mode": "SHADOW_ONLY",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "state_version": 1,
+            "full_pipeline_executed": false
+          }
+        }
+      }
+    ],
+    "current_turn_replayed": false,
+    "complete_transition_pass": false
+  },
+  "complete_live_transition_passes": 0,
+  "real_model_calls": 7,
+  "source_SQL_executions": 0,
+  "production_external_writes": 0,
+  "remaining_failure": {
+    "stage": "v2_current_turn",
+    "reason": "V2_MODEL_OUTPUT_INVALID",
+    "detail_status": "UNKNOWN_NEEDS_CAPTURED_RESPONSE_SCHEMA_EVIDENCE"
+  },
+  "harness_review": [
+    "Initial Windows event-loop setup was denied before any model call; initialized its internal loopback socketpair before the connection guard and then reran.",
+    "A temporary replay copied a live-mode tag; corrected and rerun as RECORDED_MODEL_PIPELINE. Only corrected replay is used here.",
+    "History completion and current-turn success remain separate; failed bootstrap/current turns never count as complete transition passes."
+  ]
+}

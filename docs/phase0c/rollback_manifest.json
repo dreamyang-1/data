@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "3b3d60ccdd2698887ba57e2b849564861adf7e7c",
+  "implementation_commit": "1c28cd64e0422c98ad4bb3b0222701f63845984f",
+  "closure_commit": "CONTAINING_COMMIT",
+  "method": "Use an explicitly reviewed git revert commit on a separate rollback branch; never reset shared history",
+  "development_workspace": "E:/YouoAgent/DataAnalysis_Agent",
+  "git_repository": "E:/yy",
+  "synchronization": "Only the reviewed reverse-change manifest, source first then exact file sync; no runtime files or credentials",
+  "runtime_data_changed": false,
+  "external_repository_changes": false,
+  "rollback_executed": false,
+  "compatibility_effects": [
+    "Reverting reintroduces permissive model input, unverified caller/default identity, and previous scope-reuse behavior",
+    "Scope fingerprints intentionally invalidate older cached responses/datasets; do not rewrite old provenance to bypass this"
+  ],
+  "no_secret_in_git": true
+}

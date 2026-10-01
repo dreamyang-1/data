@@ -1,0 +1,298 @@
+{
+  "capture": {
+    "observed_at": "2026-09-08T19:35:05.535876+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+    "status": "ACTUAL_METADATA_ONLY_CAPTURE_LOCAL_SOURCE_BINDING_CHECK",
+    "governed_value_fields": 89,
+    "distinct_source_routes": 1,
+    "declared_vectorization_counts": {
+      "None": 11,
+      "0": 52,
+      "1": 26
+    },
+    "attribute_mapping_outcomes": {
+      "VERIFIED_SOURCE_MAPPING": 89
+    },
+    "records_generated": 290,
+    "private_snapshot_committed": false,
+    "business_source_reads": 0,
+    "real_model_calls": 0,
+    "embedding_calls": 0,
+    "production_external_writes": 0,
+    "native_publication": false,
+    "live_entity_values_verified": false,
+    "configured_route_is_not_server_identity": true
+  },
+  "schema_observation": {
+    "observed_at": "2026-09-08T19:36:19.142402+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "queried_schema": "Current configured authoritative catalog database only",
+    "table_columns": {
+      "semantic_model_attribute_config": [
+        "id",
+        "semantic_model_id",
+        "entity_type_id",
+        "code",
+        "vectorization",
+        "attr_name",
+        "description",
+        "mapping_table",
+        "mapping_column",
+        "is_main_attribute",
+        "data_type",
+        "is_primary_key",
+        "is_unique",
+        "is_required",
+        "clean_rule_id",
+        "merge_rule_id",
+        "remark",
+        "create_by",
+        "create_time",
+        "update_by",
+        "update_time",
+        "is_deleted",
+        "view_status",
+        "prefix",
+        "suffix",
+        "data_status"
+      ],
+      "semantic_model_entity_type": [
+        "id",
+        "semantic_model_id",
+        "business_domain_id",
+        "name",
+        "description",
+        "data_source_id",
+        "main_table_name",
+        "status",
+        "is_deleted",
+        "create_by",
+        "create_time",
+        "update_by",
+        "update_time",
+        "view_status",
+        "code",
+        "alias",
+        "update_frequency",
+        "data_status"
+      ],
+      "semantic_model_field": [
+        "id",
+        "semantic_model_id",
+        "data_source_id",
+        "table_id",
+        "name",
+        "type",
+        "enum_values",
+        "null_flag",
+        "comment",
+        "description",
+        "create_by",
+        "create_time",
+        "update_by",
+        "update_time",
+        "is_deleted",
+        "exist_status"
+      ],
+      "semantic_model_table": [
+        "id",
+        "semantic_model_id",
+        "data_source_id",
+        "name",
+        "change_flag",
+        "description",
+        "comment",
+        "create_by",
+        "create_time",
+        "update_by",
+        "update_time",
+        "is_deleted",
+        "exist_status"
+      ]
+    },
+    "raw_attribute_rows": 89,
+    "raw_primary_flag_counts": {
+      "0": 89
+    },
+    "raw_unique_flag_counts": {
+      "0": 89
+    },
+    "snapshot_relation": "Separate timestamped read-only transaction; not claimed atomic with the earlier catalog capture.",
+    "business_source_schema_inspected": false,
+    "business_source_reads": 0,
+    "production_writes": 0
+  },
+  "identity_inventory": {
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "entities": 14,
+    "attributes": 89,
+    "entities_without_identity_declaration": 14,
+    "entities_requiring_declaration_review": 0,
+    "non_boolean_key_flags": 0,
+    "entity_identity_contract_proven": false,
+    "rows": [
+      {
+        "entity_definition_hash": "f936a6892c88e9e95dad612caf9282768ed377875d693df6da2a5ab116cdd4b5",
+        "attribute_count": 4,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "2c59308f6826a9963ff333b044a8db2b889f01cc27caecbf9cb900a345d9cfcc",
+        "attribute_count": 2,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "be5e797649a8d99a3bac0397d3721d4e1e2e04398cf9efdd3e26e5a1438aad68",
+        "attribute_count": 3,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "46cb4ce8b7c9ceb9e78a2059323bc51eeafae7958e5c8083dd71998d5d406839",
+        "attribute_count": 4,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "5b6ae7660e108aaaabc921bea19d6d8ce9c792b746b7ac9dfa76008cd9c9a65b",
+        "attribute_count": 9,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "320d920877fb5f47b3e82a1e28de879f5b64d060793c1350a728d4802382e971",
+        "attribute_count": 23,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "eaf23c9c8d084cd7192173a35c4471e6a9feb120165d0cd43ec08ebb05c18630",
+        "attribute_count": 7,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "3fde1790bd293acc8f2e4cdd9aeb67ef85ae0000bfe0b239d68dd4a099478667",
+        "attribute_count": 6,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "4137d45256d769a48837de750d0427d4efb7842da2b1e16a6a6f43b04532bb4f",
+        "attribute_count": 5,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "7ad344aa22dc5a8717bde186ea7386a167326cc3eb8140fb9d589c2dde6a464d",
+        "attribute_count": 4,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "d04743a4ea0c9e06115e7fc9e15f9e97ead6bbbe87a3b0415ab6fc6b7309ee47",
+        "attribute_count": 6,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "55ac657a7d3d8709c93e57e184b2fc376c8c557b53d03cff22b2470d3949bc3b",
+        "attribute_count": 3,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "cee1634698cf5a058b4a1b9798c053dd14eacf3aab277ba89b4c12ae9456d357",
+        "attribute_count": 6,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      },
+      {
+        "entity_definition_hash": "d2c051a555a67bd5ef0bb004c8360f145e21311d49100dfe7fd9d70ff95fcc60",
+        "attribute_count": 7,
+        "primary_attribute_count": 0,
+        "unique_attribute_count": 0,
+        "entity_primary_key_present": false,
+        "non_boolean_key_flags": 0,
+        "status": "IDENTITY_DECLARATION_MISSING"
+      }
+    ],
+    "limitation": "Presence is an inventory fact only. Do not choose a key, infer uniqueness from names, merge composite fields, or infer business identity from physical row identity."
+  },
+  "evidence_status": "PROVEN_MISSING_GOVERNED_IDENTITY_DECLARATIONS",
+  "classification": "CATALOG_GOVERNANCE_GAP",
+  "blocker_ids": [
+    "C-03",
+    "S-01"
+  ],
+  "owner_rule_status": "AWAITING_OWNER",
+  "runtime_fix_performed": false,
+  "native_publication_verified": false,
+  "raw_snapshot_or_owner_worksheet_committed": false,
+  "production_writes": 0,
+  "business_source_reads": 0,
+  "real_model_calls": 0,
+  "embedding_service_calls": 0
+}

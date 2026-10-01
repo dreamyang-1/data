@@ -50,7 +50,13 @@ def test_question_preflight_requests_target_and_history_when_both_missing() -> N
     request = RuleBasedIntentClassifier().classify(
         "预测销售额", IDENTITY, "conversation"
     )
+    # No automatic training year: the forecast needs both requested inputs.
+    assert request.primary_intent == PrimaryIntent.FORECAST_ANALYSIS
     assert request.missing_slots == ["forecast_horizon", "forecast_history_range"]
+    assert request.forecast_horizon_periods is None
+    assert request.forecast_history_provided is False
+    assert request.time_range is None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in request.assumptions
 
 
 def test_question_preflight_accepts_explicit_history_and_target() -> None:
@@ -127,7 +133,7 @@ def test_dataset_preflight_rejects_unvalidated_multi_step_model() -> None:
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_returns_structured_requirements_instead_of_prediction() -> None:
+async def test_insufficient_forecast_history_returns_observations_not_prediction() -> None:
     agent = DataAnalysisOrchestrator(
         settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
         classifier=RuleBasedIntentClassifier(),
@@ -135,7 +141,7 @@ async def test_orchestrator_returns_structured_requirements_instead_of_predictio
         sessions=InMemorySessionStore(),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="forecast-readiness",
             message_id="message-1",
@@ -143,13 +149,13 @@ async def test_orchestrator_returns_structured_requirements_instead_of_predictio
         ),
         IDENTITY,
     )
-    assert response.status == "SAFE_FALLBACK"
-    assert response.missing_slots == ["forecast_minimum_history"]
-    assert [item.code for item in response.requirements] == [
-        "forecast_minimum_history"
-    ]
-    assert "至少" in response.requirements[0].action
-    assert "需要补充或处理" in response.answer
+    assert response.status == "PARTIAL_SUCCESS"
+    assert response.missing_slots == []
+    assert response.requirements == []
+    assert "至少" in response.answer
+    assert "未计算扩展分析" in response.answer
+    assert any(item.kind == "QUERY_RESULT" for item in response.evidence)
+    assert not any(item.payload.get("method") == "linear_forecast" for item in response.evidence)
 
 
 @pytest.mark.asyncio
@@ -161,7 +167,7 @@ async def test_orchestrator_returns_user_input_requirements_before_query() -> No
         sessions=InMemorySessionStore(),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="forecast-question-readiness",
             message_id="message-1",

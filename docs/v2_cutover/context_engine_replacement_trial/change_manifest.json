@@ -1,0 +1,22 @@
+{
+  "baseline_commit": "f78af8d008c520cce3e355fd3b2ebdb5607573df",
+  "branch": "v2-context-engine-replacement-trial-20260911T054156Z",
+  "files": [
+    {"path": ".env.example", "purpose": "document internal read-only catalog access toggle; default PUBLISHED"},
+    {"path": "app/config.py", "purpose": "load deployment integer settings from normal environment text and add default-off catalog access mode"},
+    {"path": "app/semantic_v2/limited_scalar_runtime.py", "purpose": "read-only exact catalog snapshot for the internal 8088 trial without Redis/Milvus writes"},
+    {"path": "app/semantic_v2/pending_recognition.py", "purpose": "read catalog synonym strings using the existing governed separator convention"},
+    {"path": "app/semantic_v2/recognition_repairs.py", "purpose": "exact governed synonym handle repair and validated pure historical task-description repair"},
+    {"path": "app/semantic_v2/recognition.py", "purpose": "apply historical description repair after model target validation and before edit generation"},
+    {"path": "tests/test_v2_limited_scalar_deployment.py", "purpose": "default-off, no-vector-write, deterministic pin and environment loading tests"},
+    {"path": "tests/test_v2_model_parse_repairs.py", "purpose": "positive and contrast tests for synonym and historical repairs"},
+    {"path": "tests/test_v2_historical_reference_round58.py", "purpose": "native multi-task historical return regression"},
+    {"path": "docs/v2_cutover/context_engine_replacement_trial/closure_report.md", "purpose": "limited internal trial result"},
+    {"path": "docs/v2_cutover/context_engine_replacement_trial/validation_result.json", "purpose": "machine-readable API/SSE/Redis/idempotency evidence"},
+    {"path": "docs/v2_cutover/context_engine_replacement_trial/test_delta.json", "purpose": "test accounting"},
+    {"path": "docs/v2_cutover/context_engine_replacement_trial/change_manifest.json", "purpose": "explicit tracked file manifest"},
+    {"path": "docs/v2_cutover/context_engine_replacement_trial/rollback.md", "purpose": "code and 8088 local configuration rollback"}
+  ],
+  "excluded": [".env", "logs", "cache", "backups", "private receipts", "credentials", "business result values"],
+  "final_commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/context_engine_replacement_trial/validation_result.json"
+}

@@ -1,0 +1,21 @@
+{
+  "status": "BOUNDED_SOURCE_VALUE_DISCOVERY_AND_REVALIDATED_CHOICE",
+  "first_divergence": "ENTITY_VALUE_GROUNDING: complete empty exact lookup previously ended without bounded candidate discovery",
+  "native_boundary": "One pinned field; current empty exact query prerequisite; governed implicit-search policy; limit64; max3 probes/pin; timeout15s plus bounded socket timeouts; read-only rollback/close; no source credentials in receipts",
+  "no_truncation": "More than64 distinct values returns complete=false and values=[]; no partial list reaches the model",
+  "agent_boundary": "Only one selected field, real opaque candidate handles, current mention; model cannot set scope/field/operation; selected canonical is looked up exactly and bound through existing source proofs; full probe and exact evidence reobserved at pin finish",
+  "uncertain": "REJECTED retains NOT_FOUND; AMBIGUOUS/UNRESOLVED are bounded system outcomes, never a generic metric clarification",
+  "provenance": "Discovery receipt is not exact-match authority or a published/learned alias. Frozen observations are private replay evidence, not live production certification.",
+  "changes": {
+    "prompt": "New v2-source-value-choice-v1; original current-turn and draft prompts unchanged",
+    "why_determinism_insufficient": "Catalog lacks a declared alias mapping for these spellings. Same-row short_name does not supply them. Semantic equivalence among real candidates requires selection, not suffix invention.",
+    "positive": "Live model selected the reviewed Shanghai/Beijing/Jiangsu canonical province values after field Oracle; all three current binding/finish checks passed",
+    "contrast": "No unrelated nearest value on REJECTED; ambiguous/unresolved, invented handle/scope, disappearing value, new competing value, high-cardinality, mapping/scope drift and mutation operations tested",
+    "regex_patterns_added": 0,
+    "business_word_branches_added": 0,
+    "public_api_changes": 0,
+    "V1_routing_changed": false
+  },
+  "limitation": "The20-case run remains6OK/10FAILED/4NOT_RUN. It did not invoke the new value-choice model stage: city field exceeded budget or earlier draft guards rejected. Component field Oracle is not end-to-end accuracy.",
+  "next_stage": "SEMANTIC_CUTOVER_TRIAGE_CHECKPOINT per user steering; pause production semantic changes and per-case fixes"
+}

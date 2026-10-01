@@ -1,0 +1,135 @@
+{
+  "original_round52_remaining": 4,
+  "original_roots": [
+    {
+      "root_id": "RC-S1",
+      "cases": [
+        "LF51-B",
+        "LF51-C"
+      ],
+      "status": "NEXT_DIVERGENCE",
+      "first_divergence": {
+        "LF51-B": "TASK_OPERATION",
+        "LF51-C": "CATALOG_GAP"
+      },
+      "reason": "B malformed initial filter scope remains safely rejected; C reaches missing sales time anchor; reducer unchanged"
+    },
+    {
+      "root_id": "RC-S3",
+      "cases": [
+        "LF51-J"
+      ],
+      "status": "NEXT_DIVERGENCE",
+      "engine_consumer_missing": false,
+      "reason": "Producer omitted usage in original capture; current live usage reaches grounding then rejects malformed filter ADD"
+    },
+    {
+      "root_id": "RC-B1",
+      "cases": [
+        "LF51-A"
+      ],
+      "status": "NEXT_DIVERGENCE",
+      "reason": "Original model selected a DIMENSION for source lookup. Guard retained; current ATTRIBUTE path verified on F, no fresh A-model closure claimed"
+    },
+    {
+      "root_id": "RC-V1",
+      "cases": [
+        "LF51-F"
+      ],
+      "status": "CLOSED",
+      "closure_scope": "INDEXED_FIELD_ENGINE_PATH",
+      "reason": "Original city query ignores mention at high cardinality; indexed targeted query proves one real candidate and actual F plans",
+      "remaining_limit": "No general alias/recall completeness claim; unindexed fields or unavailable mappings still fail closed"
+    }
+  ],
+  "new_roots": [
+    {
+      "root_id": "RC-SCHEMA-XOR",
+      "classification": "ENGINE_DEFECT",
+      "status": "GENERATION_CONTRACT_CLOSED_LIVE_NOT_RERUN",
+      "reason": "Export the existing field-or-current-target XOR invariant; runtime already enforced it",
+      "live_case": "LF51-F correction",
+      "baseline_json_schema_accepts_runtime_invalid_output": true,
+      "final_schema_rejects": true,
+      "validator_relaxed": false
+    },
+    {
+      "root_id": "RC-FIXTURE-UTF8",
+      "classification": "FIXTURE_GAP",
+      "status": "INPUT_PREFLIGHT_FIXED_LIVE_COVERAGE_NOT_RECOVERED",
+      "invalid_provider_calls": 3,
+      "production_context_bug": false
+    }
+  ],
+  "schema_oracle": {
+    "original_capture": "be77cb3441082a985f06b50e62d1dca087f0c5b17860ee765c717a4dfcf3fe40",
+    "intervention": "Only remove offered fields from a source request already naming a valid current filter target",
+    "next_divergence": {
+      "type": "RuntimeError",
+      "reason": "ORACLE_NEXT_MODEL_OUTPUT_NOT_RECORDED"
+    },
+    "counts_as_model_pass": false
+  },
+  "grounding_oracle": {
+    "before_source_query": "SOURCE_CANDIDATE_QUERY_PREDICATE",
+    "after_same_raw_capture_enabled_plan": true,
+    "same_raw_capture_disable_only_targeted_consumer": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+    },
+    "causal_root_confirmed": true,
+    "counts_as_gold_pass": false
+  },
+  "recorded_originals": [
+    {
+      "case_id": "LF51-A",
+      "error": {
+        "type": "ValueError",
+        "reason": "CONTRACT_OR_HARNESS_FAILURE"
+      },
+      "strict_request_match": false
+    },
+    {
+      "case_id": "LF51-B",
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "strict_request_match": false
+    },
+    {
+      "case_id": "LF51-C",
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "CATALOG_METRIC_TIME_ANCHOR_MISSING"
+      },
+      "strict_request_match": false
+    },
+    {
+      "case_id": "LF51-D",
+      "error": null,
+      "strict_request_match": false
+    },
+    {
+      "case_id": "LF51-F",
+      "error": {
+        "type": "RuntimeError",
+        "reason": "ORACLE_NEXT_MODEL_OUTPUT_NOT_RECORDED"
+      },
+      "strict_request_match": false
+    },
+    {
+      "case_id": "LF51-J",
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "strict_request_match": false
+    }
+  ],
+  "recorded_source_evidence_version": "6644e32eaed4416bac7eb074973d69989559c1a13feee0f5faa7b3915b2b40fc",
+  "recorded_is_original_strict_request": false,
+  "original_model_outputs_unchanged": true,
+  "next_root": "SourceValueRequest / StructuredFilterEdit generation contract; first restore valid healthy Live coverage with repaired input preflight",
+  "context_root_not_proven": true
+}

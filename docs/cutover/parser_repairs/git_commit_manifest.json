@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "f15969dcc0f90e75a399a3d80d4a489d58139dec",
+  "feature_branch": "cutover-parser-spans-20260909t015840z",
+  "final_commit": "Commit containing this manifest",
+  "planned_subject": "cutover: repair evidenced current-turn parse representations",
+  "runtime_source_changed": true,
+  "evidence": "closure_report.md and test_delta.json",
+  "draft_pr_base": "cutover-evaluation-gates-20260909t011632z"
+}

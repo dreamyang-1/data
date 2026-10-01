@@ -1,0 +1,131 @@
+{
+  "before": {
+    "requests": 9,
+    "model_calls": 20,
+    "calls_per_request": {
+      "n": 9,
+      "mean": 2.2222222222222223,
+      "p95": 3.0,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "input_tokens": {
+      "n": 9,
+      "mean": 21967.777777777777,
+      "p95": 32076.999999999996,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "output_tokens": {
+      "n": 9,
+      "mean": 1015.1111111111111,
+      "p95": 1520.0,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "recognition_seconds": {
+      "n": 9,
+      "mean": 10.090222222213116,
+      "p95": 13.674600000027567,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "total_plan_request_seconds": {
+      "n": 9,
+      "mean": 16.963555555583703,
+      "p95": 24.981400000024585,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "accepted_plan_only_seconds": {
+      "n": 3,
+      "mean": 9.854000000050291,
+      "p95": 11.598000000137835,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "provider_timeouts": 0,
+    "http_status_counts": {
+      "200": 20
+    },
+    "schema_failures": 0,
+    "clarification_count": 0
+  },
+  "after": {
+    "calls": {
+      "n": 5,
+      "mean": 2.2,
+      "p95": 2.8,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "input_tokens": {
+      "n": 5,
+      "mean": 27831,
+      "p95": 37079.0,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "output_tokens": {
+      "n": 5,
+      "mean": 882.2,
+      "p95": 1411.6,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "recognition_seconds": {
+      "n": 5,
+      "mean": 7.987199999997392,
+      "p95": 10.871399999968707,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "total_seconds": {
+      "n": 5,
+      "mean": 13.35,
+      "p95": 19.831199999991803,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    }
+  },
+  "after_requests": 5,
+  "after_model_calls": 11,
+  "http_status_counts": {
+    "200": 11
+  },
+  "provider_timeouts": 0,
+  "schema_failures": 0,
+  "clarification_count": 0,
+  "normal_model_call_path_changed": false,
+  "new_context_calls": 0,
+  "comparison_limit": "Different small curated case/attempt distributions; no causal latency or accuracy improvement claim. Failed attempts retained.",
+  "source_lookup_strategy_changed": false,
+  "source_frozen_evidence": true,
+  "SQL_or_HTTP_answer_latency": false,
+  "token_change_audit": {
+    "same_prerequisite": "LF51-D",
+    "rows": [
+      {
+        "stage": "v2_current_turn",
+        "before_input_tokens": 3004,
+        "after_input_tokens": 3004,
+        "context_equal": true,
+        "system_schema_chars_before": 9742,
+        "system_schema_chars_after": 9742,
+        "catalog_candidates_before": 0,
+        "catalog_candidates_after": 0
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "before_input_tokens": 17170,
+        "after_input_tokens": 18007,
+        "context_equal": true,
+        "system_schema_chars_before": 13121,
+        "system_schema_chars_after": 14428,
+        "catalog_candidates_before": 51,
+        "catalog_candidates_after": 51
+      },
+      {
+        "stage": "v2_source_value_choice",
+        "before_input_tokens": 4720,
+        "after_input_tokens": 4740,
+        "context_equal": false,
+        "system_schema_chars_before": 3573,
+        "system_schema_chars_after": 3573,
+        "catalog_candidates_before": 0,
+        "catalog_candidates_after": 0
+      }
+    ],
+    "explanation": "Higher second-stage input includes an explicit offered-ATTRIBUTE enum and the initial-time schema description. Aggregate populations also differ: current 3/5 requests carry context vs prior 4/9. No comparable old live CLEAR/TIME request existed.",
+    "no_extra_model_calls": true
+  }
+}

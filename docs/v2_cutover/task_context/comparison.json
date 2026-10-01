@@ -1,0 +1,202 @@
+{
+  "baseline_commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
+  "shared_prompt_version": "v2-current-recognition-v8",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "gold_hash": "f9307933e72e2c85fe189dcdad6855edfa09dce85926e761539beee2f621f825",
+  "baseline": {
+    "FAILED": 15,
+    "OK": 1,
+    "NOT_RUN": 4
+  },
+  "context_only": {
+    "OK": 2,
+    "FAILED": 14,
+    "NOT_RUN": 4
+  },
+  "context_and_destructive_dependency": {
+    "OK": 4,
+    "FAILED": 12,
+    "NOT_RUN": 4
+  },
+  "current_observed_plan_case_ids": [
+    "S81-001",
+    "S81-003",
+    "S81-011",
+    "S81-013"
+  ],
+  "current_triage": [
+    {
+      "case_id": "S81-001",
+      "status": "OK",
+      "reason": null,
+      "phase": "CURRENT",
+      "classification": "OBSERVED_SELECTED_AXES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-002",
+      "status": "FAILED",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+      "phase": "CURRENT",
+      "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+      "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+    },
+    {
+      "case_id": "S81-003",
+      "status": "OK",
+      "reason": null,
+      "phase": "CURRENT",
+      "classification": "OBSERVED_SELECTED_AXES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-004",
+      "status": "FAILED",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "phase": "HISTORY",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-005",
+      "status": "FAILED",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "phase": "HISTORY",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-006",
+      "status": "FAILED",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "phase": "HISTORY",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-007",
+      "status": "FAILED",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "phase": "HISTORY",
+      "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+      "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+    },
+    {
+      "case_id": "S81-008",
+      "status": "FAILED",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "phase": "HISTORY",
+      "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+      "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+    },
+    {
+      "case_id": "S81-009",
+      "status": "FAILED",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "phase": "HISTORY",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-010",
+      "status": "FAILED",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "phase": "HISTORY",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-011",
+      "status": "OK",
+      "reason": null,
+      "phase": "CURRENT",
+      "classification": "OBSERVED_SELECTED_AXES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-012",
+      "status": "FAILED",
+      "reason": "V2_SLOT_OPERATION_CONFLICT",
+      "phase": "HISTORY",
+      "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+      "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+    },
+    {
+      "case_id": "S81-013",
+      "status": "OK",
+      "reason": null,
+      "phase": "CURRENT",
+      "classification": "OBSERVED_SELECTED_AXES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-014",
+      "status": "FAILED",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+      "phase": "HISTORY",
+      "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+      "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+    },
+    {
+      "case_id": "S81-015",
+      "status": "FAILED",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "phase": "HISTORY",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-016",
+      "status": "NOT_RUN",
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "phase": null,
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-017",
+      "status": "FAILED",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+      "phase": "CURRENT",
+      "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+      "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+    },
+    {
+      "case_id": "S81-018",
+      "status": "NOT_RUN",
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "phase": null,
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-019",
+      "status": "NOT_RUN",
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "phase": null,
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": null
+    },
+    {
+      "case_id": "S81-020",
+      "status": "NOT_RUN",
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "phase": null,
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": null
+    }
+  ],
+  "successful_plan_means": "Selected state/operation/target axes are observed; this does not establish whole-plan, SQL, result or hard-safety acceptance.",
+  "real_model_requests": 94,
+  "http_counts": {
+    "200": 94
+  },
+  "source_SQL_executions": 0,
+  "production_external_writes": 0,
+  "whole_plan_acceptance": "NOT_EVALUATED",
+  "limits": [
+    "Live generation varies; the deterministic regression isolates the resolver cause.",
+    "S81-012 failed on its current turn in the intermediate run and on its history in the final run. Both remain failures.",
+    "Six source-value gaps and four entry fixtures stay in the fixed denominator; safety gaps are NOT_EVALUATED."
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "baseline_commit": "b0c2d9da2a836b9e16b9986c90d1e3b2065026f0",
+  "feature_branch": "cutover-pinned-sql-catalog-20260909-01",
+  "files": [
+    {
+      "repository_path": "Oagnet/catalog_release.py",
+      "source_sha256": "e6b2da2cb08de6d8ca5dd1f1b43a313eaa8bab11d798fc5b11c6bf7ba957e0d6",
+      "published_sha256": "e6b2da2cb08de6d8ca5dd1f1b43a313eaa8bab11d798fc5b11c6bf7ba957e0d6",
+      "baseline_sha256": "f8b5d99acce9e5d2d4b6e4bb2b170e8ae22329668ff5f9a591cf75943ab59f27"
+    },
+    {
+      "repository_path": "Oagnet/catalog_sql_sources.py",
+      "source_sha256": "2f5f005b2562caac380c2db6c903955be0b9d313d021c33a98b44633bff49839",
+      "published_sha256": "2f5f005b2562caac380c2db6c903955be0b9d313d021c33a98b44633bff49839",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "Oagnet/tests/test_catalog_sql_sources.py",
+      "source_sha256": "0fbb3bfc527d8bc1866532bb1d10a1b79a9d30537cf3869ebb48ad8b80a89c73",
+      "published_sha256": "0fbb3bfc527d8bc1866532bb1d10a1b79a9d30537cf3869ebb48ad8b80a89c73",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "Oagnet/tests/test_catalog_release.py",
+      "source_sha256": "083136bd6d4a0446514e1e47f212985ca54737fcb0cfa4f222562e6bb2765c4f",
+      "published_sha256": "083136bd6d4a0446514e1e47f212985ca54737fcb0cfa4f222562e6bb2765c4f",
+      "baseline_sha256": "c8de09bddc2d5b118fe457e777b5303e03831dfe51b6a7c2e34d9f3eb00e227d"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_catalog_publication.py",
+      "source_sha256": "c74eddf9d567ec9a196fce8d931d585afcb4d28f900d50e7d74a442a48e543e4",
+      "published_sha256": "c74eddf9d567ec9a196fce8d931d585afcb4d28f900d50e7d74a442a48e543e4",
+      "baseline_sha256": "e9954b93922e3f498361b96a7ef2c1759f5625fcf9c24f16af314f3b01b8029e"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_catalog_value_sources.py",
+      "source_sha256": "fc11e372898d03a04e912774d1e9a562f1056440130761e8288465a57431475a",
+      "published_sha256": "fc11e372898d03a04e912774d1e9a562f1056440130761e8288465a57431475a",
+      "baseline_sha256": "fa06c964238aec2f5c3fca97dfa9f17d022c40707e2c9b677f20bf094c34a75e"
+    },
+    {
+      "repository_path": "sql-translator/pinned_catalog.py",
+      "source_sha256": "1572ba45d58d8278d7df469d54b01100bb6cd649a497b556f600d91b260bfffb",
+      "published_sha256": "1572ba45d58d8278d7df469d54b01100bb6cd649a497b556f600d91b260bfffb",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "sql-translator/test_pinned_catalog.py",
+      "source_sha256": "729646544b4c0f8d441a128befa9ad5e120581196d79aac2adb1b82ab853f541",
+      "published_sha256": "729646544b4c0f8d441a128befa9ad5e120581196d79aac2adb1b82ab853f541",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.json",
+      "source_sha256": "9df76a4ed4bdfbf776562c0adcf5df4f6d061218e6400788dbb08cdd3de7c4ad",
+      "published_sha256": "9df76a4ed4bdfbf776562c0adcf5df4f6d061218e6400788dbb08cdd3de7c4ad",
+      "baseline_sha256": "77212e38960b0351ae93c603bfe3a87c57e1f33ca9782d962873a423d3e2cbe2"
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.csv",
+      "source_sha256": "73a33d974ac106f25bbc4e8336a3e136e52a163b14a2eb1466e6cd1c1bd1a65c",
+      "published_sha256": "f80e9d185db71c36e3cd177f01261c8586396885ff21b140c5a730b3cbef21fd",
+      "baseline_sha256": "1ce4c4b46bc8c3ea6265016a8e50beeeacc879c58344cb9bb94d006c41d616bd"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.json",
+      "source_sha256": "6541835668db4793d6701319ed07a57278caa8e0ccfc55642c1ada26c111dd72",
+      "published_sha256": "6541835668db4793d6701319ed07a57278caa8e0ccfc55642c1ada26c111dd72",
+      "baseline_sha256": "9085841f0ca62c09cec8794103c516960dfc1a8db5eb389e7a8a5e80273a5001"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.csv",
+      "source_sha256": "86317f7f04f0db24c02c7aa65a2fa3a53268b2f44d31a352573e7c55cf76c46e",
+      "published_sha256": "2add8a62c65fa260450826e9d60c636e49c46f8a9aa0b34fcb912705ab4cc2c0",
+      "baseline_sha256": "f5d37545cd49fc0771a1654052c9e1eb574b9a78ba48c49e637d3afa6f54d4d6"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.md",
+      "source_sha256": "d111491df0d622c5b821b110e10d93eb00afc109e655ddded14ad09a0abc63e8",
+      "published_sha256": "d111491df0d622c5b821b110e10d93eb00afc109e655ddded14ad09a0abc63e8",
+      "baseline_sha256": "996bea811ae49d6737f714e57b22e39fa546c871594c7384ae1664f29935a33b"
+    },
+    {
+      "repository_path": "docs/cutover/catalog_publication_candidate/publication_candidate.md",
+      "source_sha256": "50aefa38b511b075074e5d8415bbf34f4521f3cacc4c21a6aa3c96a174ba033d",
+      "published_sha256": "50aefa38b511b075074e5d8415bbf34f4521f3cacc4c21a6aa3c96a174ba033d",
+      "baseline_sha256": "bf969acdbd6b5cb7f55c2fec11fd875fdc7ca6353d66d02b4794732f539bf8df"
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/catalog_evidence.json",
+      "source_sha256": "96c7a9ee1f016bd8d24849d487831a03c145f8156073f406e53b917c356ba0f8",
+      "published_sha256": "96c7a9ee1f016bd8d24849d487831a03c145f8156073f406e53b917c356ba0f8",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/closure_report.md",
+      "source_sha256": "443adf71889810f2801d1575520914f00898d16c52d421d133ba3dc6b595f875",
+      "published_sha256": "443adf71889810f2801d1575520914f00898d16c52d421d133ba3dc6b595f875",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/final_DataAnalysis_Agent.json",
+      "source_sha256": "eb87b019365d76063df0b78a0f192fb13074aa8cf83d044990678e58d5b8e40d",
+      "published_sha256": "eb87b019365d76063df0b78a0f192fb13074aa8cf83d044990678e58d5b8e40d",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/final_Oagnet.json",
+      "source_sha256": "175e6c1f79859037c92234ad3623774dbdb4de34d90d7a612e135ebfa8c4d876",
+      "published_sha256": "175e6c1f79859037c92234ad3623774dbdb4de34d90d7a612e135ebfa8c4d876",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/final_SQL_Translator.json",
+      "source_sha256": "a94a5046eb9dce3b97c470dd9c52c972e9fdcdb5b735f29dac8d0ae43eb34ad7",
+      "published_sha256": "a94a5046eb9dce3b97c470dd9c52c972e9fdcdb5b735f29dac8d0ae43eb34ad7",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/publication_candidate.json",
+      "source_sha256": "360ee49bbd222c315d2a9ece4f913bef82d947e91f16c0c1eb1ca3baf25e610e",
+      "published_sha256": "360ee49bbd222c315d2a9ece4f913bef82d947e91f16c0c1eb1ca3baf25e610e",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/publication_candidate.md",
+      "source_sha256": "fd9638233b127f9ab3db2a4de4a01026539b7f44ebeb93491d2df410ce47c7e7",
+      "published_sha256": "fd9638233b127f9ab3db2a4de4a01026539b7f44ebeb93491d2df410ce47c7e7",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/rollback_manifest.json",
+      "source_sha256": "544d6035d54fbd896335856a380b5915cfea407d85726b3a45dae7a7d809289c",
+      "published_sha256": "544d6035d54fbd896335856a380b5915cfea407d85726b3a45dae7a7d809289c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/source_review.md",
+      "source_sha256": "88cb8b118d54dff7282da3165e4cf293ab907fe5776f98579d00549f9ca99d3e",
+      "published_sha256": "88cb8b118d54dff7282da3165e4cf293ab907fe5776f98579d00549f9ca99d3e",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/test_delta.json",
+      "source_sha256": "7ca3b4ba281ccc061421eade8738dd5ae9bbf736bd2c4b27a0783f81f899afc2",
+      "published_sha256": "7ca3b4ba281ccc061421eade8738dd5ae9bbf736bd2c4b27a0783f81f899afc2",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/git_commit_manifest.json",
+      "source_sha256": "a60352c3cd52af05182b47cbe4645930fd4837dcb6d7ea89d88a5b8d977ae358",
+      "published_sha256": "a60352c3cd52af05182b47cbe4645930fd4837dcb6d7ea89d88a5b8d977ae358",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/pinned_sql_catalog/workspace_git_hash_verification.json",
+      "source_sha256": "b3152f2200589492393cadfa46cd74dab968df5f374179edc67588a1975297ee",
+      "published_sha256": "b3152f2200589492393cadfa46cd74dab968df5f374179edc67588a1975297ee",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash"
+}

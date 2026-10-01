@@ -1,0 +1,2648 @@
+{
+  "status": "PASS",
+  "phase0a_baseline_commit": "e4d3bb59026d3b219c9268ac53f87dccf58f3c28",
+  "verified_payload_files": 524,
+  "unexpected_tracked_source_drift": 0,
+  "verification_scope": "Prepared final commit payload: both workspaces match; verification file excludes itself from embedded hashes, and postcommit command includes every raw blob.",
+  "final_commit_resolver": "git log -1 --format=%H -- docs/phase0b/phase0b_closure_report.md",
+  "postcommit_verification": "python tools/phase0/finalize_repository.py verify",
+  "expected_local_generated_artifacts": [
+    "docs/phase0b/boundary_checks.json",
+    "docs/phase0b/boundary_checks_v2.json",
+    "docs/phase0b/critical_after_batch1.json",
+    "docs/phase0b/final_test_gate.json",
+    "docs/phase0b/final_test_gate_with_trace.json",
+    "docs/phase0b/full_after_batch1.json",
+    "docs/phase0b/full_after_batch1_corrected.json",
+    "docs/phase0b/full_after_regressions.json",
+    "docs/phase0b/full_after_trace.json",
+    "docs/phase0b/new_regression_batch.json",
+    "docs/phase0b/new_regression_batch2.json",
+    "docs/phase0b/preclosure_test_gate.json",
+    "docs/phase0b/targeted_final.json",
+    "docs/phase0b/targeted_guards_final.json",
+    "docs/phase0b/targeted_pending_fix.json"
+  ],
+  "files": [
+    {
+      "path": ".dockerignore",
+      "workspace_hash": "6f17168982ba16d1f1e37dcf3f5dc855fd5fd30a047bb4dab53d3bd71d59021d",
+      "git_hash": "6f17168982ba16d1f1e37dcf3f5dc855fd5fd30a047bb4dab53d3bd71d59021d"
+    },
+    {
+      "path": ".env.example",
+      "workspace_hash": "a576fef61c6367ab8660097b4ecab60bc61e651bbdb038f2fe4fa0d7029b9002",
+      "git_hash": "a576fef61c6367ab8660097b4ecab60bc61e651bbdb038f2fe4fa0d7029b9002"
+    },
+    {
+      "path": ".gitattributes",
+      "workspace_hash": "5c9ba2ea6f4e1b9e3d8aaf371b87157634722667f2a3487bf254bd631428a388",
+      "git_hash": "5c9ba2ea6f4e1b9e3d8aaf371b87157634722667f2a3487bf254bd631428a388"
+    },
+    {
+      "path": ".gitignore",
+      "workspace_hash": "2fdf44d1769a88ed73827e33064dbbc36857e9d26862c62255d466a218444541",
+      "git_hash": "2fdf44d1769a88ed73827e33064dbbc36857e9d26862c62255d466a218444541"
+    },
+    {
+      "path": "AGENTS.md",
+      "workspace_hash": "0e655d69c6a08700468a48319bded509d4665c66bd4b791cd3863d671f0cd816",
+      "git_hash": "0e655d69c6a08700468a48319bded509d4665c66bd4b791cd3863d671f0cd816"
+    },
+    {
+      "path": "AGENT_NODE_WORKFLOW_GUIDE.md",
+      "workspace_hash": "4c5103719a839e2a54474c852ce9b69f6345333b7c71761bef6073c6856c0154",
+      "git_hash": "4c5103719a839e2a54474c852ce9b69f6345333b7c71761bef6073c6856c0154"
+    },
+    {
+      "path": "ANALYSIS_PIPELINE_GUIDE.md",
+      "workspace_hash": "dee6c012fd543f02f7294ce29d988841be173f316b339d7d8d596224df5e77f2",
+      "git_hash": "dee6c012fd543f02f7294ce29d988841be173f316b339d7d8d596224df5e77f2"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "workspace_hash": "dc6a44e2f3e6ffb5f6793e6c2cbeeefc8a02b4ec88ac765dfe9e32ddcc245438",
+      "git_hash": "dc6a44e2f3e6ffb5f6793e6c2cbeeefc8a02b4ec88ac765dfe9e32ddcc245438"
+    },
+    {
+      "path": "CODE_REVIEW_ISSUES.md",
+      "workspace_hash": "1566e96b5720a18f3a4c024fae39aeb86db6864e22f1027922a7d4f448be461c",
+      "git_hash": "1566e96b5720a18f3a4c024fae39aeb86db6864e22f1027922a7d4f448be461c"
+    },
+    {
+      "path": "CURRENT_SYSTEM_TEST_AND_CAPABILITY_REPORT.md",
+      "workspace_hash": "0d093759e10ed9084d4b29d3cc280bf65f3d0dbf7e6ad8f0f67d020d9a95d5b2",
+      "git_hash": "0d093759e10ed9084d4b29d3cc280bf65f3d0dbf7e6ad8f0f67d020d9a95d5b2"
+    },
+    {
+      "path": "DETAIL_QUERY ASL Projection & Error Classification Fix Report.md",
+      "workspace_hash": "5174802edb4a6981c446b768d4c6d5dbde3716163203b9aee2447a5535bc73c3",
+      "git_hash": "5174802edb4a6981c446b768d4c6d5dbde3716163203b9aee2447a5535bc73c3"
+    },
+    {
+      "path": "Dockerfile",
+      "workspace_hash": "7ed0363add0f80f0ecfdc2a488d7cdd8ec642a7499d3a7e85037a86c64405365",
+      "git_hash": "7ed0363add0f80f0ecfdc2a488d7cdd8ec642a7499d3a7e85037a86c64405365"
+    },
+    {
+      "path": "ENTITY_SHADOW_COMPARISON_20260831.md",
+      "workspace_hash": "4ca5dc2014910c769f2792dfed23a79fa22a84983f55d1eff2a211dc96470df2",
+      "git_hash": "4ca5dc2014910c769f2792dfed23a79fa22a84983f55d1eff2a211dc96470df2"
+    },
+    {
+      "path": "Follow-up Context Inheritance 与时间结果复用修复报告.md",
+      "workspace_hash": "9a5d174cae38b129f0c6031429c059160cbe92c256370b35f51e49a2d1f5d3fc",
+      "git_hash": "9a5d174cae38b129f0c6031429c059160cbe92c256370b35f51e49a2d1f5d3fc"
+    },
+    {
+      "path": "IMPLEMENTATION.md",
+      "workspace_hash": "95f301f0296dab77ad1565e766f3b435ec483d60d9eb7b2e7a905dd003122994",
+      "git_hash": "95f301f0296dab77ad1565e766f3b435ec483d60d9eb7b2e7a905dd003122994"
+    },
+    {
+      "path": "INTENT_REWRITE_ADVERSARIAL_TEST_REPORT.md",
+      "workspace_hash": "bd20c0380f1c794110cb4d87d88b38b481f1d6cc688e161dadd65f512c31ca8e",
+      "git_hash": "bd20c0380f1c794110cb4d87d88b38b481f1d6cc688e161dadd65f512c31ca8e"
+    },
+    {
+      "path": "Long-range Conversational Data Agent V2设计报告.md",
+      "workspace_hash": "53af5a3707d3f43c73d14e6facddaa90b94aa46b2345ca59d232cdbed34f6a52",
+      "git_hash": "53af5a3707d3f43c73d14e6facddaa90b94aa46b2345ca59d232cdbed34f6a52"
+    },
+    {
+      "path": "MILVUS_REDIS_MINIO_RETRIEVAL_DESIGN.md",
+      "workspace_hash": "edd0c69e8fa04858a33870222852751180a62151a8d35268449d01657dc2399d",
+      "git_hash": "edd0c69e8fa04858a33870222852751180a62151a8d35268449d01657dc2399d"
+    },
+    {
+      "path": "MULTIDIMENSIONAL_EVALUATION_20260826.md",
+      "workspace_hash": "b8f477aedc8e2d174917053b8f0194b215f1e1d7b44f860d9a3d98c3cd4fa3b2",
+      "git_hash": "b8f477aedc8e2d174917053b8f0194b215f1e1d7b44f860d9a3d98c3cd4fa3b2"
+    },
+    {
+      "path": "MULTITURN_CONVERSATION_EVALUATION_20260826.md",
+      "workspace_hash": "c78f010ccda33e035ce8b2d0eb6ad611451507b5d09828c10215e46ee9a7931c",
+      "git_hash": "c78f010ccda33e035ce8b2d0eb6ad611451507b5d09828c10215e46ee9a7931c"
+    },
+    {
+      "path": "New Topic - Follow-up Context Leakage 修复报告.md",
+      "workspace_hash": "ca40b955525841b54cb9c2765e3b320e38a8b9b8d943cbe51daca28595af9c06",
+      "git_hash": "ca40b955525841b54cb9c2765e3b320e38a8b9b8d943cbe51daca28595af9c06"
+    },
+    {
+      "path": "PLATFORM_INTEGRATION_STATUS.md",
+      "workspace_hash": "6848c7c4427de0cff5a328860115506a52b33a410513744cf20879a556c95d94",
+      "git_hash": "6848c7c4427de0cff5a328860115506a52b33a410513744cf20879a556c95d94"
+    },
+    {
+      "path": "PROJECT_EXPLAINED_SIMPLY.md",
+      "workspace_hash": "cf5eaca0931f26f0e8edbf2b24c0bbf85a12ec0c44b6de0786b64969ed4de67e",
+      "git_hash": "cf5eaca0931f26f0e8edbf2b24c0bbf85a12ec0c44b6de0786b64969ed4de67e"
+    },
+    {
+      "path": "README.md",
+      "workspace_hash": "019b7c1223a97e023d55d06292a5db71d12b447de27f30e4fbaa6e676f79f9d1",
+      "git_hash": "019b7c1223a97e023d55d06292a5db71d12b447de27f30e4fbaa6e676f79f9d1"
+    },
+    {
+      "path": "REAL_WORLD_QUERY_EVALUATION_20260826.md",
+      "workspace_hash": "206572a075b48fabb4e39090e023e01550d511b843122aa7a68a2ec80445d110",
+      "git_hash": "206572a075b48fabb4e39090e023e01550d511b843122aa7a68a2ec80445d110"
+    },
+    {
+      "path": "SKILL_AND_TOOL_CATALOG.md",
+      "workspace_hash": "76b10fc0501ef46fe3b06630b4c4fa0fb3267c079fa30472e6198960a59925c6",
+      "git_hash": "76b10fc0501ef46fe3b06630b4c4fa0fb3267c079fa30472e6198960a59925c6"
+    },
+    {
+      "path": "SSE_STREAMING_EXAMPLES.md",
+      "workspace_hash": "ad188cb7b9c6a3eda2df4bba8625226c317d8a7230451cbee577597c0c6c6d07",
+      "git_hash": "ad188cb7b9c6a3eda2df4bba8625226c317d8a7230451cbee577597c0c6c6d07"
+    },
+    {
+      "path": "TASK_BREAKDOWN.md",
+      "workspace_hash": "89e9c4e6c68d6a32498dccddfd9d7c44d9c0f079286df48211af5645fc461123",
+      "git_hash": "89e9c4e6c68d6a32498dccddfd9d7c44d9c0f079286df48211af5645fc461123"
+    },
+    {
+      "path": "app/__init__.py",
+      "workspace_hash": "0c9574158a1a14d6d5d45f99da66939eba93095f2c3aa8354ea4975075cf5cb4",
+      "git_hash": "0c9574158a1a14d6d5d45f99da66939eba93095f2c3aa8354ea4975075cf5cb4"
+    },
+    {
+      "path": "app/adapters/__init__.py",
+      "workspace_hash": "438ba2cdc1af725cbcab82e70dde2e1b6858da005be21f945a15b930c0a8eb76",
+      "git_hash": "438ba2cdc1af725cbcab82e70dde2e1b6858da005be21f945a15b930c0a8eb76"
+    },
+    {
+      "path": "app/adapters/base.py",
+      "workspace_hash": "b16c74b175d1bd75eb927d049fff9c0289021c9255439511b85e4484d258209c",
+      "git_hash": "b16c74b175d1bd75eb927d049fff9c0289021c9255439511b85e4484d258209c"
+    },
+    {
+      "path": "app/adapters/contracts.py",
+      "workspace_hash": "96e2afd7b30870316fbe92e11ffc829877699748c3b25c896ed870610cbfbbe7",
+      "git_hash": "96e2afd7b30870316fbe92e11ffc829877699748c3b25c896ed870610cbfbbe7"
+    },
+    {
+      "path": "app/adapters/errors.py",
+      "workspace_hash": "15afcbf91852b0225da102b4732c2f55335fa3f1e0bfd95fbe641fdd2d703e8f",
+      "git_hash": "15afcbf91852b0225da102b4732c2f55335fa3f1e0bfd95fbe641fdd2d703e8f"
+    },
+    {
+      "path": "app/adapters/handshake.py",
+      "workspace_hash": "5e7b4ccb09f059987c7ab7bc5ec27eaa44c564d15462853cfd59da251cc8bee8",
+      "git_hash": "5e7b4ccb09f059987c7ab7bc5ec27eaa44c564d15462853cfd59da251cc8bee8"
+    },
+    {
+      "path": "app/adapters/http.py",
+      "workspace_hash": "f34944e41499ea96c0af63eca6ad5412c15fca5129d2a7d50923ccdbb9a4ca46",
+      "git_hash": "f34944e41499ea96c0af63eca6ad5412c15fca5129d2a7d50923ccdbb9a4ca46"
+    },
+    {
+      "path": "app/adapters/mock.py",
+      "workspace_hash": "e2d38159c8fe6580181d238677e9fb256a012a8522b044a4bd7e36504f09820e",
+      "git_hash": "e2d38159c8fe6580181d238677e9fb256a012a8522b044a4bd7e36504f09820e"
+    },
+    {
+      "path": "app/adapters/semantic_query.py",
+      "workspace_hash": "9ba7da8207ff565b1dae26baf8dee6d230bf90b6408a3da1baaf7afffcb44d3e",
+      "git_hash": "9ba7da8207ff565b1dae26baf8dee6d230bf90b6408a3da1baaf7afffcb44d3e"
+    },
+    {
+      "path": "app/analysis/__init__.py",
+      "workspace_hash": "56830f1ecda9f9a5f3f97285531aafda730acd7d889a5501d9a2b177ef7a7a82",
+      "git_hash": "56830f1ecda9f9a5f3f97285531aafda730acd7d889a5501d9a2b177ef7a7a82"
+    },
+    {
+      "path": "app/analysis/contracts.py",
+      "workspace_hash": "b837ac946b6ea0af377ab5b4bb4f019fc290e848c280aa36434b6a1818ed6ce7",
+      "git_hash": "b837ac946b6ea0af377ab5b4bb4f019fc290e848c280aa36434b6a1818ed6ce7"
+    },
+    {
+      "path": "app/analysis/engine.py",
+      "workspace_hash": "68a918480fcf1f2613bf65cbffe3b69fc632b5feaca8c911a03c3863b8998933",
+      "git_hash": "68a918480fcf1f2613bf65cbffe3b69fc632b5feaca8c911a03c3863b8998933"
+    },
+    {
+      "path": "app/analysis/forecasting.py",
+      "workspace_hash": "c45406b74c58d230ef191544e9185b8061a5e52bff61855c835cc4e5b748a528",
+      "git_hash": "c45406b74c58d230ef191544e9185b8061a5e52bff61855c835cc4e5b748a528"
+    },
+    {
+      "path": "app/analysis/insight_discovery.py",
+      "workspace_hash": "8321af145807ca44c3bd0dce72f6e0e7a3ebb4d491ecadcbf546316eb46c6d4e",
+      "git_hash": "8321af145807ca44c3bd0dce72f6e0e7a3ebb4d491ecadcbf546316eb46c6d4e"
+    },
+    {
+      "path": "app/analysis/interpretation.py",
+      "workspace_hash": "8338a2d8e3fd7ccb5b3e489ee221d4d707ed8be82c162321430e0d27c2c21615",
+      "git_hash": "8338a2d8e3fd7ccb5b3e489ee221d4d707ed8be82c162321430e0d27c2c21615"
+    },
+    {
+      "path": "app/analysis/multidimensional_attribution.py",
+      "workspace_hash": "c0334936678aff7b7f689443d76fdd1199621f3a938f497e3d7f122da51055f3",
+      "git_hash": "c0334936678aff7b7f689443d76fdd1199621f3a938f497e3d7f122da51055f3"
+    },
+    {
+      "path": "app/analysis/operators.py",
+      "workspace_hash": "88e7a4fbc348ffe0dd203f5819d4725038b44f3fd5c100abd6eb14c04a341682",
+      "git_hash": "88e7a4fbc348ffe0dd203f5819d4725038b44f3fd5c100abd6eb14c04a341682"
+    },
+    {
+      "path": "app/analysis/planning.py",
+      "workspace_hash": "1a74c35f60afa113164dd7444fcc856aa01983dad7630a54c833f3803dcba7a5",
+      "git_hash": "1a74c35f60afa113164dd7444fcc856aa01983dad7630a54c833f3803dcba7a5"
+    },
+    {
+      "path": "app/analysis/profiling.py",
+      "workspace_hash": "439308aee0da47ab253a1034a27ab4acfd978a78b1582bb1069aa24381bf6780",
+      "git_hash": "439308aee0da47ab253a1034a27ab4acfd978a78b1582bb1069aa24381bf6780"
+    },
+    {
+      "path": "app/analysis/result_validator.py",
+      "workspace_hash": "8d1d89a76d1b105d34f96ae2d667dd1bb34ef5211f5d71bf80111cbbf039acbc",
+      "git_hash": "8d1d89a76d1b105d34f96ae2d667dd1bb34ef5211f5d71bf80111cbbf039acbc"
+    },
+    {
+      "path": "app/analysis/synthesis.py",
+      "workspace_hash": "7b9d8bfb41f6c76abe1ab327f2d9f54f42f3d891cebd898e5239e0ddc930dae7",
+      "git_hash": "7b9d8bfb41f6c76abe1ab327f2d9f54f42f3d891cebd898e5239e0ddc930dae7"
+    },
+    {
+      "path": "app/analysis/visualization.py",
+      "workspace_hash": "0675e8231c26278226eb778c99dc38f8288b5092083f621c6efd4493b78ecf48",
+      "git_hash": "0675e8231c26278226eb778c99dc38f8288b5092083f621c6efd4493b78ecf48"
+    },
+    {
+      "path": "app/api.py",
+      "workspace_hash": "8ccb5a754e2e826e333cfb6db420d7f61877cbcaa7fb7f4a19889c54716f03be",
+      "git_hash": "8ccb5a754e2e826e333cfb6db420d7f61877cbcaa7fb7f4a19889c54716f03be"
+    },
+    {
+      "path": "app/config.py",
+      "workspace_hash": "dc6b2e8c0a5600f99725587fb00ae0a94de70a9bf5bbd85474d173900d7a0fb2",
+      "git_hash": "dc6b2e8c0a5600f99725587fb00ae0a94de70a9bf5bbd85474d173900d7a0fb2"
+    },
+    {
+      "path": "app/dependencies.py",
+      "workspace_hash": "fe48a9e0bb30e98cb3eaf591904c210adc739bb8741878ad59a39cc3fc39052b",
+      "git_hash": "fe48a9e0bb30e98cb3eaf591904c210adc739bb8741878ad59a39cc3fc39052b"
+    },
+    {
+      "path": "app/domain/__init__.py",
+      "workspace_hash": "add3926584b83e25f77e7e18efe8338435674dcde70417ad860a59d6770a64b4",
+      "git_hash": "add3926584b83e25f77e7e18efe8338435674dcde70417ad860a59d6770a64b4"
+    },
+    {
+      "path": "app/domain/models.py",
+      "workspace_hash": "fcb3f4f1a2e2b43755c354edb211456ea8b1007700efdab24ad7b0abb2c20997",
+      "git_hash": "fcb3f4f1a2e2b43755c354edb211456ea8b1007700efdab24ad7b0abb2c20997"
+    },
+    {
+      "path": "app/graph/__init__.py",
+      "workspace_hash": "53a907e82905bb01079d3102131d9c6c8b6df8ba9225b7ef97e5baf28aa64a72",
+      "git_hash": "53a907e82905bb01079d3102131d9c6c8b6df8ba9225b7ef97e5baf28aa64a72"
+    },
+    {
+      "path": "app/graph/state.py",
+      "workspace_hash": "15b89166431e09ec23add31ba2b2d6fa522c25f1da2188639feef01c3c04de7b",
+      "git_hash": "15b89166431e09ec23add31ba2b2d6fa522c25f1da2188639feef01c3c04de7b"
+    },
+    {
+      "path": "app/graph/workflow.py",
+      "workspace_hash": "285c346e8f4e798a13c03fa5f8cd51fdaa7fdb81ee5b8f2021fe100234e3f8a4",
+      "git_hash": "285c346e8f4e798a13c03fa5f8cd51fdaa7fdb81ee5b8f2021fe100234e3f8a4"
+    },
+    {
+      "path": "app/intent/__init__.py",
+      "workspace_hash": "6d82d08dd02634a0b5bb43eb4601b28177583387fbace2b270be3ac33f04253a",
+      "git_hash": "6d82d08dd02634a0b5bb43eb4601b28177583387fbace2b270be3ac33f04253a"
+    },
+    {
+      "path": "app/intent/classifier.py",
+      "workspace_hash": "76ed596868bff6951858cd53776986a10c4ee28a6962046e7e5d4a3f5b9cbb05",
+      "git_hash": "76ed596868bff6951858cd53776986a10c4ee28a6962046e7e5d4a3f5b9cbb05"
+    },
+    {
+      "path": "app/intent/structured.py",
+      "workspace_hash": "a8797333f90da5b46c2de6222e5cbe74bd1ad3ee7de151a2a6ad04438c9d24bf",
+      "git_hash": "a8797333f90da5b46c2de6222e5cbe74bd1ad3ee7de151a2a6ad04438c9d24bf"
+    },
+    {
+      "path": "app/main.py",
+      "workspace_hash": "7d1b622f5e5bc3a3750881d4cf1bfe85ebc1c8800a71ecf65bc908a48956fd99",
+      "git_hash": "7d1b622f5e5bc3a3750881d4cf1bfe85ebc1c8800a71ecf65bc908a48956fd99"
+    },
+    {
+      "path": "app/observability/__init__.py",
+      "workspace_hash": "60a9ad7f6b4ae1447b519ec68e6a2f54365a8d043c4a4b4261b13f0fcc7f7525",
+      "git_hash": "60a9ad7f6b4ae1447b519ec68e6a2f54365a8d043c4a4b4261b13f0fcc7f7525"
+    },
+    {
+      "path": "app/observability/langfuse_client.py",
+      "workspace_hash": "230e043a899b45bad5c3a8f7b3fdb7a21fc6fe55fb68a096ee91f2e8758defe7",
+      "git_hash": "230e043a899b45bad5c3a8f7b3fdb7a21fc6fe55fb68a096ee91f2e8758defe7"
+    },
+    {
+      "path": "app/observability/tracing.py",
+      "workspace_hash": "80d0bbf41eec3ef85c5b1922072d993b065e37683887d7c7253170e0b472f809",
+      "git_hash": "80d0bbf41eec3ef85c5b1922072d993b065e37683887d7c7253170e0b472f809"
+    },
+    {
+      "path": "app/planning/__init__.py",
+      "workspace_hash": "dfbbc11a2d747de4d5161db2000f4d0afadbf757c49f09cbc605f829ed3a7507",
+      "git_hash": "dfbbc11a2d747de4d5161db2000f4d0afadbf757c49f09cbc605f829ed3a7507"
+    },
+    {
+      "path": "app/planning/task_dag.py",
+      "workspace_hash": "210847a5f47ef956a59d792af93be7c381f104844bf6128d41ba95205eaa4307",
+      "git_hash": "210847a5f47ef956a59d792af93be7c381f104844bf6128d41ba95205eaa4307"
+    },
+    {
+      "path": "app/presentation/__init__.py",
+      "workspace_hash": "2e57e20ce728ad6ba5e3381b54e79614cb6e3fb8e92592f77415f3ae3bf62321",
+      "git_hash": "2e57e20ce728ad6ba5e3381b54e79614cb6e3fb8e92592f77415f3ae3bf62321"
+    },
+    {
+      "path": "app/presentation/intent_recognition.py",
+      "workspace_hash": "3f429a3527c300ffd7d1de118246fe821d68a38bd97ddc90890193f9e175b721",
+      "git_hash": "3f429a3527c300ffd7d1de118246fe821d68a38bd97ddc90890193f9e175b721"
+    },
+    {
+      "path": "app/runtime/__init__.py",
+      "workspace_hash": "a28f89dea6035d936e4261d74782c546353e9f2cd896733529468d4a2618adc0",
+      "git_hash": "a28f89dea6035d936e4261d74782c546353e9f2cd896733529468d4a2618adc0"
+    },
+    {
+      "path": "app/runtime/analysis_runtime.py",
+      "workspace_hash": "29b7519c5acc1e650c228f7cb543d3f870c8900c6ef9f9c9ff1b3f736d1adcac",
+      "git_hash": "29b7519c5acc1e650c228f7cb543d3f870c8900c6ef9f9c9ff1b3f736d1adcac"
+    },
+    {
+      "path": "app/runtime/tool_runtime.py",
+      "workspace_hash": "50275c53aac35b70a581ebc5f9cd3c2afb15a23a5c66388b3f220c5964ff2bfe",
+      "git_hash": "50275c53aac35b70a581ebc5f9cd3c2afb15a23a5c66388b3f220c5964ff2bfe"
+    },
+    {
+      "path": "app/semantic_v2/__init__.py",
+      "workspace_hash": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+      "git_hash": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93"
+    },
+    {
+      "path": "app/semantic_v2/clarification.py",
+      "workspace_hash": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+      "git_hash": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb"
+    },
+    {
+      "path": "app/semantic_v2/enums.py",
+      "workspace_hash": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+      "git_hash": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159"
+    },
+    {
+      "path": "app/semantic_v2/legacy_adapter.py",
+      "workspace_hash": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
+      "git_hash": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f"
+    },
+    {
+      "path": "app/semantic_v2/migration.py",
+      "workspace_hash": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+      "git_hash": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6"
+    },
+    {
+      "path": "app/semantic_v2/models.py",
+      "workspace_hash": "983bd8c5c39ffae765ab4f6dbe736dcf83b946cd1b2e2169023a85a2e983a7b1",
+      "git_hash": "983bd8c5c39ffae765ab4f6dbe736dcf83b946cd1b2e2169023a85a2e983a7b1"
+    },
+    {
+      "path": "app/semantic_v2/pipeline.py",
+      "workspace_hash": "a37732615f58c12f2730c516a4eb1968ac05f49d12780c9ed37c94cac7f85eea",
+      "git_hash": "a37732615f58c12f2730c516a4eb1968ac05f49d12780c9ed37c94cac7f85eea"
+    },
+    {
+      "path": "app/semantic_v2/registries.py",
+      "workspace_hash": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+      "git_hash": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7"
+    },
+    {
+      "path": "app/semantic_v2/result_contract.py",
+      "workspace_hash": "3adafe39a060161d10442c060e77b8269418afd4d233a445fcc84839c133a6e0",
+      "git_hash": "3adafe39a060161d10442c060e77b8269418afd4d233a445fcc84839c133a6e0"
+    },
+    {
+      "path": "app/semantic_v2/schema.py",
+      "workspace_hash": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+      "git_hash": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad"
+    },
+    {
+      "path": "app/semantic_v2/slot_reducer.py",
+      "workspace_hash": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+      "git_hash": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf"
+    },
+    {
+      "path": "app/semantic_v2/state_machine.py",
+      "workspace_hash": "6fa7412eed16252188b48fca774856438d3c52aeb2f96e4dfadcf043527feab6",
+      "git_hash": "6fa7412eed16252188b48fca774856438d3c52aeb2f96e4dfadcf043527feab6"
+    },
+    {
+      "path": "app/semantic_v2/trace_models.py",
+      "workspace_hash": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+      "git_hash": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5"
+    },
+    {
+      "path": "app/semantic_v2/validators.py",
+      "workspace_hash": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15",
+      "git_hash": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15"
+    },
+    {
+      "path": "app/services/__init__.py",
+      "workspace_hash": "d312ed63db3ba53a785aafd1553c31e2de38154f4801593387d35feccccb22e0",
+      "git_hash": "d312ed63db3ba53a785aafd1553c31e2de38154f4801593387d35feccccb22e0"
+    },
+    {
+      "path": "app/services/business_question_collector.py",
+      "workspace_hash": "64b34d7f81ad05194ce5ab167b2387cc422320f5099b0635c1b11bb31b2d886a",
+      "git_hash": "64b34d7f81ad05194ce5ab167b2387cc422320f5099b0635c1b11bb31b2d886a"
+    },
+    {
+      "path": "app/services/chat_responder.py",
+      "workspace_hash": "995e0f855ebedeb4d96b7f8ef0bb6ba3f8220be7b773f4adabefd4fba69a2e07",
+      "git_hash": "995e0f855ebedeb4d96b7f8ef0bb6ba3f8220be7b773f4adabefd4fba69a2e07"
+    },
+    {
+      "path": "app/services/clarification_policy.py",
+      "workspace_hash": "c5cb27266557db35087f0bcc4ebab96b773f4a43d852bb9dfdfa77a3589f65ff",
+      "git_hash": "c5cb27266557db35087f0bcc4ebab96b773f4a43d852bb9dfdfa77a3589f65ff"
+    },
+    {
+      "path": "app/services/context_builder.py",
+      "workspace_hash": "c90d2ef28558abc50c7971d57c69dab721b7d9f7778f4936ee805adcfb4d1d22",
+      "git_hash": "c90d2ef28558abc50c7971d57c69dab721b7d9f7778f4936ee805adcfb4d1d22"
+    },
+    {
+      "path": "app/services/context_compaction.py",
+      "workspace_hash": "5062131594d98ef690e6e39c797f381fb909c37184bdf9b6f3ac3dfaba2a0a94",
+      "git_hash": "5062131594d98ef690e6e39c797f381fb909c37184bdf9b6f3ac3dfaba2a0a94"
+    },
+    {
+      "path": "app/services/conversation_followup.py",
+      "workspace_hash": "b4957003d2ae6d58cd54b62eb8d9a208fa51ae658434062b21dfb6ad21f93a85",
+      "git_hash": "b4957003d2ae6d58cd54b62eb8d9a208fa51ae658434062b21dfb6ad21f93a85"
+    },
+    {
+      "path": "app/services/dataset_followup.py",
+      "workspace_hash": "7559cabff81a3b0d490c3bfb8882f9a63c000e833ea654ccc2fd2da50ac390d7",
+      "git_hash": "7559cabff81a3b0d490c3bfb8882f9a63c000e833ea654ccc2fd2da50ac390d7"
+    },
+    {
+      "path": "app/services/entity_extraction.py",
+      "workspace_hash": "d43cf5ef983178087559f9a29482d80afd6e52ea8aab1b34376d3e960ab3a780",
+      "git_hash": "d43cf5ef983178087559f9a29482d80afd6e52ea8aab1b34376d3e960ab3a780"
+    },
+    {
+      "path": "app/services/extension_dispatcher.py",
+      "workspace_hash": "56fcba1d687dc14146dd384d5de5867ec3dfd53073b05275f13859de0a3039a6",
+      "git_hash": "56fcba1d687dc14146dd384d5de5867ec3dfd53073b05275f13859de0a3039a6"
+    },
+    {
+      "path": "app/services/file_ingestion.py",
+      "workspace_hash": "1aef72baf79e26614147c34ee6e12dbf7689750d9f85564721c56d1b8df0b60f",
+      "git_hash": "1aef72baf79e26614147c34ee6e12dbf7689750d9f85564721c56d1b8df0b60f"
+    },
+    {
+      "path": "app/services/history_compaction.py",
+      "workspace_hash": "92fb18dacda85135852176802e66515a7e76e850c38ffc84735bb1bff6aee5ee",
+      "git_hash": "92fb18dacda85135852176802e66515a7e76e850c38ffc84735bb1bff6aee5ee"
+    },
+    {
+      "path": "app/services/intent_asl_contract.py",
+      "workspace_hash": "6bbf85d9cbb5f33fd15bd0c8225a22bc1628c65011e6893e40d8cc1e142edcb0",
+      "git_hash": "6bbf85d9cbb5f33fd15bd0c8225a22bc1628c65011e6893e40d8cc1e142edcb0"
+    },
+    {
+      "path": "app/services/knowledge_retrieval.py",
+      "workspace_hash": "8cad8a28d865809ac37bed3c5df7ab46e45e625c234fa31d419524027bdb4d43",
+      "git_hash": "8cad8a28d865809ac37bed3c5df7ab46e45e625c234fa31d419524027bdb4d43"
+    },
+    {
+      "path": "app/services/legacy_guards.py",
+      "workspace_hash": "6094416687d30d2c06e3145e7f12f35aeeb68e3fdec9ed321343e080a3d2f02e",
+      "git_hash": "6094416687d30d2c06e3145e7f12f35aeeb68e3fdec9ed321343e080a3d2f02e"
+    },
+    {
+      "path": "app/services/memory_manager.py",
+      "workspace_hash": "ab0dc04c428451fda7fdeb10dd5bff4ba37f0320bf3e5f5120111664a580aebf",
+      "git_hash": "ab0dc04c428451fda7fdeb10dd5bff4ba37f0320bf3e5f5120111664a580aebf"
+    },
+    {
+      "path": "app/services/orchestrator.py",
+      "workspace_hash": "848bc565cfbfb392609253c8b6f7d6a984c27d5313741886dcdc22b1387ddc5e",
+      "git_hash": "848bc565cfbfb392609253c8b6f7d6a984c27d5313741886dcdc22b1387ddc5e"
+    },
+    {
+      "path": "app/services/progress.py",
+      "workspace_hash": "4b4c7bba23b350b5b3dd89b2099351fc455474f0d391061d8663e65c41ec56f6",
+      "git_hash": "4b4c7bba23b350b5b3dd89b2099351fc455474f0d391061d8663e65c41ec56f6"
+    },
+    {
+      "path": "app/services/question_rewriter.py",
+      "workspace_hash": "c6f612454784223e5c648a80c78eafca842684124aee86766ac2d222a5c8544e",
+      "git_hash": "c6f612454784223e5c648a80c78eafca842684124aee86766ac2d222a5c8544e"
+    },
+    {
+      "path": "app/services/relationship_projection.py",
+      "workspace_hash": "919862e8af6a33f6a6bb179b096f289f239a68d5385afe0021d99e7787c40dd8",
+      "git_hash": "919862e8af6a33f6a6bb179b096f289f239a68d5385afe0021d99e7787c40dd8"
+    },
+    {
+      "path": "app/services/report_export.py",
+      "workspace_hash": "1912c765c09656ed305cef8d02d934ea41008cb84449b2f1944e36f8760e6df1",
+      "git_hash": "1912c765c09656ed305cef8d02d934ea41008cb84449b2f1944e36f8760e6df1"
+    },
+    {
+      "path": "app/services/semantic_context.py",
+      "workspace_hash": "6edb395a8d6350328671d40778ee9cff395a84537e86fb7886656beb4fad79f9",
+      "git_hash": "6edb395a8d6350328671d40778ee9cff395a84537e86fb7886656beb4fad79f9"
+    },
+    {
+      "path": "app/services/tool_selector.py",
+      "workspace_hash": "245f50449a6723410530b1237198ee8a6c229a1a63d81557df55df4f8662cd1e",
+      "git_hash": "245f50449a6723410530b1237198ee8a6c229a1a63d81557df55df4f8662cd1e"
+    },
+    {
+      "path": "app/services/turn_admission.py",
+      "workspace_hash": "2bdaed1545c689014f146b5114937fc1d35fb3292eb25ab8569dcfa44db8f0bd",
+      "git_hash": "2bdaed1545c689014f146b5114937fc1d35fb3292eb25ab8569dcfa44db8f0bd"
+    },
+    {
+      "path": "app/services/validated_query_recall.py",
+      "workspace_hash": "b63f49fc3d7ff002411b8e5ee066889d60747d0d6ea1b8985a8c17497414b71b",
+      "git_hash": "b63f49fc3d7ff002411b8e5ee066889d60747d0d6ea1b8985a8c17497414b71b"
+    },
+    {
+      "path": "app/services/working_memory.py",
+      "workspace_hash": "77d9942551f3616abce7021b543d7fc99c5fb58df22297ad92edfa7ec7152643",
+      "git_hash": "77d9942551f3616abce7021b543d7fc99c5fb58df22297ad92edfa7ec7152643"
+    },
+    {
+      "path": "app/skills/__init__.py",
+      "workspace_hash": "e595946e1f1d5c7fab5d4a6d17713571a125a9854658c7f12580724fdc6ce2c8",
+      "git_hash": "e595946e1f1d5c7fab5d4a6d17713571a125a9854658c7f12580724fdc6ce2c8"
+    },
+    {
+      "path": "app/skills/dynamic.py",
+      "workspace_hash": "ed0c1b547561b3a2fd7f34260ccf11d0d5e880a1dfb141da1b01317425a9a093",
+      "git_hash": "ed0c1b547561b3a2fd7f34260ccf11d0d5e880a1dfb141da1b01317425a9a093"
+    },
+    {
+      "path": "app/skills/registry.py",
+      "workspace_hash": "e34b2c7c8d2a63b47b73c9a75e779e98c7eb707cbdcba0d37daedbefe50554a5",
+      "git_hash": "e34b2c7c8d2a63b47b73c9a75e779e98c7eb707cbdcba0d37daedbefe50554a5"
+    },
+    {
+      "path": "app/stores/__init__.py",
+      "workspace_hash": "54bf3ffc7cb74ff012753fb2a4380f5f94e22e97360dde0ad970241e861fa69a",
+      "git_hash": "54bf3ffc7cb74ff012753fb2a4380f5f94e22e97360dde0ad970241e861fa69a"
+    },
+    {
+      "path": "app/stores/events.py",
+      "workspace_hash": "150b2405aa315af1b6acb4e5ec12fa68908f31769070b7dd2da53820f48d83a7",
+      "git_hash": "150b2405aa315af1b6acb4e5ec12fa68908f31769070b7dd2da53820f48d83a7"
+    },
+    {
+      "path": "app/stores/long_memory.py",
+      "workspace_hash": "133c6bb9ee311f51fbc90560d37d2d0e39c107689007a25227d5bc1082b50600",
+      "git_hash": "133c6bb9ee311f51fbc90560d37d2d0e39c107689007a25227d5bc1082b50600"
+    },
+    {
+      "path": "app/stores/redis.py",
+      "workspace_hash": "af3e749bfce903794d60378c8edb9b8063295a77af87cc603fe9b27e8ca8f0e3",
+      "git_hash": "af3e749bfce903794d60378c8edb9b8063295a77af87cc603fe9b27e8ca8f0e3"
+    },
+    {
+      "path": "app/stores/session.py",
+      "workspace_hash": "58c21533db69b115b67d876cf5b2bc01b7cf76526b4fcf1081f52e5e265aa2e0",
+      "git_hash": "58c21533db69b115b67d876cf5b2bc01b7cf76526b4fcf1081f52e5e265aa2e0"
+    },
+    {
+      "path": "app/tools/__init__.py",
+      "workspace_hash": "313dd8b1f6a76272896d320dd8268ac8aed8970ecff78ede6acd851692c0d529",
+      "git_hash": "313dd8b1f6a76272896d320dd8268ac8aed8970ecff78ede6acd851692c0d529"
+    },
+    {
+      "path": "app/tools/database_load.py",
+      "workspace_hash": "1e325ce7ac56688687cd10184899e2489fb48a746d23bb62f9a0312ec0d128bd",
+      "git_hash": "1e325ce7ac56688687cd10184899e2489fb48a746d23bb62f9a0312ec0d128bd"
+    },
+    {
+      "path": "app/tools/knowledge_base.py",
+      "workspace_hash": "053ae34be6a6dc98694b8b26392d2e2a59396621aa380dd9512a11233a18c6c8",
+      "git_hash": "053ae34be6a6dc98694b8b26392d2e2a59396621aa380dd9512a11233a18c6c8"
+    },
+    {
+      "path": "docs/data_agent_call_graph.mmd",
+      "workspace_hash": "3c384eec4306765180c6656072ae5a6b998c148b6236d0d97f2b84281223a6d3",
+      "git_hash": "3c384eec4306765180c6656072ae5a6b998c148b6236d0d97f2b84281223a6d3"
+    },
+    {
+      "path": "docs/data_agent_failure_cases.jsonl",
+      "workspace_hash": "6b3d00adfd8442db88128fd9e4b942f477d996e42b186aba41a56a45cdf530fa",
+      "git_hash": "6b3d00adfd8442db88128fd9e4b942f477d996e42b186aba41a56a45cdf530fa"
+    },
+    {
+      "path": "docs/data_agent_memory_multiturn_diagnostic_report.md",
+      "workspace_hash": "251d56930f751e9aeddc925d5a4a035e480d34e8dc4fd7bc4cee401e5896ffa2",
+      "git_hash": "251d56930f751e9aeddc925d5a4a035e480d34e8dc4fd7bc4cee401e5896ffa2"
+    },
+    {
+      "path": "docs/data_agent_model_calls.json",
+      "workspace_hash": "ca31fe6fbd8c76a3595c5add30b5b81b9021be64de5a8e1a62e841a5b2c7a9b6",
+      "git_hash": "ca31fe6fbd8c76a3595c5add30b5b81b9021be64de5a8e1a62e841a5b2c7a9b6"
+    },
+    {
+      "path": "docs/data_agent_open_questions.md",
+      "workspace_hash": "071fbd7f3384ad8c3d1dae3b881afd0d2ade1760d065c7083a695ffe75afec54",
+      "git_hash": "071fbd7f3384ad8c3d1dae3b881afd0d2ade1760d065c7083a695ffe75afec54"
+    },
+    {
+      "path": "docs/data_agent_state_schemas.json",
+      "workspace_hash": "011f69dd71a7538ab27fc4399e5f71e6422a4f98fae103cf47a900b5e9c2ec51",
+      "git_hash": "011f69dd71a7538ab27fc4399e5f71e6422a4f98fae103cf47a900b5e9c2ec51"
+    },
+    {
+      "path": "docs/dimension_filter_contract.md",
+      "workspace_hash": "d41aaf3f1c6fbe98cf68380a68a0d3529a7598e850b294b825c20a53f82e4a45",
+      "git_hash": "d41aaf3f1c6fbe98cf68380a68a0d3529a7598e850b294b825c20a53f82e4a45"
+    },
+    {
+      "path": "docs/phase0a/drift_disposition.csv",
+      "workspace_hash": "73b38ade6fb361f9392f7350d20c78d9281c4232990e9f9f4e8f9d125aee9647",
+      "git_hash": "73b38ade6fb361f9392f7350d20c78d9281c4232990e9f9f4e8f9d125aee9647"
+    },
+    {
+      "path": "docs/phase0a/drift_disposition.json",
+      "workspace_hash": "1b60a4f9e054c131c513839a4604189b99d94cf568bc829ea7449f558d1cf81e",
+      "git_hash": "1b60a4f9e054c131c513839a4604189b99d94cf568bc829ea7449f558d1cf81e"
+    },
+    {
+      "path": "docs/phase0a/git_commit_manifest.json",
+      "workspace_hash": "6d5fbca2ebc08b0bdcb1d7ee879d3fa74349952a358a0451108fd22c8aa375a0",
+      "git_hash": "6d5fbca2ebc08b0bdcb1d7ee879d3fa74349952a358a0451108fd22c8aa375a0"
+    },
+    {
+      "path": "docs/phase0a/line_ending_alignment.json",
+      "workspace_hash": "c0a4191d8b07d4507f348782aa27a02497d0c0ff11498e33e1ce30fc3ee5fd7b",
+      "git_hash": "c0a4191d8b07d4507f348782aa27a02497d0c0ff11498e33e1ce30fc3ee5fd7b"
+    },
+    {
+      "path": "docs/phase0a/phase0a_closure_report.md",
+      "workspace_hash": "9e02c7905552e938b828b07e538a85eb1f081dadc6395c4eb511df9189a6aa64",
+      "git_hash": "9e02c7905552e938b828b07e538a85eb1f081dadc6395c4eb511df9189a6aa64"
+    },
+    {
+      "path": "docs/phase0a/phase25_1_evidence_index.json",
+      "workspace_hash": "ffad87011272849a9b75f88cdf24caa2f482e3f3734bc3708495e8750ce00543",
+      "git_hash": "ffad87011272849a9b75f88cdf24caa2f482e3f3734bc3708495e8750ce00543"
+    },
+    {
+      "path": "docs/phase0a/preexisting_drift_inventory.csv",
+      "workspace_hash": "a1c454aab6cf0e333ac9c2902ba64270a43b05c40428eb9d7a72bdcf09ed0897",
+      "git_hash": "a1c454aab6cf0e333ac9c2902ba64270a43b05c40428eb9d7a72bdcf09ed0897"
+    },
+    {
+      "path": "docs/phase0a/preexisting_drift_inventory.json",
+      "workspace_hash": "8bca498844df088129729059042643a0ea27b0a3247f7c3792c8afa79f875f18",
+      "git_hash": "8bca498844df088129729059042643a0ea27b0a3247f7c3792c8afa79f875f18"
+    },
+    {
+      "path": "docs/phase0a/repository_reproducibility_report.md",
+      "workspace_hash": "9e02c7905552e938b828b07e538a85eb1f081dadc6395c4eb511df9189a6aa64",
+      "git_hash": "9e02c7905552e938b828b07e538a85eb1f081dadc6395c4eb511df9189a6aa64"
+    },
+    {
+      "path": "docs/phase0a/rollback_manifest.json",
+      "workspace_hash": "c376f2e259bd5e8d45e35323ed85016c761d8ce61a3159c44e1a814dfb3b54f4",
+      "git_hash": "c376f2e259bd5e8d45e35323ed85016c761d8ce61a3159c44e1a814dfb3b54f4"
+    },
+    {
+      "path": "docs/phase0a/sync_paths.json",
+      "workspace_hash": "ecf0278c396ffe6ea9deec4320f37e0286c0cef6b284156cedc0d9810d7ff5ff",
+      "git_hash": "ecf0278c396ffe6ea9deec4320f37e0286c0cef6b284156cedc0d9810d7ff5ff"
+    },
+    {
+      "path": "docs/phase0a/test_delta.json",
+      "workspace_hash": "89227f132180e5257c927dafb08be32d209049d996229cc6439c6356a6be017f",
+      "git_hash": "89227f132180e5257c927dafb08be32d209049d996229cc6439c6356a6be017f"
+    },
+    {
+      "path": "docs/phase0a/test_environment.json",
+      "workspace_hash": "c3c13b1adb3ae2645aee38fe7afa325c307e9945f01672a677913ed2dc8b092b",
+      "git_hash": "c3c13b1adb3ae2645aee38fe7afa325c307e9945f01672a677913ed2dc8b092b"
+    },
+    {
+      "path": "docs/phase0a/test_gate.json",
+      "workspace_hash": "ab20efbe2cd8771d189cf60f0fab58ce4c7120c57f6362fb8d2b7618d4f240f9",
+      "git_hash": "ab20efbe2cd8771d189cf60f0fab58ce4c7120c57f6362fb8d2b7618d4f240f9"
+    },
+    {
+      "path": "docs/phase0a/workspace_git_hash_verification.json",
+      "workspace_hash": "2716f345ac1f6eca8dcb040a9858e08108976764af0b01701eb9f03e2b58bdb7",
+      "git_hash": "2716f345ac1f6eca8dcb040a9858e08108976764af0b01701eb9f03e2b58bdb7"
+    },
+    {
+      "path": "docs/phase0b/baseline_commit_manifest.json",
+      "workspace_hash": "0c84f5d42b30abcd032463389afeb6e5dfdccabe943b86654981b4f3c537a05a",
+      "git_hash": "0c84f5d42b30abcd032463389afeb6e5dfdccabe943b86654981b4f3c537a05a"
+    },
+    {
+      "path": "docs/phase0b/baseline_test_gate.json",
+      "workspace_hash": "2528e4ddbe8ae92b6bf4a329df39d6215c72ddec6a642f1960166c347b95b6ae",
+      "git_hash": "2528e4ddbe8ae92b6bf4a329df39d6215c72ddec6a642f1960166c347b95b6ae"
+    },
+    {
+      "path": "docs/phase0b/behavior_commit_manifest.json",
+      "workspace_hash": "120e4b3a9e77788851a5f868cd0ba767f7cd85ce9bcc09e6d943efe77d3852c0",
+      "git_hash": "120e4b3a9e77788851a5f868cd0ba767f7cd85ce9bcc09e6d943efe77d3852c0"
+    },
+    {
+      "path": "docs/phase0b/clarification_trace_contract.md",
+      "workspace_hash": "2f3ce0a71b8c5cf6c000276f36ed59a29a12411bceca446792dde7fcf37058b9",
+      "git_hash": "2f3ce0a71b8c5cf6c000276f36ed59a29a12411bceca446792dde7fcf37058b9"
+    },
+    {
+      "path": "docs/phase0b/closure_counts.json",
+      "workspace_hash": "2640da82ce9cf292d732be68e72942068a297acd6e57167808f1c107418a4ff3",
+      "git_hash": "2640da82ce9cf292d732be68e72942068a297acd6e57167808f1c107418a4ff3"
+    },
+    {
+      "path": "docs/phase0b/closure_sync_manifest.json",
+      "workspace_hash": "859df114a819dbc5838d08becd9bc02ad8654f599240f408ff6ac9c5a4d71da1",
+      "git_hash": "859df114a819dbc5838d08becd9bc02ad8654f599240f408ff6ac9c5a4d71da1"
+    },
+    {
+      "path": "docs/phase0b/critical_before.json",
+      "workspace_hash": "8f91b87c8498b9904cb8a46f0546b01f0a584d714550a836a58615d63b947a8d",
+      "git_hash": "8f91b87c8498b9904cb8a46f0546b01f0a584d714550a836a58615d63b947a8d"
+    },
+    {
+      "path": "docs/phase0b/critical_multiturn_scenarios.jsonl",
+      "workspace_hash": "c96a6b29b8de82033601d54dc6beace5f1bdd5cc7144c223598156425e863996",
+      "git_hash": "c96a6b29b8de82033601d54dc6beace5f1bdd5cc7144c223598156425e863996"
+    },
+    {
+      "path": "docs/phase0b/enterprise_security_blockers.md",
+      "workspace_hash": "fd962f74960e1cd971c7c86b0974edab7dd64edce2b700cff9d86fe0a16ea530",
+      "git_hash": "fd962f74960e1cd971c7c86b0974edab7dd64edce2b700cff9d86fe0a16ea530"
+    },
+    {
+      "path": "docs/phase0b/external_service_fix_candidates.md",
+      "workspace_hash": "ef743b8f0e1251e9a678c1e32b23ac9656148e26814bab3b44eff75672b8caa1",
+      "git_hash": "ef743b8f0e1251e9a678c1e32b23ac9656148e26814bab3b44eff75672b8caa1"
+    },
+    {
+      "path": "docs/phase0b/failure_triage_matrix.csv",
+      "workspace_hash": "fde8ef5969a621d7405e94343fc08b440401fb0849b44202a53a524ef970fcca",
+      "git_hash": "fde8ef5969a621d7405e94343fc08b440401fb0849b44202a53a524ef970fcca"
+    },
+    {
+      "path": "docs/phase0b/failure_triage_matrix.json",
+      "workspace_hash": "1de1d93f03d46cbb12480c2b83ceea787bf5a44eba32bd07d69ce4329ae402eb",
+      "git_hash": "1de1d93f03d46cbb12480c2b83ceea787bf5a44eba32bd07d69ce4329ae402eb"
+    },
+    {
+      "path": "docs/phase0b/failure_universe.csv",
+      "workspace_hash": "7c21a17b1b80b8dca2e0e15c5d0ce1c66cdadd034c998a95b6a763fea30a4d85",
+      "git_hash": "7c21a17b1b80b8dca2e0e15c5d0ce1c66cdadd034c998a95b6a763fea30a4d85"
+    },
+    {
+      "path": "docs/phase0b/failure_universe.json",
+      "workspace_hash": "3a92e65acc98c09558b5b8b5e891d0fa48259e1ed62e11e1cd96f8f3698336c7",
+      "git_hash": "3a92e65acc98c09558b5b8b5e891d0fa48259e1ed62e11e1cd96f8f3698336c7"
+    },
+    {
+      "path": "docs/phase0b/failure_universe_baseline.json",
+      "workspace_hash": "c78ade3101e1eb77a29941786a47168bcc66baed6055d25d733b3d23746930c3",
+      "git_hash": "c78ade3101e1eb77a29941786a47168bcc66baed6055d25d733b3d23746930c3"
+    },
+    {
+      "path": "docs/phase0b/final_verified_test_gate.json",
+      "workspace_hash": "f7d7800dff22d5d44bed68f0c56d9074d823e500a392e5933dc25d15806c1310",
+      "git_hash": "f7d7800dff22d5d44bed68f0c56d9074d823e500a392e5933dc25d15806c1310"
+    },
+    {
+      "path": "docs/phase0b/git_commit_manifest.json",
+      "workspace_hash": "0f582c847ebdc45dffa718ef340ecd8e1712abb039e2f83ffe68dadf9c22d068",
+      "git_hash": "0f582c847ebdc45dffa718ef340ecd8e1712abb039e2f83ffe68dadf9c22d068"
+    },
+    {
+      "path": "docs/phase0b/gold_candidate_inventory.jsonl",
+      "workspace_hash": "09506c58a792e2cba36807f717f1b7cd4d40abb0bb58e028bc3e757905207860",
+      "git_hash": "09506c58a792e2cba36807f717f1b7cd4d40abb0bb58e028bc3e757905207860"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-01-run-1.json",
+      "workspace_hash": "67e31e052d8858f9d07b34eeab3bb13922a6bf52a2cb46a040d4e299a93603e0",
+      "git_hash": "67e31e052d8858f9d07b34eeab3bb13922a6bf52a2cb46a040d4e299a93603e0"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-01-run-2.json",
+      "workspace_hash": "67e31e052d8858f9d07b34eeab3bb13922a6bf52a2cb46a040d4e299a93603e0",
+      "git_hash": "67e31e052d8858f9d07b34eeab3bb13922a6bf52a2cb46a040d4e299a93603e0"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-02-run-1.json",
+      "workspace_hash": "fefd921d5146872d33eb7889d83f8247e9beb4ca63ac4304636dd2f76d3713e7",
+      "git_hash": "fefd921d5146872d33eb7889d83f8247e9beb4ca63ac4304636dd2f76d3713e7"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-02-run-2.json",
+      "workspace_hash": "fefd921d5146872d33eb7889d83f8247e9beb4ca63ac4304636dd2f76d3713e7",
+      "git_hash": "fefd921d5146872d33eb7889d83f8247e9beb4ca63ac4304636dd2f76d3713e7"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-03-run-1.json",
+      "workspace_hash": "5fef77fb7cdf0cc5544b930e94ce564f726f3d1208d63b4f095143a049f95f7f",
+      "git_hash": "5fef77fb7cdf0cc5544b930e94ce564f726f3d1208d63b4f095143a049f95f7f"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-03-run-2.json",
+      "workspace_hash": "5fef77fb7cdf0cc5544b930e94ce564f726f3d1208d63b4f095143a049f95f7f",
+      "git_hash": "5fef77fb7cdf0cc5544b930e94ce564f726f3d1208d63b4f095143a049f95f7f"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-04-run-1.json",
+      "workspace_hash": "54ce47183ed737969e5755d8ec97314b334f82d1465c88567ac46a84db5634ea",
+      "git_hash": "54ce47183ed737969e5755d8ec97314b334f82d1465c88567ac46a84db5634ea"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-04-run-2.json",
+      "workspace_hash": "54ce47183ed737969e5755d8ec97314b334f82d1465c88567ac46a84db5634ea",
+      "git_hash": "54ce47183ed737969e5755d8ec97314b334f82d1465c88567ac46a84db5634ea"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-05-run-1.json",
+      "workspace_hash": "69dbbaaac6a0aee39a766ead95bb603ffd65c613a08113d9fdaef214c12d8e6b",
+      "git_hash": "69dbbaaac6a0aee39a766ead95bb603ffd65c613a08113d9fdaef214c12d8e6b"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-05-run-2.json",
+      "workspace_hash": "69dbbaaac6a0aee39a766ead95bb603ffd65c613a08113d9fdaef214c12d8e6b",
+      "git_hash": "69dbbaaac6a0aee39a766ead95bb603ffd65c613a08113d9fdaef214c12d8e6b"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-06-run-1.json",
+      "workspace_hash": "37e52649718d65cc93fa7f430fda989153fffab48cdbfa1b48948977c11584a1",
+      "git_hash": "37e52649718d65cc93fa7f430fda989153fffab48cdbfa1b48948977c11584a1"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-06-run-2.json",
+      "workspace_hash": "ca4e5527aef756cb6d5ef146abb17fb85e153e22ee677f1422f5030d7afb78ac",
+      "git_hash": "ca4e5527aef756cb6d5ef146abb17fb85e153e22ee677f1422f5030d7afb78ac"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-07-run-1.json",
+      "workspace_hash": "ec2a07beb49c35836f5f9585ff73cc7e81c7d57247a3f3865fdbd6cb696c6a1b",
+      "git_hash": "ec2a07beb49c35836f5f9585ff73cc7e81c7d57247a3f3865fdbd6cb696c6a1b"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-07-run-2.json",
+      "workspace_hash": "ec2a07beb49c35836f5f9585ff73cc7e81c7d57247a3f3865fdbd6cb696c6a1b",
+      "git_hash": "ec2a07beb49c35836f5f9585ff73cc7e81c7d57247a3f3865fdbd6cb696c6a1b"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-08-run-1.json",
+      "workspace_hash": "8ef18294c00fbf6e5ed1eb885c7566ce1f561646f9a8c9761147698c9ac7293a",
+      "git_hash": "8ef18294c00fbf6e5ed1eb885c7566ce1f561646f9a8c9761147698c9ac7293a"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-08-run-2.json",
+      "workspace_hash": "8ef18294c00fbf6e5ed1eb885c7566ce1f561646f9a8c9761147698c9ac7293a",
+      "git_hash": "8ef18294c00fbf6e5ed1eb885c7566ce1f561646f9a8c9761147698c9ac7293a"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-09-run-1.json",
+      "workspace_hash": "12623edeb5a4456e7f03ea0c32e7003832895abad9894cc5328319f26119433d",
+      "git_hash": "12623edeb5a4456e7f03ea0c32e7003832895abad9894cc5328319f26119433d"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-09-run-2.json",
+      "workspace_hash": "12623edeb5a4456e7f03ea0c32e7003832895abad9894cc5328319f26119433d",
+      "git_hash": "12623edeb5a4456e7f03ea0c32e7003832895abad9894cc5328319f26119433d"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-10-run-1.json",
+      "workspace_hash": "939f4dd53b889c164b7556e112186cd1853662db0f1c7a18865a5fbba04563e6",
+      "git_hash": "939f4dd53b889c164b7556e112186cd1853662db0f1c7a18865a5fbba04563e6"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-10-run-2.json",
+      "workspace_hash": "939f4dd53b889c164b7556e112186cd1853662db0f1c7a18865a5fbba04563e6",
+      "git_hash": "939f4dd53b889c164b7556e112186cd1853662db0f1c7a18865a5fbba04563e6"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-11-run-1.json",
+      "workspace_hash": "90f750c88fe1f0bf1d5816e84c06d2bc22b846f999c3a0fa86266ce4052e88d4",
+      "git_hash": "90f750c88fe1f0bf1d5816e84c06d2bc22b846f999c3a0fa86266ce4052e88d4"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-11-run-2.json",
+      "workspace_hash": "90f750c88fe1f0bf1d5816e84c06d2bc22b846f999c3a0fa86266ce4052e88d4",
+      "git_hash": "90f750c88fe1f0bf1d5816e84c06d2bc22b846f999c3a0fa86266ce4052e88d4"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-12-run-1.json",
+      "workspace_hash": "73b44f72dc53872ca3f2487c98a5957b52479ca401bc4edc3d3598cf551aee1f",
+      "git_hash": "73b44f72dc53872ca3f2487c98a5957b52479ca401bc4edc3d3598cf551aee1f"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-12-run-2.json",
+      "workspace_hash": "73b44f72dc53872ca3f2487c98a5957b52479ca401bc4edc3d3598cf551aee1f",
+      "git_hash": "73b44f72dc53872ca3f2487c98a5957b52479ca401bc4edc3d3598cf551aee1f"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-13-run-1.json",
+      "workspace_hash": "383f4336711826ffed46e6069862a8c4013a2e1a8ad24caa35d7592d291a75fb",
+      "git_hash": "383f4336711826ffed46e6069862a8c4013a2e1a8ad24caa35d7592d291a75fb"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-13-run-2.json",
+      "workspace_hash": "8b02e85fcf54b9aaf1411991c9f8ee25907ea1b97913bd10360d47154ca0c030",
+      "git_hash": "8b02e85fcf54b9aaf1411991c9f8ee25907ea1b97913bd10360d47154ca0c030"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-14-run-1.json",
+      "workspace_hash": "597ae33ecb6532a7b787857d2aea0d3b531a69b5d3ceb26bafa4014ca3994985",
+      "git_hash": "597ae33ecb6532a7b787857d2aea0d3b531a69b5d3ceb26bafa4014ca3994985"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-14-run-2.json",
+      "workspace_hash": "597ae33ecb6532a7b787857d2aea0d3b531a69b5d3ceb26bafa4014ca3994985",
+      "git_hash": "597ae33ecb6532a7b787857d2aea0d3b531a69b5d3ceb26bafa4014ca3994985"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-15-run-1.json",
+      "workspace_hash": "f6affc1cc3108d32f4f0f9f5077788c91f80d4dc584b24ef3b02cc5273d4329e",
+      "git_hash": "f6affc1cc3108d32f4f0f9f5077788c91f80d4dc584b24ef3b02cc5273d4329e"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-15-run-2.json",
+      "workspace_hash": "f6affc1cc3108d32f4f0f9f5077788c91f80d4dc584b24ef3b02cc5273d4329e",
+      "git_hash": "f6affc1cc3108d32f4f0f9f5077788c91f80d4dc584b24ef3b02cc5273d4329e"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-16-run-1.json",
+      "workspace_hash": "122ec0155006b024c82b82be6638f66d9482ff36985d137700733695ce87679a",
+      "git_hash": "122ec0155006b024c82b82be6638f66d9482ff36985d137700733695ce87679a"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-16-run-2.json",
+      "workspace_hash": "122ec0155006b024c82b82be6638f66d9482ff36985d137700733695ce87679a",
+      "git_hash": "122ec0155006b024c82b82be6638f66d9482ff36985d137700733695ce87679a"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-17-run-1.json",
+      "workspace_hash": "0b932dd032b746fe06497497f29bdc69069dc9c8df60fc65da5226efc9f1464c",
+      "git_hash": "0b932dd032b746fe06497497f29bdc69069dc9c8df60fc65da5226efc9f1464c"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-17-run-2.json",
+      "workspace_hash": "0b932dd032b746fe06497497f29bdc69069dc9c8df60fc65da5226efc9f1464c",
+      "git_hash": "0b932dd032b746fe06497497f29bdc69069dc9c8df60fc65da5226efc9f1464c"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-18-run-1.json",
+      "workspace_hash": "494ae62d7fefc554e2ff3e8aa1ddfdd41b24df93bbf3937105f36d76a9039f3a",
+      "git_hash": "494ae62d7fefc554e2ff3e8aa1ddfdd41b24df93bbf3937105f36d76a9039f3a"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-18-run-2.json",
+      "workspace_hash": "ee38690106765e8713fe63650a8dc4b45c5257247b41a25b606da2629151085f",
+      "git_hash": "ee38690106765e8713fe63650a8dc4b45c5257247b41a25b606da2629151085f"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-19-run-1.json",
+      "workspace_hash": "e4f4a88bd1e1b8a71972a6d70e09830e696e5a7d1550dcff4dde10a98f8f89f7",
+      "git_hash": "e4f4a88bd1e1b8a71972a6d70e09830e696e5a7d1550dcff4dde10a98f8f89f7"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-19-run-2.json",
+      "workspace_hash": "a90db3caa0ea8a3afe09210c166afad160823d0cf2048f0fb86631be533d2867",
+      "git_hash": "a90db3caa0ea8a3afe09210c166afad160823d0cf2048f0fb86631be533d2867"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-20-run-1.json",
+      "workspace_hash": "fe727486c121fb08668f3a3c1df75f885024d59df5741b66062a198f364e93ac",
+      "git_hash": "fe727486c121fb08668f3a3c1df75f885024d59df5741b66062a198f364e93ac"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-20-run-2.json",
+      "workspace_hash": "eecbd8332bb5dc835d06ead3582200145182f8847756208b080c9d5035b1af72",
+      "git_hash": "eecbd8332bb5dc835d06ead3582200145182f8847756208b080c9d5035b1af72"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-21-run-1.json",
+      "workspace_hash": "83e1c0beec481b50d553f40fb3dc6a51b4b840c8ad4ffd7e63befde06fd9fdc9",
+      "git_hash": "83e1c0beec481b50d553f40fb3dc6a51b4b840c8ad4ffd7e63befde06fd9fdc9"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-21-run-2.json",
+      "workspace_hash": "bc2ff652c09c4f12e532d9faa173bd18b2dfa45c6aef3024fef0793808eacd88",
+      "git_hash": "bc2ff652c09c4f12e532d9faa173bd18b2dfa45c6aef3024fef0793808eacd88"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-22-run-1.json",
+      "workspace_hash": "af9dee6eb01a90ead4bc9b7ca9c5693b5739870b0d8f23c32272739eb049280e",
+      "git_hash": "af9dee6eb01a90ead4bc9b7ca9c5693b5739870b0d8f23c32272739eb049280e"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-22-run-2.json",
+      "workspace_hash": "2670a74614dc63c643f0cf3c7bfca95addf4c2c6a5b9f6440fa20f928acca156",
+      "git_hash": "2670a74614dc63c643f0cf3c7bfca95addf4c2c6a5b9f6440fa20f928acca156"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-23-run-1.json",
+      "workspace_hash": "0db7b9994805791e2509cdeb0c3588efb9841e7ef3e8fe54d841f89dd805533b",
+      "git_hash": "0db7b9994805791e2509cdeb0c3588efb9841e7ef3e8fe54d841f89dd805533b"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-23-run-2.json",
+      "workspace_hash": "40b9bb22291a2b96999a4925e8d44868d950526722625d7b955cd9496ab05b00",
+      "git_hash": "40b9bb22291a2b96999a4925e8d44868d950526722625d7b955cd9496ab05b00"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-24-run-1.json",
+      "workspace_hash": "2b18850b5b38c62f85d304f42c9d0e7332d328984613dfbe57f8afeb37a0010e",
+      "git_hash": "2b18850b5b38c62f85d304f42c9d0e7332d328984613dfbe57f8afeb37a0010e"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-24-run-2.json",
+      "workspace_hash": "2b18850b5b38c62f85d304f42c9d0e7332d328984613dfbe57f8afeb37a0010e",
+      "git_hash": "2b18850b5b38c62f85d304f42c9d0e7332d328984613dfbe57f8afeb37a0010e"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-25-run-1.json",
+      "workspace_hash": "2a8d1065cf0b3f3f81e7203e0c73a3b587f4693d6eace2a740fef6373f6dcca0",
+      "git_hash": "2a8d1065cf0b3f3f81e7203e0c73a3b587f4693d6eace2a740fef6373f6dcca0"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-25-run-2.json",
+      "workspace_hash": "aa6a18bd3d63bca226cdce4b90ac6ad27d20d3f01b6acaec1f09cc45df73455b",
+      "git_hash": "aa6a18bd3d63bca226cdce4b90ac6ad27d20d3f01b6acaec1f09cc45df73455b"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-26-run-1.json",
+      "workspace_hash": "4ce8e626ffdcab31880722bdc85b6a38c415afec8cfda00eceb5d1c305c4c65d",
+      "git_hash": "4ce8e626ffdcab31880722bdc85b6a38c415afec8cfda00eceb5d1c305c4c65d"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-26-run-2.json",
+      "workspace_hash": "4ce8e626ffdcab31880722bdc85b6a38c415afec8cfda00eceb5d1c305c4c65d",
+      "git_hash": "4ce8e626ffdcab31880722bdc85b6a38c415afec8cfda00eceb5d1c305c4c65d"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-27-run-1.json",
+      "workspace_hash": "125edd0497594854b3470b8106912212dbe3a9a825438e4e0bee4ae3c526352c",
+      "git_hash": "125edd0497594854b3470b8106912212dbe3a9a825438e4e0bee4ae3c526352c"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-27-run-2.json",
+      "workspace_hash": "125edd0497594854b3470b8106912212dbe3a9a825438e4e0bee4ae3c526352c",
+      "git_hash": "125edd0497594854b3470b8106912212dbe3a9a825438e4e0bee4ae3c526352c"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-28-run-1.json",
+      "workspace_hash": "c239b31101537b1388ce14c45d52592d8f4befc097512c8df240dde2540fe7f0",
+      "git_hash": "c239b31101537b1388ce14c45d52592d8f4befc097512c8df240dde2540fe7f0"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-28-run-2.json",
+      "workspace_hash": "c239b31101537b1388ce14c45d52592d8f4befc097512c8df240dde2540fe7f0",
+      "git_hash": "c239b31101537b1388ce14c45d52592d8f4befc097512c8df240dde2540fe7f0"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-29-run-1.json",
+      "workspace_hash": "a81b3490206fe5c51719c880818a513ca19a16e1fa4fd04c384ec6c30c8dafd3",
+      "git_hash": "a81b3490206fe5c51719c880818a513ca19a16e1fa4fd04c384ec6c30c8dafd3"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-29-run-2.json",
+      "workspace_hash": "a81b3490206fe5c51719c880818a513ca19a16e1fa4fd04c384ec6c30c8dafd3",
+      "git_hash": "a81b3490206fe5c51719c880818a513ca19a16e1fa4fd04c384ec6c30c8dafd3"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-30-run-1.json",
+      "workspace_hash": "6f560d54848d5a2eddae066bcc6c3d84b8505e75d994b1414d31b4562cae9de4",
+      "git_hash": "6f560d54848d5a2eddae066bcc6c3d84b8505e75d994b1414d31b4562cae9de4"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-30-run-2.json",
+      "workspace_hash": "6f560d54848d5a2eddae066bcc6c3d84b8505e75d994b1414d31b4562cae9de4",
+      "git_hash": "6f560d54848d5a2eddae066bcc6c3d84b8505e75d994b1414d31b4562cae9de4"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-31-run-1.json",
+      "workspace_hash": "42dce176974a7340d3a1c0eb860d5884f4be9a9409792ab3a8ca763964ab1584",
+      "git_hash": "42dce176974a7340d3a1c0eb860d5884f4be9a9409792ab3a8ca763964ab1584"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-31-run-2.json",
+      "workspace_hash": "42dce176974a7340d3a1c0eb860d5884f4be9a9409792ab3a8ca763964ab1584",
+      "git_hash": "42dce176974a7340d3a1c0eb860d5884f4be9a9409792ab3a8ca763964ab1584"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-32-run-1.json",
+      "workspace_hash": "2620bdea9387702fd2c9c55fab79f68050a1a068b1db976c87614f09414b2ca1",
+      "git_hash": "2620bdea9387702fd2c9c55fab79f68050a1a068b1db976c87614f09414b2ca1"
+    },
+    {
+      "path": "docs/phase0b/independent_runs/failure-32-run-2.json",
+      "workspace_hash": "2620bdea9387702fd2c9c55fab79f68050a1a068b1db976c87614f09414b2ca1",
+      "git_hash": "2620bdea9387702fd2c9c55fab79f68050a1a068b1db976c87614f09414b2ca1"
+    },
+    {
+      "path": "docs/phase0b/legacy_multiturn_regression_matrix.csv",
+      "workspace_hash": "aeb9057b32f89ba0759391a6769b472fc514397a115e24feddcbb15b8a2d11b7",
+      "git_hash": "aeb9057b32f89ba0759391a6769b472fc514397a115e24feddcbb15b8a2d11b7"
+    },
+    {
+      "path": "docs/phase0b/p0_failure_root_cause_report.md",
+      "workspace_hash": "34a185683bead4f11ab958fac76ccae23c245624cb6ad7f72f266fbef41dc234",
+      "git_hash": "34a185683bead4f11ab958fac76ccae23c245624cb6ad7f72f266fbef41dc234"
+    },
+    {
+      "path": "docs/phase0b/phase0a_baseline_verification.json",
+      "workspace_hash": "9ca945b777ebbd44d35cfbdc3dbb9a4b3f085077341e21537a14929d323d0627",
+      "git_hash": "9ca945b777ebbd44d35cfbdc3dbb9a4b3f085077341e21537a14929d323d0627"
+    },
+    {
+      "path": "docs/phase0b/phase0a_evidence_corrections.json",
+      "workspace_hash": "e611f6bf4f63a5eebb8acb91cf3386e84b804490b0d027415560ca020a011a89",
+      "git_hash": "e611f6bf4f63a5eebb8acb91cf3386e84b804490b0d027415560ca020a011a89"
+    },
+    {
+      "path": "docs/phase0b/phase0b_closure_report.md",
+      "workspace_hash": "c6a3b81c8e1e1df0552b01787ce959f7a46c5cb9c3eb91e6b4cab9108bd41081",
+      "git_hash": "c6a3b81c8e1e1df0552b01787ce959f7a46c5cb9c3eb91e6b4cab9108bd41081"
+    },
+    {
+      "path": "docs/phase0b/regex_change_register.md",
+      "workspace_hash": "f5610a888d77f49620fb45d055e136162295ca42559dfc87b536958aa853d71f",
+      "git_hash": "f5610a888d77f49620fb45d055e136162295ca42559dfc87b536958aa853d71f"
+    },
+    {
+      "path": "docs/phase0b/repeatability.json",
+      "workspace_hash": "da6df9e38873c9fd94ca795c763ad22a5695618551b2f20b127e96a1b0a825a3",
+      "git_hash": "da6df9e38873c9fd94ca795c763ad22a5695618551b2f20b127e96a1b0a825a3"
+    },
+    {
+      "path": "docs/phase0b/rollback_manifest.json",
+      "workspace_hash": "b6bc87ffb93a0492cc126cd5fdd3a4adf2d41e8770ec198a9d148db79725f333",
+      "git_hash": "b6bc87ffb93a0492cc126cd5fdd3a4adf2d41e8770ec198a9d148db79725f333"
+    },
+    {
+      "path": "docs/phase0b/scope_freeze_verification.json",
+      "workspace_hash": "07e45d2e8b884c21d41cb63edb8543ba75ef1e79921fe411093677809cffec0d",
+      "git_hash": "07e45d2e8b884c21d41cb63edb8543ba75ef1e79921fe411093677809cffec0d"
+    },
+    {
+      "path": "docs/phase0b/semantic_grounding_failure_matrix.csv",
+      "workspace_hash": "d2a39adf02e97217daa9fca8368b3def3979ed5b6934eb2544f2108fcab7fe7f",
+      "git_hash": "d2a39adf02e97217daa9fca8368b3def3979ed5b6934eb2544f2108fcab7fe7f"
+    },
+    {
+      "path": "docs/phase0b/stale_test_decisions.md",
+      "workspace_hash": "e12c7038077c951a8a663608e80708cf1263e6453b8f90abe5cdb4f356de1d4c",
+      "git_hash": "e12c7038077c951a8a663608e80708cf1263e6453b8f90abe5cdb4f356de1d4c"
+    },
+    {
+      "path": "docs/phase0b/temporal_failure_matrix.csv",
+      "workspace_hash": "733910e83ab781f74d7cfa6b66776c6e8be0abcbe56bf7920264ee095fb21d58",
+      "git_hash": "733910e83ab781f74d7cfa6b66776c6e8be0abcbe56bf7920264ee095fb21d58"
+    },
+    {
+      "path": "docs/phase0b/test_delta_report.md",
+      "workspace_hash": "9f62f7274762db95ef549cfb283583b70276813a18475b7ab98ab10dea7f43a7",
+      "git_hash": "9f62f7274762db95ef549cfb283583b70276813a18475b7ab98ab10dea7f43a7"
+    },
+    {
+      "path": "docs/phase2/architecture_evidence_map.json",
+      "workspace_hash": "bd94abbe5639ab4e719eb45ace4aaa88e0a6e2dd3ab599d025e6c79ef67daaf8",
+      "git_hash": "bd94abbe5639ab4e719eb45ace4aaa88e0a6e2dd3ab599d025e6c79ef67daaf8"
+    },
+    {
+      "path": "docs/phase2/asl_nl2sql_contract_audit.md",
+      "workspace_hash": "2bec438caeb2c13eaabc1dbeb8de4657905c77112ba5b090038f7cf8edb9b33a",
+      "git_hash": "2bec438caeb2c13eaabc1dbeb8de4657905c77112ba5b090038f7cf8edb9b33a"
+    },
+    {
+      "path": "docs/phase2/asl_nl2sql_contracts.json",
+      "workspace_hash": "500978b97e73d57df9cf071eb3b3819ce3639d6581a610982a9a34f0bdd964bc",
+      "git_hash": "500978b97e73d57df9cf071eb3b3819ce3639d6581a610982a9a34f0bdd964bc"
+    },
+    {
+      "path": "docs/phase2/asl_nl2sql_gap_matrix.csv",
+      "workspace_hash": "24e3ee316d5b1c592e880eaf8a6b59c2fd15b597f15ad5d5d45d6e0e686c6933",
+      "git_hash": "24e3ee316d5b1c592e880eaf8a6b59c2fd15b597f15ad5d5d45d6e0e686c6933"
+    },
+    {
+      "path": "docs/phase2/capability_implementation_matrix.md",
+      "workspace_hash": "d7a5a2214c13fb354d920982fb541bbf6ddd5ee440ab7a3d5a738b0c4d0785d5",
+      "git_hash": "d7a5a2214c13fb354d920982fb541bbf6ddd5ee440ab7a3d5a738b0c4d0785d5"
+    },
+    {
+      "path": "docs/phase2/catalog_quality_summary.csv",
+      "workspace_hash": "395c6cb69a9517df41df534b8d7335305fbb815e7f25604d4f11eb98acc4b8b7",
+      "git_hash": "395c6cb69a9517df41df534b8d7335305fbb815e7f25604d4f11eb98acc4b8b7"
+    },
+    {
+      "path": "docs/phase2/cross_repository_change_matrix.csv",
+      "workspace_hash": "ca8a5efaf4b9b3ca156d1b1dbe81786996ffd046ded71199e891430a810358ea",
+      "git_hash": "ca8a5efaf4b9b3ca156d1b1dbe81786996ffd046ded71199e891430a810358ea"
+    },
+    {
+      "path": "docs/phase2/current_to_target_schema_mapping.md",
+      "workspace_hash": "436fe57b223097e346597905ff398a7fd2181324dd06622c88993975969126b6",
+      "git_hash": "436fe57b223097e346597905ff398a7fd2181324dd06622c88993975969126b6"
+    },
+    {
+      "path": "docs/phase2/data_agent_phase2_semantic_execution_audit.md",
+      "workspace_hash": "4c7aceda096c35ac6e414b4fff7c34f010f8f265f1c9f3ea9007650b84dd1228",
+      "git_hash": "4c7aceda096c35ac6e414b4fff7c34f010f8f265f1c9f3ea9007650b84dd1228"
+    },
+    {
+      "path": "docs/phase2/entity_relationship_inventory.json",
+      "workspace_hash": "7fafb47f2fba2e2342c5050f999346f0e42669068c0284383f9afa03f547c6d0",
+      "git_hash": "7fafb47f2fba2e2342c5050f999346f0e42669068c0284383f9afa03f547c6d0"
+    },
+    {
+      "path": "docs/phase2/evaluation_framework_gap.md",
+      "workspace_hash": "27401728008efadd06563d8281c92cce389a9441a9e98334feaf79373b73ad51",
+      "git_hash": "27401728008efadd06563d8281c92cce389a9441a9e98334feaf79373b73ad51"
+    },
+    {
+      "path": "docs/phase2/evaluation_metric_spec.json",
+      "workspace_hash": "a67764221d20e9f3d0314aa4b0e7d484164bfc849aa1a4f0cb342e40819e3a4e",
+      "git_hash": "a67764221d20e9f3d0314aa4b0e7d484164bfc849aa1a4f0cb342e40819e3a4e"
+    },
+    {
+      "path": "docs/phase2/external_service_inventory.json",
+      "workspace_hash": "f4dbb00e3d011adbdfcb4b5aceefbbe4a009010bb313647edd719a2d69e9520b",
+      "git_hash": "f4dbb00e3d011adbdfcb4b5aceefbbe4a009010bb313647edd719a2d69e9520b"
+    },
+    {
+      "path": "docs/phase2/failure_root_cause_summary.md",
+      "workspace_hash": "621faaa0cae8159fc99f9cfbbb429b7350a99933dc30ea50ab8c8925fce4a161",
+      "git_hash": "621faaa0cae8159fc99f9cfbbb429b7350a99933dc30ea50ab8c8925fce4a161"
+    },
+    {
+      "path": "docs/phase2/failure_stage_distribution.csv",
+      "workspace_hash": "c8de6e9cfaedf8126ee09e6e27a05fe1a640f162c906479928839b20f99776e7",
+      "git_hash": "c8de6e9cfaedf8126ee09e6e27a05fe1a640f162c906479928839b20f99776e7"
+    },
+    {
+      "path": "docs/phase2/failure_trace_replay.jsonl",
+      "workspace_hash": "6ab25fada3b1d55dd724cadfe51e8c019aff06eade0a7959a2a24b2e811509ae",
+      "git_hash": "6ab25fada3b1d55dd724cadfe51e8c019aff06eade0a7959a2a24b2e811509ae"
+    },
+    {
+      "path": "docs/phase2/gold_cases_seed.jsonl",
+      "workspace_hash": "1154ad211c0875f24e8a5bcd28911bb7ff283c0db02bcfece80ee7f3fd0658da",
+      "git_hash": "1154ad211c0875f24e8a5bcd28911bb7ff283c0db02bcfece80ee7f3fd0658da"
+    },
+    {
+      "path": "docs/phase2/integration_and_migration_map.md",
+      "workspace_hash": "4b44a9a6775250ea7af190c41b76c9eb776a54ec5c76dcca96fca309499ae179",
+      "git_hash": "4b44a9a6775250ea7af190c41b76c9eb776a54ec5c76dcca96fca309499ae179"
+    },
+    {
+      "path": "docs/phase2/intent_confusion_analysis.md",
+      "workspace_hash": "003040369619c1896caf7da9f094bc8cc50f2e7818616b952c3e3a52dceb0fb1",
+      "git_hash": "003040369619c1896caf7da9f094bc8cc50f2e7818616b952c3e3a52dceb0fb1"
+    },
+    {
+      "path": "docs/phase2/intent_confusion_matrix.csv",
+      "workspace_hash": "e547726b3c014b75269c26278485f923065e7509710cc938326df7d531bcb0e7",
+      "git_hash": "e547726b3c014b75269c26278485f923065e7509710cc938326df7d531bcb0e7"
+    },
+    {
+      "path": "docs/phase2/metric_algebra_feasibility.md",
+      "workspace_hash": "fe2c89dd4230b3d4d3c61869e02d4b9077c5e525e324eaea0c31f055d298d681",
+      "git_hash": "fe2c89dd4230b3d4d3c61869e02d4b9077c5e525e324eaea0c31f055d298d681"
+    },
+    {
+      "path": "docs/phase2/metric_dimension_compatibility.json",
+      "workspace_hash": "65c93b0ede89dec97776f6fa8fef74743597397c1bd051e2de61df448c932c91",
+      "git_hash": "65c93b0ede89dec97776f6fa8fef74743597397c1bd051e2de61df448c932c91"
+    },
+    {
+      "path": "docs/phase2/semantic_candidate_examples.jsonl",
+      "workspace_hash": "9af8fcb7b34cefbafd53d9cea8ded9c6626bafa1cb29814a79db598f8b151f21",
+      "git_hash": "9af8fcb7b34cefbafd53d9cea8ded9c6626bafa1cb29814a79db598f8b151f21"
+    },
+    {
+      "path": "docs/phase2/semantic_catalog_audit.md",
+      "workspace_hash": "ceae45b174428a4be9d9ce259697635ade573ac9831dd0bd5a336879fd599e00",
+      "git_hash": "ceae45b174428a4be9d9ce259697635ade573ac9831dd0bd5a336879fd599e00"
+    },
+    {
+      "path": "docs/phase2/semantic_catalog_inventory.json",
+      "workspace_hash": "7b4294d2d00aeecef3130dfe99ee54136538735113a6a326dc520ec5423c9fd5",
+      "git_hash": "7b4294d2d00aeecef3130dfe99ee54136538735113a6a326dc520ec5423c9fd5"
+    },
+    {
+      "path": "docs/phase2/semantic_resolution_pipeline.md",
+      "workspace_hash": "6c01b503c55da1adcc06e3d6bd3dc9d58d34a5bf7a2b536312a8631496459f27",
+      "git_hash": "6c01b503c55da1adcc06e3d6bd3dc9d58d34a5bf7a2b536312a8631496459f27"
+    },
+    {
+      "path": "docs/phase2/semantic_role_confusion_matrix.csv",
+      "workspace_hash": "ac7b9536ce7a7b7745618b68bc89c74020b6bf6398d0ba43b4a8c3d35ea35600",
+      "git_hash": "ac7b9536ce7a7b7745618b68bc89c74020b6bf6398d0ba43b4a8c3d35ea35600"
+    },
+    {
+      "path": "docs/phase2/slot_role_confusion_matrix.csv",
+      "workspace_hash": "bf401ca16a2992e6cda2e0d238606c54f319dee11142c94053c8c5a168eaa156",
+      "git_hash": "bf401ca16a2992e6cda2e0d238606c54f319dee11142c94053c8c5a168eaa156"
+    },
+    {
+      "path": "docs/phase2/synthetic_test_proposals.jsonl",
+      "workspace_hash": "f22d2dbcd45bac49606541062e751c3e4f397be18e2e37d57280d11631b01ea3",
+      "git_hash": "f22d2dbcd45bac49606541062e751c3e4f397be18e2e37d57280d11631b01ea3"
+    },
+    {
+      "path": "docs/phase2/temporal_semantics_feasibility.md",
+      "workspace_hash": "acb573d28b229a44d658635b9c4c3e25c80c124f285041a06a902e1f98de90b9",
+      "git_hash": "acb573d28b229a44d658635b9c4c3e25c80c124f285041a06a902e1f98de90b9"
+    },
+    {
+      "path": "docs/phase2/test_execution_report.md",
+      "workspace_hash": "52bcd7b52ba5f8b3a0e560ccee09e5bc4f894872c91595f88799f953ab79ae32",
+      "git_hash": "52bcd7b52ba5f8b3a0e560ccee09e5bc4f894872c91595f88799f953ab79ae32"
+    },
+    {
+      "path": "docs/phase2/typed_logical_plan_schema_draft.json",
+      "workspace_hash": "e9fe0b21a37dca8f1c15f5d87c95d3b86d2010398e56bfdae7f208bed282a4b5",
+      "git_hash": "e9fe0b21a37dca8f1c15f5d87c95d3b86d2010398e56bfdae7f208bed282a4b5"
+    },
+    {
+      "path": "docs/phase25/asl1_adapter_loss_matrix.csv",
+      "workspace_hash": "b89ac57a24f6ea4b31527e5a2a571b61f7e5655e96105a3187a65e1d0ac2ed2f",
+      "git_hash": "b89ac57a24f6ea4b31527e5a2a571b61f7e5655e96105a3187a65e1d0ac2ed2f"
+    },
+    {
+      "path": "docs/phase25/baseline_manifest.json",
+      "workspace_hash": "0337e34bb891bc01a2bb70a2f81af808bd2442bbbf976d4a1ae10a2c1995769b",
+      "git_hash": "0337e34bb891bc01a2bb70a2f81af808bd2442bbbf976d4a1ae10a2c1995769b"
+    },
+    {
+      "path": "docs/phase25/baseline_test_report.md",
+      "workspace_hash": "b352e4429e7c197b36358a6eb5f49339aab0c533ed8ad9abf22f6598f4f3f9bd",
+      "git_hash": "b352e4429e7c197b36358a6eb5f49339aab0c533ed8ad9abf22f6598f4f3f9bd"
+    },
+    {
+      "path": "docs/phase25/catalog_governance_overlay.json",
+      "workspace_hash": "2956fae7e751652dca5faad2dafe6e3211a048bcc69842d2f4ba835d286e3072",
+      "git_hash": "2956fae7e751652dca5faad2dafe6e3211a048bcc69842d2f4ba835d286e3072"
+    },
+    {
+      "path": "docs/phase25/catalog_lint_report.json",
+      "workspace_hash": "771b15de79d4c3d9faa048bacd23a84b833622b9c080d5abf2894be0153b1671",
+      "git_hash": "771b15de79d4c3d9faa048bacd23a84b833622b9c080d5abf2894be0153b1671"
+    },
+    {
+      "path": "docs/phase25/catalog_owner_review_checklist.md",
+      "workspace_hash": "c7635840fc63bc2ce59050e08330f251923655334003d74e7d6cb6e629aef2c3",
+      "git_hash": "c7635840fc63bc2ce59050e08330f251923655334003d74e7d6cb6e629aef2c3"
+    },
+    {
+      "path": "docs/phase25/change_manifest.json",
+      "workspace_hash": "c2aa8c6cf655d3de7eaa9bf15dbaa90357ade2bb42f81bb28c7c8e1376f38c22",
+      "git_hash": "c2aa8c6cf655d3de7eaa9bf15dbaa90357ade2bb42f81bb28c7c8e1376f38c22"
+    },
+    {
+      "path": "docs/phase25/clarification_contract.md",
+      "workspace_hash": "c912a10e7756c7bdbcdde78fdcd6c745920d270665878cec1f4d5b5335d42454",
+      "git_hash": "c912a10e7756c7bdbcdde78fdcd6c745920d270665878cec1f4d5b5335d42454"
+    },
+    {
+      "path": "docs/phase25/conversation_state_machine.md",
+      "workspace_hash": "f4ae7e01dd286524eb6f43eaef8941648f896eb0e431981b03b3faae0ac76c94",
+      "git_hash": "f4ae7e01dd286524eb6f43eaef8941648f896eb0e431981b03b3faae0ac76c94"
+    },
+    {
+      "path": "docs/phase25/conversation_state_machine.mmd",
+      "workspace_hash": "e37f2aa0fc2276fab2f0e6bbc343634fdd9a1a1a7b6fae3c3ca3d1778117185f",
+      "git_hash": "e37f2aa0fc2276fab2f0e6bbc343634fdd9a1a1a7b6fae3c3ca3d1778117185f"
+    },
+    {
+      "path": "docs/phase25/evaluation_annotation_guide.md",
+      "workspace_hash": "b7903472b4672e178a5cbc7bd678d18887b3c1e620bbf352905d4091daeace93",
+      "git_hash": "b7903472b4672e178a5cbc7bd678d18887b3c1e620bbf352905d4091daeace93"
+    },
+    {
+      "path": "docs/phase25/evaluation_metric_spec_v2.json",
+      "workspace_hash": "76103ba8e6f17a89c6659b6c818691746a28c63cd0484cbc668bdb46aeb8015a",
+      "git_hash": "76103ba8e6f17a89c6659b6c818691746a28c63cd0484cbc668bdb46aeb8015a"
+    },
+    {
+      "path": "docs/phase25/gold_v2_seed.jsonl",
+      "workspace_hash": "5a6a0157417c550ca3b833b01d3b5f02c3818cc642e919ea19f342eaa71f57b2",
+      "git_hash": "5a6a0157417c550ca3b833b01d3b5f02c3818cc642e919ea19f342eaa71f57b2"
+    },
+    {
+      "path": "docs/phase25/implementation_backlog.md",
+      "workspace_hash": "99c304df46488ba4caea6f93868d68e659a3131746cfca656c48cabe40d46abf",
+      "git_hash": "99c304df46488ba4caea6f93868d68e659a3131746cfca656c48cabe40d46abf"
+    },
+    {
+      "path": "docs/phase25/metric_dimension_compatibility_v2.json",
+      "workspace_hash": "3058be6c86b76cbeaa199397d15694e03c1d8ee99ab87ba203ae30874d4adc16",
+      "git_hash": "3058be6c86b76cbeaa199397d15694e03c1d8ee99ab87ba203ae30874d4adc16"
+    },
+    {
+      "path": "docs/phase25/open_business_metadata_items.md",
+      "workspace_hash": "d1e05c1254a15e0813243ed893ddf3e2dc3812e6e97fdc47a51ca386671d6222",
+      "git_hash": "d1e05c1254a15e0813243ed893ddf3e2dc3812e6e97fdc47a51ca386671d6222"
+    },
+    {
+      "path": "docs/phase25/phase25_closure_report.md",
+      "workspace_hash": "65f25a1b6d4d51bac364f6b6ef0f4291554857b2fde9e858a5a1477fc1ddff47",
+      "git_hash": "65f25a1b6d4d51bac364f6b6ef0f4291554857b2fde9e858a5a1477fc1ddff47"
+    },
+    {
+      "path": "docs/phase25/phase2_corrections_and_addendum.md",
+      "workspace_hash": "c0e582223e3a0755d77d0a5c01c5d044bb06ea3cb073e55922797d745e91c8eb",
+      "git_hash": "c0e582223e3a0755d77d0a5c01c5d044bb06ea3cb073e55922797d745e91c8eb"
+    },
+    {
+      "path": "docs/phase25/relation_governance_overlay.json",
+      "workspace_hash": "ad945c0b5951f065953d8bc918a125c6d348250f63a3fddb5e572580f8205057",
+      "git_hash": "ad945c0b5951f065953d8bc918a125c6d348250f63a3fddb5e572580f8205057"
+    },
+    {
+      "path": "docs/phase25/result_contract_and_proof_chain.md",
+      "workspace_hash": "d7a5ea55628f703cc79e0c830f96e2dfbc793078e55a2845828e31651fbb9d7a",
+      "git_hash": "d7a5ea55628f703cc79e0c830f96e2dfbc793078e55a2845828e31651fbb9d7a"
+    },
+    {
+      "path": "docs/phase25/semantic_resolution_v2.md",
+      "workspace_hash": "87f7096169f102818ef3e4a6d371bc79a0a85d0a211e5fb6a350fd8a657c900f",
+      "git_hash": "87f7096169f102818ef3e4a6d371bc79a0a85d0a211e5fb6a350fd8a657c900f"
+    },
+    {
+      "path": "docs/phase25/shadow_runner_usage.md",
+      "workspace_hash": "474c3fff40d84f9207e7e0da3fe9f7b76722c7045f4ad1cdf91deaa147537e46",
+      "git_hash": "474c3fff40d84f9207e7e0da3fe9f7b76722c7045f4ad1cdf91deaa147537e46"
+    },
+    {
+      "path": "docs/phase25/state_transition_table.csv",
+      "workspace_hash": "b0ce18af8e096c6518e31b64deee337b27eaef6251fbe13acfbd53ec974c97b5",
+      "git_hash": "b0ce18af8e096c6518e31b64deee337b27eaef6251fbe13acfbd53ec974c97b5"
+    },
+    {
+      "path": "docs/phase25/surface_collision_inventory.json",
+      "workspace_hash": "bdfa5b5aa6b91a3f7e3e4b8660f945cb175994786a63f8986d24602b3c7a252b",
+      "git_hash": "bdfa5b5aa6b91a3f7e3e4b8660f945cb175994786a63f8986d24602b3c7a252b"
+    },
+    {
+      "path": "docs/phase25/surface_collision_summary.csv",
+      "workspace_hash": "8a475e3e404863912650f56b007d9ee07eb479e51e74688da8d94517f00ba85c",
+      "git_hash": "8a475e3e404863912650f56b007d9ee07eb479e51e74688da8d94517f00ba85c"
+    },
+    {
+      "path": "docs/phase25/synthetic_test_proposals_v2.jsonl",
+      "workspace_hash": "f9c3576e6e0c90628e7836bc63f41bf7a8d1840af0c8958ee24aa4ffd530fdf0",
+      "git_hash": "f9c3576e6e0c90628e7836bc63f41bf7a8d1840af0c8958ee24aa4ffd530fdf0"
+    },
+    {
+      "path": "docs/phase25/test_failure_triage.json",
+      "workspace_hash": "680686c9533ed8dc074ffa5a7fac996a2bc044f6355f877ed457e5485ebd482a",
+      "git_hash": "680686c9533ed8dc074ffa5a7fac996a2bc044f6355f877ed457e5485ebd482a"
+    },
+    {
+      "path": "docs/phase25/test_failure_triage.md",
+      "workspace_hash": "721b8f7127a2217e07ce22e3a72c5a7f754b8a93c08cb281c9e3172d509f1f23",
+      "git_hash": "721b8f7127a2217e07ce22e3a72c5a7f754b8a93c08cb281c9e3172d509f1f23"
+    },
+    {
+      "path": "docs/phase25/trace_v2_contract.md",
+      "workspace_hash": "6d78fefe3baf575fb93d3771f94ceeb6661d3e6c13d244ab864cf0c913809e85",
+      "git_hash": "6d78fefe3baf575fb93d3771f94ceeb6661d3e6c13d244ab864cf0c913809e85"
+    },
+    {
+      "path": "docs/phase25/typed_logical_plan_v0_2.schema.json",
+      "workspace_hash": "5bf0a52816ead043a7d5c4ab7e0e5c30bd5bf554375c3157573fbecae263d08e",
+      "git_hash": "5bf0a52816ead043a7d5c4ab7e0e5c30bd5bf554375c3157573fbecae263d08e"
+    },
+    {
+      "path": "docs/phase25/typed_logical_plan_v0_2_examples.jsonl",
+      "workspace_hash": "3494a1a64f6e81ec6ca5f6918aca4031914b27c5a8dd3e56c4b910c2227fd441",
+      "git_hash": "3494a1a64f6e81ec6ca5f6918aca4031914b27c5a8dd3e56c4b910c2227fd441"
+    },
+    {
+      "path": "docs/phase25_1/README.md",
+      "workspace_hash": "c79af2b70351b5db4c9ad3803ef867decd3cd07db4785bf08b859f4620804186",
+      "git_hash": "c79af2b70351b5db4c9ad3803ef867decd3cd07db4785bf08b859f4620804186"
+    },
+    {
+      "path": "docs/phase25_1/baseline_test_gate.json",
+      "workspace_hash": "b0b0ac2a3a7eb2a94537a54c9f1d37f615bac8c7a331926175e418db4bdd60ef",
+      "git_hash": "b0b0ac2a3a7eb2a94537a54c9f1d37f615bac8c7a331926175e418db4bdd60ef"
+    },
+    {
+      "path": "docs/phase25_1/change_manifest_closure.json",
+      "workspace_hash": "3a387f9013d60bc03f12517abf08141a51983d30b24af2792de2c80fea108a41",
+      "git_hash": "3a387f9013d60bc03f12517abf08141a51983d30b24af2792de2c80fea108a41"
+    },
+    {
+      "path": "docs/phase25_1/change_manifest_implementation.json",
+      "workspace_hash": "7f2ba317afa8ff258801fe7948b41e45753d763128e6fc6bd020c203e41a3c70",
+      "git_hash": "7f2ba317afa8ff258801fe7948b41e45753d763128e6fc6bd020c203e41a3c70"
+    },
+    {
+      "path": "docs/phase25_1/contract_boundaries_and_rollback.md",
+      "workspace_hash": "feacef7a34ff67292ae70780a198988b514c0a85be82d386df48809ad45657c2",
+      "git_hash": "feacef7a34ff67292ae70780a198988b514c0a85be82d386df48809ad45657c2"
+    },
+    {
+      "path": "docs/phase25_1/contrast_cases.json",
+      "workspace_hash": "72ab2c87db56d690106cdce1e3577d15d247d7a98cca420fcadc1bdbeec0cad6",
+      "git_hash": "72ab2c87db56d690106cdce1e3577d15d247d7a98cca420fcadc1bdbeec0cad6"
+    },
+    {
+      "path": "docs/phase25_1/current_code_baseline_audit.md",
+      "workspace_hash": "b68950c3534c173c2b77f5553874cca23c2b6b9a6a62ec7e641a74807921521f",
+      "git_hash": "b68950c3534c173c2b77f5553874cca23c2b6b9a6a62ec7e641a74807921521f"
+    },
+    {
+      "path": "docs/phase25_1/dataset_ancestry_fixture.json",
+      "workspace_hash": "be45132aeac3b9f6117f61e55dc4d067418089cfe3c3d7cebb7af3f1eccf6039",
+      "git_hash": "be45132aeac3b9f6117f61e55dc4d067418089cfe3c3d7cebb7af3f1eccf6039"
+    },
+    {
+      "path": "docs/phase25_1/final_verified_test_gate.json",
+      "workspace_hash": "ab20efbe2cd8771d189cf60f0fab58ce4c7120c57f6362fb8d2b7618d4f240f9",
+      "git_hash": "ab20efbe2cd8771d189cf60f0fab58ce4c7120c57f6362fb8d2b7618d4f240f9"
+    },
+    {
+      "path": "docs/phase25_1/final_workspace_git_drift.json",
+      "workspace_hash": "80d1a6f0f1a362c15de91e33c3154f4e8b9384f443eed851deff501f7bc6cceb",
+      "git_hash": "80d1a6f0f1a362c15de91e33c3154f4e8b9384f443eed851deff501f7bc6cceb"
+    },
+    {
+      "path": "docs/phase25_1/gold_v0_2_1.jsonl",
+      "workspace_hash": "617ee90c28e63503835c2451bbe8e4b4fe20ad7ef9f3dbd6038e2a524febf520",
+      "git_hash": "617ee90c28e63503835c2451bbe8e4b4fe20ad7ef9f3dbd6038e2a524febf520"
+    },
+    {
+      "path": "docs/phase25_1/legacy_parser_freeze_policy.md",
+      "workspace_hash": "9836fa1394d5497665b08607d758e57450b37b6710dfeee5df9eca842e593a19",
+      "git_hash": "9836fa1394d5497665b08607d758e57450b37b6710dfeee5df9eca842e593a19"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/dealer_orders.json",
+      "workspace_hash": "8939a3d1248b9ab7414a5d9350dfe3a615c7665e6b2dd316cc68033e3073d5a5",
+      "git_hash": "8939a3d1248b9ab7414a5d9350dfe3a615c7665e6b2dd316cc68033e3073d5a5"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/department_purchases.json",
+      "workspace_hash": "cd406cf18b2580fcfd37f6e909a3f7fc3cdce1790cb3efe3f06d82188afe9a1a",
+      "git_hash": "cd406cf18b2580fcfd37f6e909a3f7fc3cdce1790cb3efe3f06d82188afe9a1a"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/hospital_sales.json",
+      "workspace_hash": "87c270a706c0755d4f7dc6a63b89cd33116fd3536f1ad3208cfc83d1a90e4273",
+      "git_hash": "87c270a706c0755d4f7dc6a63b89cd33116fd3536f1ad3208cfc83d1a90e4273"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/product_returns.json",
+      "workspace_hash": "327fa3b6385886f8592615af0d19b21bfa5c728a1641439bbc636613cafeaa26",
+      "git_hash": "327fa3b6385886f8592615af0d19b21bfa5c728a1641439bbc636613cafeaa26"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/warehouse_stock.json",
+      "workspace_hash": "620b2d84eb466078c7b4180aac8fda5af784ff76dacd952892c6f36338d6ff7c",
+      "git_hash": "620b2d84eb466078c7b4180aac8fda5af784ff76dacd952892c6f36338d6ff7c"
+    },
+    {
+      "path": "docs/phase25_1/magic_string_audit.json",
+      "workspace_hash": "d6e4d3aa4545b54ae24558d901522ed79852a724aca8f14cd026d10040c02c4c",
+      "git_hash": "d6e4d3aa4545b54ae24558d901522ed79852a724aca8f14cd026d10040c02c4c"
+    },
+    {
+      "path": "docs/phase25_1/magic_string_control_plane_audit.md",
+      "workspace_hash": "d9156ce1ac933ad8b73d4768f7b98ed88edb34cede59f06a5e910652fc63846f",
+      "git_hash": "d9156ce1ac933ad8b73d4768f7b98ed88edb34cede59f06a5e910652fc63846f"
+    },
+    {
+      "path": "docs/phase25_1/metamorphic_cases.json",
+      "workspace_hash": "583dd2941f34b97696eef705a87f78376fcac1c9f37573cf9d7d6c7e4ef36163",
+      "git_hash": "583dd2941f34b97696eef705a87f78376fcac1c9f37573cf9d7d6c7e4ef36163"
+    },
+    {
+      "path": "docs/phase25_1/payload_contract_registry.md",
+      "workspace_hash": "11c3338b90d4590daed6edd07c7eb564274cafd3fa81fb31edc8783ba18582e2",
+      "git_hash": "11c3338b90d4590daed6edd07c7eb564274cafd3fa81fb31edc8783ba18582e2"
+    },
+    {
+      "path": "docs/phase25_1/phase25_1_closure_report.md",
+      "workspace_hash": "056b8196ef7de564689f89cb86c8232328ad1074cda74531d344fa3d3c79eb5b",
+      "git_hash": "056b8196ef7de564689f89cb86c8232328ad1074cda74531d344fa3d3c79eb5b"
+    },
+    {
+      "path": "docs/phase25_1/plan_axis_compatibility_matrix.csv",
+      "workspace_hash": "981715e56f9d1de094ba8b56befc22da6d62377a1bc6a928b0196af5e884b4de",
+      "git_hash": "981715e56f9d1de094ba8b56befc22da6d62377a1bc6a928b0196af5e884b4de"
+    },
+    {
+      "path": "docs/phase25_1/preexisting_workspace_drift.json",
+      "workspace_hash": "bb7047f885d889ae3ff620c12a1c5ccab16b3c80fa0b15aedeb1d0996b2e69f6",
+      "git_hash": "bb7047f885d889ae3ff620c12a1c5ccab16b3c80fa0b15aedeb1d0996b2e69f6"
+    },
+    {
+      "path": "docs/phase25_1/safety_gate.json",
+      "workspace_hash": "584582b67a41bc79fa0353e348d27794124e10f7f171bc5b23b415c3c24b01d2",
+      "git_hash": "584582b67a41bc79fa0353e348d27794124e10f7f171bc5b23b415c3c24b01d2"
+    },
+    {
+      "path": "docs/phase25_1/semantic_v2_import_audit.json",
+      "workspace_hash": "9d5238e2e9e8a9bbcbda5a973930677c5aed15ff831903a68a7bf3d108efdd8b",
+      "git_hash": "9d5238e2e9e8a9bbcbda5a973930677c5aed15ff831903a68a7bf3d108efdd8b"
+    },
+    {
+      "path": "docs/phase25_1/source_inventory.json",
+      "workspace_hash": "dfbdc1b3c3cf0f0245c7dee233a13858e18ff99cb0861e40d8af4a15eade39f0",
+      "git_hash": "dfbdc1b3c3cf0f0245c7dee233a13858e18ff99cb0861e40d8af4a15eade39f0"
+    },
+    {
+      "path": "docs/phase25_1/test_gate_comparison.json",
+      "workspace_hash": "c051b2bca381445bffe3b46c184ced77b99a7d77bc0b7a9a84a68b61f7bb4058",
+      "git_hash": "c051b2bca381445bffe3b46c184ced77b99a7d77bc0b7a9a84a68b61f7bb4058"
+    },
+    {
+      "path": "docs/phase25_1/verified_final_test_gate.json",
+      "workspace_hash": "37087ffd3a8599343a676725f0ce8af9a4e1ae7383716d62f1e9b99dbbc0a9ff",
+      "git_hash": "37087ffd3a8599343a676725f0ce8af9a4e1ae7383716d62f1e9b99dbbc0a9ff"
+    },
+    {
+      "path": "evals/INTENT_REALISTIC_100_REPORT.md",
+      "workspace_hash": "00505ea4f4a84c018fdeffd77fefc576aaae4f48a4a40bb07422e951d64a740a",
+      "git_hash": "00505ea4f4a84c018fdeffd77fefc576aaae4f48a4a40bb07422e951d64a740a"
+    },
+    {
+      "path": "evals/QWEN_200_EVALUATION.md",
+      "workspace_hash": "ece0b80ab1b4ba1306c0a536a65f96f53864e4c38cf2b0ada4094d6b4ffda158",
+      "git_hash": "ece0b80ab1b4ba1306c0a536a65f96f53864e4c38cf2b0ada4094d6b4ffda158"
+    },
+    {
+      "path": "evals/README.md",
+      "workspace_hash": "183907b09eeef86b855920366f3129c0ebb94dc1b04d6a3a99fd1aba6468d45f",
+      "git_hash": "183907b09eeef86b855920366f3129c0ebb94dc1b04d6a3a99fd1aba6468d45f"
+    },
+    {
+      "path": "evals/compare_entity_shadow.py",
+      "workspace_hash": "25acb51464f8ec79bbaaa02c4a57d5c5d0e3c5057b3b75571a59ce2034599086",
+      "git_hash": "25acb51464f8ec79bbaaa02c4a57d5c5d0e3c5057b3b75571a59ce2034599086"
+    },
+    {
+      "path": "evals/evaluate_entity_candidates.py",
+      "workspace_hash": "cd34589fc208a6d5961ca184a6dc7baa421f15c4058577cd7cb6b62e6e00c764",
+      "git_hash": "cd34589fc208a6d5961ca184a6dc7baa421f15c4058577cd7cb6b62e6e00c764"
+    },
+    {
+      "path": "evals/intent_probe.json",
+      "workspace_hash": "1bbc0218abfbe8bed4f174abdf51c6bdd3fcb4cee17b71939e18f10cdf03ec43",
+      "git_hash": "1bbc0218abfbe8bed4f174abdf51c6bdd3fcb4cee17b71939e18f10cdf03ec43"
+    },
+    {
+      "path": "evals/intent_realistic_100.json",
+      "workspace_hash": "4790bc2bc4d523adfa8dbad1fc29ad80db40c9dd13a3a13515ee7e80735874da",
+      "git_hash": "4790bc2bc4d523adfa8dbad1fc29ad80db40c9dd13a3a13515ee7e80735874da"
+    },
+    {
+      "path": "evals/intent_realistic_extra_100.json",
+      "workspace_hash": "640a3addb2bc0d91059c1628fe40b656ef6f83cce719fac38c728c6b91deab70",
+      "git_hash": "640a3addb2bc0d91059c1628fe40b656ef6f83cce719fac38c728c6b91deab70"
+    },
+    {
+      "path": "evals/intent_smoke.json",
+      "workspace_hash": "a3e98a45db555b42311ecff3f89d36e896720116d3d0402a05a321be9faa3b9f",
+      "git_hash": "a3e98a45db555b42311ecff3f89d36e896720116d3d0402a05a321be9faa3b9f"
+    },
+    {
+      "path": "evals/medical_scenario_chain.json",
+      "workspace_hash": "53764d8945c3758dc2749949e2fb06411b3e35020e65ba11ce50fdec4b9727d6",
+      "git_hash": "53764d8945c3758dc2749949e2fb06411b3e35020e65ba11ce50fdec4b9727d6"
+    },
+    {
+      "path": "evals/results/debug-projection-response.json",
+      "workspace_hash": "0e85017544a22dadac53be445679648ae5509a712a7e764eb88d55244d95bb8d",
+      "git_hash": "0e85017544a22dadac53be445679648ae5509a712a7e764eb88d55244d95bb8d"
+    },
+    {
+      "path": "evals/results/debug-sales-detail-r3.json",
+      "workspace_hash": "cc7101037f6e436fdd93283a00e073fd9998abd49f33f59da740bcc4dc5b0c59",
+      "git_hash": "cc7101037f6e436fdd93283a00e073fd9998abd49f33f59da740bcc4dc5b0c59"
+    },
+    {
+      "path": "evals/results/entity-off-20260831.json",
+      "workspace_hash": "163edba75f337a32cc0d15c2252dfb9ce171a5e4d98e28ca5d47856dc80e510a",
+      "git_hash": "163edba75f337a32cc0d15c2252dfb9ce171a5e4d98e28ca5d47856dc80e510a"
+    },
+    {
+      "path": "evals/results/entity-shadow-20260831.json",
+      "workspace_hash": "23fe0b92ca4c93b5229d3427da7debf26bd3a7578e2644219f1b037fc1805f7d",
+      "git_hash": "23fe0b92ca4c93b5229d3427da7debf26bd3a7578e2644219f1b037fc1805f7d"
+    },
+    {
+      "path": "evals/results/focused-clarification-switch.json",
+      "workspace_hash": "b91e9fe2cbbda136fc73bb457db3bf118fb22cfd9ff4f47ef2d0584a45854ef3",
+      "git_hash": "b91e9fe2cbbda136fc73bb457db3bf118fb22cfd9ff4f47ef2d0584a45854ef3"
+    },
+    {
+      "path": "evals/results/focused-entity-after-fix.json",
+      "workspace_hash": "5ce127878041c80daeb0a439f7f5922d5ba426f971375e67f0e20527e8569c0b",
+      "git_hash": "5ce127878041c80daeb0a439f7f5922d5ba426f971375e67f0e20527e8569c0b"
+    },
+    {
+      "path": "evals/results/focused-entity-ranking-v2.json",
+      "workspace_hash": "7975bbc263a8691c2456a4f542c65aba11748bcc44e8524d73297073e94713da",
+      "git_hash": "7975bbc263a8691c2456a4f542c65aba11748bcc44e8524d73297073e94713da"
+    },
+    {
+      "path": "evals/results/focused-entity-ranking-v3.json",
+      "workspace_hash": "bbc104943b9a02e7b9ca340ca64c5e717c8f42c4ae8692ef415aeb75088513f0",
+      "git_hash": "bbc104943b9a02e7b9ca340ca64c5e717c8f42c4ae8692ef415aeb75088513f0"
+    },
+    {
+      "path": "evals/results/focused-entity-ranking.json",
+      "workspace_hash": "4bd78249b43cb55b8afae9df42458009b58b2b3d55038bb017b62575f6bc3972",
+      "git_hash": "4bd78249b43cb55b8afae9df42458009b58b2b3d55038bb017b62575f6bc3972"
+    },
+    {
+      "path": "evals/results/focused-multidimensional-after-fix.json",
+      "workspace_hash": "de168226819204e3715efca5c871cfd9f0be77720d612f2b4cf1c7cd85e6528e",
+      "git_hash": "de168226819204e3715efca5c871cfd9f0be77720d612f2b4cf1c7cd85e6528e"
+    },
+    {
+      "path": "evals/results/focused-multidimensional.json",
+      "workspace_hash": "3fda89ece8abc665a95c88a52b74adcc7da53adac85dcb2a46fecb8a79ed15f0",
+      "git_hash": "3fda89ece8abc665a95c88a52b74adcc7da53adac85dcb2a46fecb8a79ed15f0"
+    },
+    {
+      "path": "evals/results/focused-time-followup-after-fix.json",
+      "workspace_hash": "66d6c7c31dc8cb53b5c959808ff8d11ab1af1c9c1289f5eff093922f25d7e0d2",
+      "git_hash": "66d6c7c31dc8cb53b5c959808ff8d11ab1af1c9c1289f5eff093922f25d7e0d2"
+    },
+    {
+      "path": "evals/results/focused-time-followup-brand-preserve.json",
+      "workspace_hash": "cafde4bfa9bcf5abb4c7c69ccd6c1b7aa86c959ab618cccf2a6348b189e71ab7",
+      "git_hash": "cafde4bfa9bcf5abb4c7c69ccd6c1b7aa86c959ab618cccf2a6348b189e71ab7"
+    },
+    {
+      "path": "evals/results/focused-time-followup-final.json",
+      "workspace_hash": "4d464620fb3749aaae475e49ba56006ab142a2f717914fd73bd2637980aac7c5",
+      "git_hash": "4d464620fb3749aaae475e49ba56006ab142a2f717914fd73bd2637980aac7c5"
+    },
+    {
+      "path": "evals/results/focused-time-followup-second-fix.json",
+      "workspace_hash": "45e4eb1994d467dcd7ea6db53abc053c0156f3f79713267c283bd2fa3fdea29b",
+      "git_hash": "45e4eb1994d467dcd7ea6db53abc053c0156f3f79713267c283bd2fa3fdea29b"
+    },
+    {
+      "path": "evals/results/focused-time-followup-verified-v2.json",
+      "workspace_hash": "f038913a43d99377c6fba3f14fa7b9c1536509d9e47a4db8c99ebcc2bfb39d62",
+      "git_hash": "f038913a43d99377c6fba3f14fa7b9c1536509d9e47a4db8c99ebcc2bfb39d62"
+    },
+    {
+      "path": "evals/results/focused-time-followup-verified-v3.json",
+      "workspace_hash": "29256cf5b61a43e0767ddde38ce156f568f389c0f81e4dec8881b58da78d4531",
+      "git_hash": "29256cf5b61a43e0767ddde38ce156f568f389c0f81e4dec8881b58da78d4531"
+    },
+    {
+      "path": "evals/results/focused-time-followup-verified.json",
+      "workspace_hash": "56827f55327cf94b2d6894e77b28c0f917aa7c90e7a7907552c36dd01c6f5eaa",
+      "git_hash": "56827f55327cf94b2d6894e77b28c0f917aa7c90e7a7907552c36dd01c6f5eaa"
+    },
+    {
+      "path": "evals/results/followup-30turn-20260828-202635.json",
+      "workspace_hash": "ea84ac2caa84ab36f06b57e9896b41f41c76dde24e2dd800e9ff2cbe154d3a61",
+      "git_hash": "ea84ac2caa84ab36f06b57e9896b41f41c76dde24e2dd800e9ff2cbe154d3a61"
+    },
+    {
+      "path": "evals/results/followup-30turn-20260828-203915.json",
+      "workspace_hash": "c59d54a480d6eac086b4e45ba4a29ae643aa97ab71de8994d03dd9725ca3d046",
+      "git_hash": "c59d54a480d6eac086b4e45ba4a29ae643aa97ab71de8994d03dd9725ca3d046"
+    },
+    {
+      "path": "evals/results/live-baseline-after-followup-fixes.json",
+      "workspace_hash": "b415a29b99b957f56a7d37efc9c492e57870e3cb3ae98095a801800db12c62b0",
+      "git_hash": "b415a29b99b957f56a7d37efc9c492e57870e3cb3ae98095a801800db12c62b0"
+    },
+    {
+      "path": "evals/results/live-baseline-current.json",
+      "workspace_hash": "6b61c85f1e34a8e1991400f867da1f7cd715b3407cec90b92a23ef51357410c1",
+      "git_hash": "6b61c85f1e34a8e1991400f867da1f7cd715b3407cec90b92a23ef51357410c1"
+    },
+    {
+      "path": "evals/results/live-expanded-simple-36-final.json",
+      "workspace_hash": "61581280ed34cc696fcac67e4fa9e3a59ccaa3a436b94c60b2dc6a8c1edb0faa",
+      "git_hash": "61581280ed34cc696fcac67e4fa9e3a59ccaa3a436b94c60b2dc6a8c1edb0faa"
+    },
+    {
+      "path": "evals/results/live-expanded-simple-q09-q12-r2.json",
+      "workspace_hash": "a653977585dacb05a810536654d28fa0348e128d0414a0aefb8a7fbfea0329b6",
+      "git_hash": "a653977585dacb05a810536654d28fa0348e128d0414a0aefb8a7fbfea0329b6"
+    },
+    {
+      "path": "evals/results/live-expanded-simple-q09-q12.json",
+      "workspace_hash": "1747b8e9ae1c52db2e418bfb7fe8c41b0334d3968b02b4b8994739e1ea1f1836",
+      "git_hash": "1747b8e9ae1c52db2e418bfb7fe8c41b0334d3968b02b4b8994739e1ea1f1836"
+    },
+    {
+      "path": "evals/results/model81-30-failures-round2.json",
+      "workspace_hash": "71ec980b32d2e4ba66cb4f44c0646e076a9825b78cc0ecc57d5c1222b10cc060",
+      "git_hash": "71ec980b32d2e4ba66cb4f44c0646e076a9825b78cc0ecc57d5c1222b10cc060"
+    },
+    {
+      "path": "evals/results/model81-30-failures-round3.json",
+      "workspace_hash": "f3c5e5582e66a4baf5f81bc27302a68de5b9c379339615687aff1f5671ff979f",
+      "git_hash": "f3c5e5582e66a4baf5f81bc27302a68de5b9c379339615687aff1f5671ff979f"
+    },
+    {
+      "path": "evals/results/model81-30-final-round1.json",
+      "workspace_hash": "75369a018a50adf670c61009c6accad57b8f61ca2f6abcda381dd2dbafc8acc2",
+      "git_hash": "75369a018a50adf670c61009c6accad57b8f61ca2f6abcda381dd2dbafc8acc2"
+    },
+    {
+      "path": "evals/results/model81-30-q16-round4.json",
+      "workspace_hash": "522d8f0b96260e785d21cff200c8c1de5abcf53347bbfc13e68e81d4360c7651",
+      "git_hash": "522d8f0b96260e785d21cff200c8c1de5abcf53347bbfc13e68e81d4360c7651"
+    },
+    {
+      "path": "evals/results/model81-30-q16-round6.json",
+      "workspace_hash": "f7b788d74384caa08efa943af99c22201e238cea544094b666a9922604a115ab",
+      "git_hash": "f7b788d74384caa08efa943af99c22201e238cea544094b666a9922604a115ab"
+    },
+    {
+      "path": "evals/results/model81-30-q16-round7.json",
+      "workspace_hash": "173b5657f86be2fc004a1386c7ccb3781c58dbd77f1c16aca7a0ce5270a32be4",
+      "git_hash": "173b5657f86be2fc004a1386c7ccb3781c58dbd77f1c16aca7a0ce5270a32be4"
+    },
+    {
+      "path": "evals/results/model81-30-q16-round8.json",
+      "workspace_hash": "c735db22039259038c7cf9d2ec6dfebf3809af65f67b3c9394ef6600066a383e",
+      "git_hash": "c735db22039259038c7cf9d2ec6dfebf3809af65f67b3c9394ef6600066a383e"
+    },
+    {
+      "path": "evals/results/model81-30-q16-trend-round5.json",
+      "workspace_hash": "46761f5b17fb87daa15b6138ebcd6b84008f6ad73d8e51477d8d92414eb84d03",
+      "git_hash": "46761f5b17fb87daa15b6138ebcd6b84008f6ad73d8e51477d8d92414eb84d03"
+    },
+    {
+      "path": "evals/results/model81-30-round1.json",
+      "workspace_hash": "090032c2457e3fc6bb198623600d0bc2236407f1dd0ad504337a59f6b60e3d13",
+      "git_hash": "090032c2457e3fc6bb198623600d0bc2236407f1dd0ad504337a59f6b60e3d13"
+    },
+    {
+      "path": "evals/results/model81-q14-full-138.json",
+      "workspace_hash": "38cf4e06f4296eaa4fc5685a38fb0e5ea45302f4113f52e374614d98bf4f4671",
+      "git_hash": "38cf4e06f4296eaa4fc5685a38fb0e5ea45302f4113f52e374614d98bf4f4671"
+    },
+    {
+      "path": "evals/results/model81-q7-distinct-fix.json",
+      "workspace_hash": "a066494df4c3c3f0bb35ebb8a605a89514b4b3601a34bb573deeb6387235409e",
+      "git_hash": "a066494df4c3c3f0bb35ebb8a605a89514b4b3601a34bb573deeb6387235409e"
+    },
+    {
+      "path": "evals/results/qwen-hybrid-intent-200-adversarial-update.json",
+      "workspace_hash": "3755eb5146659e75dc4b740943c14aaab15a80e64fe516e2aad14d7eea958377",
+      "git_hash": "3755eb5146659e75dc4b740943c14aaab15a80e64fe516e2aad14d7eea958377"
+    },
+    {
+      "path": "evals/results/qwen3.6-plus-hybrid-intent-200-20260820-171114.json",
+      "workspace_hash": "0958dd576dc3030b6c4f0c9eb732608210401c51f5987704fa5261e52f520daa",
+      "git_hash": "0958dd576dc3030b6c4f0c9eb732608210401c51f5987704fa5261e52f520daa"
+    },
+    {
+      "path": "evals/results/qwen3.6-plus-intent-200-20260820-170147.json",
+      "workspace_hash": "abcb99e743167b34f7bb101842dcfc39e3cac96ac69018d9cf9333aa67ac4807",
+      "git_hash": "abcb99e743167b34f7bb101842dcfc39e3cac96ac69018d9cf9333aa67ac4807"
+    },
+    {
+      "path": "evals/results/rule-intent-200-adversarial-update.json",
+      "workspace_hash": "6aa0e8293dc7a4ef392324407b29748c4824b9fe4bea7ae21c0b0eaf9d54dd4d",
+      "git_hash": "6aa0e8293dc7a4ef392324407b29748c4824b9fe4bea7ae21c0b0eaf9d54dd4d"
+    },
+    {
+      "path": "evals/results/rule-intent-current.json",
+      "workspace_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evals/results/targeted-after-fix-1.json",
+      "workspace_hash": "4241385830bac9464a2cfbf5255ce0900c05a42fc5d98110e5d0f847c7afb768",
+      "git_hash": "4241385830bac9464a2cfbf5255ce0900c05a42fc5d98110e5d0f847c7afb768"
+    },
+    {
+      "path": "evals/run_30turn_followup_eval.py",
+      "workspace_hash": "f99f79f09da331fdebfc42cba084062ef42ceb32d2ba9421e8b5014d8b45dcec",
+      "git_hash": "f99f79f09da331fdebfc42cba084062ef42ceb32d2ba9421e8b5014d8b45dcec"
+    },
+    {
+      "path": "evals/run_analysis_synthesis_probe.py",
+      "workspace_hash": "2aa3cd4456e1ba4ea84408b71f8c695f98d99bc9bbe93090e2efe2761c7e8328",
+      "git_hash": "2aa3cd4456e1ba4ea84408b71f8c695f98d99bc9bbe93090e2efe2761c7e8328"
+    },
+    {
+      "path": "evals/run_business_question_matrix.py",
+      "workspace_hash": "01a1232805d181e9843aa2a1e173f388b74c766c140106ac705221ab881a3b30",
+      "git_hash": "01a1232805d181e9843aa2a1e173f388b74c766c140106ac705221ab881a3b30"
+    },
+    {
+      "path": "evals/run_intent_eval.py",
+      "workspace_hash": "d369cd4c371e4a19670f899bcda703efcabd2fb28a7056c49d4e63e67a7bc77f",
+      "git_hash": "d369cd4c371e4a19670f899bcda703efcabd2fb28a7056c49d4e63e67a7bc77f"
+    },
+    {
+      "path": "evals/run_live_60_question_suite.py",
+      "workspace_hash": "c4ca6c31472937cd2731ad3a93540428afda34c0395c2e0805b03d35e952093a",
+      "git_hash": "c4ca6c31472937cd2731ad3a93540428afda34c0395c2e0805b03d35e952093a"
+    },
+    {
+      "path": "evals/run_live_medical_scenarios.py",
+      "workspace_hash": "7ba65174f726eab4534e42938c282e0d1c4c9942ceb11315af5b98fedeae3e10",
+      "git_hash": "7ba65174f726eab4534e42938c282e0d1c4c9942ceb11315af5b98fedeae3e10"
+    },
+    {
+      "path": "evals/run_model81_30.py",
+      "workspace_hash": "d77653e6c97bf79c76914007cf80af2877e28dff2fd557060d9709152e9cd89b",
+      "git_hash": "d77653e6c97bf79c76914007cf80af2877e28dff2fd557060d9709152e9cd89b"
+    },
+    {
+      "path": "evals/run_named_dealer_followup.py",
+      "workspace_hash": "05a9ecb0ef1a187a95429b810fb4879916edab210cc572e22132307599fdb7e3",
+      "git_hash": "05a9ecb0ef1a187a95429b810fb4879916edab210cc572e22132307599fdb7e3"
+    },
+    {
+      "path": "evals/run_time_grouping_followup.py",
+      "workspace_hash": "fc15bc6ef8703ddafd8bf9e39c958b61935eb87471bfa0f58e8f143b9b8c91bb",
+      "git_hash": "fc15bc6ef8703ddafd8bf9e39c958b61935eb87471bfa0f58e8f143b9b8c91bb"
+    },
+    {
+      "path": "migrations/001_long_term_memory.sql",
+      "workspace_hash": "cf8be501c3d1e7e37355113199e7040e8fd117d727b0585442e0fbd257be6021",
+      "git_hash": "cf8be501c3d1e7e37355113199e7040e8fd117d727b0585442e0fbd257be6021"
+    },
+    {
+      "path": "migrations/002_memory_candidate_idempotency.sql",
+      "workspace_hash": "e60b6b6a8c28e7d01cdd71e67de1cbc0ee17bec61486c1e3db5e2eb83d56138c",
+      "git_hash": "e60b6b6a8c28e7d01cdd71e67de1cbc0ee17bec61486c1e3db5e2eb83d56138c"
+    },
+    {
+      "path": "minio_followup_store.py",
+      "workspace_hash": "93c71b5d95222037cfccac68a0fd1b56e537503aca5aa1ef13cec161cf14f05c",
+      "git_hash": "93c71b5d95222037cfccac68a0fd1b56e537503aca5aa1ef13cec161cf14f05c"
+    },
+    {
+      "path": "pyproject.toml",
+      "workspace_hash": "a56085dbc6413ad4795450a07b3f795149f770f345c4bb74affb0493d0048f0c",
+      "git_hash": "a56085dbc6413ad4795450a07b3f795149f770f345c4bb74affb0493d0048f0c"
+    },
+    {
+      "path": "scripts/ecommerce_agent_test.sql",
+      "workspace_hash": "57dec63dd587fe4699faa732f679b8740fec62e67f5af939bb3c790c7aa4f330",
+      "git_hash": "57dec63dd587fe4699faa732f679b8740fec62e67f5af939bb3c790c7aa4f330"
+    },
+    {
+      "path": "scripts/run_context_leakage_regression.py",
+      "workspace_hash": "38d967706014ef3876396205e63588cebdee5b1a52931d920cc593acdfa6b59f",
+      "git_hash": "38d967706014ef3876396205e63588cebdee5b1a52931d920cc593acdfa6b59f"
+    },
+    {
+      "path": "scripts/run_followup_result_reuse_regression.py",
+      "workspace_hash": "c7f75c2ce6ee2cb2796c6e18812b958b90b2929c53448edf5e4a27a62886843d",
+      "git_hash": "c7f75c2ce6ee2cb2796c6e18812b958b90b2929c53448edf5e4a27a62886843d"
+    },
+    {
+      "path": "scripts/run_qwen_200_eval.ps1",
+      "workspace_hash": "9ed91431823d8d755529e246ac7c5a6a40330ada3f77c1897e5f37e9d9b02e57",
+      "git_hash": "9ed91431823d8d755529e246ac7c5a6a40330ada3f77c1897e5f37e9d9b02e57"
+    },
+    {
+      "path": "scripts/seed_analysis_history.py",
+      "workspace_hash": "8977dba2fe1da23ad14cd2a0854fd76738f707ae9530a53be1c9864143a92516",
+      "git_hash": "8977dba2fe1da23ad14cd2a0854fd76738f707ae9530a53be1c9864143a92516"
+    },
+    {
+      "path": "scripts/start_with_entity_shadow.ps1",
+      "workspace_hash": "98c20a52095e9deffd8e80757070f5ce078cd964fb2a139f02dcafaa57d74b12",
+      "git_hash": "98c20a52095e9deffd8e80757070f5ce078cd964fb2a139f02dcafaa57d74b12"
+    },
+    {
+      "path": "scripts/supplier_department_match_example.sql",
+      "workspace_hash": "e74e331fe685ea96577c59f895da65d146cc710ac2ba5ff1df020a6dbe75c1b9",
+      "git_hash": "e74e331fe685ea96577c59f895da65d146cc710ac2ba5ff1df020a6dbe75c1b9"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/CandidateSelectionDecision.schema.json",
+      "workspace_hash": "650d10ad06f8fcd69c2a3912231ecf6364722099e63f8860a270383b1ad29d2b",
+      "git_hash": "650d10ad06f8fcd69c2a3912231ecf6364722099e63f8860a270383b1ad29d2b"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/ConversationState.schema.json",
+      "workspace_hash": "b8d7e50a758ea5de451628aa936c7511d7e8665aaf0b61a600e65a2a01d80a4c",
+      "git_hash": "b8d7e50a758ea5de451628aa936c7511d7e8665aaf0b61a600e65a2a01d80a4c"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/CurrentTurnParseResult.schema.json",
+      "workspace_hash": "72cca9f73702372b7f443f0206b69b36204441d5bc774a0642d31d9e7dd43e00",
+      "git_hash": "72cca9f73702372b7f443f0206b69b36204441d5bc774a0642d31d9e7dd43e00"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/CurrentTurnSemanticParse.schema.json",
+      "workspace_hash": "6aab0ab5e2b832621afd33f14c454e0357b582427948a3f1b5a390289841057d",
+      "git_hash": "6aab0ab5e2b832621afd33f14c454e0357b582427948a3f1b5a390289841057d"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/ExecutablePlan.schema.json",
+      "workspace_hash": "3c43d90d81b164ee068e0952865a1985eda9f7b318f66e4a6250928ab5db8857",
+      "git_hash": "3c43d90d81b164ee068e0952865a1985eda9f7b318f66e4a6250928ab5db8857"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/ExecutionAttemptRecord.schema.json",
+      "workspace_hash": "8f40c9588a1dcbd2ee4c38e6369566c6f09f8e9504f4899beaa4a5a746eb6b4e",
+      "git_hash": "8f40c9588a1dcbd2ee4c38e6369566c6f09f8e9504f4899beaa4a5a746eb6b4e"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/LogicalPlan.schema.json",
+      "workspace_hash": "4c003b013a77f8c04ae8e693135028f4f40ca809890b1b7b4b3a5c1ca6c39efc",
+      "git_hash": "4c003b013a77f8c04ae8e693135028f4f40ca809890b1b7b4b3a5c1ca6c39efc"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/PlanEnvelope.schema.json",
+      "workspace_hash": "2ab7ce6d62912931d64790660fe6972ae966613d7e3ba3f77b3bb31b4b65553a",
+      "git_hash": "2ab7ce6d62912931d64790660fe6972ae966613d7e3ba3f77b3bb31b4b65553a"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/TaskSemanticState.schema.json",
+      "workspace_hash": "e069696f6336097384586e2b9cc88c70b91da804f3f581919a08df6b4672a663",
+      "git_hash": "e069696f6336097384586e2b9cc88c70b91da804f3f581919a08df6b4672a663"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/TurnResolutionResult.schema.json",
+      "workspace_hash": "4ae8eb0cff57d63be3eef7faefeb6248555df86a3a11cdb3f386be696f33f037",
+      "git_hash": "4ae8eb0cff57d63be3eef7faefeb6248555df86a3a11cdb3f386be696f33f037"
+    },
+    {
+      "path": "specs/semantic_v2/semantic_resolution_contract.json",
+      "workspace_hash": "f84dc2c8d9b3950a09eec176c6eaa6edbeaa3490aa99d4526af9d40ec7c324d2",
+      "git_hash": "f84dc2c8d9b3950a09eec176c6eaa6edbeaa3490aa99d4526af9d40ec7c324d2"
+    },
+    {
+      "path": "specs/semantic_v2/trace_v2.schema.json",
+      "workspace_hash": "798d1e8eed3dc0a7abfa5067d323cce0f5a748f1ded0e892896e85c9176a35e3",
+      "git_hash": "798d1e8eed3dc0a7abfa5067d323cce0f5a748f1ded0e892896e85c9176a35e3"
+    },
+    {
+      "path": "specs/semantic_v2/typed_logical_plan_v0_2.schema.json",
+      "workspace_hash": "5bf0a52816ead043a7d5c4ab7e0e5c30bd5bf554375c3157573fbecae263d08e",
+      "git_hash": "5bf0a52816ead043a7d5c4ab7e0e5c30bd5bf554375c3157573fbecae263d08e"
+    },
+    {
+      "path": "tests/test_analysis_data_contracts.py",
+      "workspace_hash": "f176ee71f357f25e9963565745c239cf561c75fa2c72e686bb5dcc0d7fd2dbfe",
+      "git_hash": "f176ee71f357f25e9963565745c239cf561c75fa2c72e686bb5dcc0d7fd2dbfe"
+    },
+    {
+      "path": "tests/test_analysis_engine.py",
+      "workspace_hash": "62ee5a5f15d9e916834bfe0a88f3cacac9703d6093f62a78b7056eccef9bbf87",
+      "git_hash": "62ee5a5f15d9e916834bfe0a88f3cacac9703d6093f62a78b7056eccef9bbf87"
+    },
+    {
+      "path": "tests/test_analysis_orchestration.py",
+      "workspace_hash": "f74c864af21e2fea5a39296ee3f22055df7b4ad450735f299ac7a58e6442ed3e",
+      "git_hash": "f74c864af21e2fea5a39296ee3f22055df7b4ad450735f299ac7a58e6442ed3e"
+    },
+    {
+      "path": "tests/test_analysis_planning.py",
+      "workspace_hash": "f51338a705621355a5fc6281f4c0d1dba84afbdd804554d951d82054d271abd8",
+      "git_hash": "f51338a705621355a5fc6281f4c0d1dba84afbdd804554d951d82054d271abd8"
+    },
+    {
+      "path": "tests/test_analysis_profile_and_charts.py",
+      "workspace_hash": "f6de477d3748b17b4b6b3c07f01a5b5b395e632dd928187831d6bc8be930adc3",
+      "git_hash": "f6de477d3748b17b4b6b3c07f01a5b5b395e632dd928187831d6bc8be930adc3"
+    },
+    {
+      "path": "tests/test_analysis_runtime.py",
+      "workspace_hash": "2cf97f42fa3f1e0cdbff2cf2488fb21782f41d8423f4152c4bf13f37300bff9d",
+      "git_hash": "2cf97f42fa3f1e0cdbff2cf2488fb21782f41d8423f4152c4bf13f37300bff9d"
+    },
+    {
+      "path": "tests/test_analysis_synthesis.py",
+      "workspace_hash": "63604b18f706ad59f260a702a1aefde141df32510f0dbfa2178ce89bf5127824",
+      "git_hash": "63604b18f706ad59f260a702a1aefde141df32510f0dbfa2178ce89bf5127824"
+    },
+    {
+      "path": "tests/test_api.py",
+      "workspace_hash": "b0fb64ea528beb24ab4f555f88ca335cb111cedd914a61d646ee538eb64a7545",
+      "git_hash": "b0fb64ea528beb24ab4f555f88ca335cb111cedd914a61d646ee538eb64a7545"
+    },
+    {
+      "path": "tests/test_business_question_collector.py",
+      "workspace_hash": "b22c0daa1c9fb46ae041f721d8ab97e3b7a4760039850fa7da2ce313bd183929",
+      "git_hash": "b22c0daa1c9fb46ae041f721d8ab97e3b7a4760039850fa7da2ce313bd183929"
+    },
+    {
+      "path": "tests/test_chat_request_validation.py",
+      "workspace_hash": "246961a537884e7c271853b7674ad6594d8e125450ad811a3a200935feee33d8",
+      "git_hash": "246961a537884e7c271853b7674ad6594d8e125450ad811a3a200935feee33d8"
+    },
+    {
+      "path": "tests/test_chat_responder.py",
+      "workspace_hash": "3c7c6ebb5d76ed9f86d5a721494d812ade1d6a6969aa65b45c26c5b7a656e88e",
+      "git_hash": "3c7c6ebb5d76ed9f86d5a721494d812ade1d6a6969aa65b45c26c5b7a656e88e"
+    },
+    {
+      "path": "tests/test_clarification_flow.py",
+      "workspace_hash": "14e5bd2220a8c6321b61366557ca3e60e769e62de8bdb9cb74880a8135e6d490",
+      "git_hash": "14e5bd2220a8c6321b61366557ca3e60e769e62de8bdb9cb74880a8135e6d490"
+    },
+    {
+      "path": "tests/test_clarification_quality.py",
+      "workspace_hash": "92c8f4f8d0c214f72b6a8772e3190e00de243d9e8e8da04849b4ed9037f64904",
+      "git_hash": "92c8f4f8d0c214f72b6a8772e3190e00de243d9e8e8da04849b4ed9037f64904"
+    },
+    {
+      "path": "tests/test_composable_analysis_operators.py",
+      "workspace_hash": "c86e8021249f1791ae69fdf39c2248207f18ac2ef4d9d52a3e18ec071b8f5840",
+      "git_hash": "c86e8021249f1791ae69fdf39c2248207f18ac2ef4d9d52a3e18ec071b8f5840"
+    },
+    {
+      "path": "tests/test_context_builder.py",
+      "workspace_hash": "9a7e6c1ea460eaf554bbaa12b6d6e75c8daa25304d1b3b16ccf16646d75f107b",
+      "git_hash": "9a7e6c1ea460eaf554bbaa12b6d6e75c8daa25304d1b3b16ccf16646d75f107b"
+    },
+    {
+      "path": "tests/test_context_compaction.py",
+      "workspace_hash": "a6dbf77e1939d436345718a204ca78954af030f9b94ec3cad8ee2215ec6fbf50",
+      "git_hash": "a6dbf77e1939d436345718a204ca78954af030f9b94ec3cad8ee2215ec6fbf50"
+    },
+    {
+      "path": "tests/test_contracts.py",
+      "workspace_hash": "9fb53e76c4abd4b7494251dfb13bd6f7946948fb4526f705445128d595456392",
+      "git_hash": "9fb53e76c4abd4b7494251dfb13bd6f7946948fb4526f705445128d595456392"
+    },
+    {
+      "path": "tests/test_conversation_result_followup.py",
+      "workspace_hash": "fe3298b21d9e540cefefe145c3605b31c5e269ca2e4e4ea87e6ebf20e0eb8ac6",
+      "git_hash": "fe3298b21d9e540cefefe145c3605b31c5e269ca2e4e4ea87e6ebf20e0eb8ac6"
+    },
+    {
+      "path": "tests/test_database_load_tool.py",
+      "workspace_hash": "7ebdf14be73c64387c32b9a59b0138d3a4d3fbe8dd41ec9973f6bdee168e7af4",
+      "git_hash": "7ebdf14be73c64387c32b9a59b0138d3a4d3fbe8dd41ec9973f6bdee168e7af4"
+    },
+    {
+      "path": "tests/test_dataset_contract.py",
+      "workspace_hash": "27890c7721468d973b6cdde9be2584abe1d66a568f0f74ccc99bc33a816d3809",
+      "git_hash": "27890c7721468d973b6cdde9be2584abe1d66a568f0f74ccc99bc33a816d3809"
+    },
+    {
+      "path": "tests/test_dataset_storage_routing.py",
+      "workspace_hash": "4d29f4df75fe22af47dc6477a222ba588f1853a69bdf4f426b89942d6d5b57cb",
+      "git_hash": "4d29f4df75fe22af47dc6477a222ba588f1853a69bdf4f426b89942d6d5b57cb"
+    },
+    {
+      "path": "tests/test_dependency_errors.py",
+      "workspace_hash": "d8a6bf58bccdf8b850339f5348a1814b2b624bf72e4abbb8d65ab31f76a6d002",
+      "git_hash": "d8a6bf58bccdf8b850339f5348a1814b2b624bf72e4abbb8d65ab31f76a6d002"
+    },
+    {
+      "path": "tests/test_dialogue_resolution.py",
+      "workspace_hash": "1e9a0876a23d55720b439dddcd9da333428295d2ce4ac16273270215f6fef0f2",
+      "git_hash": "1e9a0876a23d55720b439dddcd9da333428295d2ce4ac16273270215f6fef0f2"
+    },
+    {
+      "path": "tests/test_dynamic_skill_loader.py",
+      "workspace_hash": "8894d9ff3af7a3a73ad02c5125a50c3d77eb796467c6ec76a2ef0ef2f7c84ead",
+      "git_hash": "8894d9ff3af7a3a73ad02c5125a50c3d77eb796467c6ec76a2ef0ef2f7c84ead"
+    },
+    {
+      "path": "tests/test_entity_extraction.py",
+      "workspace_hash": "bc413a9b2d682103f9b164a30d177effb238b2d71964cacafc8129cb5da6e0f3",
+      "git_hash": "bc413a9b2d682103f9b164a30d177effb238b2d71964cacafc8129cb5da6e0f3"
+    },
+    {
+      "path": "tests/test_extension_dispatcher.py",
+      "workspace_hash": "fa50ab7effe6b095dfbcb79c0e30ad29cb2bfabceff2f3531e70a5d6752017b1",
+      "git_hash": "fa50ab7effe6b095dfbcb79c0e30ad29cb2bfabceff2f3531e70a5d6752017b1"
+    },
+    {
+      "path": "tests/test_external_search_routing.py",
+      "workspace_hash": "f90b7fe127177479a74cbea5d99893f26b68bd8f3a7f858ecd2840c4dec8d87a",
+      "git_hash": "f90b7fe127177479a74cbea5d99893f26b68bd8f3a7f858ecd2840c4dec8d87a"
+    },
+    {
+      "path": "tests/test_file_ingestion.py",
+      "workspace_hash": "8eeec4780f239c3b0c61de8f0a28e5f34367f89a66dc59b427dcdf3231a93e24",
+      "git_hash": "8eeec4780f239c3b0c61de8f0a28e5f34367f89a66dc59b427dcdf3231a93e24"
+    },
+    {
+      "path": "tests/test_forecast_model_selection.py",
+      "workspace_hash": "772c16494e362249730b3dffea4364647367fd633cba4e5a7d35c8fe338fcc0e",
+      "git_hash": "772c16494e362249730b3dffea4364647367fd633cba4e5a7d35c8fe338fcc0e"
+    },
+    {
+      "path": "tests/test_forecast_readiness.py",
+      "workspace_hash": "63c5bc6ffcfeb6e3a8a4071ea3d90240f8a3d457c05f8c7914a9e9d91b149171",
+      "git_hash": "63c5bc6ffcfeb6e3a8a4071ea3d90240f8a3d457c05f8c7914a9e9d91b149171"
+    },
+    {
+      "path": "tests/test_handshake.py",
+      "workspace_hash": "b26531d5ddfb56a88b9a4d58007a5ebc3156502b8c1feb8236a1ccb9b46d009f",
+      "git_hash": "b26531d5ddfb56a88b9a4d58007a5ebc3156502b8c1feb8236a1ccb9b46d009f"
+    },
+    {
+      "path": "tests/test_history_compaction.py",
+      "workspace_hash": "a4fdc07a1ed726e5d5c21f88fa04a5c2f84e667441dce519d7d38bf84520d546",
+      "git_hash": "a4fdc07a1ed726e5d5c21f88fa04a5c2f84e667441dce519d7d38bf84520d546"
+    },
+    {
+      "path": "tests/test_http_adapters.py",
+      "workspace_hash": "cc4ce179a8b6533a083e83f1e37b1d47332e0bf5be926d105b78be67eeb0be10",
+      "git_hash": "cc4ce179a8b6533a083e83f1e37b1d47332e0bf5be926d105b78be67eeb0be10"
+    },
+    {
+      "path": "tests/test_idempotency_conflict.py",
+      "workspace_hash": "65d7baea14fc59a6eb19dc8295ad822f07d68d2759ca68f0073520b159c6887b",
+      "git_hash": "65d7baea14fc59a6eb19dc8295ad822f07d68d2759ca68f0073520b159c6887b"
+    },
+    {
+      "path": "tests/test_insight_discovery.py",
+      "workspace_hash": "564e0156976b9297f0328c89626c172619821648889588d33157164a1ac88e9a",
+      "git_hash": "564e0156976b9297f0328c89626c172619821648889588d33157164a1ac88e9a"
+    },
+    {
+      "path": "tests/test_insight_interpretation.py",
+      "workspace_hash": "0028d614c729a662f43df1f170ba746278b81685972e966ca4d3e059534f330c",
+      "git_hash": "0028d614c729a662f43df1f170ba746278b81685972e966ca4d3e059534f330c"
+    },
+    {
+      "path": "tests/test_intent.py",
+      "workspace_hash": "fdaa00555ba142545bc3776c44e3dd6c2e554b7f8d0d14da31ea94e94bb2de67",
+      "git_hash": "fdaa00555ba142545bc3776c44e3dd6c2e554b7f8d0d14da31ea94e94bb2de67"
+    },
+    {
+      "path": "tests/test_intent_adversarial_scenarios.py",
+      "workspace_hash": "bf6020158313ea57a87b502b19d76231ac0cb2cb31dbe619cebb258befe90601",
+      "git_hash": "bf6020158313ea57a87b502b19d76231ac0cb2cb31dbe619cebb258befe90601"
+    },
+    {
+      "path": "tests/test_intent_asl_contract_matrix.py",
+      "workspace_hash": "1f0b07612053861cc305cfe3947eca07385c4da5a6312a23f82a9f25b7f214c8",
+      "git_hash": "1f0b07612053861cc305cfe3947eca07385c4da5a6312a23f82a9f25b7f214c8"
+    },
+    {
+      "path": "tests/test_intent_realistic_100.py",
+      "workspace_hash": "366ea09d1b0c7af6c06570b516468a48513a8362b1458058f6dbb9d74ce08bab",
+      "git_hash": "366ea09d1b0c7af6c06570b516468a48513a8362b1458058f6dbb9d74ce08bab"
+    },
+    {
+      "path": "tests/test_intent_recognition_display.py",
+      "workspace_hash": "cb70c70e25d7b076d77f6d12cef8b8458255e2d904c8c8f334283e74a0c648b9",
+      "git_hash": "cb70c70e25d7b076d77f6d12cef8b8458255e2d904c8c8f334283e74a0c648b9"
+    },
+    {
+      "path": "tests/test_knowledge_base_tool.py",
+      "workspace_hash": "4464a8233a4bb97c894557bda34d23294f434c43526d8a1ee013340030e34972",
+      "git_hash": "4464a8233a4bb97c894557bda34d23294f434c43526d8a1ee013340030e34972"
+    },
+    {
+      "path": "tests/test_knowledge_retrieval.py",
+      "workspace_hash": "cf022c49aa11c3cb79863bd4bfa77b84ae3d6b793d55126540721ecbfaa57270",
+      "git_hash": "cf022c49aa11c3cb79863bd4bfa77b84ae3d6b793d55126540721ecbfaa57270"
+    },
+    {
+      "path": "tests/test_langfuse_instrumentation.py",
+      "workspace_hash": "e4c92b74dda569192d26117589c298fbb3ea7ba95beecc953891eb249e53d1db",
+      "git_hash": "e4c92b74dda569192d26117589c298fbb3ea7ba95beecc953891eb249e53d1db"
+    },
+    {
+      "path": "tests/test_long_memory_store.py",
+      "workspace_hash": "c394d823d7a8453aab24f50b3a609f01d63d362eb2a5c1ce26cd832d32f4032e",
+      "git_hash": "c394d823d7a8453aab24f50b3a609f01d63d362eb2a5c1ce26cd832d32f4032e"
+    },
+    {
+      "path": "tests/test_medical_scenario_eval_runner.py",
+      "workspace_hash": "0c115c19d44e85e6df2cce44c9906d652a1c280de8f27cfc0f6bb1d72de05bab",
+      "git_hash": "0c115c19d44e85e6df2cce44c9906d652a1c280de8f27cfc0f6bb1d72de05bab"
+    },
+    {
+      "path": "tests/test_memory_boundaries.py",
+      "workspace_hash": "9490e97706eb93e8b7629b3d3d0a1d9ad6cc6129b847341378b00c774bce3737",
+      "git_hash": "9490e97706eb93e8b7629b3d3d0a1d9ad6cc6129b847341378b00c774bce3737"
+    },
+    {
+      "path": "tests/test_memory_manager.py",
+      "workspace_hash": "0a0c9a3c3f38f2f3a287aa07d459b6291af9c7dde09f2bc2894b4c22c5948e99",
+      "git_hash": "0a0c9a3c3f38f2f3a287aa07d459b6291af9c7dde09f2bc2894b4c22c5948e99"
+    },
+    {
+      "path": "tests/test_minio_followup_store.py",
+      "workspace_hash": "6a1198aaa80a4f87bdb701b20995b657ed9171d12871db0094b96a5dd967ff12",
+      "git_hash": "6a1198aaa80a4f87bdb701b20995b657ed9171d12871db0094b96a5dd967ff12"
+    },
+    {
+      "path": "tests/test_multidimensional_attribution.py",
+      "workspace_hash": "9f35e5bd961e5c3e660dcee29110f7f3b20a4e850a4526b8ec5f18ea058b3a5e",
+      "git_hash": "9f35e5bd961e5c3e660dcee29110f7f3b20a4e850a4526b8ec5f18ea058b3a5e"
+    },
+    {
+      "path": "tests/test_node_architecture.py",
+      "workspace_hash": "84f07f900cf17d1c6709866f9f425bbba5cf7cf14aa6e903ed307a7b04f54db5",
+      "git_hash": "84f07f900cf17d1c6709866f9f425bbba5cf7cf14aa6e903ed307a7b04f54db5"
+    },
+    {
+      "path": "tests/test_openapi_contract.py",
+      "workspace_hash": "628b657a1b3de3dfcfddee91cf2788254121cff3a5d828fb0c329489354a65e3",
+      "git_hash": "628b657a1b3de3dfcfddee91cf2788254121cff3a5d828fb0c329489354a65e3"
+    },
+    {
+      "path": "tests/test_orchestrator.py",
+      "workspace_hash": "994d73a4d4dc2402a1dd8fe653e558294382599a86a93108ea3fc95ad7d895ca",
+      "git_hash": "994d73a4d4dc2402a1dd8fe653e558294382599a86a93108ea3fc95ad7d895ca"
+    },
+    {
+      "path": "tests/test_pending_execution_transition.py",
+      "workspace_hash": "3a3db0e89fb17eb9fedafc0ca7fc14a7ebfee36c24f2810c5af69b69d5e18c30",
+      "git_hash": "3a3db0e89fb17eb9fedafc0ca7fc14a7ebfee36c24f2810c5af69b69d5e18c30"
+    },
+    {
+      "path": "tests/test_phase0b_critical.py",
+      "workspace_hash": "20ff749cef1670739f2446eeec267213161ec9f786a306f921ac2da20f0322d8",
+      "git_hash": "20ff749cef1670739f2446eeec267213161ec9f786a306f921ac2da20f0322d8"
+    },
+    {
+      "path": "tests/test_phase0b_regressions.py",
+      "workspace_hash": "9ed61e9012873d50c8b3148e4adbfc5fe9d91bdae0c9f66fdaf0fdc83c9ee270",
+      "git_hash": "9ed61e9012873d50c8b3148e4adbfc5fe9d91bdae0c9f66fdaf0fdc83c9ee270"
+    },
+    {
+      "path": "tests/test_phase25_1_contracts.py",
+      "workspace_hash": "e9d0210d111bb01712aac6485eeede560089bdd3730987e676b1bfd80f2dba2f",
+      "git_hash": "e9d0210d111bb01712aac6485eeede560089bdd3730987e676b1bfd80f2dba2f"
+    },
+    {
+      "path": "tests/test_phase25_1_scenarios.py",
+      "workspace_hash": "f372a76666762e31ab46fa6a5893de40bfd8436a95d4c488b97c7f63e98b3147",
+      "git_hash": "f372a76666762e31ab46fa6a5893de40bfd8436a95d4c488b97c7f63e98b3147"
+    },
+    {
+      "path": "tests/test_phase25_tools.py",
+      "workspace_hash": "5305326a2e8b246d5fbc949c9a60e55b49fae0045968294cf96be31ece9b0b6e",
+      "git_hash": "5305326a2e8b246d5fbc949c9a60e55b49fae0045968294cf96be31ece9b0b6e"
+    },
+    {
+      "path": "tests/test_question_rewriter.py",
+      "workspace_hash": "88ab4eb1f10377bf3a1ad38fbc4b08386c79cb658a98b56853eb1cfd699300c3",
+      "git_hash": "88ab4eb1f10377bf3a1ad38fbc4b08386c79cb658a98b56853eb1cfd699300c3"
+    },
+    {
+      "path": "tests/test_redis_session.py",
+      "workspace_hash": "d55f7cf481facdbf3017c77cf0d97533aed37ae363b568e8b14a82012ad0b521",
+      "git_hash": "d55f7cf481facdbf3017c77cf0d97533aed37ae363b568e8b14a82012ad0b521"
+    },
+    {
+      "path": "tests/test_report_export.py",
+      "workspace_hash": "038ba96429159c609a84cbc229541b37b45fc14858e3077b882575a4c7d02d31",
+      "git_hash": "038ba96429159c609a84cbc229541b37b45fc14858e3077b882575a4c7d02d31"
+    },
+    {
+      "path": "tests/test_result_validator.py",
+      "workspace_hash": "6cbfb3fa64372762f6c91456e631b5019362c6fa16be35923346c824f2005310",
+      "git_hash": "6cbfb3fa64372762f6c91456e631b5019362c6fa16be35923346c824f2005310"
+    },
+    {
+      "path": "tests/test_runtime_regressions.py",
+      "workspace_hash": "49f35c3ac5d29c9a1dd47cc070a1743b7dd351c2e96e00434b3f15df8b681d73",
+      "git_hash": "49f35c3ac5d29c9a1dd47cc070a1743b7dd351c2e96e00434b3f15df8b681d73"
+    },
+    {
+      "path": "tests/test_semantic_clarification_session_recovery.py",
+      "workspace_hash": "84b56b3b0117480a2fdb71dffe9ef2ba1eefc3f97dce439eae9ac2cdc5e92ad0",
+      "git_hash": "84b56b3b0117480a2fdb71dffe9ef2ba1eefc3f97dce439eae9ac2cdc5e92ad0"
+    },
+    {
+      "path": "tests/test_semantic_context_contract.py",
+      "workspace_hash": "9d2d91af3ac95c6b604a7b6c951d6e108e4eff427da022094c3a8d66a2efe97e",
+      "git_hash": "9d2d91af3ac95c6b604a7b6c951d6e108e4eff427da022094c3a8d66a2efe97e"
+    },
+    {
+      "path": "tests/test_semantic_query_tool.py",
+      "workspace_hash": "9d11f5b641e0b103e0711c516c014664c58419a78fef27b9ac0de62ba7a57c5f",
+      "git_hash": "9d11f5b641e0b103e0711c516c014664c58419a78fef27b9ac0de62ba7a57c5f"
+    },
+    {
+      "path": "tests/test_semantic_v2_contracts.py",
+      "workspace_hash": "51dabf8706252794401a7417ec056ab0d6301ad510fc09371e0181a4ff42f13d",
+      "git_hash": "51dabf8706252794401a7417ec056ab0d6301ad510fc09371e0181a4ff42f13d"
+    },
+    {
+      "path": "tests/test_session_event_log.py",
+      "workspace_hash": "ec58cca1f25a97bd7dc47865549d253313aa00aa34b984747ba8a05c9d4df713",
+      "git_hash": "ec58cca1f25a97bd7dc47865549d253313aa00aa34b984747ba8a05c9d4df713"
+    },
+    {
+      "path": "tests/test_session_store.py",
+      "workspace_hash": "61a5032e73d4ab9b15cb7ebc808bb2ed517d238e33e2ef5fb07475a80fc22902",
+      "git_hash": "61a5032e73d4ab9b15cb7ebc808bb2ed517d238e33e2ef5fb07475a80fc22902"
+    },
+    {
+      "path": "tests/test_source_watermark_orchestration.py",
+      "workspace_hash": "d837b9292c22c360cf0eb8c9e8dd2b26cdd002d994d4648eb4b52d2529eee863",
+      "git_hash": "d837b9292c22c360cf0eb8c9e8dd2b26cdd002d994d4648eb4b52d2529eee863"
+    },
+    {
+      "path": "tests/test_structured_intent.py",
+      "workspace_hash": "3012c78734cb6d250a4763ac842c2b0eedfed02db62b52aec9fe82fee6a44080",
+      "git_hash": "3012c78734cb6d250a4763ac842c2b0eedfed02db62b52aec9fe82fee6a44080"
+    },
+    {
+      "path": "tests/test_supplier_department_ranking.py",
+      "workspace_hash": "2e4ad5a4982650e4fadb31bdfe12a87dde30bc3984506e80a36343d3ed86ffca",
+      "git_hash": "2e4ad5a4982650e4fadb31bdfe12a87dde30bc3984506e80a36343d3ed86ffca"
+    },
+    {
+      "path": "tests/test_task_dag.py",
+      "workspace_hash": "1a7d08d2a1814de7635b302c49eed693e12d19664c81a9db22d960ad07deba1c",
+      "git_hash": "1a7d08d2a1814de7635b302c49eed693e12d19664c81a9db22d960ad07deba1c"
+    },
+    {
+      "path": "tests/test_temporal_edge_cases.py",
+      "workspace_hash": "fa9b71b4987036d01c47fc2a94223732a3d8275afe865dadd89c8b6cadbf8376",
+      "git_hash": "fa9b71b4987036d01c47fc2a94223732a3d8275afe865dadd89c8b6cadbf8376"
+    },
+    {
+      "path": "tests/test_temporal_parser.py",
+      "workspace_hash": "e171eb8e173de0e41aa9bb19392091f8fd2e43e0c5555dfe80bf6e964a74dba9",
+      "git_hash": "e171eb8e173de0e41aa9bb19392091f8fd2e43e0c5555dfe80bf6e964a74dba9"
+    },
+    {
+      "path": "tests/test_tool_runtime.py",
+      "workspace_hash": "f180b32bb5d8e9591bb668d0bceb26a083ed8606c556f91ab2a19ae664b37e07",
+      "git_hash": "f180b32bb5d8e9591bb668d0bceb26a083ed8606c556f91ab2a19ae664b37e07"
+    },
+    {
+      "path": "tests/test_tracing_evaluation.py",
+      "workspace_hash": "2a1c7e9e86e05ab6896fc4a39c8c0bf6f76a34f19f9b7aa885b5285c8271a25c",
+      "git_hash": "2a1c7e9e86e05ab6896fc4a39c8c0bf6f76a34f19f9b7aa885b5285c8271a25c"
+    },
+    {
+      "path": "tests/test_turn_admission.py",
+      "workspace_hash": "2c8d0870e46d7b055b6a2237a87ba803bba1f78258d1d546c6d49897ff3a8633",
+      "git_hash": "2c8d0870e46d7b055b6a2237a87ba803bba1f78258d1d546c6d49897ff3a8633"
+    },
+    {
+      "path": "tests/test_validated_query_recall.py",
+      "workspace_hash": "e597c0500c3868dfb471ad808ff09c5dc1b371131e42b29500cecc64ccce769d",
+      "git_hash": "e597c0500c3868dfb471ad808ff09c5dc1b371131e42b29500cecc64ccce769d"
+    },
+    {
+      "path": "tests/test_workflow.py",
+      "workspace_hash": "06306b6cc742e852582b14188bab58b040de061010ba7c4586ad806a5a50269d",
+      "git_hash": "06306b6cc742e852582b14188bab58b040de061010ba7c4586ad806a5a50269d"
+    },
+    {
+      "path": "tests/test_working_memory.py",
+      "workspace_hash": "824a121c7c5939186141a177d144fc60f69ca7a0d3a5ea74eafcc8fb6a6d3f6d",
+      "git_hash": "824a121c7c5939186141a177d144fc60f69ca7a0d3a5ea74eafcc8fb6a6d3f6d"
+    },
+    {
+      "path": "tools/audit/phase2_materialize.py",
+      "workspace_hash": "211efb322183226c8bfd3d18670839eba516fa4b16c137fd74416782a5399172",
+      "git_hash": "211efb322183226c8bfd3d18670839eba516fa4b16c137fd74416782a5399172"
+    },
+    {
+      "path": "tools/phase0/close_evidence.py",
+      "workspace_hash": "5f2f79e6e64b16795ef55a07a2a8a34fe55159107b0456ae7fc8dabf44a340ff",
+      "git_hash": "5f2f79e6e64b16795ef55a07a2a8a34fe55159107b0456ae7fc8dabf44a340ff"
+    },
+    {
+      "path": "tools/phase0/failure_inventory.py",
+      "workspace_hash": "9809131f417e3c7e807cf6e5ddaa2b5c3fe7cbb8cede95bb5ff57671b77d3568",
+      "git_hash": "9809131f417e3c7e807cf6e5ddaa2b5c3fe7cbb8cede95bb5ff57671b77d3568"
+    },
+    {
+      "path": "tools/phase0/finalize_repository.py",
+      "workspace_hash": "d19e69b579fdcb17778fa4870a03df7b673af0bd50fd0448b6363890e771f7ea",
+      "git_hash": "d19e69b579fdcb17778fa4870a03df7b673af0bd50fd0448b6363890e771f7ea"
+    },
+    {
+      "path": "tools/phase0/repeat_failures.py",
+      "workspace_hash": "3e5f633cb87c7dc9ec63faecbec6db7f8fcdc154d8a040013916859d2a41ba8b",
+      "git_hash": "3e5f633cb87c7dc9ec63faecbec6db7f8fcdc154d8a040013916859d2a41ba8b"
+    },
+    {
+      "path": "tools/phase0/repro.py",
+      "workspace_hash": "192d5cca243fe672fb1fbd6b0cacb0ff77d1bdf65ed8e3b924ff25c73185ba7d",
+      "git_hash": "192d5cca243fe672fb1fbd6b0cacb0ff77d1bdf65ed8e3b924ff25c73185ba7d"
+    },
+    {
+      "path": "tools/phase0/run_offline.py",
+      "workspace_hash": "c9230410d3bbf9d4f7dd85529e755e90357047fda6c1a8494fbc97770fe5f802",
+      "git_hash": "c9230410d3bbf9d4f7dd85529e755e90357047fda6c1a8494fbc97770fe5f802"
+    },
+    {
+      "path": "tools/phase25/catalog_lint.py",
+      "workspace_hash": "c8ab07fad9f20832a1f9f3b6c5a46d46d1ca1a0da2e2870ba50df22de76d6326",
+      "git_hash": "c8ab07fad9f20832a1f9f3b6c5a46d46d1ca1a0da2e2870ba50df22de76d6326"
+    },
+    {
+      "path": "tools/phase25/materialize_phase25.py",
+      "workspace_hash": "207541825f7b45419490c0b66f16ea921b18bac2564a6e7fb2c1237cec58cbe1",
+      "git_hash": "207541825f7b45419490c0b66f16ea921b18bac2564a6e7fb2c1237cec58cbe1"
+    },
+    {
+      "path": "tools/phase25/run_semantic_v2_shadow.py",
+      "workspace_hash": "85e1b38047e72545a5b4d6caadf849c06bc0366280628490ca19f285d309b9da",
+      "git_hash": "85e1b38047e72545a5b4d6caadf849c06bc0366280628490ca19f285d309b9da"
+    },
+    {
+      "path": "tools/phase25_1/audit_workspace.py",
+      "workspace_hash": "897185b858130a196ad961160ba98cf0e9737458d56026962f990b0806b5992d",
+      "git_hash": "897185b858130a196ad961160ba98cf0e9737458d56026962f990b0806b5992d"
+    },
+    {
+      "path": "tools/phase25_1/closure_audit.py",
+      "workspace_hash": "c83a8e43d78473718674e87c7dbffe069e4bec463394c2c136ce0df4ff1ef522",
+      "git_hash": "c83a8e43d78473718674e87c7dbffe069e4bec463394c2c136ce0df4ff1ef522"
+    },
+    {
+      "path": "tools/phase25_1/fixtures.py",
+      "workspace_hash": "aa214965a4b5d1658dca8dd54506e4539023eabf97d6274be5d900aa825d3ebb",
+      "git_hash": "aa214965a4b5d1658dca8dd54506e4539023eabf97d6274be5d900aa825d3ebb"
+    },
+    {
+      "path": "tools/phase25_1/materialize.py",
+      "workspace_hash": "18e2cfe095fe6a311cf211341865ae804ef0369bdcf80d7f2560fb046f17dcdb",
+      "git_hash": "18e2cfe095fe6a311cf211341865ae804ef0369bdcf80d7f2560fb046f17dcdb"
+    },
+    {
+      "path": "tools/phase25_1/run_gate.py",
+      "workspace_hash": "77ec9e81ed867c161983baba36498887ccd80c81b5c9514b9d82ed3623bbfe1c",
+      "git_hash": "77ec9e81ed867c161983baba36498887ccd80c81b5c9514b9d82ed3623bbfe1c"
+    },
+    {
+      "path": "tools/phase25_1/scenarios.py",
+      "workspace_hash": "b89a7ac1b93a1454cc3b5c5e2666479640264fdab263450a923cf01bb3664177",
+      "git_hash": "b89a7ac1b93a1454cc3b5c5e2666479640264fdab263450a923cf01bb3664177"
+    },
+    {
+      "path": "tools/phase25_1/sync_batch.py",
+      "workspace_hash": "4e6084cf5d4da63c857d6a5086bd3a8f0100757aaf4c9dac463c6ab62f24d437",
+      "git_hash": "4e6084cf5d4da63c857d6a5086bd3a8f0100757aaf4c9dac463c6ab62f24d437"
+    },
+    {
+      "path": "当前数据智能体Semantic与ContextLayer架构分析.md",
+      "workspace_hash": "65dde6ef7fda80769c312acc0189b2649e24930949e49b1be1984a075e237860",
+      "git_hash": "65dde6ef7fda80769c312acc0189b2649e24930949e49b1be1984a075e237860"
+    },
+    {
+      "path": "当前数据智能体功能清单.md",
+      "workspace_hash": "d297c6842a0d9c274eccaf175c6a39692dd670cef39b8f88e627ae9b2f8c9304",
+      "git_hash": "d297c6842a0d9c274eccaf175c6a39692dd670cef39b8f88e627ae9b2f8c9304"
+    },
+    {
+      "path": "当前数据智能体架构分析.md",
+      "workspace_hash": "deea8eaa37d4a530f39359c258841a88db5d18df947a6a3f9bfdac955d0daac2",
+      "git_hash": "deea8eaa37d4a530f39359c258841a88db5d18df947a6a3f9bfdac955d0daac2"
+    },
+    {
+      "path": "数据智能体24个主要节点详细说明.md",
+      "workspace_hash": "06771f39ac68d227734069c4ef8c8eb061f36eb435115d8265bb252cb49be707",
+      "git_hash": "06771f39ac68d227734069c4ef8c8eb061f36eb435115d8265bb252cb49be707"
+    },
+    {
+      "path": "数据智能体60题全链路测试文档.md",
+      "workspace_hash": "4740e4c8a55942852f52908908c7d8f79c9f0f8aaea9349c88d773c4f4695936",
+      "git_hash": "4740e4c8a55942852f52908908c7d8f79c9f0f8aaea9349c88d773c4f4695936"
+    },
+    {
+      "path": "数据智能体流式输出完整响应示例.md",
+      "workspace_hash": "157f4ae56195c49d07baedd5a2b640de74714a6f93de330197dbf2ddb5cdb14c",
+      "git_hash": "157f4ae56195c49d07baedd5a2b640de74714a6f93de330197dbf2ddb5cdb14c"
+    },
+    {
+      "path": "语义模型81查询测试问题.md",
+      "workspace_hash": "79c4485fea2006ecdb4342c1d1389e563f33115bb6f1510f63dd59ea1258d389",
+      "git_hash": "79c4485fea2006ecdb4342c1d1389e563f33115bb6f1510f63dd59ea1258d389"
+    },
+    {
+      "path": "调用规则讲解.md",
+      "workspace_hash": "7100eda9dea555e03e3c874d1cd5a352e06c7e47d9cf6794f69e2cb99a564dd1",
+      "git_hash": "7100eda9dea555e03e3c874d1cd5a352e06c7e47d9cf6794f69e2cb99a564dd1"
+    }
+  ]
+}

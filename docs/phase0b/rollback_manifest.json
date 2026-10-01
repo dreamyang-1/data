@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "e4d3bb59026d3b219c9268ac53f87dccf58f3c28",
+  "baseline_evidence_commit": "42baf3c",
+  "scope": "DataAnalysis_Agent only",
+  "strategy": "Review git diff from PHASE0A_BASELINE_COMMIT, then use git revert on Phase0B commits in reverse order when authorized. No reset/clean/stash; no external service rollback needed.",
+  "phase0a_history_unchanged": true,
+  "phase0a_runtime_sync_deviation": "See phase0a_evidence_corrections.json; original ignored Git placeholder restored, dev runtime retained",
+  "final_commit_resolver": "git log -1 --format=%H -- docs/phase0b/phase0b_closure_report.md"
+}

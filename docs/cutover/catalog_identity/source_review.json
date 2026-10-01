@@ -1,0 +1,66 @@
+{
+  "baseline_commit": "a1708a796c9eb103309bc189280a94fb51b0ebfd",
+  "modified_files": [
+    {
+      "path": "Oagnet/dimension_scope.py",
+      "sha256": "21a15223e772fb6a513ddaecce8cb7ac4d4c40a5f4901186174e8a78fdf45a13"
+    },
+    {
+      "path": "Oagnet/catalog_generation.py",
+      "sha256": "fad5f39f055ca42c478995d5f72bab2dbfccf5237e6ef145c439c4f46ca92b08"
+    },
+    {
+      "path": "Oagnet/mysql_tool.py",
+      "sha256": "aa3742e31d7e2eee8ff1abb9b7718f7679b2f983310ff3f6119c2d1c9f395cbd"
+    },
+    {
+      "path": "Oagnet/tests/test_catalog_identity.py",
+      "sha256": "a4b14477b826c077c5179c0c1c2c8ca9a97e33b51103720b0039200464925204"
+    },
+    {
+      "path": "Oagnet/tests/test_catalog_model_isolation.py",
+      "sha256": "e1d363ad6d37bb421c9e0d22baace3e3510dd739c98da5934f8dc7b1ea3adf38"
+    },
+    {
+      "path": "Oagnet/tests/test_exact_entity_value_resolution.py",
+      "sha256": "70d76875e16007eadc45be8cc315161e15ebdacfda5ec8a7c9c0ea7c207247f7"
+    }
+  ],
+  "backend_read_only_evidence": [
+    {
+      "path": "youoagent-api/youo-agent-project/src/main/java/com/youotech/project/service/impl/SemanticModelServiceImpl.java",
+      "sha256": "3e9c6dc10922f64a3ae91e537749748f78ea9affdc8888f111b3d497dce4ef3e"
+    },
+    {
+      "path": "youoagent-api/youo-agent-infrastructure/src/main/java/com/youotech/infrastructure/modules/project/po/SemanticModelEntityAttributeConfig.java",
+      "sha256": "d07381235f94f407a350a626dd752ae70e0a9f251dc2a2562648cb33c251867c"
+    }
+  ],
+  "review": "Self-review; no independent agent. Read current Java copyVersionData and VARCHAR schema, executed synthetic SQL with cross-model reused IDs, verified real scope capture/generation, reviewed every Oagnet attribute metadata query.",
+  "findings": [
+    {
+      "id": "B-02",
+      "confidence": "PROVEN",
+      "first_divergence": "OAGNET_SEMANTIC_RETRIEVAL",
+      "root": "Catalog generation and dimension ownership reject current governed UUID keys",
+      "fix": "UUID/decimal catalog identity recognition; current public positive-integer scope contract unchanged"
+    },
+    {
+      "id": "B-03",
+      "confidence": "PROVEN",
+      "first_divergence": "OAGNET_SEMANTIC_RETRIEVAL",
+      "root": "Model copies reuse entity IDs and rebuild attribute IDs; unscoped joins let newest foreign attributes replace current ones",
+      "fix": "Model membership on attribute/relation reads, candidate discovery, main-field uniqueness and vector source definitions before deduplication"
+    }
+  ],
+  "remaining_boundaries": [
+    "SQL Translator independent metadata/cache version integration remains C-03/S-01",
+    "No active isolated Milvus/Redis publication at actual target",
+    "No V2 current-request scope bridge or autonomous parser path yet",
+    "External entity-value snapshots, governed default projections, deployment trust and durability still need verification"
+  ],
+  "live_source_writes": 0,
+  "backend_java_modifications": 0,
+  "agent_python_modifications": 0,
+  "sql_translator_modifications": 0
+}

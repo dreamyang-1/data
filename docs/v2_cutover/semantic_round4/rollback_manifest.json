@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "466482b67703bf19214ef54c852c606ee14be109",
+  "production_rollback_needed": false,
+  "procedure": "Discard diagnostic branch or revert its two commits on a new review branch; no reset/clean/force push.",
+  "V1_routing_unchanged": true,
+  "credentials_unchanged": true,
+  "production_state_writes": 0
+}

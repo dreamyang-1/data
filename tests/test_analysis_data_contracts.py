@@ -112,7 +112,9 @@ def test_period_comparison_does_not_create_an_object_scope_from_in_filters():
 
 
 @pytest.mark.asyncio
-async def test_http_adapter_injects_contract_and_rejects_wrong_result_shape():
+@pytest.mark.parametrize("parse_proof", [True, False])
+@pytest.mark.parametrize("execute_proof", [True, False])
+async def test_http_adapter_injects_contract_and_preserves_rows_with_analysis_warning(parse_proof, execute_proof):
     request = analysis_request(PrimaryIntent.ROOT_CAUSE_ANALYSIS, "分析销售额量价因素")
     contract = contract_for_request(request)
     assert contract is not None
@@ -142,15 +144,24 @@ async def test_http_adapter_injects_contract_and_rejects_wrong_result_shape():
         },
     ])
 
-    with pytest.raises(AdapterError) as captured:
-        await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
-            request, IDENTITY, semantic_model_id=6, business_domain_id=None
-        )
-
-    assert captured.value.code == "ANALYSIS_RESULT_CONTRACT_INVALID"
-    assert set(captured.value.details["violations"]["missing_roles"]) == {
-        "period_role", "price", "quantity"
-    }
+    responses = list(client.responses)
+    if not parse_proof:
+        asl.pop("analysis_contract")
+        responses[0]["result"] = json.dumps(asl)
+    if not execute_proof:
+        responses[2].pop("analysis_contract")
+    client.responses = iter(responses)
+    result = await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
+        request, IDENTITY, semantic_model_id=6, business_domain_id=None
+    )
+    assert result.dataset.rows == [{"period": "base", "sales": 100}]
+    assert result.execution_transforms[0]['type'] == 'ANALYSIS_RESULT_CONTRACT_WARNING'
+    if execute_proof:
+        assert set(result.execution_transforms[0]['details']["violations"]["missing_roles"]) == {
+            "period_role", "price", "quantity"
+        }
+    if not parse_proof:
+        assert any("解析结果未确认" in warning for notice in result.execution_transforms for warning in notice["warnings"])
     assert client.calls[0][2]["query"] == request.original_question
     assert client.calls[0][2]["analysis_operator"] == "price_volume_decomposition"
     assert client.calls[1][2]["analysis_contract"]["operator"] == "price_volume_decomposition"
