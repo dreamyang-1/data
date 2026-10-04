@@ -1,0 +1,23 @@
+{
+  "parent_commit": "6e9bf16",
+  "production_files": [
+    "app/semantic_v2/context_question.py",
+    "app/semantic_v2/context_v1_execution.py"
+  ],
+  "test_files": [
+    "tests/test_v2_context_v1_execution_bridge.py"
+  ],
+  "documentation_files": [
+    "docs/v2_cutover/context_v1_reference_completion/validation_report.md",
+    "docs/v2_cutover/context_v1_reference_completion/test_delta.json",
+    "docs/v2_cutover/context_v1_reference_completion/change_manifest.json"
+  ],
+  "excluded": [
+    ".env",
+    "logs",
+    "cache",
+    "credentials",
+    "private runtime receipts",
+    "business query results"
+  ]
+}

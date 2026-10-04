@@ -112,8 +112,14 @@ async def test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplic
     )
 
     assert result.intent_source == "STRUCTURED_MODEL"
-    assert result.missing_slots == ["time_range"]
-    assert result.ambiguities == ["时间表达“最近”边界不明确"]
+    # The controlled default time fills the time slot, so no advisory ambiguity
+    # may survive: every candidate text describes a slot that is no longer
+    # missing, and paraphrases/duplicates are dropped.
+    assert result.missing_slots == []
+    assert result.ambiguities == []
+    # The model's “未说明时间范围” text must not cancel the governed default.
+    assert result.time_range is not None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in result.assumptions
 
 
 @pytest.mark.asyncio
@@ -132,7 +138,12 @@ async def test_model_metric_must_be_grounded_in_the_users_words():
     )
 
     assert result.metrics == []
-    assert result.missing_slots == ["metric", "time_range"]
+    # Time is filled by the controlled default; only the ungrounded metric
+    # slot remains genuinely missing and must still be questioned.
+    assert result.missing_slots == ["metric"]
+    assert result.ambiguities == []
+    assert result.time_range is not None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in result.assumptions
     assert "UNGROUNDED_MODEL_METRIC_DROPPED" in result.assumptions
 
 

@@ -1315,6 +1315,8 @@ class TurnAdmissionGate:
         cls,
         decision: TurnAdmissionDecision,
         current: CanonicalAnalysisRequest,
+        *,
+        replace_filters: bool = False,
     ) -> None:
         """Refresh slot labels after current-model semantic grounding.
 
@@ -1342,6 +1344,12 @@ class TurnAdmissionGate:
                 source_turn=(prior.source_turn if prior is not None else source_turn),
                 confidence=(prior.confidence if prior is not None else 1.0),
             )
+        elif replace_filters:
+            # A structured extraction owns the complete current filter set,
+            # including an intentionally empty set.  Clearing the early rule
+            # proposal is also required when model validation fails; otherwise
+            # that rejected guess can re-enter through explicit slot protection.
+            facts.explicit_slots.pop("filters", None)
         if current.dimensions and "DIMENSION_CLEAR" not in facts.followup_signals:
             prior = facts.explicit_slots.get("dimensions")
             dimensions = list(current.dimensions)
@@ -1368,6 +1376,10 @@ class TurnAdmissionGate:
             refreshed_slots.append("filters")
         if current.dimensions:
             refreshed_slots.append("dimensions")
+        if replace_filters and not current.filters:
+            refreshed_slots = [
+                slot for slot in refreshed_slots if slot != "filters"
+            ]
         decision.protected_slots = list(dict.fromkeys(refreshed_slots))
         decision.context_delta = cls._facts_delta(facts)
         cls.refresh_slot_operations(decision)

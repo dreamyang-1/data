@@ -322,6 +322,7 @@ def test_logical_dimension_removes_its_duplicate_bound_physical_field():
 
     assert result["dimensions"] == [{
         "name": "dealer", "attr": None, "level": None, "granularity": None,
+        "alias": "经销商",
     }]
     _validate_asl_output(
         normalized, knowledge, "统计每个经销商已合作医院数量"

@@ -153,8 +153,12 @@ async def test_rejected_mixed_patch_leaves_state_barriers_versions_and_message_u
         return result
     steps=[(text,parsed,draft)]
     engine,_=planner(catalog,steps)
+    # slot_conflict pairs a whole-filter CLEAR with structured filter_edits; the
+    # exact schema reserves that mix for the whole channel (filter_edits
+    # maxItems 0), so the refusal now happens at the schema stage, still before
+    # any state mutation. The atomicity assertions below remain in force.
     reason={'missing_operand':'V2_FILTER_REMOVE_VALUE_NOT_PRESENT','overlap':'V2_FILTER_OVERLAPPING_EDITS',
-            'bad_metric':'V2_BINDING_HANDLE_NOT_OFFERED','slot_conflict':'V2_STRUCTURED_EDIT_CONFLICT'}[fault]
+            'bad_metric':'V2_BINDING_HANDLE_NOT_OFFERED','slot_conflict':'V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'}[fault]
     with pytest.raises(RecognitionFailure,match=reason):
         await engine.run(request(question=text,message_id='rejected'),IDENTITY,state=before.next_state,plans=[before.plan_state])
     assert before.next_state.model_dump(mode='json')==saved

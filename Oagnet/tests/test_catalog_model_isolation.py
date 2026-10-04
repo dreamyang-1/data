@@ -83,6 +83,57 @@ def test_catalog_does_not_choose_foreign_newer_attribute_or_relation(metadata_db
     assert other['attributes'][0]['field_mapping'] == 'hospitals.secret'
 
 
+def test_metric_binding_query_falls_back_to_current_entity_id_column():
+    class Cursor:
+        def __init__(self):
+            self.queries = []
+
+        def execute(self, sql, args):
+            self.queries.append((sql, args))
+            if "bi.entity_code" in sql:
+                raise mysql.pymysql.err.OperationalError(
+                    1054,
+                    "Unknown column 'bi.entity_code' in 'on clause'",
+                )
+
+        def fetchall(self):
+            return [{"indicator_code": "metric"}]
+
+    cursor = Cursor()
+    rows = mysql._execute_metric_binding_query(
+        cursor,
+        "SELECT * FROM bindings bi WHERE bi.entity_code = %s",
+        ("sales_order",),
+    )
+
+    assert rows == [{"indicator_code": "metric"}]
+    assert "bi.entity_code" in cursor.queries[0][0]
+    assert "CAST(bi.entity_id AS CHAR)" in cursor.queries[1][0]
+
+
+def test_metric_binding_loader_falls_back_to_current_entity_id_column(monkeypatch):
+    queries = []
+
+    def query(sql, args):
+        queries.append((sql, args))
+        if "bi.entity_code" in sql:
+            raise mysql.pymysql.err.OperationalError(
+                1054,
+                "Unknown column 'bi.entity_code' in 'on clause'",
+            )
+        return [{"indicator_code": "metric"}]
+
+    monkeypatch.setattr(mysql, "_query", query)
+    rows = mysql._query_metric_binding_rows(
+        "SELECT * FROM bindings bi WHERE bi.entity_code = %s",
+        ("sales_order",),
+    )
+
+    assert rows == [{"indicator_code": "metric"}]
+    assert "bi.entity_code" in queries[0][0]
+    assert "CAST(bi.entity_id AS CHAR)" in queries[1][0]
+
+
 @pytest.mark.parametrize('domains', [None, 205])
 def test_attribute_discovery_uses_semantic_model_as_well_as_entity_id(metadata_db, domains):
     registered = mysql.get_registered_entity_attributes(81, domains)

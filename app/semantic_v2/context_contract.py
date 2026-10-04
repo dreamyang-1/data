@@ -90,3 +90,29 @@ def proposal_schema(context, current_schema):
          'else': {'properties': {'pending_id': {'type': 'null'}}}},
     ]
     return schema
+
+
+def lightweight_proposal_schema(current_schema):
+    """Empty-context self-contained turn contract.
+
+    No stored tasks and no Pending exist, so historical target/version/pending
+    selection is null-only by construction. The proposal remains the model's
+    decision (ACCEPTED NEW_TASK versus UNRESOLVED/AMBIGUOUS), but the schema
+    carries only the consistency rules that can still distinguish those states.
+    """
+    schema = ContextAwareParse.model_json_schema()
+    schema['properties'].update(deepcopy(current_schema['properties']))
+    schema['$defs'].update(deepcopy(current_schema['$defs']))
+    definition = schema['$defs']['ContextProposal']['properties']
+    for key in ('target_task_id', 'task_version', 'pending_id'):
+        definition[key] = {'type': 'null'}
+    schema['$defs']['ContextProposal']['allOf'] = [
+        {'if': {'properties': {'status': {'enum': ['UNRESOLVED', 'AMBIGUOUS']}}},
+         'then': {'properties': {'relation': {'type': 'null'},
+                                 'target_task_id': {'type': 'null'},
+                                 'task_version': {'type': 'null'},
+                                 'pending_id': {'type': 'null'}}}},
+        {'if': {'properties': {'status': {'const': 'ACCEPTED'}}},
+         'then': {'properties': {'relation': {'const': 'NEW_TASK'}}}},
+    ]
+    return schema

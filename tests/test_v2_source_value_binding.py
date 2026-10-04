@@ -6,6 +6,7 @@ import pytest
 
 from app.semantic_v2.authorized_contract import ScopedArtifact, contract_digest
 from app.semantic_v2.catalog_bridge import ScopedPlanSession
+from app.semantic_v2.enums import CatalogType
 from app.semantic_v2.pending_recognition import RecognizedClarification
 from app.semantic_v2.pipeline import AuthorizedLogicalPlan
 from test_v2_raw_turn_recognition import (IDENTITY, binding, edit, parse, planner,
@@ -66,6 +67,26 @@ def source_step(value='上海', *, field='城市', explicit=False):
                     operator='EQ',value={'value_request_id':'value'},source='USER_EXPLICIT',scope='CURRENT_TASK'),
                     ids=('m0','m2') if explicit else ('m0',))])
     return text,parse(text,specs),draft
+
+
+def test_model_wide_source_receipt_uses_resolved_catalog_scope(catalog):
+    current = ScopedPlanSession(
+        request([], question='model-wide source value'),
+        IDENTITY,
+        catalog[0],
+        resolved_business_domain_ids=(205,),
+    )
+    attributes = current.candidates(CatalogType.ATTRIBUTE)
+    city = next(row for row in attributes if row['canonical_code'] == 'city')
+
+    offered = current.lookup_source_values(
+        city['candidate_id'], '\u6c5f\u82cf', implicit=True
+    )
+
+    assert current.context.authorized_scope.scope_mode == 'MODEL_WIDE'
+    assert current.context.authorized_scope.business_domain_ids == ()
+    assert [row['display_name'] for row in offered] == ['\u6c5f\u82cf']
+    assert catalog[6] == [('city', '\u6c5f\u82cf')]
 
 
 def source_edit(value, operation):

@@ -296,6 +296,50 @@ def test_completed_question_uses_natural_v1_wording_for_exact_entity_value(provi
     assert display.completed_question == f"查询2026年江苏省{metric.display_name}。"
 
 
+def test_completed_question_connects_product_value_to_replacement_metric(provider):
+    prepared = prepared_for(provider)
+    state_artifact, plan_artifact = planned_artifacts(prepared)
+    previous = ConversationState.model_validate(state_artifact.payload)
+    plan = AuthorizedLogicalPlan.model_validate(plan_artifact.payload)
+    original = previous.tasks[plan.task_id].versions[0].semantics
+    metric = original.metrics[0]
+    product = metric.model_copy(update={
+        "catalog_type": CatalogType.ATTRIBUTE,
+        "semantic_role": SemanticRole.FILTER_FIELD,
+        "canonical_id": metric.canonical_id + ":product",
+        "canonical_code": "product_name",
+        "display_name": "商品名称",
+    })
+    product_value = product.model_copy(update={
+        "catalog_type": CatalogType.ENTITY_VALUE,
+        "semantic_role": SemanticRole.FILTER_VALUE,
+        "canonical_id": "source-value:test-product",
+        "canonical_code": "source-value:test-product",
+        "display_name": "测试产品",
+    })
+    semantics = original.model_copy(update={
+        "filter_expression": m.Predicate(
+            field_ref=product,
+            operator="EQ",
+            value=m.EntityValueRef(ref=product_value),
+            source="CURRENT_EXPLICIT",
+            scope="CURRENT_TASK",
+        ),
+    })
+    next_state = _state_with_semantics(previous, plan, semantics)
+    next_plan = _plan_with_semantics(plan, semantics)
+
+    display = build_completed_question_display(
+        message_id="message-product",
+        plan=next_plan,
+        previous_state=previous,
+        next_state=next_state,
+        context_trace={"FINAL_RELATION": "MODIFY"},
+    )
+
+    assert display.completed_question == f"查询测试产品的{metric.display_name}。"
+
+
 def test_completed_question_rejects_subject_drift(provider):
     prepared = prepared_for(provider)
     state_artifact, plan_artifact = planned_artifacts(prepared)

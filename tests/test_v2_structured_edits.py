@@ -211,6 +211,25 @@ async def test_invalid_filter_edits_fail_before_plan_or_state(catalog, fault, co
         if fault == 'type': e['value'] = dict(value_type='NUMBER', value=3)
         return d
     op = 'REMOVE' if fault == 'missing' else 'CLEAR' if fault == 'clear_value' else 'ADD'
+    # Three legacy fault shapes are now unrepresentable under the exact dynamic
+    # schema issued to the model, so the earlier schema refusal is the stable
+    # fail-closed stage for them (verified per fault below). The runtime guards
+    # they used to exercise remain in production for the shapes the contract
+    # still allows (whole-slot authority values, REPLACE on non-predicate
+    # targets, and the other seven parametrized faults of this test).
+    if fault == 'root_conflict':
+        # Whole-filter SET/CLEAR plus structured filter_edits: the exported
+        # contract reserves whole-filter ADD/CLEAR for the whole channel
+        # (filter_edits maxItems 0 under a whole filter_expression edit).
+        code = 'V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'
+    elif fault == 'authority':
+        # Filter operand values expose only opaque binding/source handles; an
+        # ENTITY_REF ref carrying canonical_id is not expressible any more.
+        code = 'V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'
+    elif fault == 'clear_value':
+        # CLEAR requires a null value in the oneOf contract, so a CLEAR that
+        # still carries an operand value cannot reach the runtime guard.
+        code = 'V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'
     steps = [initial(), filter_step('修改地区', op, scalar('江苏'), follow=fault != 'new_task', transform=corrupt)]
     if fault == 'new_task':
         # Preserve the same stale-handle attack even though a new-task context

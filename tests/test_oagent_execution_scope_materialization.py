@@ -118,38 +118,39 @@ async def test_main_oagent_query_uses_resolved_model_wide_execution_scope():
 
 
 @pytest.mark.asyncio
-async def test_oagent_model_wide_multi_domain_execution_fails_closed():
+async def test_oagent_model_wide_multiple_binding_hints_preserve_model_wide_contract():
     _chat, request = scoped_request(requested=[], resolved=[205, 206])
     client = RecordingClient()
 
-    with pytest.raises(AdapterError) as failure:
-        await HttpDataRetrievalAdapter(
-            Settings(env="test"), client
-        ).discover_metrics(
-            request,
-            IDENTITY,
-            semantic_model_id=81,
-            business_domain_id=None,
-        )
+    await HttpDataRetrievalAdapter(
+        Settings(env="test"), client
+    ).discover_metrics(
+        request,
+        IDENTITY,
+        semantic_model_id=81,
+        business_domain_id=None,
+    )
 
-    assert failure.value.code == "OAGENT_MULTI_DOMAIN_CONTRACT_UNSUPPORTED"
-    assert client.calls == []
+    payload = client.calls[0][2]
+    assert payload["business_domain_id"] is None
+    assert payload["business_domain_ids"] == []
 
 
 @pytest.mark.asyncio
-async def test_oagent_unresolved_model_wide_execution_fails_before_call():
+async def test_oagent_unresolved_model_wide_execution_uses_original_v1_contract():
     _chat, request = scoped_request(requested=[], resolved=[])
     client = RecordingClient()
 
-    with pytest.raises(AdapterError) as failure:
-        await HttpDataRetrievalAdapter(
-            Settings(env="test"), client
-        ).discover_metrics(
-            request,
-            IDENTITY,
-            semantic_model_id=81,
-            business_domain_id=None,
-        )
+    await HttpDataRetrievalAdapter(
+        Settings(env="test"), client
+    ).discover_metrics(
+        request,
+        IDENTITY,
+        semantic_model_id=81,
+        business_domain_id=None,
+    )
 
-    assert failure.value.code == "OAGENT_EXECUTION_SCOPE_UNRESOLVED"
-    assert client.calls == []
+    payload = client.calls[0][2]
+    assert payload["semantic_model_id"] == 81
+    assert payload["business_domain_id"] is None
+    assert payload["business_domain_ids"] == []

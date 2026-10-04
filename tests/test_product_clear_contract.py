@@ -29,7 +29,7 @@ class OfflineModel:
     def __init__(self):
         self.calls = []
 
-    async def classify(self, question):
+    async def classify(self, question, *, pre_resolved=False):
         self.calls.append(question)
         return StructuredIntentOutput(primary_intent="METRIC_QUERY", confidence=.99, metrics=["销售额"])
 

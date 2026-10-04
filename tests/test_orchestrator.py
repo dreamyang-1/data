@@ -18,6 +18,7 @@ from app.domain.models import (
     DataQueryResult,
     Dataset,
     HistoryMessage,
+    KnowledgeContext,
     MetricRef,
     PendingState,
     PrimaryIntent,
@@ -44,7 +45,12 @@ from app.stores.long_memory import (
 
 def service() -> DataAnalysisOrchestrator:
     return DataAnalysisOrchestrator(
-        settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
+        settings=Settings(
+            _env_file=None,
+            env="test",
+            adapter_mode="mock",
+            intent_model_enabled=False,
+        ),
         classifier=RuleBasedIntentClassifier(),
         adapters=build_mock_adapters(),
         sessions=InMemorySessionStore(),
@@ -69,9 +75,11 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
         async def get_recent_task_frames(self, *args, **kwargs):
             raise AssertionError("completed question must not restore V1 task history")
 
-    class RewriteTrap(QuestionRewriter):
-        async def rewrite(self, *args, **kwargs):
-            raise AssertionError("completed question must not be rewritten by V1")
+    class PreviousContextTrap(QuestionRewriter):
+        def _apply_context(self, *args, **kwargs):
+            raise AssertionError(
+                "completed question must not restore context in V1 rewriter"
+            )
 
     agent = DataAnalysisOrchestrator(
         settings=Settings(
@@ -83,7 +91,7 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
         classifier=RuleBasedIntentClassifier(),
         adapters=build_mock_adapters(),
         sessions=ContextReadTrapStore(),
-        question_rewriter=RewriteTrap(None),
+        question_rewriter=PreviousContextTrap(None),
     )
     chat = ChatRequest(
         semantic_model_id=81,
@@ -101,6 +109,102 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
     )
 
     assert response.status == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_completed_question_replaces_stale_v1_pending_before_new_clarification():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "completed-question-replaces-stale-pending"
+    stale = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id=conversation_id,
+        tenant_id="t1",
+        user_id="u1",
+        original_question="请提供旧产品使用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields"],
+    )
+    await agent.sessions.put_pending(
+        PendingState(request=stale, clarification_rounds=1, state_version=1),
+        expected_version=0,
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id=conversation_id,
+        message_id="new-completed-question",
+        question="请查询明细",
+        history=[],
+    )
+
+    response = await agent.execute_v1_from_completed_question(chat, identity)
+    pending = await agent.sessions.get_pending(
+        "t1", "u1", "app1", conversation_id
+    )
+
+    assert response.status == "NEEDS_CLARIFICATION"
+    assert response.answer != "会话状态已被另一条消息更新，请基于最新追问重新回答。"
+    assert pending is not None
+    assert pending.request.original_question == "请查询明细"
+    assert pending.state_version == 1
+
+
+@pytest.mark.asyncio
+async def test_complete_product_department_question_executes_after_stale_pending():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "complete-product-department-after-pending"
+    stale = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id=conversation_id,
+        tenant_id="t1",
+        user_id="u1",
+        original_question="旧的不完整问题",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields"],
+    )
+    await agent.sessions.put_pending(
+        PendingState(request=stale, clarification_rounds=1, state_version=1),
+        expected_version=0,
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id=conversation_id,
+        message_id="complete-product-department",
+        question="请提供百特Prismaflex M60 set使用科室。",
+        history=[],
+    )
+
+    response = await agent.execute_v1_from_completed_question(chat, identity)
+
+    assert response.status == "COMPLETED"
+    assert response.missing_slots == []
+    assert "适用科室" in response.answer
+    assert await agent.sessions.get_pending(
+        "t1", "u1", "app1", conversation_id
+    ) is None
+
+
+def test_missing_slot_questions_name_the_parameter_and_give_examples():
+    request = CanonicalAnalysisRequest(
+        conversation_id="detailed-missing-slot-prompts",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询一下",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields", "time_range"],
+    )
+
+    questions = DataAnalysisOrchestrator._clarification_questions(request)
+
+    assert "缺少要返回的业务对象" in questions[0]
+    assert "经销商名单" in questions[0]
+    assert "缺少明细返回字段" in questions[1]
+    assert "产品名称和适用科室" in questions[1]
+    assert "缺少查询时间范围" in questions[2]
+    assert "2026年5月1日至5月10日" in questions[2]
 
 
 @pytest.mark.asyncio
@@ -206,6 +310,8 @@ async def test_regeneration_replaces_stale_continuation_state_in_original_scope(
 def test_recoverable_asl_contract_failures_receive_one_semantic_retry():
     assert "ASL_DETAIL_FIELDS_INCOMPLETE" in SEMANTIC_QUERY_RETRY_CODES
     assert "ASL_REQUIRED_FILTER_MISSING" in SEMANTIC_QUERY_RETRY_CODES
+    assert "ASL_AMBIGUOUS" not in SEMANTIC_QUERY_RETRY_CODES
+    assert "SQL_TRANSLATION_AMBIGUOUS" not in SEMANTIC_QUERY_RETRY_CODES
 
 
 def test_vector_ambiguity_clarification_returns_all_canonical_candidate_details():
@@ -248,6 +354,27 @@ def test_vector_ambiguity_clarification_returns_all_canonical_candidate_details(
     assert items[0]["options"] == request.semantic_ambiguities[0].candidates
     assert items[0]["option_details"] == request.semantic_ambiguities[0].candidate_details
     assert items[0]["multi_select"] is False
+
+
+def test_semantic_clarification_names_the_ambiguous_phrase() -> None:
+    request = CanonicalAnalysisRequest(
+        conversation_id="specific-ambiguity-question",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询费森尤斯产品",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["semantic_ambiguity"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            type="entity_role",
+            phrase="费森尤斯",
+            question="请确认需要使用哪个业务字段。",
+            candidates=["母厂牌", "厂家名称"],
+        )],
+    )
+
+    questions = DataAnalysisOrchestrator._clarification_questions(request)
+
+    assert questions == ["关于“费森尤斯”：请确认需要使用哪个业务字段。"]
 
 
 def _shanghai_region_ambiguity_request() -> CanonicalAnalysisRequest:
@@ -328,6 +455,40 @@ async def test_semantic_ambiguity_choices_are_visible_in_clarification_answer():
         "省份名称：省份",
         "城市名称：市",
     ]
+
+
+@pytest.mark.asyncio
+async def test_all_time_default_suppresses_optional_time_range_pending():
+    agent = service()
+    request = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id="optional-time-range-pending",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询销售额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        assumptions=["TIME_SCOPE=ALL_TIME"],
+        missing_slots=["semantic_ambiguity"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            type="time_anchor",
+            question="请选择查询时间范围。",
+            candidates=["this_month", "last_month", "this_year", "custom"],
+            affected_slots=["time_range"],
+        )],
+    )
+
+    response = await agent._request_clarification(
+        request,
+        rounds=1,
+        source_stage="OAGNET_ASL_GENERATION",
+    )
+
+    assert response.status == "SAFE_FALLBACK"
+    assert response.clarification_decision_traces[0].safe_default_available is True
+    assert response.clarification_decision_traces[0].decision == "SUPPRESS"
+    assert await agent.sessions.get_pending(
+        "t1", "u1", "app1", "optional-time-range-pending"
+    ) is None
 
 
 def test_semantic_ambiguity_numeric_choice_binds_selected_catalog_attribute():
@@ -427,84 +588,31 @@ def test_requested_business_column_renames_existing_semantic_alias():
     assert dataset.rows == [{"医院名称": "测试医院", "医院等级": "三级"}]
 
 
-def test_complete_name_list_drops_null_and_placeholder_members():
+def test_detail_result_presentation_preserves_null_placeholder_and_duplicate_rows():
     request = CanonicalAnalysisRequest(
-        conversation_id="name-integrity",
+        conversation_id="raw-detail-result",
         tenant_id="t1",
         user_id="u1",
-        original_question="查询产品合作的医院名单",
+        original_question="查询医院名单",
         primary_intent=PrimaryIntent.DETAIL_QUERY,
         entity="医院",
         fields=["医院名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=医院名称"],
     )
-    result = DataQueryResult(
-        asl={},
-        sql="SELECT hospital_name FROM hospital",
-        dataset=Dataset(
-            columns=["医院名称"],
-            rows=[
-                {"医院名称": "测试医院"},
-                {"医院名称": None},
-                {"医院名称": "—"},
-            ],
-            row_count=3,
-            total_row_count=3,
-            snapshot_id="name-integrity-snapshot",
-            data_as_of=datetime(2025, 12, 30, tzinfo=timezone.utc),
-        ),
+    answer = DataAnalysisOrchestrator._analyze(
+        request,
+        ["医院名称"],
+        [
+            {"医院名称": "测试医院"},
+            {"医院名称": None},
+            {"医院名称": "—"},
+            {"医院名称": "测试医院"},
+        ],
+        KnowledgeContext(query="查询医院名单"),
     )
 
-    cleaned = DataAnalysisOrchestrator._enforce_name_projection_integrity(
-        request, result
-    )
-
-    assert cleaned.dataset.rows == [{"医院名称": "测试医院"}]
-    assert cleaned.dataset.row_count == 1
-    assert cleaned.dataset.total_row_count == 1
-    assert cleaned.execution_transforms[-1] == {
-        "type": "DROP_INVALID_NAME_PROJECTION_ROWS",
-        "fields": ["医院名称"],
-        "removed_row_count": 2,
-        "verified_complete_result": True,
-    }
-    assert "INVALID_NAME_ROWS_REMOVED=2" in request.assumptions
-
-
-def test_truncated_name_list_with_invalid_members_fails_closed():
-    request = CanonicalAnalysisRequest(
-        conversation_id="name-integrity-truncated",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询经销商名单",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        entity="经销商",
-        fields=["经销商名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=经销商名称"],
-    )
-    result = DataQueryResult(
-        asl={},
-        sql="SELECT dealer_name FROM dealer",
-        dataset=Dataset(
-            columns=["经销商名称"],
-            rows=[{"经销商名称": "有效公司"}, {"经销商名称": None}],
-            row_count=2,
-            total_row_count=20,
-            truncated=True,
-            snapshot_id="name-integrity-truncated-snapshot",
-            data_as_of=datetime(2025, 12, 30, tzinfo=timezone.utc),
-        ),
-        result_file_url="https://example.test/result.xlsx",
-    )
-
-    cleaned = DataAnalysisOrchestrator._enforce_name_projection_integrity(
-        request, result
-    )
-
-    assert cleaned.dataset.quality_status == "FAIL"
-    assert cleaned.dataset.rows == [{"经销商名称": "有效公司"}]
-    assert cleaned.dataset.total_row_count == 20
-    assert cleaned.result_file_url is None
+    assert "共查询到 4 条明细" in answer
+    assert answer.count("测试医院") == 2
+    assert "—" in answer
 
 
 def test_singular_product_pronoun_is_bound_from_previous_result_table():
@@ -1053,6 +1161,8 @@ async def test_relationship_count_projection_is_accepted_as_verified_metric_evid
         "source_watermark_verified": True,
     }
     assert "101" in response.answer
+    assert "数据水位：" not in response.answer
+    assert "查询快照时间仅表示本次读取时间" not in response.answer
     derived = next(
         item for item in response.evidence
         if item.kind == "DERIVED_METRIC_RESOLUTION"
@@ -1233,6 +1343,84 @@ async def test_unqualified_sales_metric_uses_auditable_default_time_range():
     assert first.intent == PrimaryIntent.METRIC_QUERY
     assert first.reliability and first.reliability.level == "HIGH"
     assert first.reliability.gates["query_succeeded"] is True
+
+
+@pytest.mark.asyncio
+async def test_all_time_default_retries_optional_time_anchor_ambiguity_once():
+    base = build_mock_adapters()
+
+    class OptionalTimeAmbiguityOnce:
+        def __init__(self):
+            self.calls = 0
+            self.retry_request = None
+
+        async def health(self):
+            return True
+
+        async def rewrite_health(self):
+            return True
+
+        async def query(
+            self, request, identity, *, semantic_model_id, business_domain_id
+        ):
+            self.calls += 1
+            if self.calls == 1:
+                raise AdapterError(
+                    "ASL_AMBIGUOUS",
+                    "optional time scope was treated as blocking",
+                    details=[{
+                        "type": "time_anchor",
+                        "question": "请选择查询时间范围。",
+                        "candidates": [
+                            "this_month", "last_month", "this_year", "custom",
+                        ],
+                        "affected_slots": ["time_range"],
+                    }],
+                )
+            self.retry_request = request.model_copy(deep=True)
+            return await base.retrieval.query(
+                request,
+                identity,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+            )
+
+    retrieval = OptionalTimeAmbiguityOnce()
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=AdapterBundle(
+            semantic=base.semantic,
+            retrieval=retrieval,
+            knowledge=base.knowledge,
+            policy=base.policy,
+            analysis=base.analysis,
+        ),
+        sessions=InMemorySessionStore(),
+    )
+
+    response = await agent.handle(
+        ChatRequest(
+            semantic_model_id=81,
+            application_id="app1",
+            conversation_id="optional-time-anchor-default",
+            message_id="m1",
+            question="帮我查一下销售额",
+        ),
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+    )
+
+    assert response.status == "COMPLETED"
+    assert retrieval.calls == 2
+    assert retrieval.retry_request is not None
+    assert "TIME_SCOPE=ALL_TIME" in retrieval.retry_request.assumptions
+    assert any(
+        value.startswith("SEMANTIC_QUERY_RETRY:")
+        for value in retrieval.retry_request.assumptions
+    )
+    assert await agent.sessions.get_pending(
+        "t1", "u1", "app1", "optional-time-anchor-default"
+    ) is None
 
 
 @pytest.mark.asyncio

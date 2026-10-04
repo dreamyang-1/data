@@ -1,5 +1,6 @@
 import hashlib
 import json
+import random
 import re
 from datetime import date
 from difflib import SequenceMatcher
@@ -545,6 +546,7 @@ def _build_semantic_evidence(
             "canonical_name": canonical_name,
             "calculation_formula": formula,
             "global_filters": global_filters,
+            "time_anchor": _metric_time_anchor(vector_meta),
         }
         selected_metrics.append({
             **stable_metadata,
@@ -588,6 +590,7 @@ def _normalize_semantic_references(
     exact_value_resolver=None,
     exact_attribute_value_resolver=None,
     catalog_value_resolver=None,
+    model_owned_time: bool = False,
 ) -> str:
     """Correct uniquely resolvable semantic/physical references from recall."""
     try:
@@ -745,10 +748,44 @@ def _normalize_semantic_references(
         exact_attribute_value_resolver=exact_attribute_value_resolver,
         catalog_value_resolver=catalog_value_resolver,
     )
-    _normalize_time_context(ast, knowledge, user_query)
+    if not model_owned_time:
+        _normalize_time_context(ast, knowledge, user_query)
     _normalize_activity_semantics(ast, knowledge, user_query)
     _normalize_generic_sales_metric(ast, knowledge, user_query)
+    _complete_dimension_alias_from_recall(ast, knowledge)
     return json.dumps(ast, ensure_ascii=False)
+
+
+def _complete_dimension_alias_from_recall(ast: dict, knowledge: dict) -> None:
+    """Fill a logical dimension alias only from unique recalled metadata.
+
+    Model-generated aliases are not trusted.  A dimension receives its
+    canonical business label only when its name exactly matches one unique,
+    complete ``dim_code``/``dim_name`` record from the current scoped recall.
+    Any alias that cannot be proven this way is removed.
+    """
+    dimensions = ast.get("dimensions")
+    if not isinstance(dimensions, list):
+        return
+
+    complete_records: dict[str, list[str]] = {}
+    for result in knowledge.get("dimensions", []):
+        metadata = getattr(result, "metadata", {}) or {}
+        code = str(metadata.get("dim_code") or "").strip()
+        name = str(metadata.get("dim_name") or "").strip()
+        if code and name:
+            complete_records.setdefault(code, []).append(name)
+
+    for dimension in dimensions:
+        if not isinstance(dimension, dict):
+            continue
+        dimension_code = str(dimension.get("name") or "").strip()
+        names = complete_records.get(dimension_code) or []
+        proven_alias = names[0] if len(names) == 1 else None
+        if proven_alias:
+            dimension["alias"] = proven_alias
+        else:
+            dimension.pop("alias", None)
 
 
 def _known_codes(knowledge: dict, section: str, key: str) -> set[str]:
@@ -1532,6 +1569,57 @@ def _ambiguity_mentions_filter(
     }
     value_match = bool(value_texts and any(token in text for token in value_texts))
     return field_match and (not require_value or value_match)
+
+
+def _clear_resolved_contract_filter_ambiguities(
+    ast: dict,
+    *,
+    semantic_field: str,
+    resolved_field: str,
+    value,
+    candidate_fields: set[str] | None = None,
+) -> int:
+    """Remove only filter warnings made stale by an exact contract binding.
+
+    The ASL model can emit a warning that a semantic field was not recalled and
+    still return an otherwise repairable draft.  Once the caller-owned filter
+    has been mapped to one published field and the complete predicate has been
+    installed, a warning about that same field is no longer actionable.  Other
+    filter warnings remain blocking, including every warning produced while the
+    field mapping is not unique.
+    """
+
+    ambiguities = ast.get("ambiguity")
+    if not isinstance(ambiguities, list):
+        return 0
+    fields = {
+        str(semantic_field or "").strip(),
+        str(resolved_field or "").strip(),
+        *(candidate_fields or set()),
+    }
+    # A fully-qualified physical field is authoritative evidence.  Its short
+    # column alias is useful for model warnings such as ``province_name was not
+    # found``, but generic aliases such as ``name`` must not clear an unrelated
+    # warning merely because they occur in ordinary prose.
+    for field in tuple(fields):
+        short_name = str(field).rsplit(".", 1)[-1].strip()
+        if "_" in short_name or len(short_name) >= 6:
+            fields.add(short_name)
+    retained = [
+        item
+        for item in ambiguities
+        if not _ambiguity_mentions_filter(
+            item,
+            semantic_field,
+            value,
+            {field for field in fields if field},
+            require_value=False,
+        )
+    ]
+    removed = len(ambiguities) - len(retained)
+    if removed:
+        ast["ambiguity"] = retained
+    return removed
 
 
 def _related_entity_distances(
@@ -2507,6 +2595,7 @@ def _normalize_relation_name_filters(
         catalog_choices: list[dict] = []
         catalog_evidence_fields: set[str] = set()
         catalog_ranked_choices: set[str] = set()
+        catalog_ranked_filter_choices: dict[str, tuple[str, str]] = {}
         catalog_candidates = _catalog_identity_candidates(
             broad_candidates, attributes_by_entity
         )
@@ -2554,6 +2643,18 @@ def _normalize_relation_name_filters(
                     and str(match.get("field") or "") in catalog_fields
                     and str(match.get("canonical_value") or "").strip()
                 )
+                for match in catalog_matches:
+                    if not isinstance(match, dict):
+                        continue
+                    matched_field = str(match.get("field") or "").strip()
+                    canonical_value = str(
+                        match.get("canonical_value") or ""
+                    ).strip()
+                    if matched_field in catalog_fields and canonical_value:
+                        catalog_ranked_filter_choices.setdefault(
+                            f"{matched_field}={canonical_value}",
+                            (matched_field, canonical_value),
+                        )
                 choice = _unique_catalog_match(catalog_matches, catalog_fields)
                 if choice is None:
                     catalog_choices = []
@@ -2601,20 +2702,40 @@ def _normalize_relation_name_filters(
             )
             for ambiguity in ambiguities
         ):
-            ambiguities.append({
-                "type": "filter",
-                "question": (
-                    f"过滤值 {'、'.join(natural_values)} 看起来不像关系键 {field} 的编码，"
-                    "且当前语义作用域"
-                    "无法唯一确定对应的名称属性。请确认使用编码还是名称过滤。"
-                ),
-                "candidates": sorted(
-                    catalog_ranked_choices
-                    or name_fields
-                    .union(broad_evidence_fields)
-                    .union(catalog_evidence_fields)
-                ),
-            })
+            question = (
+                f"过滤值 {'、'.join(natural_values)} 看起来不像关系键 {field} 的编码，"
+                "且当前语义作用域"
+                "无法唯一确定对应的名称属性。请确认使用编码还是名称过滤。"
+            )
+            candidate_labels = sorted(
+                catalog_ranked_choices
+                or name_fields
+                .union(broad_evidence_fields)
+                .union(catalog_evidence_fields)
+            )
+            if candidate_labels and len(natural_values) == 1:
+                input_value = natural_values[0]
+                _append_filter_ambiguity(
+                    ast,
+                    question,
+                    [
+                        (
+                            label,
+                            catalog_ranked_filter_choices.get(
+                                label, (label, input_value)
+                            )[0],
+                            catalog_ranked_filter_choices.get(
+                                label, (label, input_value)
+                            )[1],
+                        )
+                        for label in candidate_labels
+                    ],
+                    input_value=input_value,
+                    semantic_model_id=semantic_model_id,
+                    business_domain_id=business_domain_id,
+                )
+            else:
+                _append_ambiguity(ast, "filter", question, candidate_labels)
 
 
 def _literal_is_explicitly_mentioned(value: str, user_query: str) -> bool:
@@ -2782,27 +2903,29 @@ def _split_composite_brand_filter(
                 )
             ]
             continue
-        ranked_choices = sorted({
-            f"{candidate.get('field')}={candidate.get('canonical_value')}"
+        brand_choices = [
+            (
+                f"{candidate.get('field')}={candidate.get('canonical_value')}",
+                str(candidate.get("field") or ""),
+                str(candidate.get("canonical_value") or ""),
+            )
             for candidate in catalog_matches
             if isinstance(candidate, dict)
             and candidate.get("field") in brand_fields
             and str(candidate.get("canonical_value") or "").strip()
-        })
-        if ranked_choices and not any(
-            isinstance(ambiguity, dict)
-            and ambiguity.get("type") == "filter"
-            and ambiguity.get("candidates") == ranked_choices
-            for ambiguity in ambiguities
-        ):
-            ambiguities.append({
-                "type": "filter",
-                "question": (
+        ]
+        if brand_choices:
+            _append_filter_ambiguity(
+                ast,
+                (
                     f"品牌值 {raw_value} 对应多个同优先级目录字段或规范值，"
                     "请确认具体品牌口径。"
                 ),
-                "candidates": ranked_choices,
-            })
+                brand_choices,
+                input_value=raw_value,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+            )
 
     for item in list(filters):
         if not isinstance(item, dict):
@@ -3008,10 +3131,9 @@ def _administrative_attribute_kind(
     explicit exclusion even when it also contains words such as ``region``.
     """
     column = field.rsplit(".", 1)[-1]
-    code_text = " ".join((
-        column,
-        str(attribute.get("attr_code") or ""),
-    )).casefold()
+    column_text = column.casefold()
+    attribute_code_text = str(attribute.get("attr_code") or "").casefold()
+    code_text = " ".join((column_text, attribute_code_text))
     semantic_text = " ".join((
         code_text,
         str(attribute.get("attr_name") or ""),
@@ -3024,18 +3146,22 @@ def _administrative_attribute_kind(
     def english_token(text: str, token: str) -> bool:
         return bool(re.search(rf"(?:^|[^a-z0-9]){token}(?:$|[^a-z0-9])", text))
 
-    # Stable codes are more precise than a broad translated label such as
-    # "所在省市".  This makes ``attr_code=province`` unambiguously provincial.
-    for token, kind in (
+    # The executable physical column wins when recalled metadata conflicts
+    # with its binding.  For example a recalled "省份名称" dimension must not
+    # make ``dim_city.city_name`` provincial.  If the physical column is
+    # generic (such as ``name``), fall back to the registered attribute code.
+    administrative_codes = (
         ("province", "province"),
         ("city", "city"),
         ("district", "district"),
         ("county", "district"),
         ("region", "region"),
         ("administrative_area", "region"),
-    ):
-        if english_token(code_text.replace("_", " "), token.replace("_", " ")):
-            return kind
+    )
+    for source in (column_text, attribute_code_text):
+        for token, kind in administrative_codes:
+            if english_token(source.replace("_", " "), token.replace("_", " ")):
+                return kind
 
     label = _semantic_label(semantic_text)
     if any(token in label for token in ("省份", "所在省", "行政省")):
@@ -3096,6 +3222,18 @@ def _administrative_query_level(raw_value: str, user_query: str) -> str | None:
             if raw_value.endswith(suffix):
                 return level
     return None
+
+
+def _administrative_suffix_completion(surface: str, canonical: str) -> bool:
+    """Accept only a standard administrative suffix added by source data."""
+    surface_key = re.sub(r"\s+", "", str(surface or "")).casefold()
+    canonical_key = re.sub(r"\s+", "", str(canonical or "")).casefold()
+    if not surface_key or not canonical_key.startswith(surface_key):
+        return False
+    suffix = canonical_key[len(surface_key):]
+    return bool(suffix and suffix in {
+        str(value).casefold() for value in _ADMINISTRATIVE_SUFFIXES
+    })
 
 
 def _administrative_value_candidates(
@@ -3417,24 +3555,24 @@ def _normalize_entity_attribute_filters(
                         ambiguity for ambiguity in ambiguities
                         if not attribute_choice_ambiguity(ambiguity)
                     ]
-                    choices = sorted(
-                        f"{matched_field}={canonical_value}"
-                        for _, matched_field, canonical_value in best
+                    _append_filter_ambiguity(
+                        ast,
+                        (
+                            f"地区值 {raw_value} 在与结果对象等距的多个行政区字段中"
+                            "精确存在，请确认行政层级。"
+                        ),
+                        [
+                            (
+                                f"{matched_field}={canonical_value}",
+                                matched_field,
+                                canonical_value,
+                            )
+                            for _, matched_field, canonical_value in best
+                        ],
+                        input_value=raw_value,
+                        semantic_model_id=semantic_model_id,
+                        business_domain_id=business_domain_id,
                     )
-                    if not any(
-                        isinstance(ambiguity, dict)
-                        and ambiguity.get("type") == "filter"
-                        and ambiguity.get("candidates") == choices
-                        for ambiguity in ambiguities
-                    ):
-                        ambiguities.append({
-                            "type": "filter",
-                            "question": (
-                                f"地区值 {raw_value} 在与结果对象等距的多个行政区字段中"
-                                "精确存在，请确认行政层级。"
-                            ),
-                            "candidates": choices,
-                        })
                     continue
 
                 current_attribute = attributes_by_entity[entity_code][field]
@@ -3444,21 +3582,20 @@ def _normalize_entity_attribute_filters(
                     # Never execute a geographic slot against a name/address
                     # field merely because that free text happens to contain
                     # the same place name.
-                    choices = sorted(administrative_fields)
-                    if not any(
-                        isinstance(ambiguity, dict)
-                        and ambiguity.get("type") == "filter"
-                        and ambiguity.get("candidates") == choices
-                        for ambiguity in ambiguities
-                    ):
-                        ambiguities.append({
-                            "type": "filter",
-                            "question": (
-                                f"地区值 {raw_value} 未能在召回的行政区字段中唯一匹配，"
-                                "请确认地区名称或行政层级。"
-                            ),
-                            "candidates": choices,
-                        })
+                    _append_filter_ambiguity(
+                        ast,
+                        (
+                            f"地区值 {raw_value} 未能在召回的行政区字段中唯一匹配，"
+                            "请确认地区名称或行政层级。"
+                        ),
+                        [
+                            (candidate_field, candidate_field, raw_value)
+                            for candidate_field in administrative_fields
+                        ],
+                        input_value=raw_value,
+                        semantic_model_id=semantic_model_id,
+                        business_domain_id=business_domain_id,
+                    )
                     continue
 
         try:
@@ -3520,13 +3657,17 @@ def _normalize_entity_attribute_filters(
                 item["value"] = canonical_values[0]
                 continue
             if len(canonical_values) > 1:
-                ambiguities.append({
-                    "type": "filter",
-                    "question": (
-                        f"地区简称 {raw_value} 对应多个目录规范值，请确认具体地区。"
-                    ),
-                    "candidates": canonical_values,
-                })
+                _append_filter_ambiguity(
+                    ast,
+                    f"地区简称 {raw_value} 对应多个目录规范值，请确认具体地区。",
+                    [
+                        (canonical_value, field, canonical_value)
+                        for canonical_value in canonical_values
+                    ],
+                    input_value=raw_value,
+                    semantic_model_id=semantic_model_id,
+                    business_domain_id=business_domain_id,
+                )
                 continue
         if len(matched_fields) == 1:
             matched_field = next(iter(matched_fields))
@@ -3612,22 +3753,28 @@ def _normalize_entity_attribute_filters(
                     )
                 ]
                 continue
-            ranked_choices = sorted({
-                f"{match.get('field')}={match.get('canonical_value')}"
+            related_choices = [
+                (
+                    f"{match.get('field')}={match.get('canonical_value')}",
+                    str(match.get("field") or ""),
+                    str(match.get("canonical_value") or ""),
+                )
                 for match in catalog_matches
                 if isinstance(match, dict)
                 and str(match.get("field") or "") in related_fields
                 and str(match.get("canonical_value") or "").strip()
-            })
-            if ranked_choices:
-                _append_ambiguity(
+            ]
+            if related_choices:
+                _append_filter_ambiguity(
                     ast,
-                    "filter",
                     (
                         f"过滤值 {raw_value} 在关联实体目录中存在多个同等候选，"
                         "请确认具体商品、品牌或厂家口径。"
                     ),
-                    ranked_choices,
+                    related_choices,
+                    input_value=raw_value,
+                    semantic_model_id=semantic_model_id,
+                    business_domain_id=business_domain_id,
                 )
                 continue
         if len(matched_fields) > 1:
@@ -3646,14 +3793,20 @@ def _normalize_entity_attribute_filters(
                     require_value=True,
                 )
             ]
-            ambiguities.append({
-                "type": "filter",
-                "question": (
+            _append_filter_ambiguity(
+                ast,
+                (
                     f"过滤值 {raw_value} 在实体 {entity_code} 的多个属性中精确存在，"
                     "无法安全确定业务含义，请确认要筛选的属性。"
                 ),
-                "candidates": sorted(matched_fields),
-            })
+                [
+                    (matched_field, matched_field, raw_value)
+                    for matched_field in matched_fields
+                ],
+                input_value=raw_value,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+            )
 
 
 _DATE_TOKEN = re.compile(
@@ -3697,23 +3850,95 @@ def _append_ambiguity(
     ambiguity_type: str,
     question: str,
     candidates: list[str],
+    *,
+    phrase: str | None = None,
+    affected_slots: list[str] | None = None,
+    candidate_details: list[dict] | None = None,
+    semantic_model_id: int | None = None,
 ) -> None:
     ambiguities = ast.get("ambiguity")
     if not isinstance(ambiguities, list):
         return
     normalized_candidates = list(dict.fromkeys(map(str, candidates)))
-    if any(
-        isinstance(item, dict)
-        and str(item.get("type") or "") == ambiguity_type
-        and list(map(str, item.get("candidates") or [])) == normalized_candidates
-        for item in ambiguities
-    ):
-        return
-    ambiguities.append({
+    payload = {
         "type": ambiguity_type,
         "question": question,
         "candidates": normalized_candidates,
-    })
+    }
+    if phrase:
+        payload["phrase"] = phrase
+    if affected_slots:
+        payload["affected_slots"] = list(dict.fromkeys(affected_slots))
+    if candidate_details is not None:
+        if len(candidate_details) != len(normalized_candidates):
+            raise ValueError("candidate details must align with candidate labels")
+        payload["candidate_details"] = [dict(item) for item in candidate_details]
+    if type(semantic_model_id) is int:
+        payload["semantic_model_id"] = semantic_model_id
+    existing = next((
+        item for item in ambiguities
+        if isinstance(item, dict)
+        and str(item.get("type") or "") == ambiguity_type
+        and list(map(str, item.get("candidates") or [])) == normalized_candidates
+    ), None)
+    if existing is not None:
+        # A model-produced label-only ambiguity may precede catalog grounding.
+        # Upgrade the same visible options with the governed application
+        # contract instead of retaining a choice that cannot be executed.
+        existing.update(payload)
+        return
+    ambiguities.append(payload)
+
+
+def _append_filter_ambiguity(
+    ast: dict,
+    question: str,
+    choices: list[tuple[str, str, str]],
+    *,
+    input_value: str,
+    semantic_model_id: int | None,
+    business_domain_id: int | None,
+) -> None:
+    """Publish aligned filter choices that a downstream agent can apply."""
+
+    normalized: dict[str, tuple[str, str]] = {}
+    for label, field, canonical_value in choices:
+        clean_label = str(label or "").strip()
+        clean_field = str(field or "").strip()
+        clean_value = str(canonical_value or "").strip()
+        if clean_label and clean_field and clean_value:
+            normalized.setdefault(clean_label, (clean_field, clean_value))
+    labels = sorted(normalized)
+    if not labels:
+        return
+    details = []
+    for label in labels:
+        field, canonical_value = normalized[label]
+        detail = {
+            "label": label,
+            "canonical_name": field,
+            "canonical_code": field,
+            "attribute_name": field,
+            "attribute_code": field,
+            "value": canonical_value,
+            "canonical_value": canonical_value,
+            "input_value": input_value,
+            "operation": "UPSERT_FILTER",
+            "operator": "EQ",
+        }
+        if type(business_domain_id) is int:
+            detail["business_domain_id"] = business_domain_id
+        details.append(detail)
+    _append_ambiguity(
+        ast,
+        "filter",
+        question,
+        labels,
+        phrase=input_value,
+        affected_slots=["filters"],
+        candidate_details=details,
+        semantic_model_id=semantic_model_id,
+    )
 
 
 def _query_date_bounds(user_query: str) -> tuple[str, str, str] | None:
@@ -5120,6 +5345,23 @@ def _contract_label(value: object) -> str:
     return normalized
 
 
+_CONTRACT_ENTITY_LABEL_ALIASES = {
+    "产品": {"商品"},
+    "商品": {"产品"},
+    "厂家": {"制造商", "生产厂家"},
+    "制造商": {"厂家", "生产厂家"},
+}
+
+
+def _contract_entity_label_variants(value: object) -> set[str]:
+    """Return explicit business aliases used only for entity-label matching."""
+
+    label = _contract_label(value)
+    if not label:
+        return set()
+    return {label, *_CONTRACT_ENTITY_LABEL_ALIASES.get(label, set())}
+
+
 def _contract_projection_candidates(
     label: str,
     query_object: str | None,
@@ -5127,38 +5369,56 @@ def _contract_projection_candidates(
     preferred_fields: set[str] | None = None,
     *,
     prefer_physical: bool = False,
+    prefer_display: bool = False,
 ) -> list[str]:
     """Resolve a requested display label only from recalled semantic metadata."""
 
     target = _contract_label(label)
-    object_label = _contract_label(query_object)
+    object_labels = _contract_entity_label_variants(query_object)
     authorized = _known_physical_fields(knowledge)
     entities, attributes_by_entity = _scoped_entity_attributes(knowledge)
 
     exact_object_entities: set[str] = set()
     related_object_entities: set[str] = set()
-    if object_label:
+    if object_labels:
         for entity_code, metadata in entities.items():
-            labels = {_contract_label(entity_code)}
+            labels = _contract_entity_label_variants(entity_code)
             for key in ("entity_name", "entity_alias"):
-                labels.update(_contract_label(value) for value in _metadata_term_values(metadata.get(key)))
-            if object_label in labels:
+                for value in _metadata_term_values(metadata.get(key)):
+                    labels.update(_contract_entity_label_variants(value))
+            if object_labels.intersection(labels):
                 exact_object_entities.add(entity_code)
             elif any(
-                object_label and (object_label in value or value in object_label)
-                for value in labels if value
+                left and right and (left in right or right in left)
+                for left in object_labels
+                for right in labels
             ):
                 related_object_entities.add(entity_code)
 
     scored: list[tuple[int, str]] = []
+    display_fields: set[str] = set()
     entity_scope = (
         exact_object_entities or related_object_entities or set(attributes_by_entity)
     )
+    if prefer_display and target:
+        # A detail projection can ask for a related entity's visible label even
+        # when the result object's entity is different (for example a product's
+        # applicable department). Include only entities whose published label is
+        # explicitly present in that projection; do not broaden to every recalled
+        # entity or guess a relationship from a shared physical field.
+        for entity_code, metadata in entities.items():
+            labels = _contract_entity_label_variants(entity_code)
+            for key in ("entity_name", "entity_alias"):
+                for value in _metadata_term_values(metadata.get(key)):
+                    labels.update(_contract_entity_label_variants(value))
+            if any(label and (label in target or target in label) for label in labels):
+                entity_scope.add(entity_code)
     for entity_code in entity_scope:
-        entity_labels = {_contract_label(entity_code)}
+        entity_labels = _contract_entity_label_variants(entity_code)
         metadata = entities.get(entity_code, {})
         for key in ("entity_name", "entity_alias"):
-            entity_labels.update(_contract_label(value) for value in _metadata_term_values(metadata.get(key)))
+            for value in _metadata_term_values(metadata.get(key)):
+                entity_labels.update(_contract_entity_label_variants(value))
         for field, attribute in attributes_by_entity.get(entity_code, {}).items():
             if field not in authorized or _is_relationship_key_field(field, attributes_by_entity):
                 continue
@@ -5169,9 +5429,15 @@ def _contract_projection_candidates(
                 "is_main_attribute", "is_primary_name", "is_display_name", "is_name",
             )) or str(attribute.get("semantic_role") or "").casefold() in {
                 "name", "display_name", "primary_name", "title",
-            }
+            } or str(attribute.get("attr_code") or "").casefold().endswith("_name")
+            if is_display:
+                display_fields.add(field)
             exact = target in terms
-            entity_display = is_display and target in entity_labels
+            entity_display = is_display and any(
+                entity_label
+                and (entity_label == target or entity_label in target)
+                for entity_label in entity_labels
+            )
             partial = any(
                 len(target) >= 2 and len(term) >= 2 and (target in term or term in target)
                 for term in terms
@@ -5180,6 +5446,19 @@ def _contract_projection_candidates(
                 scored.append((0, field))
             elif partial:
                 scored.append((1, field))
+
+    if prefer_display and scored:
+        best_display_score = min(
+            (score for score, field in scored if field in display_fields),
+            default=None,
+        )
+        if best_display_score is not None:
+            best_display = sorted({
+                field for score, field in scored
+                if score == best_display_score and field in display_fields
+            })
+            if len(best_display) == 1:
+                return best_display
 
     if prefer_physical and scored:
         best_physical_score = min(score for score, _field in scored)
@@ -5338,6 +5617,16 @@ def _contract_filter_candidates(
             return "province"
         return None
 
+    target_administrative_role = administrative_role(target)
+
+    def semantic_role(value: str) -> str | None:
+        compact = _contract_label(value)
+        if any(token in compact for token in (
+            _contract_label("品牌"), _contract_label("厂牌"),
+        )):
+            return "brand"
+        return None
+
     def match_score(
         identity_terms: set[str], descriptive_terms: set[str]
     ) -> int | None:
@@ -5349,6 +5638,12 @@ def _contract_filter_candidates(
         target_role = administrative_role(target)
         if target_role and any(
             administrative_role(term) == target_role
+            for term in identity_terms | descriptive_terms
+        ):
+            return 1
+        target_semantic_role = semantic_role(target)
+        if target_semantic_role and any(
+            semantic_role(term) == target_semantic_role
             for term in identity_terms | descriptive_terms
         ):
             return 1
@@ -5372,6 +5667,12 @@ def _contract_filter_candidates(
         for field, attribute in entity_attributes.items():
             if field not in authorized or _is_relationship_key_field(
                 field, attributes_by_entity
+            ):
+                continue
+            if (
+                target_administrative_role is not None
+                and _administrative_attribute_kind(field, attribute)
+                != target_administrative_role
             ):
                 continue
             identity_terms = {_contract_label(field.rsplit(".", 1)[-1])}
@@ -5414,7 +5715,20 @@ def _contract_filter_candidates(
             table = str(binding.get("mappingTable") or "").strip()
             column = str(binding.get("mappingColumn") or "").strip()
             field = f"{table}.{column}" if table and column else ""
-            if field in authorized:
+            if (
+                field in authorized
+                and (
+                    target_administrative_role is None
+                    or _administrative_attribute_kind(
+                        field,
+                        {
+                            "attr_code": metadata.get("dim_code"),
+                            "attr_name": metadata.get("dim_name"),
+                            "description": metadata.get("dim_description"),
+                        },
+                    ) == target_administrative_role
+                )
+            ):
                 scored.append((score, field))
 
     if not scored and semantic_model_id is not None:
@@ -5445,6 +5759,11 @@ def _contract_filter_candidates(
                 field not in active_fields
                 or attribute.get("is_primary_key")
                 or bool(re.search(r"(?:^|[._])(?:id|code)$", field, re.I))
+                or (
+                    target_administrative_role is not None
+                    and _administrative_attribute_kind(field, attribute)
+                    != target_administrative_role
+                )
             ):
                 continue
             identity_terms = {_contract_label(field.rsplit(".", 1)[-1])}
@@ -5540,6 +5859,101 @@ def _contract_operator(operator: object, *, negative: bool) -> str:
     return aliases.get(normalized, normalized or "=")
 
 
+def _unique_human_name_candidate(
+    candidates: list[str], semantic_field: object,
+) -> str | None:
+    """Resolve a physical name/id pair from the semantic role itself.
+
+    Catalog recall can legitimately return both ``city_id`` and
+    ``city_name`` for a role such as ``业务城市``.  A human-readable filter
+    value belongs to the sole name/display attribute when every competing
+    candidate is an identifier.  Multiple name attributes remain ambiguous.
+    """
+
+    label = _contract_label(str(semantic_field or ""))
+    if any(token in label for token in ("编码", "代码", "编号", "标识", "id")):
+        return None
+
+    def column(field: str) -> str:
+        return field.rsplit(".", 1)[-1].casefold()
+
+    def is_name(field: str) -> bool:
+        value = column(field)
+        return any(token in value for token in (
+            "name", "label", "title", "名称", "姓名", "简称",
+        ))
+
+    def is_identifier(field: str) -> bool:
+        value = column(field)
+        return bool(
+            re.search(r"(?:^|_)(?:id|code|key|no)(?:$|_)", value)
+            or any(token in value for token in ("编码", "代码", "编号", "标识"))
+        )
+
+    names = [field for field in candidates if is_name(field)]
+    others = [field for field in candidates if field not in names]
+    if len(names) == 1 and others and all(is_identifier(field) for field in others):
+        return names[0]
+    return None
+
+
+def _canonical_contract_filter_value(
+    value: object,
+    resolved_field: str,
+    semantic_model_id: int | None,
+    domain_scope: int | list[int] | tuple[int, ...] | None,
+) -> object:
+    """Return a uniquely proven source value for one contract predicate.
+
+    Intent contracts retain the user's surface wording. Once their semantic
+    field has been bound, the executable predicate must still use the value
+    stored by that field (for example ``上海`` -> ``上海市``). Only an exact
+    source hit or a unique administrative-suffix completion is accepted.
+    """
+    if type(semantic_model_id) is not int or not isinstance(value, str):
+        return value
+    surface = value.strip()
+    if len(surface) < 2 or not resolved_field:
+        return value
+    published = [
+        item for item in load_published_entity_attribute_candidates(
+            semantic_model_id, domain_scope,
+        )
+        if str(item.get("field") or "") == resolved_field
+    ]
+    if len(published) != 1:
+        return value
+    try:
+        matches = resolve_entity_attribute_catalog_matches(
+            semantic_model_id, domain_scope, published, surface,
+        )
+    except Exception as exc:
+        logger.warning(
+            "contract filter value normalization unavailable: sm=%s, error_type=%s",
+            semantic_model_id,
+            type(exc).__name__,
+        )
+        return value
+    exact = {
+        str(item.get("canonical_value") or "").strip()
+        for item in matches
+        if str(item.get("field") or "") == resolved_field
+        and item.get("match_type") == "EXACT"
+        and str(item.get("canonical_value") or "").strip()
+    }
+    if len(exact) == 1:
+        return next(iter(exact))
+    administrative = {
+        str(item.get("canonical_value") or "").strip()
+        for item in matches
+        if str(item.get("field") or "") == resolved_field
+        and _administrative_suffix_completion(
+            surface, str(item.get("canonical_value") or "")
+        )
+    }
+    return next(iter(administrative)) if len(administrative) == 1 else value
+
+
 def _repair_contract_filter(
     ast: dict,
     expected: dict,
@@ -5626,6 +6040,27 @@ def _repair_contract_filter(
                 field for field, item in published_by_field.items()
                 if bool(item.get("is_main_attribute"))
             }
+            if len(main_fields) != 1:
+                # The compact source-value candidate payload intentionally
+                # omits some catalog metadata.  Resolve a remaining
+                # name/code tie from the current entity registry, where the
+                # published main/display attribute is authoritative.  This is
+                # generic semantic metadata (not a product-field heuristic),
+                # and still fails closed when governance leaves zero or more
+                # than one main attribute.
+                registered_by_field = {
+                    str(item.get("field_mapping") or "").strip(): item
+                    for item in get_registered_entity_attributes(
+                        semantic_model_id, domain_scope
+                    )
+                    if str(item.get("field_mapping") or "").strip() in common
+                }
+                governed_main_fields = {
+                    field for field, item in registered_by_field.items()
+                    if bool(item.get("is_main_attribute"))
+                }
+                if len(governed_main_fields) == 1:
+                    main_fields = governed_main_fields
             if len(main_fields) == 1:
                 candidates = [next(iter(main_fields))]
 
@@ -5651,16 +6086,75 @@ def _repair_contract_filter(
         if len(subject_candidates) == 1:
             candidates = subject_candidates
 
+    if len(candidates) > 1:
+        # Value lookup can be unavailable for a newly published catalog or can
+        # return the same literal for both a display column and its identifier.
+        # The semantic role still proves a name/id pair when there is exactly
+        # one human-readable name field and every alternative is an ID/code.
+        name_candidate = _unique_human_name_candidate(
+            candidates, expected.get("field")
+        )
+        if name_candidate is not None:
+            candidates = [name_candidate]
+
+    resolved = candidates[0] if len(candidates) == 1 else ""
+    natural_values = (
+        list(expected_value) if isinstance(expected_value, list)
+        else [expected_value]
+    )
+    canonical_values = [
+        _canonical_contract_filter_value(
+            value, resolved, semantic_model_id, domain_scope,
+        )
+        for value in natural_values
+    ]
+    canonical_expected_value = (
+        canonical_values if isinstance(expected_value, list)
+        else canonical_values[0]
+    )
+    source_canonical_values = knowledge.setdefault(
+        "_source_canonical_values", {}
+    )
+    for surface, canonical in zip(natural_values, canonical_values):
+        if isinstance(surface, str) and canonical != surface:
+            source_canonical_values[
+                re.sub(r"\s+", "", surface).casefold()
+            ] = canonical
+    canonical_repair = None
+    if (
+        isinstance(expected_value, str)
+        and isinstance(canonical_expected_value, str)
+        and canonical_expected_value != expected_value
+    ):
+        canonical_repair = {
+            "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
+            "mention": expected_value,
+            "canonical_value": canonical_expected_value,
+            "resolved_field": resolved,
+            "source": "SOURCE_CATALOG_CONTRACT_NORMALIZATION",
+        }
+
     matching: list[dict] = []
     for item in filters:
-        if not isinstance(item, dict) or item.get("value") != expected_value:
+        if not isinstance(item, dict) or item.get("value") not in (
+            expected_value, canonical_expected_value,
+        ):
             continue
         actual_negative = str(item.get("operator") or "").upper() in negative_ops
         if actual_negative == negative and str(item.get("field") or "") in candidates:
             matching.append(item)
     if len(matching) == 1:
         matching[0]["operator"] = expected_operator
-        return None
+        matching[0]["value"] = canonical_expected_value
+        if len(candidates) == 1:
+            _clear_resolved_contract_filter_ambiguities(
+                ast,
+                semantic_field=str(expected.get("field") or ""),
+                resolved_field=str(matching[0].get("field") or ""),
+                value=canonical_expected_value,
+                candidate_fields=set(candidates),
+            )
+        return canonical_repair
 
     if len(candidates) != 1:
         raise ASLValidationError(
@@ -5674,7 +6168,6 @@ def _repair_contract_filter(
             },
         )
 
-    resolved = candidates[0]
     published_authorized = knowledge.setdefault(
         "_published_authorized_fields", []
     )
@@ -5689,7 +6182,7 @@ def _repair_contract_filter(
         item for item in filters
         if not (
             isinstance(item, dict)
-            and item.get("value") == expected_value
+            and item.get("value") in (expected_value, canonical_expected_value)
             and (
                 str(item.get("operator") or "").upper() in negative_ops
             ) == negative
@@ -5698,40 +6191,503 @@ def _repair_contract_filter(
     filters.append({
         "field": resolved,
         "operator": expected_operator,
-        "value": expected_value,
+        "value": canonical_expected_value,
     })
-    ambiguities = ast.get("ambiguity")
-    if isinstance(ambiguities, list):
-        expected_values = (
-            list(expected_value)
-            if isinstance(expected_value, list)
-            else [expected_value]
-        )
-        value_tokens = {
-            str(value or "").strip().strip("%").casefold()
-            for value in expected_values
-            if str(value or "").strip().strip("%")
-        }
-        ambiguities[:] = [
-            item for item in ambiguities
-            if not (
-                isinstance(item, dict)
-                and item.get("type") == "filter"
-                and any(
-                    token in json.dumps(
-                        item, ensure_ascii=False, default=str
-                    ).casefold()
-                    for token in value_tokens
-                )
-            )
-        ]
-    return {
+    cleared_ambiguities = _clear_resolved_contract_filter_ambiguities(
+        ast,
+        semantic_field=str(expected.get("field") or ""),
+        resolved_field=resolved,
+        value=canonical_expected_value,
+        candidate_fields=set(candidates),
+    )
+    repair = {
         "type": "ADD_REQUIRED_NEGATIVE_FILTER" if negative else "ADD_REQUIRED_FILTER",
         "semantic_label": expected.get("field"),
         "resolved_field": resolved,
         "operator": expected_operator,
         "source": "RECALLED_SEMANTIC_METADATA",
     }
+    if cleared_ambiguities:
+        repair["cleared_stale_ambiguities"] = cleared_ambiguities
+    return canonical_repair or repair
+
+
+def _administrative_mention_level(mention: str) -> str | None:
+    """Return the administrative level stated by the mention's own suffix."""
+    text = re.sub(r"\s+", "", str(mention or ""))
+    if text.endswith(("特别行政区", "自治区", "省")):
+        return "province"
+    if text.endswith("市"):
+        return "city"
+    if text.endswith(("区", "县")):
+        return "district"
+    return None
+
+
+def _select_surface_mention_match(
+    mention: str,
+    matches: list[dict[str, Any]],
+    allowed_fields: set[str],
+    field_kinds: dict[str, str | None] | None = None,
+    *,
+    allow_role_containment: bool = False,
+) -> tuple[str, str] | None:
+    """Pick the best catalog hit for an advisory mention.
+
+    Multiple hits are never dropped: the highest similarity wins.  A
+    similarity tie between different administrative levels (for example 上海市
+    existing as both a city value and a province value) is resolved by the
+    level stated in the mention, defaulting to city level; a remaining tie is
+    resolved randomly so repeated runs stay bounded.
+    """
+    rank = {
+        "EXACT": 0,
+        "CANONICAL_CONTAINS_MENTION": 1,
+        "MENTION_CONTAINS_CANONICAL": 1,
+        "ORDERED_SUBSEQUENCE": 2,
+    }
+    best_key: tuple[int, float] | None = None
+    best: list[dict[str, Any]] = []
+    for match in matches:
+        if not isinstance(match, dict):
+            continue
+        field = str(match.get("field") or "")
+        canonical = str(match.get("canonical_value") or "").strip()
+        match_type = str(match.get("match_type") or "")
+        if field not in allowed_fields or not canonical or match_type not in rank:
+            continue
+        ratio = SequenceMatcher(
+            None, str(mention).casefold(), canonical.casefold()
+        ).ratio()
+        if _administrative_suffix_completion(mention, canonical):
+            ratio = 1.0
+        if (
+            match_type != "EXACT"
+            and ratio < 0.5
+            and not (
+                allow_role_containment
+                # A longer canonical business name may legitimately contain a
+                # short alias (e.g. a brand alias inside a legal company name).
+                # The reverse direction is unsafe for codes: otherwise one
+                # digit from ``AT75242`` can bind to product.id=7.
+                and match_type == "CANONICAL_CONTAINS_MENTION"
+            )
+        ):
+            # A weak containment/subsequence hit (for example the digit "2"
+            # of a date range like "2025年10月至12月" matching an enum code)
+            # must not inject an unrelated filter; only exact or strong hits
+            # are adopted.  The mention then falls back to the unmatched path.
+            continue
+        key = (-rank[match_type], round(ratio, 6))
+        if best_key is None or key > best_key:
+            best_key = key
+            best = [match]
+        elif key == best_key:
+            best.append(match)
+    if not best:
+        return None
+    if len(best) > 1 and field_kinds:
+        preferred_level = _administrative_mention_level(mention) or "city"
+        leveled = [
+            match for match in best
+            if field_kinds.get(str(match.get("field") or "")) == preferred_level
+        ]
+        if leveled:
+            best = leveled
+    if len(best) > 1:
+        main_attributes = [
+            match for match in best if bool(match.get("is_main_attribute"))
+        ]
+        if len(main_attributes) == 1:
+            best = main_attributes
+    selected = random.choice(best)
+    return (
+        str(selected.get("field") or ""),
+        str(selected.get("canonical_value") or "").strip(),
+    )
+
+
+def _apply_surface_mention_normalization(
+    content: str,
+    knowledge: dict,
+    surface_evidence: dict | None,
+    semantic_model_id: int | None,
+    domain_scope: int | list[int] | None,
+) -> tuple[str, list[dict]]:
+    """Normalize advisory surface mentions against the current source catalog.
+
+    Structured extraction is reference evidence for ASL planning, not an
+    authoritative binding.  Each mention is matched against the source value
+    catalog recalled for this scope: a hit rewrites the filter to the
+    standard field and standard stored value, and an unmatched mention is
+    dropped instead of failing the request.
+    """
+    mentions_by_text: dict[str, str | None] = {}
+    for item in (surface_evidence or {}).get("mentions", []):
+        if not isinstance(item, dict):
+            continue
+        text = str(item.get("text") or "").strip()
+        if not text:
+            continue
+        role_hint = str(item.get("role_hint") or "").strip() or None
+        if text not in mentions_by_text or role_hint is not None:
+            mentions_by_text[text] = role_hint
+    mentions = list(mentions_by_text)
+    if not mentions or semantic_model_id is None:
+        return content, []
+    try:
+        ast = json.loads(content)
+    except (TypeError, ValueError):
+        return content, []
+    if not isinstance(ast, dict):
+        return content, []
+
+    entities, attributes_by_entity = _scoped_entity_attributes(knowledge)
+    authorized_fields = _known_physical_fields(knowledge)
+    candidates = _catalog_identity_candidates(
+        _all_non_key_attribute_candidates(
+            set(entities), entities, attributes_by_entity,
+            authorized_fields, "",
+        ),
+        attributes_by_entity,
+    )
+    allowed_fields = {
+        str(item.get("field") or "")
+        for item in candidates
+        if str(item.get("field") or "")
+    }
+    if not allowed_fields:
+        return content, []
+    # Administrative level per candidate field, used only to break exact
+    # similarity ties between same-value levels (上海市 as city vs province).
+    field_kinds: dict[str, str | None] = {}
+    for item in candidates:
+        field = str(item.get("field") or "")
+        attribute = (
+            attributes_by_entity.get(str(item.get("entity_code") or ""), {})
+            .get(field)
+        )
+        if field and isinstance(attribute, dict):
+            field_kinds[field] = _administrative_attribute_kind(field, attribute)
+
+    filters = ast.setdefault("filters", [])
+    if not isinstance(filters, list):
+        ast["filters"] = filters = []
+    repairs: list[dict] = []
+    published_candidates: list[dict] | None = None
+
+    for mention in mentions:
+        role_hint = mentions_by_text.get(mention)
+        literal_key = re.sub(r"\s+", "", mention).casefold()
+        mention_candidates = candidates
+        mention_allowed_fields = allowed_fields
+        # An exact entity-attribute-value vector hit already carries the
+        # governed entity and attribute identity.  Prefer that evidence over
+        # the upstream role hint, which is only a model hypothesis and may call
+        # a specification/model number a product name.  The physical source is
+        # still queried below, so a stale vector record cannot authorize a
+        # filter by itself.
+        exact_value_candidates: list[dict[str, Any]] = []
+        for result in knowledge.get("entity_attribute_values", []):
+            metadata = getattr(result, "metadata", {}) or {}
+            stored_value = str(
+                metadata.get("canonical_value")
+                or metadata.get("attr_value")
+                or ""
+            ).strip()
+            if re.sub(r"\s+", "", stored_value).casefold() != literal_key:
+                continue
+            entity_code = str(metadata.get("entity_code") or "").strip()
+            attr_code = str(metadata.get("attr_code") or "").strip()
+            for field, attribute in attributes_by_entity.get(entity_code, {}).items():
+                if str(attribute.get("attr_code") or "").strip() != attr_code:
+                    continue
+                exact_value_candidates.append({
+                    "entity_code": entity_code,
+                    "field": field,
+                    "is_main_attribute": bool(
+                        attribute.get("is_main_attribute")
+                    ),
+                })
+        if exact_value_candidates:
+            mention_candidates = exact_value_candidates
+            mention_allowed_fields = {
+                str(item["field"]) for item in exact_value_candidates
+            }
+        elif role_hint:
+            role_fields = set(_contract_filter_candidates(
+                role_hint,
+                knowledge,
+                semantic_model_id=semantic_model_id,
+                domain_scope=domain_scope,
+            ))
+            scoped_candidates = [
+                item for item in candidates
+                if str(item.get("field") or "") in role_fields
+            ]
+            if scoped_candidates:
+                mention_candidates = scoped_candidates
+                mention_allowed_fields = role_fields
+        matches: list[dict[str, Any]] = []
+        for offset in range(0, len(mention_candidates), 32):
+            matches.extend(resolve_entity_attribute_catalog_matches(
+                semantic_model_id, domain_scope,
+                mention_candidates[offset : offset + 32], mention,
+            ))
+        resolved = _select_surface_mention_match(
+            mention,
+            matches,
+            mention_allowed_fields,
+            field_kinds,
+            allow_role_containment=bool(role_hint),
+        )
+        if resolved is None and role_hint and mention_allowed_fields:
+            # A role field can be correctly identified while its own source
+            # column has no value (for example a sparse parent_brand). Search
+            # other descriptive attributes on that same governed table before
+            # considering unrelated entities such as a similarly named project.
+            role_tables = {
+                field.partition(".")[0] for field in mention_allowed_fields
+                if "." in field
+            }
+            related_candidates = [
+                item for item in candidates
+                if str(item.get("field") or "").partition(".")[0]
+                in role_tables
+            ]
+            related_fields = {
+                str(item.get("field") or "") for item in related_candidates
+                if str(item.get("field") or "")
+            }
+            related_matches: list[dict[str, Any]] = []
+            for offset in range(0, len(related_candidates), 32):
+                related_matches.extend(resolve_entity_attribute_catalog_matches(
+                    semantic_model_id,
+                    domain_scope,
+                    related_candidates[offset : offset + 32],
+                    mention,
+                ))
+            resolved = _select_surface_mention_match(
+                mention,
+                related_matches,
+                related_fields,
+                field_kinds,
+                allow_role_containment=True,
+            )
+        if resolved is None:
+            # Top-k recall may miss newly published attributes. Retry once
+            # against every published attribute in the same model/domain.
+            if published_candidates is None:
+                published_candidates = (
+                    load_published_entity_attribute_candidates(
+                        semantic_model_id, domain_scope
+                    )
+                )
+            expanded_fields = {
+                str(item.get("field") or "") for item in published_candidates
+                if str(item.get("field") or "")
+            }
+            # ``role_hint`` is an upstream semantic guess.  It may identify the
+            # correct entity but the wrong descriptive attribute, e.g. a model
+            # number labelled as product name while the exact value is stored
+            # in product.specification.  Keep the hint's governed table as the
+            # boundary, then allow every published attribute on that table to
+            # participate in the source-backed exact lookup.  This mirrors the
+            # same-table fallback above even when that attribute was outside
+            # vector top-k, without opening unrelated entities.
+            expanded_role_fields = set(mention_allowed_fields)
+            if role_hint and mention_allowed_fields:
+                role_tables = {
+                    field.partition(".")[0]
+                    for field in mention_allowed_fields
+                    if "." in field
+                }
+                expanded_role_fields.update(
+                    field for field in expanded_fields
+                    if field.partition(".")[0] in role_tables
+                )
+            extra = [
+                item for item in published_candidates
+                if str(item.get("field") or "") in expanded_fields - allowed_fields
+                and (
+                    not role_hint
+                    or not mention_allowed_fields
+                    or str(item.get("field") or "") in expanded_role_fields
+                )
+            ]
+            if extra:
+                expanded_matches: list[dict[str, Any]] = []
+                for offset in range(0, len(extra), 32):
+                    expanded_matches.extend(
+                        resolve_entity_attribute_catalog_matches(
+                            semantic_model_id, domain_scope,
+                            extra[offset : offset + 32], mention,
+                        )
+                    )
+                resolved = _select_surface_mention_match(
+                    mention, expanded_matches,
+                    (
+                        expanded_role_fields
+                        if role_hint and mention_allowed_fields
+                        else mention_allowed_fields | expanded_fields
+                    ),
+                    field_kinds,
+                    allow_role_containment=bool(role_hint),
+                )
+        if resolved is None:
+            # An unmatched mention is reference noise: drop any filter the
+            # model built from it and keep the rest of the request intact.
+            kept = [
+                item for item in filters
+                if not (
+                    isinstance(item, dict)
+                    and re.sub(
+                        r"\s+", "", str(item.get("value") or "").strip()
+                    ).casefold() == literal_key
+                )
+            ]
+            if len(kept) != len(filters):
+                ast["filters"] = filters = kept
+            repairs.append({
+                "type": "DROP_UNMATCHED_SURFACE_MENTION",
+                "mention": mention,
+                "source": "SURFACE_MENTION_RECALL",
+            })
+            continue
+        field, canonical_value = resolved
+        if not field or not canonical_value:
+            continue
+        published_authorized = knowledge.setdefault(
+            "_published_authorized_fields", []
+        )
+        if field not in published_authorized:
+            published_authorized.append(field)
+        canonical_key = re.sub(r"\s+", "", canonical_value).casefold()
+        # The draft may already contain the raw mention or its standard value.
+        # Rewrite every occurrence to the resolved field/value in place; never
+        # append a second predicate for the same mention.
+        matching_filters = [
+            item for item in filters
+            if isinstance(item, dict)
+            and re.sub(
+                r"\s+", "", str(item.get("value") or "").strip()
+            ).casefold() in {literal_key, canonical_key}
+        ]
+        if matching_filters:
+            for item in matching_filters:
+                item["field"] = field
+                item["value"] = canonical_value
+        elif not any(
+            isinstance(item, dict)
+            and str(item.get("field") or "") == field
+            and str(item.get("value") or "") == canonical_value
+            for item in filters
+        ):
+            filters.append({
+                "field": field,
+                "operator": "=",
+                "value": canonical_value,
+            })
+        knowledge.setdefault("_source_canonical_values", {})[
+            literal_key
+        ] = canonical_value
+        repairs.append({
+            "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
+            "mention": mention,
+            "canonical_value": canonical_value,
+            "resolved_field": field,
+            "source": "SURFACE_MENTION_RECALL",
+        })
+
+    if not repairs:
+        return content, []
+    return json.dumps(ast, ensure_ascii=False), repairs
+
+
+def _normalize_surface_detail_projections(
+    content: str,
+    knowledge: dict,
+    user_query: str,
+) -> tuple[str, list[dict]]:
+    """Use visible attributes for metricless surface detail projections.
+
+    A published logical dimension can be backed by a relationship key even
+    though the user asked for a business-name list. In the surface handoff
+    there is no upstream projection contract to correct that choice. Resolve
+    only registered dimension codes and replace them only when the recalled
+    catalog yields one unique display attribute for the same business label.
+    """
+    try:
+        ast = json.loads(content)
+    except (TypeError, ValueError):
+        return content, []
+    if not isinstance(ast, dict) or ast.get("metrics"):
+        return content, []
+    if re.search(r"(?:编码|代码|编号|\b(?:id|code)\b)", str(user_query or ""), re.IGNORECASE):
+        return content, []
+    dimensions = ast.get("dimensions")
+    if not isinstance(dimensions, list):
+        return content, []
+
+    dimension_metadata: dict[str, dict] = {}
+    for item in knowledge.get("dimensions", []):
+        metadata = getattr(item, "metadata", {}) or {}
+        code = str(metadata.get("dim_code") or "").strip()
+        if code:
+            dimension_metadata[code] = metadata
+
+    repairs: list[dict] = []
+    selected = {
+        str(item.get("name") or "")
+        for item in dimensions if isinstance(item, dict)
+    }
+    for dimension in dimensions:
+        if not isinstance(dimension, dict):
+            continue
+        old_name = str(dimension.get("name") or "").strip()
+        metadata = dimension_metadata.get(old_name)
+        if metadata is None or dimension.get("granularity"):
+            continue
+        labels = [
+            value
+            for key in ("dim_name", "synonyms", "business_definition", "dim_description")
+            for value in _metadata_term_values(metadata.get(key))
+            if str(value or "").strip()
+        ]
+        candidates: list[str] = []
+        for label in labels:
+            candidates = _contract_projection_candidates(
+                str(label), None, knowledge,
+                preferred_fields=selected,
+                prefer_display=True,
+            )
+            if len(candidates) == 1 and candidates[0] != old_name:
+                break
+        if len(candidates) != 1 or candidates[0] == old_name:
+            continue
+        replacement = candidates[0]
+        dimension.update({
+            "name": replacement,
+            "attr": None,
+            "level": None,
+            "granularity": None,
+        })
+        selected.discard(old_name)
+        selected.add(replacement)
+        sort = ast.get("sort")
+        if isinstance(sort, dict) and str(sort.get("field") or "") == old_name:
+            sort["field"] = replacement
+            sort["field_type"] = "dimension"
+        repairs.append({
+            "type": "REPLACE_CODE_BACKED_DETAIL_PROJECTION",
+            "original_dimension": old_name,
+            "resolved_field": replacement,
+            "source": "SURFACE_CATALOG_DISPLAY_ATTRIBUTE",
+        })
+
+    if not repairs:
+        return content, []
+    return json.dumps(ast, ensure_ascii=False), repairs
 
 
 def _apply_intent_asl_contract(
@@ -5740,8 +6696,16 @@ def _apply_intent_asl_contract(
     contract: dict | None,
     semantic_model_id: int | None = None,
     domain_scope: int | list[int] | None = None,
+    *,
+    mentions_advisory: bool = False,
 ) -> tuple[str, list[dict]]:
-    """Perform at most one deterministic metadata-backed contract repair."""
+    """Perform at most one deterministic metadata-backed contract repair.
+
+    ``mentions_advisory`` marks surface-handoff requests without a caller
+    contract: entity mentions are still resolved against the source catalog,
+    but an unproven mention is skipped instead of failing the whole request,
+    and the uncontracted identity-filter upper bound stays inactive.
+    """
 
     if not contract:
         return content, []
@@ -5805,6 +6769,7 @@ def _apply_intent_asl_contract(
             contract.get("query_object"),
             knowledge,
             preferred_fields=selected_names,
+            prefer_display=True,
         )
         if len(candidates) != 1:
             raise ASLValidationError(
@@ -5966,7 +6931,17 @@ def _apply_intent_asl_contract(
         raw_value = expected.get("value") if isinstance(expected, dict) else None
         values = raw_value if isinstance(raw_value, list) else [raw_value]
         typed_filter_values.update(
-            re.sub(r"\s+", "", str(value or "")).casefold()
+            re.sub(
+                r"\s+",
+                "",
+                str(
+                    knowledge.get("_source_canonical_values", {}).get(
+                        re.sub(r"\s+", "", str(value or "")).casefold(),
+                        value,
+                    )
+                    or ""
+                ),
+            ).casefold()
             for value in values
             if isinstance(value, str) and value.strip()
         )
@@ -6050,14 +7025,32 @@ def _apply_intent_asl_contract(
             if not literal:
                 continue
             literal_key = re.sub(r"\s+", "", literal).casefold()
-            if any(
-                isinstance(item, dict)
+            surface_filters = [
+                item for item in ast.get("filters") or []
+                if isinstance(item, dict)
                 and re.sub(
                     r"\s+", "", str(item.get("value") or "").strip()
                 ).casefold() == literal_key
-                for item in ast.get("filters") or []
+            ]
+            surface_fields = {
+                str(item.get("field") or "").strip()
+                for item in surface_filters
+                if str(item.get("field") or "").strip()
+            }
+            if surface_filters and not any(
+                str(item.get("value") or "").strip() == literal
+                for item in surface_filters
             ):
+                # A role-bound filter may preserve a formatting-only variant
+                # (for example whitespace) of the same literal.  That predicate
+                # is already bound by the typed-filter contract path; running a
+                # second source lookup here would re-resolve an agreed value.
                 continue
+            mention_candidates = [
+                item for item in candidates
+                if not surface_fields
+                or str(item.get("field") or "").strip() in surface_fields
+            ]
             def catalog_resolution(
                 candidate_fields: list[dict],
             ) -> tuple[list[str], list[dict[str, Any]]]:
@@ -6119,12 +7112,22 @@ def _apply_intent_asl_contract(
                     return next(iter(unique_exact))
                 fuzzy_matches = [
                     item for item in catalog_items
-                    if item.get("match_type") == "ORDERED_SUBSEQUENCE"
-                    and SequenceMatcher(
-                        None,
-                        str(mention).casefold(),
-                        str(item.get("canonical_value") or "").casefold(),
-                    ).ratio() >= 0.86
+                    if item.get("match_type") in {
+                        "CANONICAL_CONTAINS_MENTION",
+                        "MENTION_CONTAINS_CANONICAL",
+                        "ORDERED_SUBSEQUENCE",
+                    }
+                    and (
+                        SequenceMatcher(
+                            None,
+                            str(mention).casefold(),
+                            str(item.get("canonical_value") or "").casefold(),
+                        ).ratio() >= 0.86
+                        or _administrative_suffix_completion(
+                            str(mention),
+                            str(item.get("canonical_value") or ""),
+                        )
+                    )
                 ]
                 fuzzy_matches.sort(
                     key=lambda item: len(str(item.get("canonical_value") or ""))
@@ -6140,7 +7143,7 @@ def _apply_intent_asl_contract(
                     str(fuzzy_matches[0].get("canonical_value") or ""),
                 )
 
-            matched_fields, catalog_matches = catalog_resolution(candidates)
+            matched_fields, catalog_matches = catalog_resolution(mention_candidates)
             resolved = selected_resolution(matched_fields, catalog_matches)
             if resolved is None:
                 # Top-k semantic recall is a relevance optimization, not an
@@ -6156,19 +7159,24 @@ def _apply_intent_asl_contract(
                     )
                 known = {
                     (str(item.get("entity_code") or ""), str(item.get("field") or ""))
-                    for item in candidates
+                    for item in mention_candidates
                 }
                 expanded = [
-                    *candidates,
+                    *mention_candidates,
                     *(
                         item for item in published_candidates
                         if (
                             str(item.get("entity_code") or ""),
                             str(item.get("field") or ""),
                         ) not in known
+                        and (
+                            not surface_fields
+                            or str(item.get("field") or "").strip()
+                            in surface_fields
+                        )
                     ),
                 ]
-                if len(expanded) > len(candidates):
+                if len(expanded) > len(mention_candidates):
                     matched_fields, catalog_matches = catalog_resolution(expanded)
                     resolved = selected_resolution(matched_fields, catalog_matches)
 
@@ -6180,7 +7188,9 @@ def _apply_intent_asl_contract(
                     field="filters",
                     details={
                         "mention": literal,
-                        "candidate_field_count": len(published_candidates or candidates),
+                        "candidate_field_count": len(
+                            published_candidates or mention_candidates
+                        ),
                     },
                 )
             field, canonical_value = resolved
@@ -6196,18 +7206,39 @@ def _apply_intent_asl_contract(
             )
             if field not in published_authorized:
                 published_authorized.append(field)
-            if any(
+            matching_filters = [
+                item for item in ast.get("filters") or []
+                if isinstance(item, dict)
+                and re.sub(
+                    r"\s+", "", str(item.get("value") or "").strip()
+                ).casefold() == literal_key
+            ]
+            if matching_filters:
+                # A model-produced filter is still only surface evidence.  A
+                # unique source-value result owns both its physical field and
+                # canonical stored value, so normalize the existing predicate
+                # in place instead of treating its literal as already bound.
+                for item in matching_filters:
+                    item["field"] = field
+                    item["value"] = canonical_value
+            elif not any(
                 isinstance(item, dict)
                 and str(item.get("field") or "") == field
                 and str(item.get("value") or "") == canonical_value
                 for item in ast.get("filters") or []
             ):
-                continue
-            ast.setdefault("filters", []).append({
-                "field": field,
-                "operator": "=",
-                "value": canonical_value,
-            })
+                ast.setdefault("filters", []).append({
+                    "field": field,
+                    "operator": "=",
+                    "value": canonical_value,
+                })
+            # Keep the caller-owned contract immutable. Record the unique
+            # source normalization separately so final validation compares
+            # the generated ASL with the canonical stored value while the
+            # response can still echo the original user contract verbatim.
+            knowledge.setdefault("_source_canonical_values", {})[
+                literal_key
+            ] = canonical_value
             ambiguities = ast.get("ambiguity")
             if isinstance(ambiguities, list):
                 literal_folded = literal.casefold()
@@ -6433,6 +7464,7 @@ def _validate_intent_asl_contract(
                 contract.get("query_object"),
                 knowledge,
                 preferred_fields=selected_dimension_names,
+                prefer_display=True,
             )
             if len(candidates) != 1 or candidates[0] not in selected_dimension_names:
                 raise ASLValidationError(
@@ -6466,7 +7498,29 @@ def _validate_intent_asl_contract(
                         "selected_dimensions": sorted(selected_dimension_names),
                     },
                 )
+    source_canonical_values = (
+        (knowledge or {}).get("_source_canonical_values", {})
+        if isinstance(knowledge, dict)
+        else {}
+    )
+
+    def canonical_expected_filter(expected: dict) -> dict:
+        normalized = dict(expected)
+        raw_value = expected.get("value")
+
+        def canonical(value: object) -> object:
+            key = re.sub(r"\s+", "", str(value or "")).casefold()
+            return source_canonical_values.get(key, value)
+
+        normalized["value"] = (
+            [canonical(value) for value in raw_value]
+            if isinstance(raw_value, list)
+            else canonical(raw_value)
+        )
+        return normalized
+
     for expected in contract.get("filters") or []:
+        validation_expected = canonical_expected_filter(expected)
         candidates = _contract_filter_candidates(
             str(expected.get("field") or ""), knowledge or {},
             query_object=contract.get("query_object"),
@@ -6475,7 +7529,7 @@ def _validate_intent_asl_contract(
             knowledge is not None and not candidates
         ) or not _contract_filter_present(
             ast,
-            expected,
+            validation_expected,
             negative=False,
             allowed_fields=set(candidates) if knowledge is not None else None,
         ):
@@ -6484,6 +7538,7 @@ def _validate_intent_asl_contract(
                 field="filters", details={"expected_filter": expected},
             )
     for expected in contract.get("negative_filters") or []:
+        validation_expected = canonical_expected_filter(expected)
         candidates = _contract_filter_candidates(
             str(expected.get("field") or ""), knowledge or {},
             query_object=contract.get("query_object"),
@@ -6492,7 +7547,7 @@ def _validate_intent_asl_contract(
             knowledge is not None and not candidates
         ) or not _contract_filter_present(
             ast,
-            expected,
+            validation_expected,
             negative=True,
             allowed_fields=set(candidates) if knowledge is not None else None,
         ):
@@ -6588,6 +7643,64 @@ def _get_chat_model():
         temperature=0,
         extra_body={"enable_thinking": False},
     )
+
+
+def _detail_projection_subject_candidate(ast: dict, knowledge: dict) -> str | None:
+    """Pick one proven subject for a metricless detail projection.
+
+    Detail projections have no metric dependency to bind the subject, so an
+    omitted model value would otherwise reach the translator unresolved.  The
+    replacement must still be a recalled entity whose single registered table
+    reaches every table referenced by the projected and filtered fields
+    through the recalled relation graph.  The unique nearest hub wins; ties
+    and unreachable tables stay unresolved so validation fails closed.
+    """
+    entities, attributes_by_entity = _scoped_entity_attributes(knowledge)
+    if not entities:
+        return None
+    referenced = _ast_referenced_tables(ast, knowledge)
+    for key in ("dimensions", "filters"):
+        for item in ast.get(key) or []:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or item.get("field") or "").strip()
+            if name in entities:
+                referenced.update(
+                    field.split(".", 1)[0]
+                    for field in attributes_by_entity.get(name, {})
+                    if _PHYSICAL_FIELD.fullmatch(field)
+                )
+    if not referenced:
+        return None
+    graph = _recalled_relation_table_graph(knowledge)
+    best: list[tuple[int, str]] = []
+    for entity_code, fields in attributes_by_entity.items():
+        tables = {
+            field.split(".", 1)[0]
+            for field in fields
+            if _PHYSICAL_FIELD.fullmatch(field)
+        }
+        if len(tables) != 1:
+            continue
+        table = next(iter(tables))
+        distances = {table: 0}
+        frontier = [table]
+        while frontier:
+            current = frontier.pop(0)
+            for neighbor in graph.get(current, ()):
+                if neighbor not in distances:
+                    distances[neighbor] = distances[current] + 1
+                    frontier.append(neighbor)
+        if any(referenced_table not in distances for referenced_table in referenced):
+            continue
+        worst = max(distances[referenced_table] for referenced_table in referenced)
+        best.append((worst, entity_code))
+    if not best:
+        return None
+    best.sort()
+    if len(best) > 1 and best[0][0] == best[1][0]:
+        return None
+    return best[0][1]
 
 
 def _normalize_dynamic_subject(
@@ -6703,6 +7816,28 @@ def _normalize_dynamic_subject(
                 subject["entity"] = entity_code
                 remember_subject(entity_code)
             break
+
+    # A metricless detail projection carries no metric dependency or time
+    # anchor to bind the subject.  When the model omits it, recover the single
+    # proven hub from the recalled scope; otherwise leave it unresolved so
+    # validation fails closed.
+    current_subject = ast.get("subject")
+    current_entity = (
+        str(current_subject.get("entity") or "").strip()
+        if isinstance(current_subject, dict)
+        else ""
+    )
+    has_projection = any(
+        isinstance(item, dict) and str(item.get("name") or "").strip()
+        for item in ast.get("dimensions") or []
+    )
+    if not current_entity and not selected_metrics and has_projection:
+        fallback_entity = _detail_projection_subject_candidate(ast, knowledge or {})
+        if fallback_entity:
+            subject = ast.setdefault("subject", {})
+            if isinstance(subject, dict):
+                subject["entity"] = fallback_entity
+                remember_subject(fallback_entity)
     return json.dumps(ast, ensure_ascii=False)
 
 # Runtime objects are read-only on import. Index rebuilds must be explicit API calls.
@@ -6924,6 +8059,7 @@ def main(
     result_contract: dict | None = None,
     exploration_requirements: dict | None = None,
     include_evidence: bool = False,
+    surface_evidence: dict | None = None,
 ):
     """自然语言 → DSL
 
@@ -6950,6 +8086,8 @@ def main(
     )
     if store is None:
         store = globals()["store"]
+    from surface_evidence import advisory_prompt
+    surface_reference = advisory_prompt(surface_evidence)
     builder = PromptBuilder(
         store,
         embed_query,
@@ -6963,8 +8101,12 @@ def main(
         authoritative_entity_scope=(
             metric_selection_authoritative and not metric_codes
         ),
+        surface_mentions=[item["text"] for item in (surface_evidence or {}).get("mentions", [])],
     )
     execution_query = query
+    # Validate and add advisory evidence only to generation; never embed it as
+    # the user's question or feed it into deterministic contract repair.
+    execution_query += surface_reference
     if (
         metric_selection_authoritative
         and not metric_codes
@@ -7007,6 +8149,51 @@ def main(
     # contract is an execution constraint, not retrieval evidence; embedding its
     # aliases and JSON can displace the actual metric and dimension candidates.
     mprompt = builder.build(semantic_user_query)
+    if surface_evidence is not None:
+        mprompt += """
+
+[ASL owns semantic binding for this request]
+Use the completed question as the primary request. Upstream surface roles and
+retrieval relevance are hypotheses, not selected metrics or required fields.
+Infer whether the user wants a list, a grouped statistic, or trend analysis.
+An entity/attribute list without a requested calculation uses metrics=[];
+do not select a count metric merely because it is present in recalled metadata.
+Time grouping alone does not imply a request for trend analysis.
+Separate brand/manufacturer qualifiers from product/model wording when the
+question combines them. Match each concept against recalled catalog evidence;
+do not concatenate different concepts into a single exact/LIKE value unless
+the catalog demonstrates that combined value. Do not invent alternative values.
+In Chinese wording such as “竞争品牌X的Y” or “竞品品牌X的Y”, “竞争/竞品” describes
+the business role, X is the brand value, and Y is the product or category.
+Resolve X and Y independently against recalled catalog attributes; never use
+“竞争” as a literal filter value and never omit X merely because Y matched.
+Model/specification wording must be compared with specification attributes as
+well as product display names. A name qualifier is a separate constraint, not
+part of the model identifier. Inspect all recalled attributes of those entities.
+Preserve every requested grouping and filter. When the evidence cannot uniquely
+bind a concept, return a specific ambiguity naming that concept and evidenced
+candidates. Never silently omit a constraint to make the query executable.
+Before returning JSON, check requested time against time_context: an explicit
+period must use the selected metric's published time_caliber.time_anchor or an
+appropriate registered time dimension, even without a time grouping dimension.
+If no valid anchor exists, name the missing time binding in ambiguity; never
+answer an explicit-period request with an unrestricted all-time query.
+"""
+    if intent_asl_contract is not None:
+        mprompt += """
+
+[Caller-owned Intent-ASL contract]
+The supplied intent_asl_contract is the authoritative query-shape contract
+already produced by the upstream conversation and intent layer. Use natural
+language only to resolve catalog labels that the contract leaves unresolved.
+Do not change its intent, query_object, required projections, filters, negative
+filters, sorting, ranking limit, comparison shape, or time policy. Do not add a
+metric, grouping dimension, default time range, or result entity merely because
+the natural-language wording could support an alternative interpretation.
+If recalled metadata cannot satisfy the contract, return a bounded ambiguity or
+validation failure; never silently reinterpret the user's task. The final ASL
+must pass the deterministic contract validator and echo the contract unchanged.
+"""
     # 提示词中可能包含实体属性值或业务元数据，禁止完整写入控制台和日志。
     logger.info(
         "已组装ASL提示词: sm=%s, bd=%s, prompt_chars=%s",
@@ -7099,6 +8286,7 @@ def main(
         semantic_user_query,
         semantic_model_id,
         domain_scope,
+        **({'model_owned_time': True} if surface_evidence is not None else {}),
     )
     if exploration_requirements is not None and not metric_codes:
         normalized = _normalize_exploration_metrics(
@@ -7132,6 +8320,24 @@ def main(
         semantic_model_id,
         domain_scope,
     )
+    if intent_asl_contract is None and surface_evidence is not None:
+        # Without a caller contract the structured extraction is advisory
+        # reference material only: resolve each mention against the source
+        # catalog, keep the best standard hit, and drop unmatched wording.
+        normalized, surface_repairs = _apply_surface_mention_normalization(
+            normalized,
+            getattr(builder, "last_knowledge", {}),
+            surface_evidence,
+            semantic_model_id,
+            domain_scope,
+        )
+        contract_repairs.extend(surface_repairs)
+        normalized, surface_projection_repairs = _normalize_surface_detail_projections(
+            normalized,
+            getattr(builder, "last_knowledge", {}),
+            semantic_user_query,
+        )
+        contract_repairs.extend(surface_projection_repairs)
     if intent_asl_contract is not None:
         repaired_ast = json.loads(normalized)
         _dedupe_equivalent_dimensions(

@@ -253,6 +253,134 @@ def base_ast(**updates):
 
 
 class TranslatorHardeningTests(unittest.TestCase):
+    def test_physical_department_name_projection_uses_declared_bridge_path(self):
+        value = translator()
+        value.loader.entities.update({
+            "product": {
+                "entity_code": "product",
+                "entity_name": "商品",
+                "physical_table_join": {"base_table": "product"},
+                "attributes": [
+                    {"field_mapping": "product.product_code"},
+                    {
+                        "field_mapping": "product.product_name",
+                        "attr_name": "商品名称",
+                        "is_main_attribute": True,
+                    },
+                ],
+                "relations": [],
+                "sub_table_mappings": [],
+                "data_source_id": 1,
+            },
+            "product_dept_relation": {
+                "entity_code": "product_dept_relation",
+                "entity_name": "商品适用科室关系",
+                "physical_table_join": {
+                    "base_table": "product_dept_relation",
+                },
+                "attributes": [
+                    {"field_mapping": "product_dept_relation.product_code"},
+                    {"field_mapping": "product_dept_relation.dept_code"},
+                ],
+                "relations": [],
+                "sub_table_mappings": [],
+                "data_source_id": 1,
+            },
+            "department": {
+                "entity_code": "department",
+                "entity_name": "科室",
+                "physical_table_join": {"base_table": "department"},
+                "attributes": [
+                    {"field_mapping": "department.dept_code"},
+                    {
+                        "field_mapping": "department.dept_name",
+                        "attr_name": "科室名称",
+                        "is_main_attribute": True,
+                    },
+                ],
+                "relations": [],
+                "sub_table_mappings": [],
+                "data_source_id": 1,
+            },
+        })
+
+        class CurrentRelationshipCatalog:
+            def __init__(self):
+                self.relationship_reads = 0
+
+            def entity_relationship_metadata(self, _model_id):
+                self.relationship_reads += 1
+                return {
+                    "product": {
+                        "base_table": "product",
+                        "relations": [{
+                            "relation_code": "product_department_bridge",
+                            "target_entity": "product_dept_relation",
+                            "join_key": (
+                                "product.product_code = "
+                                "product_dept_relation.product_code"
+                            ),
+                            "relation_type": "1:N",
+                        }],
+                        "sub_table_mappings": [],
+                    },
+                    "product_dept_relation": {
+                        "base_table": "product_dept_relation",
+                        "relations": [],
+                        "sub_table_mappings": [],
+                    },
+                    "department": {
+                        "base_table": "department",
+                        "relations": [{
+                            "relation_code": "department_product_bridge",
+                            "target_entity": "product_dept_relation",
+                            "join_key": (
+                                "department.dept_code = "
+                                "product_dept_relation.dept_code"
+                            ),
+                            "relation_type": "1:N",
+                        }],
+                        "sub_table_mappings": [],
+                    },
+                }
+
+            @staticmethod
+            def attribute_metadata(_model_id, fields):
+                return {
+                    field: [{
+                        "is_main_attribute": field.endswith("_name"),
+                    }]
+                    for field in fields
+                }
+
+        value.catalog = CurrentRelationshipCatalog()
+        ast = base_ast(
+            subject={"entity": "product"},
+            metrics=[],
+            dimensions=[
+                {"name": "product.product_name"},
+                {"name": "department.dept_name"},
+            ],
+            projection_mode="DISTINCT",
+            limit=None,
+        )
+
+        sql = value.translate(json.dumps(ast, ensure_ascii=False), "81")
+
+        self.assertIn(
+            "LEFT JOIN product_dept_relation ON "
+            "product.product_code = product_dept_relation.product_code",
+            sql,
+        )
+        self.assertIn(
+            "LEFT JOIN department ON "
+            "department.dept_code = product_dept_relation.dept_code",
+            sql,
+        )
+        self.assertIn("product.product_name AS `商品名称`", sql)
+        self.assertIn("department.dept_name AS `科室名称`", sql)
+        self.assertEqual(1, value.catalog.relationship_reads)
+
     def test_registered_temporal_field_can_be_projected_in_detail_rows(self):
         value = translator()
         value.catalog = FakeTemporalFieldCatalog()
@@ -625,9 +753,14 @@ class TranslatorHardeningTests(unittest.TestCase):
             translator().translate(json.dumps(ast, ensure_ascii=False), "6")
 
     def test_unknown_cross_table_dimension_never_guesses_join(self):
-        ast = base_ast(dimensions=[{"name": "goods_info.goods_name"}])
-        with self.assertRaises(ValueError):
-            translator().translate(json.dumps(ast), "6")
+        # STALE_TEST(2026-09-18): blocking field-existence validation was removed
+        # by user decision; translation passes through and must not invent joins.
+        sql = translator().translate(
+            json.dumps(base_ast(dimensions=[{"name": "goods_info.goods_name"}]),
+                       ensure_ascii=False),
+            "6",
+        )
+        self.assertNotIn("JOIN goods_info", sql)
 
     def test_limit_is_bounded(self):
         ast = base_ast(limit=MAX_QUERY_ROWS + 1)
@@ -650,7 +783,7 @@ class TranslatorHardeningTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "time_context必须是对象"):
             translator().translate(json.dumps(base_ast(time_context=[])), "6")
 
-    def test_dimension_mapping_is_a_registered_physical_filter_field(self):
+    def test_ast_contract_passes_unregistered_physical_fields_through(self):
         value = translator()
         value.loader.dimensions["city"] = {
             "dim_code": "city",
@@ -675,9 +808,10 @@ class TranslatorHardeningTests(unittest.TestCase):
 
         self.assertEqual("6", value._validate_ast_contract(ast, "6"))
 
+        # STALE_TEST(2026-09-18): unregistered physical fields no longer block;
+        # the database result is authoritative per user decision.
         ast["filters"][0]["field"] = "dim_city.not_registered"
-        with self.assertRaisesRegex(ValueError, "不存在过滤字段"):
-            value._validate_ast_contract(ast, "6")
+        self.assertEqual("6", value._validate_ast_contract(ast, "6"))
 
     def test_execute_query_has_stable_scope_and_dependency_errors(self):
         value = translator()
@@ -754,7 +888,9 @@ class TranslatorHardeningTests(unittest.TestCase):
             with self.subTest(sql=sql), self.assertRaisesRegex(ValueError, "子查询"):
                 SQLTranslatorProd.validate_read_only_sql(sql)
 
-    def test_known_one_to_many_join_blocks_fact_sum_duplication(self):
+    def test_known_one_to_many_join_uses_declared_join_without_blocking(self):
+        # STALE_TEST(2026-09-18): cardinality blocking removed by user decision;
+        # joins must follow the declared relation only.
         value = translator()
         value.loader.entities["ent_order"]["relations"] = [{
             "target_entity": "ent_item",
@@ -764,8 +900,12 @@ class TranslatorHardeningTests(unittest.TestCase):
             "relation_type": "1:N",
         }]
         ast = base_ast(dimensions=[{"name": "order_item_detail.goods_name"}])
-        with self.assertRaisesRegex(ValueError, "重复累计"):
-            value.translate(json.dumps(ast), "6")
+        sql = value.translate(json.dumps(ast, ensure_ascii=False), "6")
+        self.assertIn(
+            "LEFT JOIN order_item_detail ON "
+            "order_info.order_id = order_item_detail.order_id",
+            sql,
+        )
 
     def test_join_fallback_uses_only_a_field_declared_on_both_tables(self):
         value = translator()
@@ -817,7 +957,7 @@ class TranslatorHardeningTests(unittest.TestCase):
 
         self.assertIsNone(join)
 
-    def test_reverse_join_still_blocks_fact_sum_duplication(self):
+    def test_reverse_join_translates_from_declared_subject(self):
         """The query base can be the detail table while the metric fact is order_info."""
         value = translator()
         value.loader.entities["ent_order"]["relations"] = [{
@@ -831,10 +971,14 @@ class TranslatorHardeningTests(unittest.TestCase):
             subject={"entity": "ent_item"},
             dimensions=[{"name": "order_item_detail.goods_name"}],
         )
-        with self.assertRaisesRegex(ValueError, "重复累计"):
-            value.translate(json.dumps(ast), "6")
+        sql = value.translate(json.dumps(ast, ensure_ascii=False), "6")
+        self.assertIn(
+            "FROM order_item_detail LEFT JOIN order_info ON "
+            "order_info.order_id = order_item_detail.order_id",
+            sql,
+        )
 
-    def test_multihop_one_to_many_join_is_not_missed(self):
+    def test_multihop_relation_path_generates_declared_joins(self):
         value = translator()
         value.loader.entities.update({
             "ent_shop": {
@@ -869,8 +1013,15 @@ class TranslatorHardeningTests(unittest.TestCase):
             "relation_type": "N:1",
         }]
         ast = base_ast(dimensions=[{"name": "region_info.region_name"}])
-        with self.assertRaisesRegex(ValueError, "重复累计"):
-            value.translate(json.dumps(ast), "6")
+        sql = value.translate(json.dumps(ast, ensure_ascii=False), "6")
+        self.assertIn(
+            "LEFT JOIN shop_info ON order_info.shop_id = shop_info.shop_id",
+            sql,
+        )
+        self.assertIn(
+            "LEFT JOIN region_info ON shop_info.shop_id = region_info.shop_id",
+            sql,
+        )
 
     def test_detail_projection_preserves_unicode_filter_across_bridge_join(self):
         value = translator()
@@ -1219,7 +1370,8 @@ class TranslatorHardeningTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ROWS或DISTINCT"):
             translator().translate(json.dumps(ast, ensure_ascii=False), "6")
 
-    def test_missing_join_cardinality_blocks_non_distinct_aggregate(self):
+    def test_missing_join_cardinality_no_longer_blocks_translation(self):
+        # STALE_TEST(2026-09-18): cardinality blocking removed by user decision.
         value = translator()
         value.loader.entities["ent_order"]["relations"] = [{
             "target_entity": "ent_item",
@@ -1228,8 +1380,8 @@ class TranslatorHardeningTests(unittest.TestCase):
             "relation_type": "",
         }]
         ast = base_ast(dimensions=[{"name": "order_item_detail.goods_name"}])
-        with self.assertRaisesRegex(ValueError, "基数未配置"):
-            value.translate(json.dumps(ast), "6")
+        sql = value.translate(json.dumps(ast, ensure_ascii=False), "6")
+        self.assertIn("LEFT JOIN order_item_detail", sql)
 
     def test_count_distinct_survives_one_to_many_join(self):
         value = translator()
@@ -1247,7 +1399,8 @@ class TranslatorHardeningTests(unittest.TestCase):
         sql = value.translate(json.dumps(ast, ensure_ascii=False), "6")
         self.assertIn("COUNT(DISTINCT order_info.order_id)", sql)
 
-    def test_count_star_is_protected_from_one_to_many_duplication(self):
+    def test_count_star_translates_with_declared_join(self):
+        # STALE_TEST(2026-09-18): cardinality blocking removed by user decision.
         value = translator()
         value.loader.entities["ent_order"]["relations"] = [{
             "target_entity": "ent_item",
@@ -1259,10 +1412,11 @@ class TranslatorHardeningTests(unittest.TestCase):
             metrics=[{"name": "row_count", "alias": "行数"}],
             dimensions=[{"name": "order_item_detail.goods_name"}],
         )
-        with self.assertRaisesRegex(ValueError, "重复累计"):
-            value.translate(json.dumps(ast, ensure_ascii=False), "6")
+        sql = value.translate(json.dumps(ast, ensure_ascii=False), "6")
+        self.assertIn("COUNT(*)", sql)
 
-    def test_derived_metric_inherits_dependency_cardinality_guard(self):
+    def test_derived_metric_translates_with_declared_join(self):
+        # STALE_TEST(2026-09-18): cardinality blocking removed by user decision.
         value = translator()
         value.loader.entities["ent_order"]["relations"] = [{
             "target_entity": "ent_item",
@@ -1274,8 +1428,8 @@ class TranslatorHardeningTests(unittest.TestCase):
             metrics=[{"name": "derived_sales", "alias": "衍生销售额"}],
             dimensions=[{"name": "order_item_detail.goods_name"}],
         )
-        with self.assertRaisesRegex(ValueError, "重复累计"):
-            value.translate(json.dumps(ast, ensure_ascii=False), "6")
+        sql = value.translate(json.dumps(ast, ensure_ascii=False), "6")
+        self.assertIn("SUM(order_info.pay_amount) / 2", sql)
 
     def test_declared_dependency_is_replaced_as_a_complete_token(self):
         ast = base_ast(metrics=[{

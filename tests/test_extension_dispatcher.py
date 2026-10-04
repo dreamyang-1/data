@@ -1,9 +1,16 @@
+import asyncio
 import json
 
 import httpx
 import pytest
 
-from app.domain.models import ChatRequest, McpConfig, SkillConfig, ToolConfig
+from app.domain.models import (
+    ChatRequest,
+    ExtensionExecution,
+    McpConfig,
+    SkillConfig,
+    ToolConfig,
+)
 from app.services.extension_dispatcher import ExtensionDispatcher
 from app.services.tool_selector import OptionalToolSelector
 from app.config import Settings
@@ -16,6 +23,173 @@ def chat(**updates):
         question="分析本月销售趋势", semantic_model_id=6,
     )
     return base.model_copy(update=updates)
+
+
+@pytest.mark.asyncio
+async def test_bounded_mcp_discovery_keeps_tools_from_responsive_servers(
+    monkeypatch,
+):
+    dispatcher = ExtensionDispatcher()
+    fast_tool = ToolConfig(
+        name="mcp:analysis_profile",
+        description="Analyze an Excel workbook",
+        url="https://excel.example/mcp",
+    )
+
+    async def fast_server(_url, _headers):
+        return [fast_tool]
+
+    async def slow_server(_url, _headers):
+        await asyncio.sleep(1)
+        return []
+
+    monkeypatch.setattr(dispatcher, "_list_mcp_server", fast_server)
+    monkeypatch.setattr(dispatcher, "_list_sse_mcp_server", slow_server)
+    request = chat(mcp=[
+        McpConfig(
+            mcp_server_url="https://charts.example/sse",
+            connect_type="sse",
+        ),
+        McpConfig(
+            mcp_server_url="https://excel.example/mcp",
+            connect_type="streamable_http",
+        ),
+    ])
+
+    discovered = await dispatcher.discover_mcp_tools(
+        request,
+        timeout_seconds=0.02,
+    )
+
+    assert discovered == [fast_tool]
+
+
+@pytest.mark.asyncio
+async def test_configured_visualization_mcp_receives_only_chart_projection(monkeypatch):
+    dispatcher = ExtensionDispatcher()
+    discovered = ToolConfig(
+        name="mcp:generate_line_chart",
+        description="Generate a line chart to show trends over time",
+        url="https://mcp.example/sse",
+    )
+    calls = []
+
+    async def discover(_chat):
+        return [discovered]
+
+    async def call(tool_name, _chat, payload, *args, **kwargs):
+        calls.append((tool_name, payload))
+        return ExtensionExecution(
+            name=tool_name,
+            kind="MCP_TOOL",
+            status="COMPLETED",
+            output={
+                "content": [{
+                    "type": "text",
+                    "text": "https://charts.example/trend.jpeg",
+                }]
+            },
+        )
+
+    monkeypatch.setattr(dispatcher, "_discover_mcp_tools", discover)
+    monkeypatch.setattr(dispatcher, "_call_mcp_servers", call)
+    request = chat(mcp=[McpConfig(
+        mcp_server_url="https://mcp.example/sse",
+        connect_type="sse",
+        slug="",
+    )])
+    result = await dispatcher.execute_visualizations(
+        chat=request,
+        chart_specs=[{
+            "chart_type": "LINE",
+            "title": "销售额趋势",
+            "x_field": "月份",
+            "y_fields": ["销售额"],
+            "data": [
+                {"月份": "2026-01", "销售额": "10", "内部字段": "不得外发"},
+                {"月份": "2026-02", "销售额": 15},
+            ],
+        }],
+    )
+
+    assert result[0].status == "COMPLETED"
+    assert calls == [(
+        "generate_line_chart",
+        {
+            "data": [
+                {"time": "2026-01", "value": 10},
+                {"time": "2026-02", "value": 15},
+            ],
+            "title": "销售额趋势",
+            "width": 960,
+            "height": 520,
+            "axisXTitle": "月份",
+            "axisYTitle": "销售额",
+        },
+    )]
+    assert dispatcher.visualization_url(result[0]) == (
+        "https://charts.example/trend.jpeg"
+    )
+
+
+def test_visualization_mcp_rejects_unsafe_or_non_image_text_result():
+    dispatcher = ExtensionDispatcher()
+    execution = ExtensionExecution(
+        name="generate_line_chart",
+        kind="MCP_TOOL",
+        status="COMPLETED",
+        output={"content": [{"type": "text", "text": "javascript:alert(1)"}]},
+    )
+
+    assert dispatcher.visualization_url(execution) is None
+
+
+@pytest.mark.parametrize(
+    ("output", "expected"),
+    [
+        (
+            {
+                "content": [{
+                    "type": "text",
+                    "text": "![趋势图](https://charts.example/trend.jpeg)",
+                }]
+            },
+            "https://charts.example/trend.jpeg",
+        ),
+        (
+            {
+                "result": {
+                    "content": [{
+                        "type": "text",
+                        "text": '{"image_url":"https://charts.example/trend.png"}',
+                    }]
+                }
+            },
+            "https://charts.example/trend.png",
+        ),
+        (
+            {
+                "result": {
+                    "content": [{
+                        "type": "resource_link",
+                        "uri": "https://charts.example/trend.svg",
+                    }]
+                }
+            },
+            "https://charts.example/trend.svg",
+        ),
+    ],
+)
+def test_visualization_mcp_normalizes_platform_image_result_shapes(output, expected):
+    dispatcher = ExtensionDispatcher()
+    execution = ExtensionExecution(
+        name="generate_line_chart",
+        kind="MCP_TOOL",
+        status="COMPLETED",
+        output=output,
+    )
+
+    assert dispatcher.visualization_url(execution) == expected
 
 
 @pytest.mark.asyncio

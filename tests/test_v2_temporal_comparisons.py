@@ -173,7 +173,7 @@ async def test_model_cannot_supply_derived_authority_or_unsupported_edits(catalo
         if fault=='evidence':d['comparison_edits'][0]['evidence_mention_ids']=['old']
         return d
     step=first[0],first[1],corrupt;engine,_=planner(catalog,[step])
-    with pytest.raises(ValueError,match='MODEL_OUTPUT_INVALID|EVIDENCE_NOT_CURRENT'):await turns(engine,[step])
+    with pytest.raises(ValueError,match='MODEL_OUTPUT_INVALID|EVIDENCE_NOT_CURRENT|V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):await turns(engine,[step])
 
 
 def typed_time(start,end,grain='NONE',zone='Asia/Shanghai'):

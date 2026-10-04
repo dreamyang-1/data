@@ -298,9 +298,30 @@ def test_equal_rank_brand_catalog_matches_remain_a_clarification():
     )
 
     assert ast["filters"][0]["field"] == "product.manufacturer_code"
-    assert ast["ambiguity"][-1]["type"] == "filter"
-    assert set(ast["ambiguity"][-1]["candidates"]) == {
+    ambiguity = ast["ambiguity"][-1]
+    assert ambiguity["type"] == "filter"
+    assert set(ambiguity["candidates"]) == {
         "manufacturer.manufacturer_name=Acme", "manufacturer.parent_brand=Acme",
+    }
+    assert ambiguity["phrase"] == "Acme products"
+    assert ambiguity["affected_slots"] == ["filters"]
+    assert ambiguity["semantic_model_id"] == 81
+    assert len(ambiguity["candidate_details"]) == 2
+    details = {
+        item["label"]: item for item in ambiguity["candidate_details"]
+    }
+    assert details["manufacturer.parent_brand=Acme"] == {
+        "label": "manufacturer.parent_brand=Acme",
+        "canonical_name": "manufacturer.parent_brand",
+        "canonical_code": "manufacturer.parent_brand",
+        "attribute_name": "manufacturer.parent_brand",
+        "attribute_code": "manufacturer.parent_brand",
+        "value": "Acme",
+        "canonical_value": "Acme",
+        "input_value": "Acme products",
+        "operation": "UPSERT_FILTER",
+        "operator": "EQ",
+        "business_domain_id": 205,
     }
 
 

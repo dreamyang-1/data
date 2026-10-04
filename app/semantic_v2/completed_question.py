@@ -122,6 +122,31 @@ def _compact_filter_qualifier(expression) -> str:
     return ""
 
 
+def _compact_filter_connector(expression) -> str:
+    """Connect an entity qualifier to its target in ordinary Chinese.
+
+    Geographic prefixes are naturally read without ``的`` (江苏省订单笔数).
+    Product, hospital, partner and other entity values require the connector
+    so V1's current-turn parser does not merge the value and metric into one
+    unresolved mention (一次性穿刺针的销售总数量).
+    """
+
+    if not isinstance(expression, m.Predicate):
+        return ""
+    field = " ".join(
+        value
+        for value in (
+            expression.field_ref.canonical_code,
+            expression.field_ref.display_name,
+        )
+        if value
+    ).casefold()
+    geographic = (
+        "province", "city", "region", "area", "省份", "城市", "地区", "区域",
+    )
+    return "" if any(marker in field for marker in geographic) else "的"
+
+
 def _time_text(spec: m.TimeSpec | None) -> str:
     if spec is None:
         return ""
@@ -245,7 +270,12 @@ def _completed_question(semantics: m.TaskSemanticState, *, cleared_filter: bool)
         trailing_qualifiers.append(
             "按" + _join_names(_ref_names(semantics.dimensions)) + "分组"
         )
-    text = f"查询{''.join(leading_qualifiers)}{target}"
+    connector = (
+        _compact_filter_connector(semantics.filter_expression)
+        if compact_filter and target
+        else ""
+    )
+    text = f"查询{''.join(leading_qualifiers)}{connector}{target}"
     if trailing_qualifiers:
         text += "，" + "，".join(trailing_qualifiers)
     if cleared_filter and semantics.filter_expression is None:

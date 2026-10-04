@@ -203,6 +203,27 @@ def test_all_history_monthly_statistic_allows_time_projection_without_range():
     assert validate_intent_asl_contract_definition(contract) == []
 
 
+def test_province_filter_does_not_hide_city_grouping_or_query_object():
+    request = RuleBasedIntentClassifier().classify(
+        "查看2025年安徽省下各个城市每月销售趋势",
+        IDENTITY,
+        "province-city-trend-contract",
+    )
+    # Reproduce the structured model's provisional entity choice that used to
+    # override the explicit city grouping in the downstream ASL contract.
+    request.entity = "省份名称"
+    request.dimensions = ["城市"]
+    request.filters = [{
+        "field": "业务省份", "operator": "EQ", "value": "安徽省",
+    }]
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["query_object"] == "城市"
+    assert contract["required_groupings"] == ["城市"]
+    assert validate_intent_asl_contract_definition(contract) == []
+
+
 def test_canonical_detail_rewrite_does_not_disable_relationship_set_semantics():
     request = RuleBasedIntentClassifier().classify(
         "查询A产品合作经销商名单", IDENTITY, "canonical-detail-rewrite",
@@ -381,6 +402,37 @@ def test_ranked_business_scale_contract_keeps_partner_grouping():
         "limit": None,
     }
     assert validate_intent_asl_contract_definition(contract) == []
+
+
+def test_monthly_granularity_dimension_never_displaces_product_query_object():
+    # Real platform failure: “按月份分析上海地区费森尤斯产品最近一年的销售趋势。”
+    # ended in SAFE_FALLBACK with INTENT_ASL_CONTRACT_INCOMPLETE /
+    # EXPLICIT_QUERY_OBJECT_MISSING because the contract promoted the
+    # structured-model time-granularity dimension 月份 to query_object and the
+    # completeness gate rejected it against the explicit object 产品.
+    question = "按月份分析上海地区费森尤斯产品最近一年的销售趋势。"
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "monthly-grain-query-object"
+    )
+    # Reproduce the structured path's published shape: the month bucket is a
+    # time granularity, while 产品 is the explicit query object.
+    request.entity = "产品"
+    request.dimensions = ["月份"]
+    request.turn_admission = TurnAdmissionGate().evaluate(
+        question=question,
+        current=request,
+        previous=None,
+        message_id="monthly-grain-message",
+    )
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["intent"] == PrimaryIntent.TREND_ANALYSIS.value
+    assert contract["query_object"] == "产品"
+    assert "月份" not in contract["required_groupings"]
+    assert contract["time_dimension_required"] is True
+    assert validate_intent_asl_contract_definition(contract) == []
+    assert validate_intent_asl_contract_completeness(contract, request) == []
 
 
 def test_contract_completeness_accepts_authoritative_vector_filter_rebinding():

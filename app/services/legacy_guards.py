@@ -115,6 +115,33 @@ def apply_catalog_display_default(request: CanonicalAnalysisRequest, policy: Map
     return True
 
 
+def extract_quoted_choice_candidate(text: str) -> str | None:
+    """Return the quoted option a clarification prompt told the user to repeat.
+
+    Pending prompts instruct users to reply with a bare number or the full
+    candidate name, and several surfaces wrap that name in quote marks such as
+    ``就按「仅作为结果展示参考值」这个来吧``.  Only the quoted span is the
+    selectable candidate; surrounding discourse must not participate in
+    matching.  Nothing is extracted when no quote pair exists or the quoted
+    span is empty.
+    """
+
+    value = text.strip()
+    if not value:
+        return None
+    for opening, closing in (("「", "」"), ("“", "”"), ("\"", "\""), ("'", "'"), ("『", "』")):
+        start = value.find(opening)
+        if start < 0:
+            continue
+        end = value.find(closing, start + len(opening))
+        if end <= start:
+            continue
+        candidate = value[start + len(opening):end].strip()
+        if candidate:
+            return candidate
+    return None
+
+
 def pending_answer_admissibility(current: CanonicalAnalysisRequest, pending: CanonicalAnalysisRequest, *, self_contained: bool) -> str:
     """Readiness alone never binds an utterance to an old pending request."""
     if self_contained:
@@ -136,6 +163,7 @@ def pending_answer_admissibility(current: CanonicalAnalysisRequest, pending: Can
             or ('forecast_horizon' in expected and current.forecast_horizon_periods)):
         return 'ANSWER_PENDING'
     text = current.original_question.strip().rstrip('。？！?!')
+    quoted = extract_quoted_choice_candidate(text)
     for ambiguity in pending.semantic_ambiguities:
         number_labels = ['一','二','三','四','五','六','七','八','九','十']
         for index in range(len(ambiguity.candidates)):
@@ -147,6 +175,13 @@ def pending_answer_admissibility(current: CanonicalAnalysisRequest, pending: Can
             return 'ANSWER_PENDING'
         if any(text == str(d.get('id') or d.get('candidate_id') or '') for d in ambiguity.candidate_details):
             return 'ANSWER_PENDING'
+        # The prompt itself teaches users to reply with the full candidate name
+        # wrapped in quote marks; that quoted span must be matched exactly.
+        if quoted is not None:
+            if quoted in ambiguity.candidates:
+                return 'ANSWER_PENDING'
+            if any(quoted == str(d.get('id') or d.get('candidate_id') or '') for d in ambiguity.candidate_details):
+                return 'ANSWER_PENDING'
     if current.conversation_control in {ConversationControl.CORRECTION, ConversationControl.CANCEL}:
         return 'ANSWER_PENDING'
     return 'UNBOUND'

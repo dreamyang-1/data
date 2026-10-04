@@ -279,12 +279,21 @@ class ScopedTranslator(SQLTranslatorProd):
         self.catalog = ScopedCatalog(scope, base.catalog.db_config)
         self.loader = ScopedLoader(scope, base.loader, self.catalog)
         self._metric_definitions = {}
+        self._entity_relationship_graph = None
 
     def _get_entity(self, code, model_id=None):
         value = self.loader.get_entity(code, model_id)
         if not value:
             return None
-        current = self.catalog.entity_relationship_metadata(model_id).get(code)
+        # This translator exists for exactly one request and one immutable
+        # RequestScope. Keep one authoritative graph snapshot for the complete
+        # plan so reverse-path searches neither repeat expensive catalog reads
+        # nor observe a different publication halfway through translation.
+        if self._entity_relationship_graph is None:
+            self._entity_relationship_graph = (
+                self.catalog.entity_relationship_metadata(model_id)
+            )
+        current = self._entity_relationship_graph.get(code)
         if not current:
             return None
         value = copy.deepcopy(value)
@@ -321,6 +330,12 @@ class ScopedTranslator(SQLTranslatorProd):
             if not entity or entity.get('data_source_id') is None:
                 raise ScopeError('SEMANTIC_SCOPE_MISMATCH', 'Plan entity is unavailable in the current domain')
             sources.add(str(entity['data_source_id']))
+        def field_sources(field):
+            if not isinstance(field, str) or '.' not in field:
+                return
+            table = field.split('.', 1)[0]
+            for code in self.loader.find_all_entity_codes_by_table(table, model_id):
+                entity_source(code)
         def visit(code):
             if code in active:
                 raise ScopeError('SCOPED_METRIC_DEPENDENCY_INVALID', 'Cyclic metric dependency')
@@ -340,6 +355,29 @@ class ScopedTranslator(SQLTranslatorProd):
             visit(metric.get('name'))
         if (ast.get('subject') or {}).get('entity'):
             entity_source(ast['subject']['entity'])
+        for dimension in ast.get('dimensions', []):
+            if not isinstance(dimension, dict):
+                continue
+            name = dimension.get('name')
+            for code in self._get_dimension_entities(name, model_id) if name else []:
+                entity_source(code)
+            field_sources(name)
+        for item in list(ast.get('filters', [])) + list(ast.get('having', [])):
+            if isinstance(item, dict):
+                field_sources(item.get('field'))
+        time_context = ast.get('time_context') or {}
+        if isinstance(time_context, dict):
+            field_sources(time_context.get('anchor'))
+        # Detail ASL may deliberately omit subject. The SQL translator derives
+        # it from the projected and filtered semantic fields, so source
+        # planning must use that same evidence instead of rejecting the plan
+        # before translation starts.
+        if not (ast.get('subject') or {}).get('entity'):
+            derived = self._derive_subject_entity(
+                ast.get('dimensions', []), ast.get('filters', []), model_id
+            )
+            if derived:
+                entity_source(derived)
         if ast.get('data_source_id') is not None:
             sources.add(str(ast['data_source_id']))
         if len(sources) != 1:
@@ -360,14 +398,25 @@ class ScopedTranslator(SQLTranslatorProd):
                 if claimed.business_domain_ids != self.scope.business_domain_ids:
                     raise ScopeError('SEMANTIC_SCOPE_MISMATCH', 'ASL cannot change the request domain')
             planned_source = self._plan_sources(ast, model_id)
-            result = super().translate_only(asl_str, model_id)
+            translation_ast = copy.deepcopy(ast)
+            translation_ast.setdefault('data_source_id', planned_source)
+            result = super().translate_only(
+                json.dumps(translation_ast, ensure_ascii=False), model_id
+            )
             if result.get('success'):
                 self.validate_read_only_sql(result['sql'])
-                allowed = {row['name'] for row in self.catalog._query(
-                    'SELECT name FROM semantic_model_table WHERE semantic_model_id=%s', (self.scope.semantic_model_id,))}
+                table_rows = self.catalog._query(
+                    'SELECT name,data_source_id FROM semantic_model_table WHERE semantic_model_id=%s',
+                    (self.scope.semantic_model_id,),
+                )
+                source_by_table = {
+                    row['name']: str(row['data_source_id']) for row in table_rows
+                }
                 tables = self._sql_involved_tables(result['sql'])
-                if not tables or not tables.issubset(allowed):
+                if not tables or not tables.issubset(source_by_table):
                     raise ScopeError('SEMANTIC_SCOPE_MISMATCH', 'Generated SQL references a table outside the domain')
+                if {source_by_table[table] for table in tables} != {planned_source}:
+                    raise ScopeError('DATA_SOURCE_SCOPE_MISMATCH', 'Generated SQL crosses the scoped plan source')
                 if not result.get('data_source_id'):
                     raise ScopeError('DATA_SOURCE_SCOPE_MISMATCH', 'A scoped plan must resolve one data source')
                 if str(result['data_source_id']) != planned_source:

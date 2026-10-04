@@ -8,12 +8,18 @@ import json
 
 import httpx
 import pytest
+from pydantic import BaseModel
 
 from app.config import Settings
+from app.services.progress import progress_scope
 from app.semantic_v2.authorized_contract import ScopedArtifact, contract_digest
 from app.semantic_v2.context_proposal import ContextProposalFailure
 from app.semantic_v2.pipeline import CurrentTurnSemanticParse
-from app.semantic_v2.recognition import RawTurnPlanner, RecognizedStandaloneNewTask
+from app.semantic_v2.recognition import (
+    RawTurnPlanner,
+    RecognizedStandaloneNewTask,
+    current_turn_extraction_items,
+)
 from app.semantic_v2.recognition_client import RecognitionFailure, RecognitionModelClient
 from test_v2_authorized_catalog_bridge import IDENTITY, request, authority, publish, reseal, system
 
@@ -62,7 +68,9 @@ def metric_step(text,name='销售额',operation='SET',follow=False):
 
 
 class ScriptedTransport:
-    def __init__(self,steps):self.steps=steps;self.calls=[];self.next=0
+    def __init__(self,steps):
+        self.steps=steps;self.calls=[];self.next=0
+        self.before_semantic_edits=None
     def __call__(self,req):
         body=json.loads(req.content);context=json.loads(body['messages'][1]['content'])
         self.calls.append(body)
@@ -80,8 +88,33 @@ class ScriptedTransport:
                 data['context_proposal']=fixture_proposal(data,context)
             for mention in data.get('mentions',[]):mention['source_turn_id']=context['turn_id']
         else:
+            if self.before_semantic_edits is not None:
+                self.before_semantic_edits()
             data=draft(context) if callable(draft) else deepcopy(draft);self.next+=1
         return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':json.dumps(data)}}]})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('operation', ['SET', 'ADD'])
+async def test_surface_handoff_does_not_bind_a_complete_new_question(catalog, monkeypatch, operation):
+    step = metric_step('销售额')
+    step[1]['operation_markers'][0]['operation_hint'] = operation
+    engine, transport = planner(catalog, [step])
+    engine.defer_new_task_binding = True
+
+    def forbidden_binding(*args, **kwargs):
+        raise AssertionError('surface handoff must not match catalog candidates')
+
+    monkeypatch.setattr(engine, '_candidates', forbidden_binding)
+    monkeypatch.setattr('app.semantic_v2.recognition.recover_metric_spans', forbidden_binding)
+    result = await engine.run(request(question=step[0], message_id='surface-only'),
+                              IDENTITY, allow_standalone_new_task_passthrough=True)
+    assert isinstance(result, RecognizedStandaloneNewTask)
+    assert result.completed_question == step[0]
+    assert result.fallback_reason == 'ASL_OWNS_CATALOG_BINDING'
+    assert len(transport.calls) == 1
+    assert result.parse.mentions[0].surface == '销售额'
+    assert result.next_state.context.authorized_scope.business_domain_ids == (205,)
 
 
 def planner(catalog,steps):
@@ -90,6 +123,34 @@ def planner(catalog,steps):
         intent_model_api_key='test-only-key',intent_model_name='existing-configured-model',intent_model_max_retries=0)
     client=RecognitionModelClient(settings,httpx.MockTransport(transport))
     return RawTurnPlanner(client,catalog[0],clock=lambda:NOW,deterministic_grounding=False),transport
+
+
+@pytest.mark.asyncio
+async def test_surface_context_completion_uses_offered_question_without_catalog_binding(catalog, monkeypatch):
+    from app.semantic_v2.context_question import publish_context_task
+    from app.semantic_v2.models import ContextQuestionState
+    first = request(question='查看2025年安徽省各城市每月销售额', message_id='surface-first')
+    engine, _ = planner(catalog, [(first.question, parse(first.question), {})])
+    engine.defer_new_task_binding = True
+    result = await engine.run(first, IDENTITY, allow_standalone_new_task_passthrough=True)
+    state = publish_context_task(result.next_state, chat=first, created_at=NOW,
+        frame=ContextQuestionState(original_question=first.question,
+            execution_question=first.question, source_message_id=first.message_id))
+    completed = '查看2025年上海市各城市每月销售额'
+    current = parse('上海市的', [('上海市','FILTER_VALUE','filter_expression','REPLACE')], follow=True)
+    current['completed_question'] = completed
+    engine, transport = planner(catalog, [('上海市的', current, {})])
+    engine.defer_new_task_binding = True
+    def no_binding(*args, **kwargs):
+        raise AssertionError('context completion must not bind catalog fields')
+    monkeypatch.setattr(engine, '_candidates', no_binding)
+    result = await engine.run(request(question='上海市的', message_id='surface-next'),
+        IDENTITY, state=state, allow_standalone_new_task_passthrough=True)
+    assert result.completed_question == completed
+    assert result.fallback_reason == 'ASL_OWNS_CONTEXT_BINDING'
+    assert len(transport.calls) == 1
+    sent = json.loads(transport.calls[0]['messages'][1]['content'])
+    assert sent['task_context']['candidate_tasks'][0]['context_question']['execution_question'] == first.question
 
 
 async def turns(engine,steps):
@@ -103,13 +164,87 @@ async def turns(engine,steps):
 @pytest.mark.asyncio
 async def test_raw_input_reaches_model_catalog_and_plan(catalog):
     steps=[metric_step('销售额')];engine,transport=planner(catalog,steps)
-    result=(await turns(engine,steps))[0]
+    progress=[]
+    def assert_candidate_progress_precedes_semantic_edits():
+        assert [item['progress_phase'] for item in progress] == [
+            'V2_CONVERSATION_STATE_READY',
+            'V2_SEMANTIC_CANDIDATES_READY',
+        ]
+    transport.before_semantic_edits = assert_candidate_progress_precedes_semantic_edits
+    with progress_scope(progress.append):
+        result=(await turns(engine,steps))[0]
     assert result.plan['logical_plan']['payload']['measures'][0]['canonical_code']=='amount'
     assert result.plan['backend_contract']['mode']=='SHADOW_ONLY'
     assert len(transport.calls)==2
     assert all(c['model']=='existing-configured-model' and c['temperature']==0 for c in transport.calls)
     assert 'tasks' not in json.loads(transport.calls[0]['messages'][1]['content'])
     assert result.next_state.context.authorized_scope.business_domain_ids==(205,)
+    assert [item['progress_phase'] for item in progress] == [
+        'V2_CONVERSATION_STATE_READY',
+        'V2_SEMANTIC_CANDIDATES_READY',
+    ]
+    assert progress[0]['message'] == '对话状态识别：独立新问题。'
+    assert progress[0]['resolution_source'] == 'DETERMINISTIC_EMPTY_CONTEXT'
+    assert '正在匹配指标、维度、筛选条件和时间' not in progress[0]['message']
+    assert '语义提取字段：' not in progress[0]['message']
+    assert current_turn_extraction_items(result.parse) == ({
+        'surface': '销售额',
+        'normalized_surface': '销售额',
+        'labels': ('指标',),
+        'start_char': 0,
+        'clause_id': None,
+    },)
+    assert all(item['stage'] == 'INTENT_RECOGNITION' for item in progress)
+    assert all(item['status'] == 'RUNNING' for item in progress)
+
+
+@pytest.mark.asyncio
+async def test_streaming_recognition_publishes_start_but_validates_complete_json():
+    chunks = [
+        {'choices': [{'delta': {'content': '{"value":'}, 'finish_reason': None}]},
+        {'choices': [{'delta': {'content': '"ok"}'}, 'finish_reason': 'stop'}]},
+    ]
+    body = ''.join(
+        'data: ' + json.dumps(item) + '\n\n' for item in chunks
+    ) + 'data: [DONE]\n\n'
+
+    def handler(request):
+        sent = json.loads(request.content)
+        assert sent['stream'] is True
+        return httpx.Response(
+            200,
+            headers={'content-type': 'text/event-stream'},
+            content=body.encode(),
+        )
+
+    class OutputModel(BaseModel):
+        value: str
+
+    settings = Settings(
+        _env_file=None,
+        intent_model_base_url='https://model.invalid/v1',
+        intent_model_api_key='test-only-key',
+        intent_model_name='existing-configured-model',
+        intent_model_max_retries=0,
+    )
+    client = RecognitionModelClient(
+        settings,
+        httpx.MockTransport(handler),
+        force_stream=True,
+    )
+    progress = []
+    with progress_scope(progress.append):
+        result = await client.complete(
+            stage='v2_current_turn',
+            instruction='Return JSON.',
+            context={'question': '查询销售额'},
+            output_model=OutputModel,
+        )
+
+    assert result.value == 'ok'
+    assert [item['progress_phase'] for item in progress] == [
+        'V2_CURRENT_TURN_MODEL_STREAM_STARTED',
+    ]
 
 
 @pytest.mark.asyncio
@@ -157,6 +292,35 @@ async def test_standalone_new_task_passthrough_is_not_query_shape_specific(catal
     assert isinstance(result, RecognizedStandaloneNewTask)
     assert result.completed_question == text
     assert result.parse.query_shape_prediction == 'SCALAR_AGGREGATE'
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_standalone_new_task_accepts_initial_filter_add_representation(catalog):
+    text = '查询浙江省产品合作的经销商名单'
+    step = (
+        text,
+        parse(
+            text,
+            [
+                ('经销商', 'SUBJECT_ENTITY', 'subject', 'SET'),
+                ('浙江省', 'FILTER_VALUE', 'filter_expression', 'ADD'),
+                ('产品', 'FILTER_VALUE', 'filter_expression', 'ADD'),
+            ],
+            shape='RELATION_LIST',
+        ),
+        {},
+    )
+    engine, transport = planner(catalog, [step])
+
+    result = await engine.run(
+        request(question=text, message_id='filter-add-new-task'),
+        IDENTITY,
+        allow_standalone_new_task_passthrough=True,
+    )
+
+    assert isinstance(result, RecognizedStandaloneNewTask)
+    assert result.completed_question == text
     assert len(transport.calls) == 2
 
 
@@ -704,6 +868,70 @@ async def test_scope_change_rejected_before_history_reaches_model(catalog):
     with pytest.raises(ValueError,match='SCOPED_STATE_REUSE_REJECTED'):
         await engine.run(request(question='销售额',message_id='new'),IDENTITY,state=ScopedArtifact.model_validate(artifact))
     assert len(transport.calls)==2
+
+
+def test_completed_question_prefix_parser_handles_partial_json_and_escapes():
+    from app.semantic_v2.recognition_client import _completed_question_prefix
+    assert _completed_question_prefix('{"mentions": []') is None
+    assert _completed_question_prefix('{"completed_question": "abc') == 'abc'
+    assert _completed_question_prefix('{"completed_question": "a\\nb') == 'a\nb'
+    assert _completed_question_prefix('{"completed_question": "a\\u4e') == 'a'
+    assert _completed_question_prefix('{"completed_question": "a\\u4e0a') == 'a上'
+    assert _completed_question_prefix('{"completed_question": "') is None
+
+
+@pytest.mark.asyncio
+async def test_streaming_completed_question_prefix_is_not_published_before_validation():
+    completed = '查询南京哪些医院使用费森尤斯产品。'
+    full = json.dumps(
+        {'completed_question': completed, 'mentions': []}, ensure_ascii=False
+    )
+    chunks = [full[i:i + 7] for i in range(0, len(full), 7)]
+    body = ''.join(
+        'data: ' + json.dumps(
+            {'choices': [{'delta': {'content': part}, 'finish_reason': None}]}
+        ) + '\n\n'
+        for part in chunks
+    ) + 'data: ' + json.dumps(
+        {'choices': [{'delta': {}, 'finish_reason': 'stop'}]}
+    ) + '\n\ndata: [DONE]\n\n'
+
+    def handler(request):
+        return httpx.Response(
+            200, headers={'content-type': 'text/event-stream'}, content=body.encode()
+        )
+
+    class CompletedQuestionOutput(BaseModel):
+        completed_question: str = ''
+        mentions: list = []
+
+    settings = Settings(
+        _env_file=None,
+        intent_model_base_url='https://model.invalid/v1',
+        intent_model_api_key='test-only-key',
+        intent_model_name='existing-configured-model',
+        intent_model_max_retries=0,
+    )
+    client = RecognitionModelClient(
+        settings, httpx.MockTransport(handler), force_stream=True
+    )
+    progress = []
+    with progress_scope(progress.append):
+        result = await client.complete(
+            stage='v2_current_turn',
+            instruction='Return JSON.',
+            context={'question': '南京哪些医院使用费森尤斯产品'},
+            output_model=CompletedQuestionOutput,
+        )
+
+    assert result.completed_question == completed
+    phases = [item.get('progress_phase') for item in progress]
+    assert 'V2_CURRENT_TURN_MODEL_STREAM_STARTED' in phases
+    streaming = [
+        item for item in progress
+        if item.get('progress_phase') == 'V2_CURRENT_TURN_COMPLETED_QUESTION_STREAMING'
+    ]
+    assert streaming == []
 
 
 @pytest.mark.asyncio

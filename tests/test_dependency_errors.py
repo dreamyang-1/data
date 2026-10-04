@@ -10,8 +10,9 @@ def test_dependency_message_uses_http_status_category() -> None:
         upstream_code="FILTER_NOT_SUPPORTED",
     )
     message = DataAnalysisOrchestrator._dependency_message(error)
-    assert "当前条件" in message
-    assert "FILTER_NOT_SUPPORTED" not in message
+    assert "拒绝了当前查询合同" in message
+    assert "FILTER_NOT_SUPPORTED" in message
+    assert "无需盲目改写问题" in message
 
 
 def test_dependency_message_keeps_stable_upstream_code_for_unknown_failure() -> None:
@@ -35,3 +36,114 @@ def test_time_anchor_configuration_error_does_not_tell_user_to_blindly_retry() -
     message = DataAnalysisOrchestrator._dependency_message(error)
     assert "时间字段绑定" in message
     assert "稍后重试" not in message
+
+
+def test_intent_contract_error_is_not_reported_as_upstream_outage() -> None:
+    error = AdapterError(
+        "DEPENDENCY_CONTRACT_REJECTED",
+        "sanitized",
+        status_code=422,
+        upstream_code="INTENT_ASL_CONTRACT_INCOMPLETE",
+    )
+
+    message = DataAnalysisOrchestrator._dependency_message(error)
+
+    assert "没有完整保留" in message
+    assert "停止执行" in message
+    assert "上游数据服务" not in message
+    assert "稍后重试" not in message
+
+
+def test_unresolved_entity_message_names_the_exact_unresolved_value() -> None:
+    error = AdapterError(
+        "DEPENDENCY_CONTRACT_REJECTED",
+        "sanitized",
+        status_code=502,
+        upstream_code="ASL_ENTITY_MENTION_UNRESOLVED",
+        details={"path": "/agent/query", "mention": "费森尤斯"},
+    )
+
+    message = DataAnalysisOrchestrator._dependency_message(error)
+
+    assert "“费森尤斯”" in message
+    assert "它属于" not in message
+    assert "用户可补充" in message
+    assert "语义层需配置" in message
+
+
+def test_filter_error_reports_actual_filter_and_candidates() -> None:
+    # STALE_TEST(2026-09-18): ISSUE-010200 / ISSUE-231600 changed the contract.
+    # Unconfirmed candidates no longer render as authoritative field labels and
+    # internal "语义层需配置" guidance is stripped from user-facing text. The
+    # assertion now pins the frozen wording instead of the old candidate dump.
+    error = AdapterError(
+        "DEPENDENCY_CONTRACT_REJECTED",
+        "sanitized",
+        status_code=502,
+        upstream_code="ASL_FILTER_INVALID",
+        details={
+            "semantic_field": "商品品类",
+            "candidates": ["product.product_name", "product.product_code"],
+        },
+    )
+
+    message = DataAnalysisOrchestrator._dependency_message(error)
+
+    assert "“商品品类”" in message
+    assert "没有绑定到唯一且可执行的语义字段" in message
+    assert "语义层需检查" in message
+    assert "语义层需配置" not in message
+
+
+def test_metric_selection_invalid_message_keeps_actionable_guidance() -> None:
+    error = AdapterError(
+        "DEPENDENCY_CONTRACT_REJECTED",
+        "sanitized",
+        status_code=422,
+        upstream_code="ASL_METRIC_SELECTION_INVALID",
+        details={"expected_metric_codes": ["amount_with_tax_total"]},
+    )
+
+    message = DataAnalysisOrchestrator._dependency_message(error)
+
+    assert "指标口径没有通过语义合同校验" in message
+    assert "本次要求的指标为" in message
+    assert "语义层需配置" not in message
+    assert "规范代码" not in message
+    assert "所属业务域" not in message
+
+
+def test_semantic_validation_failure_never_leaks_internal_error_code() -> None:
+    error = AdapterError(
+        "SQL_TRANSLATION_FAILED",
+        "SQL生成失败: 无法确定主实体",
+        status_code=400,
+        upstream_code="SEMANTIC_VALIDATION_FAILED",
+    )
+
+    message = DataAnalysisOrchestrator._dependency_message(error)
+
+    assert "SEMANTIC_VALIDATION_FAILED" not in message
+    assert "未提供更具体的可公开诊断信息" not in message
+    assert "未通过语义校验" in message
+    assert "查询主体" in message
+
+
+def test_sql_operator_error_explains_the_preserved_filter() -> None:
+    error = AdapterError(
+        "SQL_QUERY_FILTER_OPERATOR_FAILED",
+        "sanitized",
+        details={
+            "filters": [{
+                "field": "manufacturer.parent_brand",
+                "value": "费森尤斯",
+                "expected_operator": "EQ",
+            }],
+        },
+    )
+
+    message = DataAnalysisOrchestrator._dependency_message(error)
+
+    assert "母厂牌（manufacturer.parent_brand）=费森尤斯" in message
+    assert "改变了精确匹配方式" in message
+    assert "用户无需反复改写" in message

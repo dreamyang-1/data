@@ -21,6 +21,12 @@ entity identity or query. If absent use REJECTED; if multiple interpretations re
 use AMBIGUOUS; if uncertain use UNRESOLVED. Non-ACCEPTED requires candidate_id=null.
 Return only the CandidateSelectionDecision JSON. Never invent a candidate ID."""
 
+PROBE_PROMPT += """
+Do not treat product, brand, manufacturer, hospital, dealer, department and
+region names as interchangeable categories. A candidate is acceptable only
+inside the already selected field's business meaning.
+"""
+
 
 async def select_probed_value(model, session, attribute, mention, *, implicit):
     session._check()

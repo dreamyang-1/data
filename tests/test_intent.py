@@ -31,6 +31,34 @@ def test_metric_internal_noun_does_not_replace_explicit_grouped_query_object():
     assert "EXPLICIT_RESULT_OBJECT_FROM_GROUPING=经销商" in request.assumptions
 
 
+@pytest.mark.parametrize(
+    "question",
+    [
+        "统计上海地区各个经销商的区域医院覆盖率",
+        "统计上海地区各经销商区域医院覆盖率",
+        "查询北京地区每家经销商的区域医院覆盖率",
+        "统计江苏地区按经销商汇总区域医院覆盖率",
+    ],
+)
+def test_colloquial_region_and_grouping_scaffolding_is_not_a_product_filter(question):
+    request = RuleBasedIntentClassifier().classify(
+        question,
+        IDENTITY,
+        "coverage-colloquial-region",
+    )
+
+    assert request.entity == "经销商"
+    assert request.dimensions == ["经销商"]
+    assert not any(
+        item.get("field") in {"商品名称", "产品名称"}
+        for item in request.filters
+    )
+    assert not any(
+        "经销商" in value and "区域" in value
+        for value in request.semantic_entity_mentions
+    )
+
+
 def test_forecast_is_not_historical_trend():
     classifier = RuleBasedIntentClassifier()
     forecast = classifier.classify("预测下个月销售额", IDENTITY, "c1")
@@ -769,7 +797,7 @@ def test_multidimensional_trend_separates_product_from_dimensions():
         ("查询医用外科口罩的供应商清单。", "供应商", "供应商名称"),
     ],
 )
-def test_master_name_lists_require_non_null_members(
+def test_master_name_lists_do_not_add_local_non_null_constraints(
     question: str, entity: str, field: str
 ):
     request = RuleBasedIntentClassifier().classify(
@@ -779,7 +807,7 @@ def test_master_name_lists_require_non_null_members(
     assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
     assert request.entity == entity
     assert field in request.fields
-    assert f"REQUIRED_NAME_NON_NULL={field}" in request.assumptions
+    assert f"REQUIRED_NAME_NON_NULL={field}" not in request.assumptions
 
 
 def test_brand_comparison_uses_business_names_not_internal_codes():
@@ -831,6 +859,83 @@ def test_product_applicable_department_wording_is_detail_lookup():
     assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
     assert request.fields == ["商品名称", "适用科室"]
     assert request.missing_slots == []
+
+
+@pytest.mark.parametrize(
+    ("question", "mentions"),
+    (
+        ("请提供百特Prismaflex M60 set使用科室。", ["百特", "Prismaflex M60 set"]),
+        ("请提供Prismaflex M60 set使用科室。", ["Prismaflex M60 set"]),
+        ("查询Prismaflex M60 set应用科室。", ["Prismaflex M60 set"]),
+    ),
+)
+def test_product_department_user_synonyms_are_complete_catalog_grounded_details(
+    question, mentions,
+):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "c-product-department-synonym"
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == "产品"
+    assert request.fields == ["商品名称", "适用科室"]
+    assert request.semantic_entity_mentions == mentions
+    assert request.time_range is None
+    assert request.missing_slots == []
+    assert "PRODUCT_DEPARTMENT_SCOPE_REQUIRES_CATALOG_BINDING" in request.assumptions
+
+
+def test_bare_city_hospital_product_relationship_is_normalized_without_losing_scope():
+    request = RuleBasedIntentClassifier().classify(
+        "请提供南京哪些医院使用费森尤斯产品。",
+        IDENTITY,
+        "c-bare-city-hospital-product",
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == "医院"
+    assert request.fields == ["医院名称"]
+    assert {"field": "业务城市", "operator": "EQ", "value": "南京市"} in request.filters
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in request.filters
+    assert request.semantic_entity_mentions == ["南京市", "费森尤斯"]
+    assert request.missing_slots == []
+
+
+def test_region_prefix_is_not_folded_into_relationship_product_surface():
+    request = RuleBasedIntentClassifier().classify(
+        "请提供浙江省 做费森尤斯血液透析产品的经销商",
+        IDENTITY,
+        "c-region-product-dealer",
+    )
+
+    assert {"field": "业务省份", "operator": "EQ", "value": "浙江省"} in request.filters
+    assert {
+        "field": "商品名称", "operator": "EQ", "value": "费森尤斯血液透析",
+    } in request.filters
+    assert "浙江省做费森尤斯血液透析" not in request.semantic_entity_mentions
+
+
+def test_region_group_is_not_invented_as_a_city_value():
+    request = RuleBasedIntentClassifier().classify(
+        "请提供华东地区哪些医院使用费森尤斯产品",
+        IDENTITY,
+        "c-region-group-hospital-product",
+    )
+
+    assert not any(
+        item.get("value") == "华东地区市" for item in request.filters
+    )
+    assert "华东地区市" not in request.semantic_entity_mentions
+
+
+def test_department_qualifier_is_not_sent_to_catalog_as_a_product_name():
+    request = RuleBasedIntentClassifier().classify(
+        "请提供主要适用科室",
+        IDENTITY,
+        "c-qualified-department-without-product",
+    )
+
+    assert "主要" not in request.semantic_entity_mentions
 
 
 @pytest.mark.parametrize("dash", ("-", "‑"))
@@ -1039,13 +1144,60 @@ def test_dealer_quantity_is_normalized_to_relationship_count_metric():
     assert request.missing_slots == []
 
 
-def test_region_brand_product_trend_uses_parent_brand_not_product_name():
+def test_region_named_product_trend_preserves_value_for_catalog_rebinding():
     request = RuleBasedIntentClassifier().classify(
         "分析上海地区费森尤斯产品最近一年的销售趋势。",
         IDENTITY,
         "c-brand-trend",
     )
-    assert not any(item.get("field") == "商品名称" for item in request.filters)
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in request.filters
+    assert "费森尤斯" in request.semantic_entity_mentions
+
+
+@pytest.mark.parametrize(
+    ("question", "region_field", "region_value", "named_value"),
+    [
+        ("分析江苏省费森尤斯产品最近一年的销售趋势。", "业务省份", "江苏省", "费森尤斯"),
+        ("查询广东美敦力产品本年度销售额。", "业务省份", "广东省", "美敦力"),
+        ("分析空心纤维血液透析器产品最近一年的销售趋势。", None, None, "空心纤维血液透析器"),
+    ],
+)
+def test_named_product_scope_is_separated_from_region_and_time_scaffolding(
+    question, region_field, region_value, named_value,
+):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, f"named-scope-{named_value}",
+    )
+
+    assert {
+        "field": "商品名称", "operator": "EQ", "value": named_value,
+    } in request.filters
+    if region_field is not None:
+        assert {
+            "field": region_field, "operator": "EQ", "value": region_value,
+        } in request.filters
+    assert named_value in request.semantic_entity_mentions
+
+
+def test_query_scaffolding_is_not_emitted_as_a_second_catalog_value():
+    request = CanonicalAnalysisRequest(
+        conversation_id="catalog-span-scaffolding",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="分析上海市费森尤斯产品最近一年的销售趋势。",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        filters=[
+            {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+            {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"},
+        ],
+        semantic_entity_mentions=[
+            "上海市", "费森尤斯", "费森尤斯产品最近一年",
+        ],
+    )
+
+    RuleBasedIntentClassifier.sanitize_semantic_entity_mentions(request)
+
+    assert request.semantic_entity_mentions == ["上海市", "费森尤斯"]
 
 
 @pytest.mark.parametrize(
@@ -1463,6 +1615,34 @@ def test_product_sales_overview_uses_auditable_defaults():
     assert "DEFAULT_TIME_GRANULARITY=month" in request.assumptions
 
 
+@pytest.mark.parametrize("question", [
+    "老板要看空心纤维血液透析器的销售数据",
+    "空心纤维血液透析器在各省卖得怎么样？",
+    "空心纤维血液透析器给公司带来了多少收入？",
+])
+def test_vague_sales_phrase_binds_default_amount_metric(question):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "vague-sales-phrase",
+    )
+
+    assert [metric.input for metric in request.metrics] == ["含税销售总额"]
+    assert "metric" not in request.missing_slots
+    assert "SALES_PHRASE_DEFAULT_METRIC=含税销售总额" in request.assumptions
+
+
+@pytest.mark.parametrize("question", [
+    "空心纤维血液透析器的含税销售额是多少？",
+    "空心纤维血液透析器的走货量怎么样？",
+    "空心纤维血液透析器卖了多少笔订单？",
+])
+def test_explicit_caliber_questions_keep_their_own_metric_path(question):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "explicit-caliber",
+    )
+
+    assert "SALES_PHRASE_DEFAULT_METRIC=含税销售总额" not in request.assumptions
+
+
 def test_report_coverage_facets_infer_concrete_row_entities_and_fields():
     classifier = RuleBasedIntentClassifier()
     hospital = classifier.classify(
@@ -1567,7 +1747,7 @@ def test_sales_trend_facet_uses_auditable_sales_amount_metric():
     assert "SALES_TREND_METRIC=销售额" in request.assumptions
 
 
-def test_partner_list_ranked_by_snapshot_metric_is_complete_comparison():
+def test_partner_list_ranked_by_snapshot_metric_is_grouped_metric_query():
     question = (
         "请列出上海市医用外科口罩产品的经销商名单，排除上海洁安厂家，"
         "并按他们现有的整体业务规模排序"
@@ -1576,11 +1756,11 @@ def test_partner_list_ranked_by_snapshot_metric_is_complete_comparison():
         question, IDENTITY, "ranked-partner-list"
     )
 
-    assert request.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
-    assert request.comparison_type == "对象间比较"
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert request.comparison_type is None
     assert [metric.input for metric in request.metrics] == ["整体业务规模"]
     assert "经销商" in request.dimensions
-    assert AnalysisOperator.COMPARE in request.operators
+    assert AnalysisOperator.COMPARE not in request.operators
     assert AnalysisOperator.GROUP_BY in request.operators
     assert AnalysisOperator.SORT in request.operators
     assert request.missing_slots == []
@@ -2014,7 +2194,7 @@ def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
         "ranked-active-partner-list",
     )
 
-    assert request.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
     assert [metric.input for metric in request.metrics] == ["整体业务规模"]
     assert AnalysisOperator.SORT in request.operators
     assert request.missing_slots == []
@@ -2034,6 +2214,37 @@ def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
         {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
     ]
 
+
+def test_competitor_brand_ranked_partner_list_is_not_comparison_analysis():
+    request = RuleBasedIntentClassifier().classify(
+        "帮我找出上海地区正在销售竞争品牌万益特的血液净化管路的"
+        "经销商名单，并按他们现有的销售额排序。",
+        IDENTITY,
+        "competitor-brand-ranked-partners",
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert request.comparison_type is None
+    assert [metric.input for metric in request.metrics] == ["销售额"]
+    assert request.entity == "经销商"
+    assert request.dimensions == ["经销商"]
+    assert AnalysisOperator.GROUP_BY in request.operators
+    assert AnalysisOperator.SORT in request.operators
+    assert AnalysisOperator.COMPARE not in request.operators
+    assert request.time_range is not None
+    assert "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE" in request.assumptions
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "母品牌", "operator": "EQ", "value": "万益特"} in request.filters
+    assert {
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "血液净化管路",
+    } in request.filters
+    assert all(
+        item.get("value") not in {"竞争", "万益特的血液净化管路"}
+        for item in request.filters
+    )
+
 def test_dated_sales_record_activity_does_not_request_partner_status_or_threshold():
     request = RuleBasedIntentClassifier().classify(
         "近一年内，哪些活跃经销商在销售费森尤斯产品。",
@@ -2049,7 +2260,7 @@ def test_dated_sales_record_activity_does_not_request_partner_status_or_threshol
     assert "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE" in (
         request.assumptions
     )
-    assert "REQUIRED_NAME_NON_NULL=经销商名称" in request.assumptions
+    assert "REQUIRED_NAME_NON_NULL=经销商名称" not in request.assumptions
 
 
 def test_named_dealer_product_lookup_is_relationship_detail_without_metric():
@@ -2182,7 +2393,7 @@ def test_plain_active_partner_status_still_requires_an_explicit_activity_period(
 
     assert request.fields == ["经销商名称", "合作状态"]
     assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
-    assert "REQUIRED_NAME_NON_NULL=经销商名称" in request.assumptions
+    assert "REQUIRED_NAME_NON_NULL=经销商名称" not in request.assumptions
     assert request.missing_slots == []
 
 

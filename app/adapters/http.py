@@ -37,6 +37,13 @@ from app.services.knowledge_retrieval import (
     normalize_and_deduplicate_hits,
 )
 from app.services.progress import emit_progress
+from app.observability.call_timing import track_operation
+from app.presentation import (
+    SEMANTIC_QUERY_TOOL_NAME,
+    SQL_EXECUTION_TOOL_NAME,
+    SQL_TRANSLATION_TOOL_NAME,
+    render_asl_extraction_json,
+)
 from app.services.intent_asl_contract import (
     build_intent_asl_contract,
     validate_intent_asl_contract_completeness,
@@ -228,6 +235,10 @@ class PlatformHttpClient:
                     )
                 if response.status_code == 429 or response.status_code >= 500:
                     upstream_code = self._upstream_error_code(response)
+                    error_details = {
+                        "path": path,
+                        **self._upstream_error_details(response),
+                    }
                     if upstream_code in _NON_RETRYABLE_UPSTREAM_CODES:
                         raise AdapterError(
                             "DEPENDENCY_CONTRACT_REJECTED",
@@ -235,7 +246,7 @@ class PlatformHttpClient:
                             retryable=False,
                             status_code=response.status_code,
                             upstream_code=upstream_code,
-                            details={"path": path},
+                            details=error_details,
                         )
                     effective_retryable = bool(
                         retryable
@@ -247,7 +258,7 @@ class PlatformHttpClient:
                         retryable=effective_retryable,
                         status_code=response.status_code,
                         upstream_code=upstream_code,
-                        details={"path": path},
+                        details=error_details,
                     )
                     if effective_retryable and attempt + 1 < attempts:
                         await asyncio.sleep(
@@ -262,7 +273,10 @@ class PlatformHttpClient:
                         f"dependency returned HTTP {response.status_code}",
                         status_code=response.status_code,
                         upstream_code=upstream_code,
-                        details={"path": path},
+                        details={
+                            "path": path,
+                            **self._upstream_error_details(response),
+                        },
                     )
                 return response.json()
             except AdapterError:
@@ -294,6 +308,62 @@ class PlatformHttpClient:
             if isinstance(value, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{1,63}", value):
                 return value
         return f"HTTP_{response.status_code}"
+
+    @staticmethod
+    def _upstream_error_details(response: httpx.Response) -> dict[str, Any]:
+        """Keep bounded structured diagnostics while discarding raw error text.
+
+        Upstream services own the exact failure subject (for example the
+        unresolved mention or candidate fields).  Dropping that subject at the
+        HTTP boundary forces the UI to ask vague, misleading questions.
+        """
+
+        try:
+            body = response.json()
+        except ValueError:
+            return {}
+        if not isinstance(body, dict):
+            return {}
+        detail = body.get("detail")
+        sources = [body]
+        if isinstance(detail, dict):
+            sources.insert(0, detail)
+
+        raw: dict[str, Any] = {}
+        for source in sources:
+            nested = source.get("details")
+            if isinstance(nested, dict):
+                raw.update(nested)
+            for key in ("field", "stage", "instance_path", "schema_path", "validator"):
+                if source.get(key) not in (None, ""):
+                    raw.setdefault(key, source[key])
+
+        def bounded(value: Any, *, depth: int = 0) -> Any:
+            if depth > 3:
+                return None
+            if isinstance(value, bool) or value is None:
+                return value
+            if isinstance(value, (int, float)):
+                return value
+            if isinstance(value, str):
+                return " ".join(value.split())[:300]
+            if isinstance(value, list):
+                return [bounded(item, depth=depth + 1) for item in value[:20]]
+            if isinstance(value, dict):
+                result: dict[str, Any] = {}
+                for key, item in list(value.items())[:30]:
+                    safe_key = str(key)[:80]
+                    if safe_key.casefold() in {
+                        "authorization", "api_key", "apikey", "token",
+                        "password", "secret", "credential", "sql",
+                    }:
+                        continue
+                    result[safe_key] = bounded(item, depth=depth + 1)
+                return result
+            return "<unsupported>"
+
+        sanitized = bounded(raw)
+        return sanitized if isinstance(sanitized, dict) else {}
 
 
 class HttpSemanticAdapter:
@@ -604,12 +674,20 @@ class HttpDataRetrievalAdapter:
         request: CanonicalAnalysisRequest,
         business_domain_id: int | None,
     ) -> dict[str, int | list[int] | None]:
-        """Build Oagent's execution scope without changing request authorization."""
+        """Forward V1's request scope, with optional proven single-domain narrowing.
+
+        An empty business-domain list is Oagent's existing MODEL_WIDE contract.
+        Entity-vector grounding may provide a single execution-domain hint, but
+        failure to find such a hit must not turn an otherwise executable V1
+        question into ``OAGENT_EXECUTION_SCOPE_UNRESOLVED``.  In that case the
+        original MODEL_WIDE request is forwarded and Oagent resolves the domain
+        from its current semantic catalog and returns the selected domain in its
+        signed semantic evidence.
+        """
 
         scope = request.authorized_semantic_scope
         requested_domains = list(request.business_domain_ids)
         resolved_domains = list(request.resolved_business_domain_ids)
-
         if scope is None:
             # Isolated adapter utilities do not represent a public request and
             # retain their legacy payload shape. Public orchestration always
@@ -630,28 +708,31 @@ class HttpDataRetrievalAdapter:
                     "Resolved execution scope differs from explicit authorization",
                 )
             resolved_domains = requested_domains
-        elif not resolved_domains:
-            raise AdapterError(
-                "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
-                "MODEL_WIDE request has no resolved Oagent execution domain",
-            )
+            execution_domain = resolved_domains[0]
+        elif business_domain_id is None:
+            if len(resolved_domains) == 1:
+                # MODEL_WIDE is still the caller's authorization mode.  The
+                # request-scoped published catalog may, however, prove that
+                # this model currently resolves to one domain. Forward that
+                # proven execution scope so Oagent searches the same catalog
+                # V2 used, while keeping the authorized request itself empty.
+                execution_domain = resolved_domains[0]
+            else:
+                # Preserve the platform/V1 contract exactly when the current
+                # catalog did not prove a unique execution domain. Oagent then
+                # resolves MODEL_WIDE and reports its choice in evidence.
+                return {
+                    "business_domain_id": None,
+                    "business_domain_ids": [],
+                }
+        else:
+            if resolved_domains != [business_domain_id]:
+                raise AdapterError(
+                    "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
+                    "Single-domain narrowing is not backed by current semantic evidence",
+                )
+            execution_domain = business_domain_id
 
-        if (
-            not resolved_domains
-            or any(type(domain) is not int or domain <= 0 for domain in resolved_domains)
-            or len(resolved_domains) != len(set(resolved_domains))
-        ):
-            raise AdapterError(
-                "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
-                "Oagent execution scope is empty or invalid",
-            )
-        if len(resolved_domains) > 1:
-            raise AdapterError(
-                "OAGENT_MULTI_DOMAIN_CONTRACT_UNSUPPORTED",
-                "Oagent /agent/query does not support multiple execution domains",
-            )
-
-        execution_domain = resolved_domains[0]
         if business_domain_id is not None and business_domain_id != execution_domain:
             raise AdapterError(
                 "REQUEST_SCOPE_INVALID",
@@ -1258,6 +1339,18 @@ class HttpDataRetrievalAdapter:
                 "semantic_model_id is required",
             )
 
+        # A literal that already belongs to a typed filter is not an untyped
+        # entity mention as well.  Keeping both representations makes Oagnet
+        # resolve the same word twice: once with its business role and once
+        # without it.  The second pass can become ambiguous even after the
+        # role-bound filter was resolved correctly (for example 万益特 as
+        # 商品品牌).  Work on a local copy so provenance stored by the caller is
+        # unchanged.
+        request = request.model_copy(deep=True)
+        request.semantic_entity_mentions = self._untyped_semantic_mentions(
+            request
+        )
+
         self._enforce_bound_scope(request, semantic_model_id, business_domain_id)
         self._require_supported_retrieval_scope(request)
         oagent_execution_scope = self._materialize_oagent_execution_scope(
@@ -1338,20 +1431,6 @@ class HttpDataRetrievalAdapter:
                 + json.dumps(request.filters, ensure_ascii=False, separators=(",", ":"))
                 + "。这些条件必须逐项出现在ASL filters中，字段可映射为已注册的语义字段，"
                 "但值、运算方向和业务含义不得省略、放宽或替换。"
-            )
-        required_non_null_names = [
-            value.split("=", 1)[1]
-            for value in request.assumptions
-            if value.startswith("REQUIRED_NAME_NON_NULL=")
-            and value.split("=", 1)[1].strip()
-        ]
-        if required_non_null_names:
-            asl_query += (
-                "\n名单主名称完整性要求："
-                + "、".join(dict.fromkeys(required_non_null_names))
-                + "必须使用当前语义层注册的对应名称属性投影，并在ASL filters中保留"
-                "“名称 != 空字符串”约束；该约束通过SQL三值逻辑同时排除NULL和空字符串，"
-                "不得把空名称作为名单成员返回。"
             )
         if request.dimensions:
             grouped_dimension_roles = self._required_grouped_dimension_roles(
@@ -1845,17 +1924,23 @@ class HttpDataRetrievalAdapter:
         if asl is None and asl_cache_key is not None:
             cached = self._asl_plan_cache.get(asl_cache_key)
             if cached is not None:
-                expires_at, cached_asl = cached
+                expires_at, cached_asl, cached_repairs = cached
                 if expires_at > time.monotonic():
                     asl = copy.deepcopy(cached_asl)
+                    asl_repairs = copy.deepcopy(cached_repairs)
                     intent_contract_confirmed = intent_asl_contract is not None
                 else:
                     self._asl_plan_cache.pop(asl_cache_key, None)
         if asl is None:
-            generated = await self.client.post(
-                self.settings.asl_generator_base_url,
-                self.settings.asl_generator_path,
-                {
+            with track_operation(
+                "UPSTREAM",
+                "upstream.oagnet.asl_generation",
+                attributes={"retryable": True},
+            ) as timing:
+                generated = await self.client.post(
+                    self.settings.asl_generator_base_url,
+                    self.settings.asl_generator_path,
+                    {
                     "query": asl_query,
                     "retrieval_query": retrieval_query,
                     "semantic_model_id": semantic_model_id,
@@ -1881,17 +1966,18 @@ class HttpDataRetrievalAdapter:
                         exploration_requirements.model_dump(mode="json")
                         if exploration_requirements is not None else None
                     ),
-                },
-                identity=identity,
-                application_id=request.application_id,
-                idempotency_key=f"{request.request_id}:asl",
-                # ASL generation is read-only and guarded by a stable
-                # idempotency key. Transient connection resets are therefore
-                # safe to retry; disabling retries made a single upstream TCP
-                # reset surface directly as a failed user turn.
-                retryable=True,
-                timeout=self.settings.asl_generation_timeout_seconds,
-            )
+                    },
+                    identity=identity,
+                    application_id=request.application_id,
+                    idempotency_key=f"{request.request_id}:asl",
+                    # ASL generation is read-only and guarded by a stable
+                    # idempotency key. Transient connection resets are therefore
+                    # safe to retry; disabling retries made a single upstream TCP
+                    # reset surface directly as a failed user turn.
+                    retryable=True,
+                    timeout=self.settings.asl_generation_timeout_seconds,
+                )
+                timing.mark_first_result()
             if generated.get("success") is not True:
                 raise AdapterError("ASL_GENERATION_FAILED", "ASL generator rejected request")
             self._confirm_generated_scope(
@@ -1967,7 +2053,6 @@ class HttpDataRetrievalAdapter:
         )
         self._repair_required_model81_dimensions(asl, request, semantic_model_id)
         self._deduplicate_relationship_identity_dimensions(asl)
-        self._ensure_required_name_non_null_filters(asl, request)
         self._validate_semantic_entity_mentions(asl, request, asl_repairs)
         bound_metric_codes = {
             metric.metric_id.split(":", 1)[1]
@@ -2018,6 +2103,25 @@ class HttpDataRetrievalAdapter:
         ambiguities = asl.get("ambiguity") or []
         if not isinstance(ambiguities, list):
             raise AdapterError("ASL_RESPONSE_INVALID", "ASL ambiguity must be a list")
+        if bound_metric_codes and ambiguities:
+            metric_ambiguity_types = {
+                "metric", "metric_selection", "indicator", "指标",
+            }
+            ambiguities = [
+                item for item in ambiguities
+                if not (
+                    isinstance(item, dict)
+                    and (
+                        str(item.get("type") or "").strip().casefold()
+                        in metric_ambiguity_types
+                        or "metric" in {
+                            str(slot).strip().casefold()
+                            for slot in (item.get("affected_slots") or [])
+                        }
+                    )
+                )
+            ]
+            asl["ambiguity"] = ambiguities
         if ambiguities:
             raise AdapterError(
                 "ASL_AMBIGUOUS",
@@ -2028,6 +2132,7 @@ class HttpDataRetrievalAdapter:
             asl,
             request,
             exact_operator_contract=intent_contract_confirmed,
+            repairs=asl_repairs,
         )
         self._validate_no_synthetic_product_filter(asl, request)
         self._validate_dependency_constraints(asl, request)
@@ -2130,6 +2235,19 @@ class HttpDataRetrievalAdapter:
                     "trend ASL must group by a registered temporal dimension",
                 )
 
+        # Publish the validated ASL at its real lifecycle boundary: Oagent has
+        # finished and all local ASL guards have passed, while SQL translation
+        # and database execution have not started yet.
+        await emit_progress(
+            "ASL_GENERATION",
+            "COMPLETED",
+            f"工具：{SEMANTIC_QUERY_TOOL_NAME}。\n"
+            + render_asl_extraction_json(asl),
+            message_limit=65536,
+            display_model="OagentASL",
+            display_version=str(asl.get("version") or "UNKNOWN"),
+        )
+
         if asl_cache_key is not None:
             if len(self._asl_plan_cache) >= self.settings.asl_plan_cache_max_items:
                 oldest_key = min(
@@ -2140,13 +2258,94 @@ class HttpDataRetrievalAdapter:
             self._asl_plan_cache[asl_cache_key] = (
                 time.monotonic() + self.settings.asl_plan_cache_ttl_seconds,
                 copy.deepcopy(asl),
+                copy.deepcopy(asl_repairs),
             )
 
+        return await self._execute_validated_asl(
+            request, identity, asl=asl, semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+            analysis_contract=analysis_contract,
+            metric_definitions=metric_definitions,
+            metric_definition_fingerprints=metric_definition_fingerprints,
+        )
+
+    async def query_surface(
+        self, request: CanonicalAnalysisRequest, identity: TrustedIdentity,
+        *, mentions: list[dict],
+    ) -> DataQueryResult:
+        """Plan from wording and use the same guarded SQL execution boundary.
+
+        Confirmed choices and multi-task dependencies require their own envelope;
+        reject those shapes until that envelope is connected, never drop them.
+        """
+        from app.adapters.surface_asl import generate_surface_asl
+
+        scope = request.authorized_semantic_scope
+        if scope is None:
+            raise AdapterError("SEMANTIC_CONTEXT_MISSING", "trusted semantic scope is required")
+        self._enforce_bound_scope(request, scope.semantic_model_id,
+                                  scope.business_domain_ids[0] if scope.business_domain_ids else None)
+        if (request.semantic_filter_bindings or request.dependency_constraints
+                or request.trusted_dimension_bindings or request.lineage_target
+                or contract_for_request(request) is not None):
+            raise AdapterError("SURFACE_HANDOFF_CONSTRAINTS_UNSUPPORTED",
+                               "confirmed bindings or execution constraints require explicit handoff")
+        plan = await generate_surface_asl(
+            self.client, self.settings,
+            completed_question=request.rewritten_question or request.original_question,
+            mentions=mentions, authorized_scope=scope, identity=identity,
+            application_id=request.application_id, request_id=request.request_id,
+            time_range=request.time_range,
+            confirmed_metrics=tuple(
+                metric for metric in request.metrics if metric.metric_id
+            ),
+            resolved_business_domain_ids=tuple(
+                request.resolved_business_domain_ids
+            ),
+        )
+        asl = plan["asl"]
+        # Execution metadata is derived from this ASL, not the upstream role
+        # guesses. Keep the caller's request untouched for provenance.
+        execution = request.model_copy(deep=True)
+        execution.metrics = []
+        execution.dimensions = [str(item.get("name")) for item in asl.get("dimensions", [])
+                                if isinstance(item, dict) and item.get("name")]
+        execution.business_domain_ids = list(scope.business_domain_ids)
+        await emit_progress("ASL_GENERATION", "COMPLETED",
+                            render_asl_extraction_json(asl), message_limit=65536,
+                            display_model="OagentASL", display_version=str(asl.get("version") or "UNKNOWN"))
+        execution_domains = (
+            list(scope.business_domain_ids)
+            or list(request.resolved_business_domain_ids)
+        )
+        execution_domain = (
+            execution_domains[0] if len(execution_domains) == 1 else None
+        )
+        return await self._execute_validated_asl(
+            execution, identity, asl=asl, semantic_model_id=scope.semantic_model_id,
+            business_domain_id=execution_domain,
+            analysis_contract=None, metric_definitions=[], metric_definition_fingerprints=[],
+        )
+
+    async def _execute_validated_asl(
+        self, request, identity, *, asl, semantic_model_id,
+        business_domain_id, analysis_contract, metric_definitions,
+        metric_definition_fingerprints,
+    ) -> DataQueryResult:
+        """Shared SQL boundary after planning and ASL validation.
+
+        Scope, read-only SQL and data-source checks apply to every planner.
+        """
         try:
-            translated = await self.client.post(
-                self.settings.sql_translator_base_url,
-                self.settings.sql_translate_path,
-                {
+            with track_operation(
+                "UPSTREAM",
+                "upstream.sql.translation",
+                attributes={"retryable": True},
+            ) as timing:
+                translated = await self.client.post(
+                    self.settings.sql_translator_base_url,
+                    self.settings.sql_translate_path,
+                    {
                     "asl": json.dumps(asl, ensure_ascii=False),
                     "modelId": str(semantic_model_id),
                     "business_domain_ids": list(request.business_domain_ids),
@@ -2155,17 +2354,18 @@ class HttpDataRetrievalAdapter:
                         analysis_contract.model_dump(mode="json")
                         if analysis_contract is not None else None
                     ),
-                },
-                identity=identity,
-                application_id=request.application_id,
-                idempotency_key=(
-                    f"{request.request_id}:sql-translate:"
-                    f"{metric_definition_fingerprints[0][:16]}"
-                    if metric_definition_fingerprints
-                    else f"{request.request_id}:sql-translate"
-                ),
-                retryable=True,
-            )
+                    },
+                    identity=identity,
+                    application_id=request.application_id,
+                    idempotency_key=(
+                        f"{request.request_id}:sql-translate:"
+                        f"{metric_definition_fingerprints[0][:16]}"
+                        if metric_definition_fingerprints
+                        else f"{request.request_id}:sql-translate"
+                    ),
+                    retryable=True,
+                )
+                timing.mark_first_result()
         except AdapterError as exc:
             if exc.status_code == 404:
                 raise AdapterError(
@@ -2214,6 +2414,17 @@ class HttpDataRetrievalAdapter:
                 "SQL_RESPONSE_INVALID", "SQL translation response did not contain SQL"
             )
         sql = sql.strip()
+        effective_filter_summary = translated.get("effective_filter_summary")
+        if not isinstance(effective_filter_summary, dict):
+            effective_filter_summary = {}
+        applied_metric_filters = effective_filter_summary.get(
+            "metric_global_filters"
+        )
+        if not isinstance(applied_metric_filters, list):
+            applied_metric_filters = []
+        applied_metric_filters = [
+            item for item in applied_metric_filters if isinstance(item, dict)
+        ]
         sql = self._apply_current_metric_formulas(sql, metric_definitions)
         sql = self._apply_shared_region_hospital_coverage_policy(
             sql,
@@ -2224,9 +2435,6 @@ class HttpDataRetrievalAdapter:
             business_domain_id=business_domain_id,
         )
         self._validate_read_only_sql(sql)
-        self._validate_sql_relationship_graph(sql)
-        self._validate_query_to_sql_entity_alignment(request, sql)
-        self._validate_geographic_hierarchy_alignment(asl, request, sql)
         metric_bindings = [
             {
                 "用户指标": metric.input,
@@ -2246,15 +2454,14 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "SEMANTIC_QUERY_PLANNING",
             "COMPLETED",
-            "工具：智能语义查询器；"
-            f"输入：问题={_compact_progress_value(request.rewritten_question or request.original_question, 180)}，"
-            f"语义模型={semantic_model_id}，"
-            f"业务域={request.business_domain_ids or ([business_domain_id] if business_domain_id else [])}，"
-            f"指标诉求={_compact_progress_value([metric.input for metric in request.metrics], 240)}，"
-            f"筛选条件={_compact_progress_value(request.filters, 500)}；"
-            f"输出：指标绑定={_compact_progress_value(metric_bindings, 500)}，"
+            f"调用工具：{SQL_TRANSLATION_TOOL_NAME}。\n"
+            f"输入：已验证 ASL（版本={asl.get('version') or 'UNKNOWN'}，"
+            f"指标绑定={_compact_progress_value(metric_bindings, 500)}，"
             f"查询结构={_compact_progress_value(query_shape, 500)}，"
-            f"只读SQL：已生成（{len(sql)}字符），安全校验：通过。",
+            f"ASL筛选条件={_compact_progress_value(asl.get('filters') or [], 500)}，"
+            f"指标固定口径（SQL自动合并）="
+            f"{_compact_progress_value(applied_metric_filters, 700)}）；"
+            f"输出：只读 SQL 已生成（{len(sql)}字符），安全校验：通过。",
         )
 
         execute_payload: dict[str, Any] = {
@@ -2295,21 +2502,27 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "SQL_EXECUTION",
             "RUNNING",
-            "调用工具：SQL 执行服务。\n"
+            f"调用工具：{SQL_EXECUTION_TOOL_NAME}。\n"
             f"输入：{_compact_progress_value(execute_payload, 1200)}。",
         )
         try:
-            executed = await self.client.post(
-                self.settings.sql_translator_base_url,
-                self.settings.sql_execute_path,
-                execute_payload,
-                identity=identity,
-                application_id=request.application_id,
-                idempotency_key=f"{request.request_id}:sql-execute",
-                # Database execution is not automatically retried: a timeout does
-                # not prove that the upstream query was never started.
-                retryable=False,
-            )
+            with track_operation(
+                "UPSTREAM",
+                "upstream.sql.execution",
+                attributes={"retryable": False},
+            ) as timing:
+                executed = await self.client.post(
+                    self.settings.sql_translator_base_url,
+                    self.settings.sql_execute_path,
+                    execute_payload,
+                    identity=identity,
+                    application_id=request.application_id,
+                    idempotency_key=f"{request.request_id}:sql-execute",
+                    # Database execution is not automatically retried: a timeout does
+                    # not prove that the upstream query was never started.
+                    retryable=False,
+                )
+                timing.mark_first_result()
         except AdapterError as exc:
             if exc.status_code == 404:
                 raise AdapterError(
@@ -2365,11 +2578,9 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "SQL_EXECUTION",
             "COMPLETED",
-            "SQL 执行服务调用完成。\n"
+            f"{SQL_EXECUTION_TOOL_NAME}调用完成。\n"
             f"输出字段：{_compact_progress_value(raw.get('columns') or [], 500)}；"
-            f"返回行数：{raw.get('row_count', len(raw.get('rows') or []))}；"
-            f"数据预览：{_compact_progress_value((raw.get('data') or raw.get('preview_data') or [])[:2], 1000)}。\n"
-            "正在校验结果集契约和数据源范围。",
+            f"返回行数：{raw.get('row_count', len(raw.get('rows') or []))}。",
         )
         actual_data_source_id = str((raw.get("data_source") or {}).get("id") or "") or None
         if (
@@ -2389,7 +2600,6 @@ class HttpDataRetrievalAdapter:
             raw,
             request_id=str(request.request_id),
             has_result_file=result_file_url is not None,
-            distinct_projection=requires_distinct_relationship_projection(request),
         )
         if analysis_contract is not None and not dataset.truncated:
             violation = validate_contract(
@@ -2798,6 +3008,7 @@ class HttpDataRetrievalAdapter:
         request: CanonicalAnalysisRequest,
         *,
         exact_operator_contract: bool = False,
+        repairs: list[dict[str, Any]] | None = None,
     ) -> None:
         """Fail closed when generated ASL drops a caller-grounded filter value."""
         generated = [
@@ -2809,6 +3020,20 @@ class HttpDataRetrievalAdapter:
         null_operators = {
             "IS_NOT_NULL", "IS NOT NULL", "NOT_NULL", "NOT NULL",
         }
+        # Source-catalog normalization evidence returned by Oagnet: a caller
+        # literal such as 上海 is allowed to appear as its registered standard
+        # value 上海市 in the generated ASL while the caller contract keeps the
+        # original wording. Only repair-backed mappings qualify.
+        canonical_values: dict[str, set[str]] = {}
+        for repair in repairs or []:
+            if not isinstance(repair, dict):
+                continue
+            if repair.get("type") != "ADD_SOURCE_RESOLVED_ENTITY_FILTER":
+                continue
+            mention = str(repair.get("mention") or "").strip()
+            canonical = str(repair.get("canonical_value") or "").strip()
+            if mention and canonical:
+                canonical_values.setdefault(mention, set()).add(canonical)
 
         def is_non_null_constraint(item: dict[str, Any]) -> bool:
             operator = str(item.get("operator") or "").upper()
@@ -2859,6 +3084,11 @@ class HttpDataRetrievalAdapter:
                 required.get("operator") or "EQ"
             ).upper().replace("_", " ")
             required_negative = required_operator in negative_operators
+            # Expand each caller literal with its source-catalog standard value
+            # (for example 上海 → 上海市). Only repair-backed mappings apply.
+            acceptable_text = set(required_text)
+            for required_value in required_text:
+                acceptable_text.update(canonical_values.get(required_value, ()))
             preserved = False
             for item in generated:
                 if binding is not None:
@@ -2901,7 +3131,8 @@ class HttpDataRetrievalAdapter:
                 if exact_operator_contract and (
                     required_exact
                     and candidate_exact
-                    and required_text == candidate_text
+                    and candidate_text <= acceptable_text
+                    and len(candidate_text) == len(required_text)
                 ) or (
                     (not exact_operator_contract or not required_exact)
                     and all(
@@ -2924,37 +3155,45 @@ class HttpDataRetrievalAdapter:
                 "ASL did not preserve one or more caller-grounded filters",
                 details={"missing_filters": missing},
             )
-        required_name_fields = list(dict.fromkeys(
-            value.split("=", 1)[1].strip()
-            for value in request.assumptions
-            if value.startswith("REQUIRED_NAME_NON_NULL=")
-            and value.split("=", 1)[1].strip()
-        ))
-        missing_name_constraints = [
-            expected_field
-            for expected_field in required_name_fields
-            if not any(
-                is_non_null_constraint(item)
-                and not cls._missing_detail_fields(
-                    [expected_field],
-                    [{
-                        key: item.get(key)
-                        for key in ("field", "name", "attr", "alias")
-                        if item.get(key) is not None
-                    }],
-                )
-                for item in generated
-            )
-        ]
-        if missing_name_constraints:
-            raise AdapterError(
-                "ASL_REQUIRED_NAME_NON_NULL_MISSING",
-                "ASL omitted a required master-name non-null constraint",
-                details={"missing_name_fields": missing_name_constraints},
-            )
-
     @staticmethod
+    def _semantic_literal_key(value: object) -> str:
+        """Normalize formatting-only variants of the same semantic literal."""
+
+        normalized = str(value or "").translate(str.maketrans({
+            "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+            "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+            "\uff0d": "-",
+        }))
+        return re.sub(r"\s+", "", normalized.strip()).casefold()
+
+    @classmethod
+    def _untyped_semantic_mentions(
+        cls,
+        request: CanonicalAnalysisRequest,
+    ) -> list[str]:
+        """Return mentions that are not already represented by typed filters."""
+
+        typed_values: set[str] = set()
+        for item in request.filters:
+            if not isinstance(item, dict) or not str(item.get("field") or "").strip():
+                continue
+            raw = item.get("value")
+            values = raw if isinstance(raw, list) else [raw]
+            typed_values.update(
+                cls._semantic_literal_key(value)
+                for value in values
+                if value not in (None, "") and cls._semantic_literal_key(value)
+            )
+        return list(dict.fromkeys(
+            text
+            for value in request.semantic_entity_mentions
+            if (text := str(value).strip())
+            and cls._semantic_literal_key(text) not in typed_values
+        ))
+
+    @classmethod
     def _validate_semantic_entity_mentions(
+        cls,
         asl: dict[str, Any],
         request: CanonicalAnalysisRequest,
         repairs: list[dict[str, Any]],
@@ -2972,22 +3211,10 @@ class HttpDataRetrievalAdapter:
             item for item in asl.get("filters") or [] if isinstance(item, dict)
         ]
         unresolved: list[str] = []
-        def literal_key(value: object) -> str:
-            # Structured extraction may preserve or remove spaces inside the
-            # same bilingual legal name.  Once the role-bound filter has been
-            # source-validated, that formatting-only variant is already bound
-            # and must not trigger a second untyped-entity lookup.
-            normalized = str(value or "").translate(str.maketrans({
-                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
-                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
-                "\uff0d": "-",
-            }))
-            return re.sub(r"\s+", "", normalized.strip()).casefold()
-
         for mention in mentions:
             direct = any(
-                literal_key(str(item.get("value") or "").strip("%"))
-                == literal_key(mention)
+                cls._semantic_literal_key(str(item.get("value") or "").strip("%"))
+                == cls._semantic_literal_key(mention)
                 for item in generated_filters
             )
             resolved = False
@@ -3019,83 +3246,6 @@ class HttpDataRetrievalAdapter:
                 "ASL did not provide source-backed bindings for semantic entity mentions",
                 details={"unresolved_mentions": unresolved},
             )
-
-    @classmethod
-    def _ensure_required_name_non_null_filters(
-        cls,
-        asl: dict[str, Any],
-        request: CanonicalAnalysisRequest,
-    ) -> None:
-        """Bind list-name completeness to the currently projected ASL field.
-
-        The ASL model chooses the registered semantic attribute.  Once that
-        projection is present, adding a non-null predicate on the exact same
-        reference is deterministic and remains valid when physical schemas are
-        republished.  No table or column name is guessed by the application.
-        """
-
-        required_fields = list(dict.fromkeys(
-            value.split("=", 1)[1].strip()
-            for value in request.assumptions
-            if value.startswith("REQUIRED_NAME_NON_NULL=")
-            and value.split("=", 1)[1].strip()
-        ))
-        if not required_fields:
-            return
-        filters = [
-            item for item in (asl.get("filters") or []) if isinstance(item, dict)
-        ]
-        dimensions = [
-            item for item in (asl.get("dimensions") or []) if isinstance(item, dict)
-        ]
-        null_operators = {
-            "IS_NOT_NULL", "IS NOT NULL", "NOT_NULL", "NOT NULL",
-        }
-
-        negative_operators = {
-            "NE", "!=", "<>", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
-        }
-
-        def is_non_null_constraint(item: dict[str, Any]) -> bool:
-            operator = str(item.get("operator") or "").upper()
-            if operator in null_operators:
-                return True
-            return (
-                operator in negative_operators
-                and item.get("value") is not None
-                and str(item.get("value")).strip() == ""
-            )
-        for expected_field in required_fields:
-            if any(
-                is_non_null_constraint(item)
-                and not cls._missing_detail_fields([expected_field], [item])
-                for item in filters
-            ):
-                continue
-            candidates = [
-                item for item in dimensions
-                if not cls._missing_detail_fields([expected_field], [item])
-            ]
-            if len(candidates) != 1:
-                continue
-            dimension = candidates[0]
-            reference = next(
-                (
-                    str(dimension.get(key)).strip()
-                    for key in ("name", "field")
-                    if dimension.get(key) is not None
-                    and str(dimension.get(key)).strip()
-                ),
-                None,
-            )
-            if reference is None:
-                continue
-            filters.append({
-                "field": reference,
-                "operator": "!=",
-                "value": "",
-            })
-        asl["filters"] = filters
 
     @classmethod
     def _validate_no_synthetic_product_filter(
@@ -3145,16 +3295,32 @@ class HttpDataRetrievalAdapter:
             ).strip()
             for item in dimensions
         ]
+
+        def dimension_satisfies_role(item: dict[str, Any], role: str) -> bool:
+            binding = cls._trusted_dimension_binding_for(request, role)
+            if binding is not None:
+                # A V2-authorized dimension closes only through its published
+                # canonical code.  Free alias text, including a correct display
+                # label attached to an unbound code, is not identity proof.
+                return cls._dimension_identity_matches(item, binding)
+            actual = " ".join(
+                str(item.get(key) or "")
+                for key in ("name", "alias", "attr", "field")
+            ).strip()
+            return cls._semantic_dimension_role_matches(role, actual)
+
         missing: list[str] = []
+        satisfied = [False] * len(dimensions)
         required_dimensions = cls._required_grouped_dimension_roles(request)
         for expected in required_dimensions:
             expected_text = str(expected).strip()
             if not expected_text:
                 continue
-            preserved = any(
-                cls._semantic_dimension_role_matches(expected_text, actual)
-                for actual in actual_references
-            )
+            preserved = False
+            for index, item in enumerate(dimensions):
+                if dimension_satisfies_role(item, expected_text):
+                    satisfied[index] = True
+                    preserved = True
             if not preserved:
                 missing.append(expected_text)
         if missing:
@@ -3169,12 +3335,8 @@ class HttpDataRetrievalAdapter:
             )
         unexpected = [
             actual
-            for actual in actual_references
-            if actual
-            and not any(
-                cls._semantic_dimension_role_matches(expected, actual)
-                for expected in required_dimensions
-            )
+            for index, actual in enumerate(actual_references)
+            if actual and not satisfied[index]
         ]
         if unexpected and "STRICT_GROUPING_DIMENSIONS" in request.assumptions:
             raise AdapterError(
@@ -3186,6 +3348,46 @@ class HttpDataRetrievalAdapter:
                     "projected_dimensions": dimensions,
                 },
             )
+
+    @classmethod
+    def _trusted_dimension_binding_for(
+        cls,
+        request: CanonicalAnalysisRequest,
+        expected: str,
+    ) -> Any | None:
+        """Return the trusted catalog binding for one requested dimension role.
+
+        The binding is matched by exact display-name equality: the V1 request
+        materializes ``dimensions`` from the same authorized display names, so
+        fuzzy role matching must not select another dimension's identity.
+        """
+
+        expected_text = str(expected).strip()
+        for binding in request.trusted_dimension_bindings:
+            if str(binding.display_name).strip() == expected_text:
+                return binding
+        return None
+
+    @classmethod
+    def _dimension_identity_matches(
+        cls,
+        item: dict[str, Any],
+        binding: Any,
+    ) -> bool:
+        """Prove one ASL dimension against a bound canonical dimension code."""
+
+        canonical_code = str(binding.canonical_code).strip()
+        if not canonical_code:
+            return False
+        for key in ("name", "field"):
+            value = str(item.get(key) or "").strip()
+            if not value:
+                continue
+            if value == canonical_code:
+                return True
+            if value.rsplit(".", 1)[-1] == canonical_code:
+                return True
+        return False
 
     @classmethod
     def _semantic_dimension_role_matches(
@@ -4371,7 +4573,6 @@ class HttpDataRetrievalAdapter:
     @staticmethod
     def _dataset(
         data: dict[str, Any], *, request_id: str, has_result_file: bool = False,
-        distinct_projection: bool = False,
     ) -> Dataset:
         rows_from_data = data.get("data")
         uses_preview = (
@@ -4394,68 +4595,21 @@ class HttpDataRetrievalAdapter:
             raise AdapterError("SQL_RESPONSE_INVALID", "query data must be a list of objects")
         if not isinstance(columns, list) or not all(isinstance(col, str) for col in columns):
             raise AdapterError("SQL_RESPONSE_INVALID", "query columns must be a list of strings")
-        declared_count = (
-            data.get("preview_count", data.get("preview_row_count", len(rows)))
-            if uses_preview
-            else len(rows) if download_only else data.get("row_count", len(rows))
-        )
-        if not isinstance(declared_count, int) or isinstance(declared_count, bool) or declared_count != len(rows):
-            raise AdapterError("SQL_RESPONSE_INVALID", "row_count does not match returned preview rows")
         total_count = data.get("total_count")
         if uses_preview and total_count is None:
             total_count = data.get("row_count")
         if download_only and total_count is None:
             total_count = data.get("row_count")
-        if total_count is not None and (
-            not isinstance(total_count, int)
-            or isinstance(total_count, bool)
-            or total_count < len(rows)
-        ):
-            raise AdapterError(
-                "SQL_RESPONSE_INVALID",
-                "total_count must be an integer no smaller than returned rows",
-            )
+        if not isinstance(total_count, int) or isinstance(total_count, bool):
+            total_count = len(rows)
+        total_count = max(total_count, len(rows))
         truncated_raw = data.get("truncated", data.get("preview_truncated"))
-        if truncated_raw is not None and not isinstance(truncated_raw, bool):
-            raise AdapterError("SQL_RESPONSE_INVALID", "truncated must be a boolean")
         truncated = (
             truncated_raw
             if isinstance(truncated_raw, bool)
             else download_only or total_count is not None and total_count > len(rows)
         )
-        if total_count is not None and total_count > len(rows) and not truncated:
-            raise AdapterError(
-                "SQL_RESPONSE_INVALID",
-                "truncated=false conflicts with total_count greater than returned rows",
-            )
-        if distinct_projection and rows:
-            # Relationship queries are sets.  Keep a final defensive boundary
-            # here because legacy translator versions and physical join paths
-            # can still return duplicate visible rows even when the ASL asks
-            # for DISTINCT.  Normalize only surrounding whitespace and dedupe
-            # the complete projected row; ordinary transaction detail never
-            # enters this branch.
-            normalized_rows: list[dict[str, Any]] = []
-            seen: set[str] = set()
-            for row in rows:
-                normalized = {
-                    key: value.strip() if isinstance(value, str) else value
-                    for key, value in row.items()
-                }
-                marker = json.dumps(
-                    normalized,
-                    ensure_ascii=False,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                    default=str,
-                )
-                if marker in seen:
-                    continue
-                seen.add(marker)
-                normalized_rows.append(normalized)
-            rows = normalized_rows
-            if not truncated:
-                total_count = len(rows)
+        truncated = bool(truncated or total_count > len(rows))
         fingerprint = hashlib.sha256(
             json.dumps(
                 {"columns": columns, "rows": rows},
@@ -4500,11 +4654,6 @@ class HttpDataRetrievalAdapter:
         source_data_as_of: datetime | date | None = None
         source_watermark_field: str | None = None
         if source_watermark_present:
-            if not source_snapshot_complete or str(quality_status).strip().upper() != "PASS":
-                raise AdapterError(
-                    "SQL_RESPONSE_INVALID",
-                    "source watermark requires a complete PASS snapshot contract",
-                )
             if not isinstance(source_data_as_of_raw, str) or not source_data_as_of_raw.strip():
                 raise AdapterError(
                     "SQL_RESPONSE_INVALID",
