@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import math
+import re
+import unicodedata
 from decimal import Decimal, InvalidOperation
 from typing import Any, Mapping
 from xml.sax.saxutils import escape
@@ -31,10 +33,44 @@ def build_chart_specs(
     """Create renderer-neutral chart instructions from validated result rows."""
     if not rows:
         return []
-    metric = str(facts.get("metric_column") or "")
-    if metric not in columns or not _column_is_numeric(metric, rows):
-        metric = _first_numeric_column(columns, rows) or ""
-    non_metrics = [column for column in columns if column != metric]
+    if intent == PrimaryIntent.DATA_QUALITY:
+        return _build_metric_chart(intent, columns, rows, facts, "")
+    # Comparison analyzers expose either a single metric, several metrics, or
+    # per-metric summaries. Column position is never evidence of a measure.
+    declared = [facts.get("metric_column")]
+    declared.extend(facts.get("metric_columns") or [])
+    for key in ("comparisons", "metric_summaries"):
+        declared.extend(
+            item.get("metric_column")
+            for item in facts.get(key) or [] if isinstance(item, Mapping)
+        )
+    declared = list(dict.fromkeys(str(item) for item in declared if item))
+    metrics = [
+        column for column in declared
+        if column in columns and not is_identifier_column(column)
+        and _column_is_numeric(column, rows)
+    ]
+    if not declared:
+        metric = _first_numeric_column(columns, rows)
+        metrics = [metric] if metric else []
+    chart_facts = {**facts, "metric_columns": metrics}
+    return [
+        chart for metric in metrics
+        for chart in _build_metric_chart(intent, columns, rows, chart_facts, metric)
+    ]
+
+
+def _build_metric_chart(
+    intent: PrimaryIntent,
+    columns: list[str],
+    rows: list[dict[str, Any]],
+    facts: dict[str, Any],
+    metric: str,
+) -> list[ChartSpec]:
+    non_metrics = [
+        column for column in columns
+        if column not in (facts.get("metric_columns") or [metric])
+    ]
     temporal = next(
         (column for column in non_metrics if _looks_temporal(column, rows)),
         None,
@@ -43,10 +79,15 @@ def build_chart_specs(
         (
             column
             for column in non_metrics
-            if column != temporal and not _column_is_numeric(column, rows)
+            if column != temporal and not is_identifier_column(column)
+            and not _column_is_numeric(column, rows)
         ),
         None,
     )
+    confirmed_label = str(facts.get("label_column") or "")
+    if confirmed_label in non_metrics and confirmed_label != temporal:
+        categorical = confirmed_label
+    label = categorical or temporal or (non_metrics[0] if non_metrics else None)
 
     if intent in {PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.FORECAST_ANALYSIS}:
         label = temporal or (non_metrics[0] if non_metrics else None)
@@ -64,16 +105,18 @@ def build_chart_specs(
             series_field=categorical if temporal else None,
         )
     if intent == PrimaryIntent.COMPARISON_ANALYSIS:
-        label = categorical or temporal or (non_metrics[0] if non_metrics else None)
         return _one("BAR", label, metric, rows, f"{metric}对比")
     if intent == PrimaryIntent.COMPOSITION_ANALYSIS:
-        label = categorical or temporal or (non_metrics[0] if non_metrics else None)
-        return _one("PIE", label, metric, rows, f"{metric}占比")
+        values = [_finite_number(row.get(metric)) for row in rows]
+        if any(value is not None and value < 0 for value in values):
+            return _one("BAR", label, metric, rows, f"{metric}对比")
+        categories = {str(row.get(label)) for row in rows} if label else set()
+        chart_type = "BAR" if len(categories) > 8 else "PIE"
+        return _one(chart_type, label, metric, rows, f"{metric}占比")
     if intent == PrimaryIntent.ANOMALY_ANALYSIS:
         label = temporal or (non_metrics[0] if non_metrics else None)
         return _one("LINE", label, metric, rows, f"{metric}异常观察")
     if intent == PrimaryIntent.ROOT_CAUSE_ANALYSIS:
-        label = categorical or temporal or (non_metrics[0] if non_metrics else None)
         return _one("BAR", label, metric, rows, f"{metric}贡献分解", horizontal=True)
     if intent == PrimaryIntent.DATA_QUALITY:
         null_counts = facts.get("null_counts") or {}
@@ -125,11 +168,16 @@ def render_chart_svg(
     rows = [dict(item) for item in raw.get("data") or [] if isinstance(item, Mapping)]
     if chart_type not in {"LINE", "BAR", "PIE", "SCATTER"}:
         return None
-    if not rows or not x_field or not y_fields:
+    if (not rows or not x_field or len(y_fields) != 1
+            or is_identifier_column(y_fields[0])
+            or (chart_type == "SCATTER" and is_identifier_column(x_field))):
         return None
 
     width = max(640, min(int(width), 1600))
     height = max(360, min(int(height), 1000))
+    horizontal = bool(raw.get("horizontal")) or (chart_type == "BAR" and len(rows) > 12)
+    if chart_type == "BAR" and horizontal:
+        height = max(height, min(len(rows), MAX_CHART_POINTS) * 28 + 110)
     if chart_type == "PIE":
         body = _render_pie(rows, x_field, y_fields[0], width, height)
     elif chart_type == "BAR":
@@ -139,7 +187,7 @@ def render_chart_svg(
             y_fields[0],
             width,
             height,
-            horizontal=bool(raw.get("horizontal")),
+            horizontal=horizontal,
         )
     else:
         body = _render_cartesian(
@@ -190,13 +238,40 @@ def _display_number(value: float) -> str:
     return f"{value:,.2f}".rstrip("0").rstrip(".")
 
 
-def _chart_bounds(values: list[float]) -> tuple[float, float]:
-    low = min(values)
-    high = max(values)
+def _value_label(value: Any) -> str:
+    """Visible labels retain business precision, unlike abbreviated axis ticks."""
+    text = str(value).strip().replace(",", "").replace("，", "")
+    suffix = "%" if text.endswith("%") else ""
+    try:
+        number = Decimal(text.removesuffix("%"))
+        if not number.is_finite():
+            return ""
+        formatted = format(number, ",f")
+        if "." in formatted:
+            formatted = formatted.rstrip("0").rstrip(".")
+        return formatted + suffix
+    except (InvalidOperation, ValueError):
+        return ""
+
+
+def _value_text(x: float, y: float, value: str, *, anchor: str = "middle") -> str:
+    return (
+        f'<text class="data-label" x="{x:.1f}" y="{y:.1f}" text-anchor="{anchor}" '
+        'font-family="Microsoft YaHei, sans-serif" font-size="12" fill="#374151" '
+        'paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">'
+        f'{escape(value)}</text>'
+    )
+
+
+def _chart_bounds(values: list[float], *, include_zero: bool = False) -> tuple[float, float]:
+    low = min(0.0, min(values)) if include_zero else min(values)
+    high = max(0.0, max(values)) if include_zero else max(values)
     if math.isclose(low, high):
         padding = abs(low) * 0.1 or 1.0
         return low - padding, high + padding
     padding = (high - low) * 0.08
+    if include_zero:
+        return low - padding if low < 0 else 0.0, high + padding if high > 0 else 0.0
     return min(0.0, low - padding), high + padding
 
 
@@ -211,10 +286,12 @@ def _render_cartesian(
     scatter: bool,
 ) -> str | None:
     points = [
-        (str(row.get(x_field, "")), _finite_number(row.get(y_field)), str(row.get(series_field, "")) if series_field else "")
+        (str(row.get(x_field, "")), _finite_number(row.get(y_field)),
+         str(row.get(series_field, "")) if series_field else "", _value_label(row.get(y_field)))
         for row in rows[:MAX_CHART_POINTS]
     ]
-    points = [(x, y, series) for x, y, series in points if x and y is not None]
+    points = [item for item in points if item[0] and item[1] is not None
+              and (not scatter or _finite_number(item[0]) is not None)]
     if not points:
         return None
 
@@ -226,6 +303,12 @@ def _render_cartesian(
     y_low, y_high = _chart_bounds(y_values)
     y_span = y_high - y_low
     x_denominator = max(1, len(labels) - 1)
+    if scatter:
+        x_values = [float(_finite_number(label)) for label in labels]
+        x_low, x_high = _chart_bounds(x_values)
+        x_position = lambda label: left + (float(_finite_number(label)) - x_low) / (x_high - x_low) * plot_width
+    else:
+        x_position = lambda label: left + label_index[label] / x_denominator * plot_width
 
     parts = []
     for tick in range(6):
@@ -246,37 +329,45 @@ def _render_cartesian(
 
     max_x_labels = 12
     label_step = max(1, math.ceil(len(labels) / max_x_labels))
-    for index, label in enumerate(labels):
+    axis_labels = (
+        [_display_number(x_low + (x_high - x_low) * index / 5) for index in range(6)]
+        if scatter else labels
+    )
+    for index, label in enumerate(axis_labels):
         if index % label_step and index != len(labels) - 1:
             continue
-        x = left + index / x_denominator * plot_width
+        x = left + index / 5 * plot_width if scatter else x_position(label)
         parts.append(
             f'<text x="{x:.1f}" y="{bottom + 24:.1f}" text-anchor="middle" '
             'font-family="Microsoft YaHei, sans-serif" font-size="11" fill="#4b5563">'
             f'{escape(_short_label(label, 12))}</text>'
         )
 
-    groups: dict[str, list[tuple[str, float]]] = {}
-    for label, value, series in points:
-        groups.setdefault(series, []).append((label, float(value)))
+    groups: dict[str, list[tuple[str, float, str]]] = {}
+    for label, value, series, value_label in points:
+        groups.setdefault(series, []).append((label, float(value), value_label))
     for series_index, (series, series_points) in enumerate(groups.items()):
         color = _CHART_COLORS[series_index % len(_CHART_COLORS)]
         coordinates = []
-        for label, value in series_points:
-            x = left + label_index[label] / x_denominator * plot_width
+        for label, value, value_label in series_points:
+            x = x_position(label)
             y = bottom - (value - y_low) / y_span * plot_height
-            coordinates.append((x, y, label, value))
+            coordinates.append((x, y, label, value_label))
         if not scatter and len(coordinates) > 1:
             serialized = " ".join(f"{x:.1f},{y:.1f}" for x, y, _, _ in coordinates)
             parts.append(
                 f'<polyline points="{serialized}" fill="none" stroke="{color}" '
                 'stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>'
             )
-        for x, y, label, value in coordinates:
+        for x, y, label, value_label in coordinates:
             parts.append(
                 f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="{color}" stroke="#fff" stroke-width="1.5">'
-                f'<title>{escape(label)}：{escape(_display_number(value))}</title></circle>'
+                f'<title>{escape(label)}：{escape(value_label)}</title></circle>'
             )
+            parts.append(_value_text(
+                x, max(top + 12, y - 10), value_label,
+                anchor="start" if x <= left else "end" if x >= right else "middle",
+            ))
         if series:
             legend_x = left + series_index * 150
             parts.append(
@@ -298,10 +389,10 @@ def _render_bars(
     horizontal: bool,
 ) -> str | None:
     values = [
-        (str(row.get(x_field, "")), _finite_number(row.get(y_field)))
-        for row in rows[:30]
+        (str(row.get(x_field, "")), _finite_number(row.get(y_field)), _value_label(row.get(y_field)))
+        for row in rows[:MAX_CHART_POINTS]
     ]
-    values = [(label, float(value)) for label, value in values if label and value is not None]
+    values = [(label, float(value), text) for label, value, text in values if label and value is not None]
     if not values:
         return None
     if horizontal:
@@ -309,7 +400,7 @@ def _render_bars(
 
     left, right, top, bottom = 70.0, width - 28.0, 62.0, height - 92.0
     plot_width, plot_height = right - left, bottom - top
-    low, high = _chart_bounds([value for _, value in values])
+    low, high = _chart_bounds([value for _, value, _ in values], include_zero=True)
     baseline_value = min(max(0.0, low), high)
     scale = lambda value: bottom - (value - low) / (high - low) * plot_height
     baseline = scale(baseline_value)
@@ -318,16 +409,25 @@ def _render_bars(
     parts = [
         f'<line x1="{left:.1f}" y1="{baseline:.1f}" x2="{right:.1f}" y2="{baseline:.1f}" stroke="#9ca3af"/>'
     ]
+    for tick in range(6):
+        value = low + (high - low) * tick / 5
+        parts.append(
+            f'<text x="{left - 8:.1f}" y="{scale(value) + 4:.1f}" text-anchor="end" '
+            'font-family="Microsoft YaHei, sans-serif" font-size="11" fill="#6b7280">'
+            f'{escape(_display_number(value))}</text>'
+        )
     label_step = max(1, math.ceil(len(values) / 12))
-    for index, (label, value) in enumerate(values):
+    for index, (label, value, text) in enumerate(values):
         x = left + index * slot + (slot - bar_width) / 2
         y = min(baseline, scale(value))
         bar_height = max(1.0, abs(scale(value) - baseline))
         color = _CHART_COLORS[index % len(_CHART_COLORS)]
         parts.append(
             f'<rect x="{x:.1f}" y="{y:.1f}" width="{bar_width:.1f}" height="{bar_height:.1f}" '
-            f'rx="3" fill="{color}"><title>{escape(label)}：{escape(_display_number(value))}</title></rect>'
+            f'rx="3" fill="{color}"><title>{escape(label)}：{escape(text)}</title></rect>'
         )
+        label_y = max(top + 12, scale(value) - 8) if value >= 0 else min(bottom - 2, scale(value) + 16)
+        parts.append(_value_text(x + bar_width / 2, label_y, text))
         if index % label_step == 0 or index == len(values) - 1:
             parts.append(
                 f'<text x="{x + bar_width / 2:.1f}" y="{bottom + 22:.1f}" text-anchor="middle" '
@@ -338,25 +438,31 @@ def _render_bars(
 
 
 def _render_horizontal_bars(
-    values: list[tuple[str, float]], width: int, height: int
+    values: list[tuple[str, float, str]], width: int, height: int
 ) -> str:
-    left, right, top, bottom = 190.0, width - 42.0, 62.0, height - 38.0
+    left, right, top, bottom = 190.0, width - 110.0, 62.0, height - 38.0
     plot_width, plot_height = right - left, bottom - top
-    max_value = max(abs(value) for _, value in values) or 1.0
+    low, high = _chart_bounds([value for _, value, _ in values], include_zero=True)
+    scale = lambda value: left + (value - low) / (high - low) * plot_width
+    baseline = scale(0)
     slot = plot_height / len(values)
     bar_height = max(4.0, min(28.0, slot * 0.62))
-    parts = []
-    for index, (label, value) in enumerate(values):
+    parts = [f'<line x1="{baseline:.1f}" y1="{top:.1f}" x2="{baseline:.1f}" y2="{bottom:.1f}" stroke="#9ca3af"/>']
+    for index, (label, value, text) in enumerate(values):
         y = top + index * slot + (slot - bar_height) / 2
-        bar_width = max(1.0, abs(value) / max_value * plot_width)
+        bar_width = max(1.0, abs(scale(value) - baseline))
+        x = min(baseline, scale(value))
         color = _CHART_COLORS[index % len(_CHART_COLORS)]
         parts.append(
             f'<text x="{left - 10:.1f}" y="{y + bar_height * .72:.1f}" text-anchor="end" '
             'font-family="Microsoft YaHei, sans-serif" font-size="11" fill="#4b5563">'
             f'{escape(_short_label(label, 18))}</text>'
-            f'<rect x="{left:.1f}" y="{y:.1f}" width="{bar_width:.1f}" height="{bar_height:.1f}" '
-            f'rx="3" fill="{color}"><title>{escape(label)}：{escape(_display_number(value))}</title></rect>'
+            f'<rect x="{x:.1f}" y="{y:.1f}" width="{bar_width:.1f}" height="{bar_height:.1f}" '
+            f'rx="3" fill="{color}"><title>{escape(label)}：{escape(text)}</title></rect>'
         )
+        # Values sit inside negative bars to avoid colliding with category names.
+        label_x = scale(value) + 6
+        parts.append(_value_text(label_x, y + bar_height * .72, text, anchor="start"))
     return "".join(parts)
 
 
@@ -367,15 +473,17 @@ def _render_pie(
     width: int,
     height: int,
 ) -> str | None:
-    aggregated: dict[str, float] = {}
-    for row in rows:
+    aggregated: dict[str, Decimal] = {}
+    for row in rows[:MAX_CHART_POINTS]:
         label = str(row.get(x_field, ""))
-        value = _finite_number(row.get(y_field))
-        if label and value is not None and value > 0:
-            aggregated[label] = aggregated.get(label, 0.0) + value
+        value = _decimal_number(row.get(y_field))
+        if value is not None and value < 0:
+            return None
+        if label and value is not None and value >= 0:
+            aggregated[label] = aggregated.get(label, Decimal(0)) + value
     values = sorted(aggregated.items(), key=lambda item: item[1], reverse=True)
     if len(values) > 8:
-        values = values[:7] + [("其他", sum(value for _, value in values[7:]))]
+        return None  # Never silently hide categories under an invented aggregate.
     total = sum(value for _, value in values)
     if total <= 0:
         return None
@@ -384,19 +492,17 @@ def _render_pie(
     radius = min(width, height) * 0.29
     angle = -math.pi / 2
     parts = []
-    if len(values) == 1:
+    if values[0][1] == total:
         label, value = values[0]
         parts.append(
             f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{radius:.1f}" fill="{_CHART_COLORS[0]}">'
-            f'<title>{escape(label)}：100.0%（{escape(_display_number(value))}）</title></circle>'
-            f'<rect x="{width * .68:.1f}" y="80.0" width="14" height="14" rx="2" fill="{_CHART_COLORS[0]}"/>'
-            f'<text x="{width * .68 + 24:.1f}" y="92.0" '
-            'font-family="Microsoft YaHei, sans-serif" font-size="12" fill="#374151">'
-            f'{escape(_short_label(label, 16))} 100.0%</text>'
+            f'<title>{escape(label)}：100.0%（{escape(_value_label(value))}）</title></circle>'
         )
+        for index, (label, value) in enumerate(values):
+            parts.append(_pie_legend(index, label, value, total, width))
         return "".join(parts)
     for index, (label, value) in enumerate(values):
-        sweep = value / total * math.tau
+        sweep = float(value / total) * math.tau
         next_angle = angle + sweep
         x1, y1 = cx + radius * math.cos(angle), cy + radius * math.sin(angle)
         x2, y2 = cx + radius * math.cos(next_angle), cy + radius * math.sin(next_angle)
@@ -409,17 +515,22 @@ def _render_pie(
         percentage = value / total
         parts.append(
             f'<path d="{path}" fill="{color}" stroke="#fff" stroke-width="2">'
-            f'<title>{escape(label)}：{percentage:.1%}（{escape(_display_number(value))}）</title></path>'
+            f'<title>{escape(label)}：{percentage:.1%}（{escape(_value_label(value))}）</title></path>'
         )
-        legend_y = 92 + index * 38
-        parts.append(
-            f'<rect x="{width * .68:.1f}" y="{legend_y - 12:.1f}" width="14" height="14" rx="2" fill="{color}"/>'
-            f'<text x="{width * .68 + 24:.1f}" y="{legend_y:.1f}" '
-            'font-family="Microsoft YaHei, sans-serif" font-size="12" fill="#374151">'
-            f'{escape(_short_label(label, 16))} {percentage:.1%}</text>'
-        )
+        parts.append(_pie_legend(index, label, value, total, width))
         angle = next_angle
     return "".join(parts)
+
+
+def _pie_legend(index: int, label: str, value: Decimal, total: Decimal, width: int) -> str:
+    legend_y = 92 + index * 38
+    color = _CHART_COLORS[index % len(_CHART_COLORS)]
+    return (
+        f'<rect x="{width * .68:.1f}" y="{legend_y - 12:.1f}" width="14" height="14" rx="2" fill="{color}"/>'
+        f'<text x="{width * .68 + 24:.1f}" y="{legend_y:.1f}" '
+        'font-family="Microsoft YaHei, sans-serif" font-size="12" fill="#374151">'
+        f'{escape(_short_label(label, 16))} {value / total:.1%}（{escape(_value_label(value))}）</text>'
+    )
 
 
 def _one(
@@ -450,7 +561,7 @@ def _one(
         data=selected,
         point_count=len(selected),
         data_truncated=len(rows) > MAX_CHART_POINTS,
-        horizontal=horizontal,
+        horizontal=horizontal or (chart_type == "BAR" and len(selected) > 12),
         reason="依据分析意图和字段类型自动选择的确定性图表",
     )]
 
@@ -458,32 +569,53 @@ def _one(
 def _first_numeric_column(
     columns: list[str], rows: list[dict[str, Any]]
 ) -> str | None:
-    for column in columns:
-        values = [row.get(column) for row in rows if row.get(column) is not None]
-        if values and all(_number(value) is not None for value in values):
-            return column
-    return None
+    candidates = [column for column in columns
+                  if not is_identifier_column(column) and not _looks_temporal(column, rows)
+                  and _column_is_numeric(column, rows)]
+    return candidates[0] if len(candidates) == 1 else None
 
 
 def _column_is_numeric(column: str, rows: list[dict[str, Any]]) -> bool:
     values = [row.get(column) for row in rows if row.get(column) is not None]
-    return bool(values) and all(_number(value) is not None for value in values)
+    return bool(values) and all(_finite_number(value) is not None for value in values)
 
 
 def _number(value: Any) -> float | None:
+    number = _decimal_number(value)
+    if number is None:
+        return None
+    try:
+        converted = float(number)
+        return converted if math.isfinite(converted) else None
+    except (ValueError, OverflowError):
+        return None
+
+
+def _decimal_number(value: Any) -> Decimal | None:
     if value is None or isinstance(value, bool):
         return None
-    if isinstance(value, (int, float, Decimal)):
-        return float(value)
-    if isinstance(value, str):
-        normalized = value.strip().replace(",", "").replace("，", "")
-        if normalized.endswith("%"):
-            normalized = normalized[:-1]
-        try:
-            return float(Decimal(normalized))
-        except (InvalidOperation, ValueError):
+    normalized = str(value).strip().replace(",", "").replace("，", "")
+    percent = normalized.endswith("%")
+    try:
+        number = Decimal(normalized.removesuffix("%"))
+        if not number.is_finite():
             return None
-    return None
+        return number / 100 if percent else number
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def is_identifier_column(column: str) -> bool:
+    """Names of identity columns, not counters such as code_count/编码数量."""
+    name = unicodedata.normalize("NFKC", column).strip()
+    if re.search(r"(?:编码|编号|代码|标识|主键|序号|排名|身份证号)\)?$", name):
+        return True
+    if re.search(r"(?:订单|经销商|医院|商品|产品|客户|业务员|销售员|省份|科室)(?:号|ID|id)$", name):
+        return True
+    return bool(
+        re.search(r"(?:^|[._\s(])(?:id|code|key|uuid)\)?$", name, re.I)
+        or re.search(r"(?:Id|ID|Code|Key|UUID)$", name)
+    )
 
 
 def _looks_temporal(column: str, rows: list[dict[str, Any]]) -> bool:

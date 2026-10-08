@@ -581,7 +581,7 @@ class FailingReportExporter:
 
 
 class SynthesisStub:
-    async def synthesize(self, request, analysis, evidence, *, agent_prompt=""):
+    async def synthesize(self, request, analysis, evidence, *, agent_prompt="", semantic_model_id=None):
         query_data = analysis.facts["query_data"]
         assert query_data["columns"] and query_data["rows"]
         assert len(query_data["rows"]) <= 20

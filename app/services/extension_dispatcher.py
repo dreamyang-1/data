@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import re
 from typing import Any
 from uuid import uuid4
@@ -18,6 +17,7 @@ from uuid import uuid4
 import httpx
 
 from app.config import Settings
+from app.analysis.visualization import _finite_number as chart_number, is_identifier_column
 from app.domain.models import ChatRequest, ExtensionExecution, ToolConfig
 from app.skills.dynamic import DynamicSkillLoader, LoadedSkill
 from app.services.tool_selector import OptionalToolSelector
@@ -239,12 +239,19 @@ class ExtensionDispatcher:
             for item in discovered
             if item.name.startswith("mcp:")
         }
+        tool_schemas = {item.name.removeprefix("mcp:"): item.input_schema or {} for item in discovered}
         prepared_calls: list[tuple[str, dict[str, Any]]] = []
         for spec in chart_specs[:3]:
             prepared = self._visualization_call(spec, available)
             if prepared is None:
                 continue
             tool_name, arguments = prepared
+            # Only request labels when the actual tool declares the option.
+            # Existing tools without it retain their exact argument contract.
+            properties = tool_schemas.get(tool_name, {}).get("properties") or {}
+            for name in ("showDataLabels", "showLabels", "showValues", "show_data_labels"):
+                if isinstance(properties.get(name), dict) and properties[name].get("type") == "boolean":
+                    arguments[name] = True
             prepared_calls.append((tool_name, arguments))
         if not prepared_calls:
             return []
@@ -275,12 +282,20 @@ class ExtensionDispatcher:
         if (
             tool_name is None
             or not x_field
-            or not y_fields
+            or len(y_fields) != 1
+            or is_identifier_column(y_fields[0])
+            or (chart_type == "SCATTER" and is_identifier_column(x_field))
             or not rows
             or (chart_type == "LINE" and spec.get("series_field"))
         ):
             return None
         y_field = y_fields[0]
+        if chart_type == "PIE":
+            values = [cls._finite_number(row.get(y_field)) for row in rows]
+            if any(value is not None and value < 0 for value in values):
+                return None
+            if len({str(row.get(x_field)) for row in rows}) > 8:
+                return None
         projected: list[dict[str, Any]] = []
         for row in rows[:200]:
             value = cls._finite_number(row.get(y_field))
@@ -291,7 +306,8 @@ class ExtensionDispatcher:
                 if x_value is not None:
                     projected.append({"x": x_value, "y": value})
                 continue
-            category = str(row.get(x_field) or "").strip()
+            raw_category = row.get(x_field)
+            category = str(raw_category).strip() if raw_category is not None else ""
             if not category:
                 continue
             if chart_type == "LINE":
@@ -313,13 +329,8 @@ class ExtensionDispatcher:
 
     @staticmethod
     def _finite_number(value: Any) -> int | float | None:
-        if value is None or isinstance(value, bool):
-            return None
-        try:
-            number = float(str(value).strip().replace(",", "").rstrip("%"))
-        except (TypeError, ValueError):
-            return None
-        if not math.isfinite(number):
+        number = chart_number(value)
+        if number is None:
             return None
         return int(number) if number.is_integer() else number
 
