@@ -1,0 +1,163 @@
+{
+  "baseline_commit": "fc7c5fc2fe63c9dd4284a88d6c268a10b6b72c52",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline": {
+        "passed": 2410,
+        "failed": 27
+      },
+      "final": {
+        "passed": 2452,
+        "failed": 27
+      },
+      "new_tests": [
+        "tests/test_v2_structured_edits.py::test_add_new_condition_conjoins_whole_expression",
+        "tests/test_v2_structured_edits.py::test_ancestor_and_child_edits_are_not_ordered_programs",
+        "tests/test_v2_structured_edits.py::test_clear_grain_preserves_range_and_uses_scalar_shape",
+        "tests/test_v2_structured_edits.py::test_disjoint_removes_apply_against_original_paths_without_index_shift",
+        "tests/test_v2_structured_edits.py::test_filter_add_replace_remove_clear_preserve_other_conditions_across_turns",
+        "tests/test_v2_structured_edits.py::test_filter_operation_contrast_retains_boolean_branch_and_siblings[ADD-value0]",
+        "tests/test_v2_structured_edits.py::test_filter_operation_contrast_retains_boolean_branch_and_siblings[CLEAR-None]",
+        "tests/test_v2_structured_edits.py::test_filter_operation_contrast_retains_boolean_branch_and_siblings[REMOVE-None]",
+        "tests/test_v2_structured_edits.py::test_filter_operation_contrast_retains_boolean_branch_and_siblings[REPLACE-value1]",
+        "tests/test_v2_structured_edits.py::test_granular_change_invalidates_old_dataset",
+        "tests/test_v2_structured_edits.py::test_historical_edits_use_selected_task_subtrees_only[False]",
+        "tests/test_v2_structured_edits.py::test_historical_edits_use_selected_task_subtrees_only[True]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[authority-V2_MODEL_AUTHORITY_FIELD_FORBIDDEN]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[clear_value-V2_FILTER_VALUE_EDIT_INVALID]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[evidence-V2_EDIT_EVIDENCE_NOT_CURRENT]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[foreign-V2_FILTER_TARGET_NOT_CURRENT_TASK]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[missing-V2_FILTER_REMOVE_VALUE_NOT_PRESENT]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[new_task-V2_FILTER_TARGET_NOT_CURRENT_TASK]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[operation-V2_SLOT_OPERATION_CONFLICT]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[overlap-V2_FILTER_OVERLAPPING_EDITS]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[root_conflict-V2_STRUCTURED_EDIT_CONFLICT]",
+        "tests/test_v2_structured_edits.py::test_invalid_filter_edits_fail_before_plan_or_state[type-V2_CONTRACT_VALIDATION_FAILURE]",
+        "tests/test_v2_structured_edits.py::test_invalid_temporal_edits_fail_closed[ANCHOR-CLEAR-None-V2_TEMPORAL_CLEAR_INVALID]",
+        "tests/test_v2_structured_edits.py::test_invalid_temporal_edits_fail_closed[GRAIN-REPLACE-DECADE-V2_CONTRACT_VALIDATION_FAILURE]",
+        "tests/test_v2_structured_edits.py::test_invalid_temporal_edits_fail_closed[RANGE-CLEAR-value1-V2_TEMPORAL_CLEAR_INVALID]",
+        "tests/test_v2_structured_edits.py::test_invalid_temporal_edits_fail_closed[RANGE-REPLACE-value3-V2_CONTRACT_VALIDATION_FAILURE]",
+        "tests/test_v2_structured_edits.py::test_invalid_temporal_edits_fail_closed[RANGE-SET-None-V2_CONTRACT_VALIDATION_FAILURE]",
+        "tests/test_v2_structured_edits.py::test_membership_add_does_not_reinterpret_negative_predicate",
+        "tests/test_v2_structured_edits.py::test_partial_dates_grain_clear_and_restore_are_independent",
+        "tests/test_v2_structured_edits.py::test_remove_entire_tree_forms_barrier_and_does_not_revive[CLEAR]",
+        "tests/test_v2_structured_edits.py::test_remove_entire_tree_forms_barrier_and_does_not_revive[REMOVE]",
+        "tests/test_v2_structured_edits.py::test_remove_last_membership_value_deletes_only_that_predicate",
+        "tests/test_v2_structured_edits.py::test_scalar_plan_cannot_silently_discard_explicit_time_grouping[False]",
+        "tests/test_v2_structured_edits.py::test_scalar_plan_cannot_silently_discard_explicit_time_grouping[True]",
+        "tests/test_v2_structured_edits.py::test_stale_filter_handle_rejected_after_task_version_changes",
+        "tests/test_v2_structured_edits.py::test_structured_state_context_has_labels_but_no_authority_identifiers",
+        "tests/test_v2_structured_edits.py::test_time_anchor_uses_current_binding_and_retains_period",
+        "tests/test_v2_structured_edits.py::test_time_comparison_dependency_is_not_silently_recomputed",
+        "tests/test_v2_structured_edits.py::test_time_edit_does_not_get_base_from_previous_new_task",
+        "tests/test_v2_structured_edits.py::test_unbounded_time_cannot_be_reintroduced_into_legacy_plan",
+        "tests/test_v2_structured_edits.py::test_whole_slot_cannot_bypass_local_edit_contract[filter_expression]",
+        "tests/test_v2_structured_edits.py::test_whole_slot_cannot_bypass_local_edit_contract[time_spec]"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ]
+    },
+    "Oagnet": {
+      "baseline": {
+        "passed": 555,
+        "failed": 8
+      },
+      "final": {
+        "passed": 555,
+        "failed": 8
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter"
+      ]
+    },
+    "SQL_Translator": {
+      "baseline": {
+        "passed": 200
+      },
+      "final": {
+        "passed": 200
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": []
+    }
+  },
+  "new_regressions": 42,
+  "critical_passed": 160,
+  "critical_total": 160,
+  "agent_modules": 98,
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "focused_v2_tests": 434,
+  "full_agent_before_final_review": {
+    "passed": 2450,
+    "failed": 27
+  },
+  "final_review": "Full offline suite followed by 434 affected tests after a two-line raw scalar/time-grain conflict guard and two new regressions; exact node union, no double counting.",
+  "full_agent_sha256": "1b3b4a4270e51fd80801ec374ef92dfe309023366b7974ea18d5b4ce7bc0a62f",
+  "focused_sha256": "8edbebea786d890755906d1a3390add22299d1c2eb905cc1323c2428496c7bd0",
+  "oagnet_sha256": "7c12d3506b07b48975a4c9a74c61b9d9f1619c4a3f729700e3244f2f3b2b32ac",
+  "sql_sha256": "0f917c7857c32598473eed7a4ce22963360050a734c9535af8572c7155c14237",
+  "old_pass_to_new_fail": 0,
+  "collection_errors": 0,
+  "real_model_calls": 0,
+  "real_embedding_calls": 0,
+  "live_reads": 0,
+  "external_production_writes": 0,
+  "production_v2_routing_changed": false,
+  "public_io_changed": false,
+  "prompt_version": "v2-current-recognition-v3",
+  "changed_v2_prompts": 1,
+  "legacy_prompt_changes": 0,
+  "regex_changes": 0,
+  "old_expectation_changes": 0,
+  "mode": "Offline mock HTTP and synthetic pinned catalog stores; no actual recognition-quality or native publication claim"
+}

@@ -2,7 +2,7 @@ import pytest
 
 from app.analysis import AnalysisEngine
 from app.analysis.engine import AnalysisOutput
-from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
+from app.analysis.interpretation import AnswerPlan, AnswerPlanner, InsightInterpretationLayer
 from app.domain.models import (
     CanonicalAnalysisRequest,
     KnowledgeContext,
@@ -95,3 +95,36 @@ def test_answer_plan_does_not_repeat_deterministic_table_as_key_fact():
     assert plan.headline == answer
     assert plan.key_facts == []
     assert plan.render().count("| 甲公司 | 100 |") == 1
+
+
+@pytest.mark.parametrize("chart", ["", '#### 图表\n\n<svg><title>销售趋势</title></svg>',
+                                    '#### 图表\n\n![趋势](https://example.com/chart.png)'])
+def test_final_report_places_table_and_chart_in_requested_sections(chart):
+    plan = AnswerPlan(headline="销售额整体下降，期末回升。",
+                      key_facts=["期初100，期末80。"], interpretations=["尚不能确认反转。"],
+                      priorities=["持续观察下一周期。"], limitations=["只有三个观察周期。"])
+    table = "趋势分析数据，共 3 行。\n\n| 月份 | 金额 |\n| --- | --- |\n| 1 | 100 |\n| 2 | 20 |\n| 3 | 80 |"
+    legacy = plan.render()
+    report = plan.render_report(question="分析上海产品最近一年销售趋势", table=table,
+                                chart=chart, notes=["只有三个观察周期。", "结果仅为预览。"])
+    assert report.index("1、概况总结") < report.index(table) < report.index("2、关键发现")
+    assert report.index("期初100") > report.index("2、关键发现")
+    assert report.index("尚不能确认反转") < report.index("3、业务提示")
+    assert report.index("持续观察下一周期") > report.index("3、业务提示")
+    assert report.count("只有三个观察周期。") == 1
+    assert "结果仅为预览。" in report
+    assert report.count(table) == 1
+    if chart:
+        assert report.index("2、关键发现") < report.index(chart) < report.index("3、业务提示")
+    else:
+        assert "#### 图表" not in report
+    assert "分析上海产品最近一年销售趋势" in report
+    assert plan.render() == legacy  # insight/evidence format is unaffected
+
+
+def test_final_report_preserves_embedded_ranking_table_and_does_not_invent_totals():
+    table = "| 经销商 | 覆盖率 |\n| --- | --- |\n| A | 50% |\n| B | 40% |"
+    report = AnswerPlan(headline=table).render_report(question="查询覆盖率排名")
+    assert report.count(table) == 1
+    assert "90%" not in report
+    assert "暂无额外可确认的关键发现" in report

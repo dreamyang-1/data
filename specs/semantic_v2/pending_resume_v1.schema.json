@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "pending_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Pending Id",
+      "type": "string"
+    },
+    "task_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Task Id",
+      "type": "string"
+    },
+    "task_version": {
+      "minimum": 1,
+      "title": "Task Version",
+      "type": "integer"
+    },
+    "payload_type": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Payload Type",
+      "type": "string"
+    },
+    "operations": {
+      "additionalProperties": {
+        "enum": [
+          "SET",
+          "ADD",
+          "REPLACE"
+        ],
+        "type": "string"
+      },
+      "title": "Operations",
+      "type": "object"
+    }
+  },
+  "required": [
+    "pending_id",
+    "task_id",
+    "task_version",
+    "payload_type",
+    "operations"
+  ],
+  "title": "PendingResume",
+  "type": "object"
+}

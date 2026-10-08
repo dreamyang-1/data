@@ -1,0 +1,19 @@
+﻿{
+  "status": "OFFLINE_GATE_PASS_RUNTIME_PENDING",
+  "production_files": [
+    "app/semantic_v2/context_v1_execution.py",
+    "app/semantic_v2/persisted_scalar_api.py",
+    "app/semantic_v2/recognition.py"
+  ],
+  "test_files": [
+    "tests/test_v2_context_v1_execution_bridge.py",
+    "tests/test_v2_raw_turn_recognition.py"
+  ],
+  "evidence_files": [
+    "docs/v2_cutover/execution_backed_context_anchor/validation_report.md",
+    "docs/v2_cutover/execution_backed_context_anchor/test_delta.json",
+    "docs/v2_cutover/execution_backed_context_anchor/change_manifest.json"
+  ],
+  "excluded_services": ["Oagnet", "sql-translator", "Java/platform"],
+  "excluded_changes": ["MODEL_WIDE scope", "V2 execution capability", "Query Shape", "Redis envelope schema_version", "Session architecture"]
+}

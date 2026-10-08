@@ -1,0 +1,346 @@
+{
+  "config": {
+    "stage": "config",
+    "observed_at": "2026-09-08T11:02:18.032706+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "production_writes": 0,
+    "model_calls": 0,
+    "status": "INSPECTED",
+    "shared_root_env_present": true,
+    "configured": {
+      "MYSQL_HOST": true,
+      "MYSQL_USER": true,
+      "MYSQL_PASSWORD": true,
+      "MYSQL_DATABASE": true,
+      "REDIS_HOST": true,
+      "REDIS_PASSWORD": true,
+      "MILVUS_HOST": true,
+      "MILVUS_USER": true,
+      "MILVUS_PASSWORD": true
+    },
+    "target_hashes": {
+      "mysql": "236d2cd8341462eeb2a37222658fe18d265114a8d19bf44558badbbc4b04a72c",
+      "redis": "6deaf2abed2af78a1eb0c9e8fc12e3c670d19d9cd3a98638e4ce783f86a21959",
+      "milvus": "4ae6a1c530bd88ce5d911464a6b8aa9e0dd0154a25b027f16005737647788ec4"
+    }
+  },
+  "identity_schema": {
+    "stage": "identity_schema",
+    "observed_at": "2026-09-08T11:05:12.920743+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "production_writes": 0,
+    "model_calls": 0,
+    "status": "INSPECTED_READ_ONLY",
+    "columns": [
+      {
+        "table_name": "semantic_model_attribute_config",
+        "column_name": "id",
+        "data_type": "varchar",
+        "max_length": 128
+      },
+      {
+        "table_name": "semantic_model_attribute_config",
+        "column_name": "entity_type_id",
+        "data_type": "varchar",
+        "max_length": 128
+      },
+      {
+        "table_name": "semantic_model_entity_type",
+        "column_name": "id",
+        "data_type": "varchar",
+        "max_length": 128
+      }
+    ]
+  },
+  "capture": {
+    "stage": "capture",
+    "observed_at": "2026-09-08T11:18:40.408344+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "production_writes": 0,
+    "model_calls": 0,
+    "status": "CAPTURED_READ_ONLY",
+    "catalog_version": "74de30abbbc4b3022e69fafcfee4bea036d8e49d6780f9fa232bfbd7c82e737c",
+    "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+    "document_counts": [
+      {
+        "entities": 14,
+        "metrics": 11,
+        "dimensions": 13
+      }
+    ],
+    "physical_keys": [
+      "scope",
+      "tables"
+    ]
+  },
+  "coverage": {
+    "stage": "coverage",
+    "observed_at": "2026-09-08T11:18:41.986875+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "production_writes": 0,
+    "model_calls": 0,
+    "status": "LOCAL_BUILD_FROM_ACTUAL_CAPTURE",
+    "coverage": {
+      "contract": "catalog-generation-v1",
+      "catalog_version": "74de30abbbc4b3022e69fafcfee4bea036d8e49d6780f9fa232bfbd7c82e737c",
+      "source_counts": {
+        "domain_documents": 1,
+        "physical_data_sources": 1
+      },
+      "by_type": {
+        "entity": 14,
+        "attribute": 89,
+        "relation": 24,
+        "scoped_dimension": 13,
+        "scoped_enum": 15,
+        "metric": 11,
+        "table": 14,
+        "field": 110
+      },
+      "records_generated": 290,
+      "explicit_exclusions": {
+        "MODEL_WIDE_SHARED_ORIGINAL": 28
+      },
+      "capability_coverage_verified": false,
+      "excluded_dependencies": [
+        "external_entity_values",
+        "data_source_routing",
+        "SQL_independent_catalog_reads"
+      ]
+    },
+    "placeholder_vectors_only": true,
+    "not_index_publication": true,
+    "physical_tables": 14,
+    "physical_fields": 110
+  },
+  "projection": {
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "74de30abbbc4b3022e69fafcfee4bea036d8e49d6780f9fa232bfbd7c82e737c",
+    "dimension_count": 13,
+    "overlapping_reason_counts": {
+      "OWNERSHIP_PROVEN": 13
+    },
+    "diagnostic_only": true
+  },
+  "milvus": {
+    "stage": "milvus",
+    "observed_at": "2026-09-08T11:03:07.823037+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "production_writes": 0,
+    "model_calls": 0,
+    "status": "INSPECTED_READ_ONLY",
+    "collections": {
+      "semantic": {
+        "exists": true,
+        "schema_hash": "432887adea447532bba6256c2883920fad70c15b706579e199cdeb21e88b0d69",
+        "field_names": [
+          "record_id",
+          "embedding",
+          "text",
+          "type",
+          "semantic_model_id",
+          "business_domain_id",
+          "data_source_id",
+          "scope_key",
+          "entity_code",
+          "entity_name",
+          "parent",
+          "attr_code",
+          "attr_name",
+          "source_table",
+          "source_id",
+          "snapshot_version",
+          "content_hash",
+          "metadata",
+          "source_field",
+          "canonical_value"
+        ],
+        "scoped_records": 142,
+        "by_type": {
+          "attribute": 93,
+          "entity": 14,
+          "metric": 11,
+          "relation": 24
+        },
+        "release_stamped_records": 0
+      },
+      "physical": {
+        "exists": true,
+        "schema_hash": "a20cb4f3796c89d61e4bbf811a2c3269df6901f5b24c162b39b484fb51caf093",
+        "field_names": [
+          "record_id",
+          "embedding",
+          "text",
+          "type",
+          "semantic_model_id",
+          "business_domain_id",
+          "data_source_id",
+          "scope_key",
+          "entity_code",
+          "entity_name",
+          "parent",
+          "attr_code",
+          "attr_name",
+          "source_table",
+          "source_id",
+          "snapshot_version",
+          "content_hash",
+          "metadata",
+          "source_field",
+          "canonical_value"
+        ],
+        "scoped_records": 0,
+        "by_type": {},
+        "release_stamped_records": 0
+      },
+      "semantic_catalog": {
+        "exists": false
+      },
+      "physical_catalog": {
+        "exists": false
+      }
+    },
+    "target_identity_hash": "763d0302d6278371ea2cf3c5372103cf8d823ea40411d9d27f191a511a010ef5"
+  },
+  "registry": {
+    "stage": "registry",
+    "observed_at": "2026-09-08T11:02:28.250065+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "production_writes": 0,
+    "model_calls": 0,
+    "status": "INSPECTED_READ_ONLY",
+    "marker_present": false,
+    "marker_hash": null,
+    "target_identity_hash": "763d0302d6278371ea2cf3c5372103cf8d823ea40411d9d27f191a511a010ef5"
+  },
+  "reference": {
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "16ceba0fe78c5d058dedb7ad8b5b8f2091560c34eb8ff53d13122c9b72f61b7e",
+    "raw_active_scoped_attributes": 368,
+    "dimension_binding_matches": {
+      "CURRENT_ATTRIBUTE_ID_MATCH": 3,
+      "UNMATCHED_BINDING": 11,
+      "RAW_ACTIVE_OWNER_ATTRIBUTE_ID_MATCH": 11,
+      "BOUND_ID_REPLACED_BY_SAME_CODE_ID": 11,
+      "SAME_PHYSICAL_MAPPING": 11,
+      "SAME_ATTRIBUTE_NAME": 11,
+      "BOUND_VIEW_STATUS_0": 11,
+      "BOUND_MODEL_CURRENT": 11,
+      "SELECTED_VIEW_STATUS_0": 11,
+      "SELECTED_MODEL_FOREIGN_OR_NULL": 11,
+      "RAW_ANY_SCOPED_ATTRIBUTE_ID_MATCH": 11
+    },
+    "attribute_schema_columns": [
+      "id",
+      "semantic_model_id",
+      "entity_type_id",
+      "code",
+      "vectorization",
+      "attr_name",
+      "description",
+      "mapping_table",
+      "mapping_column",
+      "is_main_attribute",
+      "data_type",
+      "is_primary_key",
+      "is_unique",
+      "is_required",
+      "clean_rule_id",
+      "merge_rule_id",
+      "remark",
+      "create_by",
+      "create_time",
+      "update_by",
+      "update_time",
+      "is_deleted",
+      "view_status",
+      "prefix",
+      "suffix",
+      "data_status"
+    ],
+    "production_writes": 0,
+    "observation_context": "Before the model-isolation SQL fix; observed against the initial captured DSL. IDs/names/physical mappings are withheld."
+  },
+  "bounded_before_observations": {
+    "initial_catalog_version": "16ceba0fe78c5d058dedb7ad8b5b8f2091560c34eb8ff53d13122c9b72f61b7e",
+    "initial_generation_error": "CATALOG_GOVERNED_ID_REQUIRED",
+    "entity_ids": {
+      "uuid_36_strings": 14
+    },
+    "attribute_ids": {
+      "compact_uuid_strings": 86,
+      "decimal_strings": 7
+    },
+    "uuid_fix_only": {
+      "generated_records": 276,
+      "ownership_proven_dimensions": 2,
+      "unmatched_dimensions": 11
+    },
+    "model_fix": {
+      "generated_records": 290,
+      "attributes": 89,
+      "ownership_proven_dimensions": 13,
+      "unmatched_dimensions": 0
+    }
+  },
+  "baseline_commit": "a1708a796c9eb103309bc189280a94fb51b0ebfd",
+  "scope_authorization": "User explicitly selected current configured environment, model 81 / domain 205",
+  "runtime_release_verified": false,
+  "reason": "Dedicated generation collections and active marker absent; existing 142 semantic rows have no release stamps",
+  "private_snapshot_committed": false,
+  "raw_catalog_records_committed": false,
+  "real_model_calls": 0,
+  "real_embedding_calls": 0,
+  "production_external_writes": 0,
+  "index_publications": 0,
+  "collections_created": 0,
+  "distinction": "MySQL/Milvus/Redis metadata were read live. Generation coverage uses local placeholder vectors; it is not an actual embedding or index publication."
+}

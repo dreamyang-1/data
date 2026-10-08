@@ -14,6 +14,7 @@ from typing import Any, Iterable
 
 from app.semantic_v2.legacy_adapter import assess_legacy_adapter
 from app.semantic_v2.models import PlanEnvelope
+from app.semantic_v2.migration import SchemaMigrationRegistry
 from app.semantic_v2.validators import validate_plan
 
 
@@ -55,6 +56,11 @@ def compare_record(record: dict[str, Any]) -> dict[str, Any]:
             },
         }
     try:
+        if raw_plan.get('schema_version') == '0.2':
+            migrated = SchemaMigrationRegistry.migrate(raw_plan)
+            if migrated.status == 'UNSUPPORTED':
+                raise ValueError('; '.join(migrated.errors))
+            raw_plan = migrated.migrated
         plan = PlanEnvelope.model_validate(raw_plan)
     except Exception as exc:  # Pydantic validation errors are data, not runner failure.
         return {

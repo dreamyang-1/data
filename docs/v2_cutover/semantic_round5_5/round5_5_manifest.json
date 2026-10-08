@@ -1,0 +1,32 @@
+{
+  "status": "ROUND_5_5_FIELD_ALIGNMENT_PARTIAL",
+  "baseline": "67f2c8022d1014ee4f6dc3af17f677d12baa93ca",
+  "branch": "semantic-field-alignment-round5-5-20260910t072433z",
+  "base_pr": 63,
+  "started_at": "2026-09-10T07:24:33Z",
+  "hard_stop_at": "2026-09-10T09:24:33Z",
+  "model_calls": 17,
+  "hard_model_limit": 24,
+  "production_files": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/source_value_recognition.py",
+    "app/semantic_v2/source_value_target.py"
+  ],
+  "public_evidence_files": [
+    "accepted_plan_checks.json",
+    "catalog_boundary_audit.json",
+    "catalog_healthy_fixture.json",
+    "live_chain_matrix.json",
+    "live_turn_inventory.json",
+    "performance_receipt.json",
+    "root_cause_receipt.json",
+    "round5_5_manifest.json",
+    "safety_and_gates.json",
+    "test_delta.json"
+  ],
+  "private_capture_publication": false,
+  "final_commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_5/git_commit_manifest.json",
+  "models_stopped": true,
+  "next_round_started": false,
+  "read_only_e2e_started": false
+}

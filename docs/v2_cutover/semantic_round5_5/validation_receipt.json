@@ -1,0 +1,88 @@
+{
+  "status": "PASS_EVIDENCE_INTEGRITY",
+  "stage_status": "ROUND_5_5_FIELD_ALIGNMENT_PARTIAL",
+  "baseline": "67f2c8022d1014ee4f6dc3af17f677d12baa93ca",
+  "source_hashes": {
+    "app/semantic_v2/recognition.py": "83ffdc1226442babb6bf372e72c3d70d201a0f800d3de12fc05e791fce4baa2d",
+    "app/semantic_v2/source_value_recognition.py": "af68ff481d3d012af850cab6fc6f755eb3c6b57c1187154c365de819292ef149",
+    "app/semantic_v2/source_value_target.py": "d12675ecbb400b8d3bc7e8a1a9a7f8967e30fd597c4f4fa2e9495cd6db1f8a35",
+    "tests/test_v2_source_target_alignment.py": "47675a1be0bd2e971cbd380522e15b436257e083327e8bae2f4ad4fb863daa79",
+    "tests/test_round55_preflight.py": "5f703987e972ede7b6966f596a4e878ceb563ec7e84f18bcab127a6b3d4e785d",
+    "tools/cutover/round55_healthy_fixture.py": "6d44282f36dd34df9045b47684fd2d3f6e90fd42170a82a2fe59d42714d03595",
+    "tools/cutover/round55_live_chains.py": "6e7f809dea055d5cee6624cf13529197d8ad27dc9b1d8027918d41ccea721c8b"
+  },
+  "evidence_hashes": {
+    "accepted_plan_checks.json": "ae792e304a059baaff6da96fb72361ebbe216273c17f00cf13373ea56408d7d6",
+    "catalog_boundary_audit.json": "5dabbe5f3c26690737fc3560d067c016ef0a66587351f83e5b41342b34b41d80",
+    "catalog_healthy_fixture.json": "180d20d9106636eed4547e65a573059eb8d6fa5e5022f8a4a1943619b5a8e941",
+    "closure_report.md": "bfe585576aff3878ec16fdf336f660b8192a1db17f3bf6bc554df9584735c6bd",
+    "current_source_value_filter_alignment_path.md": "1981d88f1e6a1bbbbed060ca436aa46aa4b36bbeae2ab5d47693acba7f090ee3",
+    "live_chain_matrix.json": "1837f7551e4d8151083086974949eec223e1e282017087d72eb715ea13789fe4",
+    "live_turn_inventory.json": "a3d7c0090084dc532dc971426c3406b8d76323c3a3e1268d993fc5ac4893f314",
+    "performance_receipt.json": "ba7f086b1e76f1aeb34f28b4207642ed98c146d9081a839bb5ba2bcf104bb807",
+    "root_cause_receipt.json": "c9d6f3b53381201e9e4fb89276bca3926def6c7cc56f8a43dbb3bc9372fabe7c",
+    "round5_5_manifest.json": "2b11a1188d1491aaf95fedc8e54e3badbf485cfc3a2dd0e1b598b5301137a86a",
+    "safety_and_gates.json": "c58f745395b6729bb49019a5fe4c4c29af2286ea6ac7c6bd1a633e061f906eef",
+    "test_delta.json": "527ce59464946a139565757abb1c2e78c3ed133f0d64bf6dc7fde083865c7f4b",
+    "verify_round5_5.py": "813a55a15b748191e06d72c0f6329aaac29449d257535886a6c2b4cc7e474768"
+  },
+  "parent_pr_verification": [
+    {
+      "number": 62,
+      "head": "116ffe06d12812f849ba60eaa644df17cbc89f8a",
+      "head_branch": "semantic-grounding-round5-3-20260910t052350z",
+      "base_branch": "semantic-downstream-round5-2-20260910t040418z",
+      "draft": true,
+      "state": "open",
+      "merged": false,
+      "url": "https://github.com/dreamyang-1/data/pull/62"
+    },
+    {
+      "number": 63,
+      "head": "67f2c8022d1014ee4f6dc3af17f677d12baa93ca",
+      "head_branch": "semantic-filter-round5-4-20260910t063432z",
+      "base_branch": "semantic-grounding-round5-3-20260910t052350z",
+      "draft": true,
+      "state": "open",
+      "merged": false,
+      "url": "https://github.com/dreamyang-1/data/pull/63"
+    }
+  ],
+  "baseline_unexpected_drift": 0,
+  "production_files": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/source_value_recognition.py",
+    "app/semantic_v2/source_value_target.py"
+  ],
+  "live_runtime_equals_final_source": true,
+  "test_receipt_sha256": "8869135c1ff87d41a8f8d0507f96ef5dd2e134f617921c0b4afa85aba8394ec5",
+  "regression_unique_passed": 618,
+  "new_tests": 14,
+  "old_pass_new_fail": 0,
+  "collection_errors": 0,
+  "full_three_service_regression": "NOT_RUN_CORE_GATE_FAILED",
+  "live_model_calls": 17,
+  "provider_http_401_403": 0,
+  "new_runtime_turns": 8,
+  "accepted_plans_checked": 6,
+  "semantic_primary_failures": 2,
+  "accepted_wrong_silent_plan_observed": 0,
+  "private_captures_not_committed": true,
+  "env_changed": false,
+  "review": [
+    "First divergence and strict candidate-fixed negative control precede production edits",
+    "Same-city candidate cannot be retyped as province; selector-only positive control changes proven candidate identity explicitly",
+    "Generated schema exports existing target selector; actual source consumer validates canonical field before current lookup",
+    "Current field-selector runtime compatibility retained for same-field requests; ADD new predicates remain expressible",
+    "Provider may ignore generation schema: downstream validation retained; C mismatch rejected without state publication",
+    "No business keyword, field-name equivalence, relation override, TaskPatch or Reducer modification",
+    "Fresh first-turn failure retained, accepted historical prefix separately classified and restored with native scope/pin proof",
+    "Six actual accepted continuations pass independent state/IR/plan axes; C wrong relation remains primary and unsafe proposal unpublished",
+    "Three-service full regression conditional prerequisite not met; no synthetic total or copied old pass claims",
+    "Model calls stopped at17; no optional, E2E, SQL, Blind, Benchmark, Shadow, Canary or cutover"
+  ],
+  "business_sql": 0,
+  "catalog_writes": 0,
+  "production_writes": 0,
+  "blind_access": 0
+}

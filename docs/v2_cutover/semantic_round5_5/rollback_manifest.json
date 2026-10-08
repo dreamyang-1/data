@@ -1,0 +1,37 @@
+{
+  "baseline": "67f2c8022d1014ee4f6dc3af17f677d12baa93ca",
+  "production_files": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/source_value_recognition.py",
+    "app/semantic_v2/source_value_target.py"
+  ],
+  "changed_files": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/source_value_recognition.py",
+    "app/semantic_v2/source_value_target.py",
+    "docs/v2_cutover/semantic_round5_5/accepted_plan_checks.json",
+    "docs/v2_cutover/semantic_round5_5/catalog_boundary_audit.json",
+    "docs/v2_cutover/semantic_round5_5/catalog_healthy_fixture.json",
+    "docs/v2_cutover/semantic_round5_5/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_5/closure_report.md",
+    "docs/v2_cutover/semantic_round5_5/current_source_value_filter_alignment_path.md",
+    "docs/v2_cutover/semantic_round5_5/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_5/live_chain_matrix.json",
+    "docs/v2_cutover/semantic_round5_5/live_turn_inventory.json",
+    "docs/v2_cutover/semantic_round5_5/performance_receipt.json",
+    "docs/v2_cutover/semantic_round5_5/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_5/root_cause_receipt.json",
+    "docs/v2_cutover/semantic_round5_5/round5_5_manifest.json",
+    "docs/v2_cutover/semantic_round5_5/safety_and_gates.json",
+    "docs/v2_cutover/semantic_round5_5/test_delta.json",
+    "docs/v2_cutover/semantic_round5_5/validation_receipt.json",
+    "docs/v2_cutover/semantic_round5_5/verify_round5_5.py",
+    "docs/v2_cutover/semantic_round5_5/workspace_git_hash_verification.json",
+    "tests/test_round55_preflight.py",
+    "tests/test_v2_source_target_alignment.py",
+    "tools/cutover/round55_healthy_fixture.py",
+    "tools/cutover/round55_live_chains.py"
+  ],
+  "procedure": "Revert the introducing commit on an isolated branch, synchronize only the explicit manifest; no state/data/config/catalog/index rollback required.",
+  "final_commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_5/git_commit_manifest.json"
+}

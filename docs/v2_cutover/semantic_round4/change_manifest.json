@@ -1,0 +1,126 @@
+{
+  "baseline_commit": "466482b67703bf19214ef54c852c606ee14be109",
+  "production_changes": 0,
+  "files": [
+    {
+      "path": "docs/v2_cutover/semantic_round4/change_manifest.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/closure_report.md",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/context_confidence_inventory.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/controlled_context_receipt.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/current_context_proposal_dataflow.md",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/experiment_metrics.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/git_commit_manifest.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/llm_rule_arbitration_matrix.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/reproduction.md",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/rollback_manifest.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/round4_manifest.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/schema_contract.md",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/test_delta.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/validation_receipt.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/verify_round4.py",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round4/workspace_git_hash_verification.json",
+      "action": "ADD",
+      "classification": "FORMAL_EVIDENCE"
+    },
+    {
+      "path": "tests/test_v2_context_proposal_round4.py",
+      "action": "ADD",
+      "classification": "TEST"
+    },
+    {
+      "path": "tools/cutover/context_proposal_native_diagnostic.py",
+      "action": "ADD",
+      "classification": "DIAGNOSTIC_TOOL"
+    },
+    {
+      "path": "tools/cutover/context_proposal_round4.py",
+      "action": "ADD",
+      "classification": "DIAGNOSTIC_TOOL"
+    },
+    {
+      "path": "tools/cutover/context_proposal_schema.py",
+      "action": "ADD",
+      "classification": "DIAGNOSTIC_SCHEMA"
+    },
+    {
+      "path": "tools/cutover/run_context_proposal_round4.py",
+      "action": "ADD",
+      "classification": "DIAGNOSTIC_TOOL"
+    },
+    {
+      "path": "tools/cutover/summarize_context_proposal_round4.py",
+      "action": "ADD",
+      "classification": "DIAGNOSTIC_TOOL"
+    }
+  ],
+  "excluded": [
+    ".env",
+    "credentials",
+    "logs",
+    "caches",
+    "raw model captures",
+    "raw task states",
+    "remaining Private",
+    "Blind"
+  ]
+}

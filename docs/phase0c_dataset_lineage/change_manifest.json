@@ -1,0 +1,82 @@
+{
+  "baseline_commit": "119d84d70d46867f655e8de2bf44838f44d2cd46",
+  "feature_branch": "phase0c-dataset-lineage-20260908-01",
+  "files": [
+    {
+      "repository_path": "minio_followup_store.py",
+      "source_sha256": "533f7f219fa01c539cd730d1a7515945bf9331c0502b05acdbf6f330694e36fb",
+      "published_sha256": "533f7f219fa01c539cd730d1a7515945bf9331c0502b05acdbf6f330694e36fb",
+      "baseline_sha256": "f1caf653d6921d27a1d6a22c52c04601066afd0fd5e9dba3d37c4f65395d584c"
+    },
+    {
+      "repository_path": "app/services/dataset_followup.py",
+      "source_sha256": "6ecdd62d31987b23b2733ce77c83b30f1d8db48626d0ac0c1bb9123d8e06e6d4",
+      "published_sha256": "6ecdd62d31987b23b2733ce77c83b30f1d8db48626d0ac0c1bb9123d8e06e6d4",
+      "baseline_sha256": "b4cfbb5496a4097324019f608140d432090f5bed4fd2974be2a575c51935f299"
+    },
+    {
+      "repository_path": "app/services/orchestrator.py",
+      "source_sha256": "fb34d0e74717b08e920a12c80e7065b68381fb42f43eea2894adfdd5a511f458",
+      "published_sha256": "fb34d0e74717b08e920a12c80e7065b68381fb42f43eea2894adfdd5a511f458",
+      "baseline_sha256": "e7016a46b82733feaa88a24355e102ca79a19c63e045d611c412354ee0dbfac2"
+    },
+    {
+      "repository_path": "tests/test_dataset_lineage_contract.py",
+      "source_sha256": "6adfb5595869cd102e95ab471b06deb55a1a89fbb273344474614d3b0d1225bb",
+      "published_sha256": "6adfb5595869cd102e95ab471b06deb55a1a89fbb273344474614d3b0d1225bb",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_sha256": "fe69c65057271dacaaea225fa16efca0562ba81f285690f70eca44bf4c2a6d38",
+      "published_sha256": "fe69c65057271dacaaea225fa16efca0562ba81f285690f70eca44bf4c2a6d38",
+      "baseline_sha256": "0bfbc4bd965806437724ccef1b12f245f3c97b1e92b473c6170b9e5adee49479"
+    },
+    {
+      "repository_path": "docs/phase0c_dataset_lineage/audit_inventory.json",
+      "source_sha256": "a120aee6a0557bb49a2d8ff7706bfb12e506946a283daa98da7ea660cca0b3a8",
+      "published_sha256": "a120aee6a0557bb49a2d8ff7706bfb12e506946a283daa98da7ea660cca0b3a8",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_dataset_lineage/closure_report.md",
+      "source_sha256": "27682b8acbd4ac57f793233f9b5b3c4b1c73f41ec8a9164e04d3cc73d53a2a76",
+      "published_sha256": "27682b8acbd4ac57f793233f9b5b3c4b1c73f41ec8a9164e04d3cc73d53a2a76",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_dataset_lineage/final_DataAnalysis_Agent.json",
+      "source_sha256": "4e71911c71a8add43ee1ed76a15a33be0c762eb173a796303c6edeee20c69af6",
+      "published_sha256": "4e71911c71a8add43ee1ed76a15a33be0c762eb173a796303c6edeee20c69af6",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_dataset_lineage/final_Oagnet.json",
+      "source_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "published_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_dataset_lineage/final_SQL_Translator.json",
+      "source_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "published_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_dataset_lineage/rollback_manifest.json",
+      "source_sha256": "653bb709dfbf240d6a751872a4673f95c18c3a3509bf44c1805fdab94cfaee08",
+      "published_sha256": "653bb709dfbf240d6a751872a4673f95c18c3a3509bf44c1805fdab94cfaee08",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_dataset_lineage/test_delta.json",
+      "source_sha256": "34543e93de888355ab1ffe5091e05953709e635df19cb727cca68fc37d2801f6",
+      "published_sha256": "34543e93de888355ab1ffe5091e05953709e635df19cb727cca68fc37d2801f6",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash"
+}

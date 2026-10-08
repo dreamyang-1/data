@@ -1,0 +1,30 @@
+# CONTEXT_ATTACHMENT_DATAFLOW — current HEAD audit
+
+Baseline: `d01d305e23059d99d147aa4a5d2f1ff6022e02e1`. This round changes no production code.
+
+| Producer → consumer | Input / output | Responsibility and rejection / override boundary | Provenance |
+|---|---|---|---|
+| HTTP request → ScopedPlanSession | Current authorized model/domain/database/knowledge scope | Hard authority; models/history cannot expand it | Trusted upstream backend |
+| ScopedPlanSession.restore → RawTurnPlanner | Conversation, prior plans, Pending; identity, scope, catalog and version checks | Hard validation before any model call; reject incompatible state | Current-scope restored artifacts |
+| RawTurnPlanner → `v2_current_turn` | **Question, turn_id, clock, slots only** | LLM extracts mentions, operation markers, explicit slots and relation hypotheses; receives no active task, historical task or Pending summary | Current model output |
+| repair_model_parse / CurrentTurnParser / catalog span recovery | Validated current spans and governed metric spans | Deterministic representation/catalog validation; no readiness-based relation test | Current spans + pinned catalog |
+| Pending admission → answer or continue/reject | Whole-option match; parse shift, NEW_TASK and HISTORICAL fields | Before the second model. Exact option can resume even if dialogue_act_candidates says NEW_TASK but shift is absent; unmatched input can reject without giving model Pending context | Pending option fact + semantic field precedence |
+| `_candidates` | Current mention roles → scoped catalog handles | Hard membership/role/scope bounds; not semantic relation authority | Pinned catalog |
+| `_task_context` / semantic_task_schema | Restored tasks + first parse | **HISTORICAL and no shift → all tasks/handles. Otherwise first call to TurnResolver → active task only, without selectable handle; NEW → no tasks.** This is a semantic exposure policy, not a hard authorization constraint | Deterministic policy consuming contextless LLM fields |
+| `v2_semantic_edits` | Question, parse, clock, candidates, selected task labels, datasets, payload/value schema | LLM selects canonical edits and optionally an offered historical handle. **No independent final relation/active-target proposal field exists.** | Current model output; historical labels are context, not new bindings |
+| Historical handle validation | Draft handle + offered scoped tasks + parse HISTORICAL | Membership/existence is hard; requiring an earlier HISTORICAL signal is exposure/semantic policy. These must not be conflated | Current validated candidate set |
+| TurnResolver → skeleton | First parse, state, selected historical task | Final branch precedence: shift → history → reference/followup/destructive agreement → NEW. Other dialogue acts alone are insufficient. No confidence weighting or missing_slots input | Model evidence + deterministic precedence |
+| Skeleton → prior semantics | Selected task/version or empty new state | Selects the base before execution readiness; wrong/missing model evidence can affect attachment before draft editing | Active/historical task version |
+| `_patch` / source_filter_patch | Current model edits, current mention/marker evidence, scoped bindings | Validate operations/roles; reject unconsumed explicit markers/slots. This guard does **not** decide relation. Current delta must not be silently lost | CURRENT_EXPLICIT; per-edit current mention IDs |
+| apply_task_patch / structured edits | Base semantics + validated patch + barriers | Deterministic ADD/REPLACE/REMOVE/CLEAR; untouched slots retained, CLEAR barriers block inherit requests; dataset invalidation tracked | Current explicit delta + allowed base state |
+| Payload/defaults/ambiguity processing | Reduced semantics, payload shape, governed candidates | Wrong shape/catalog/system failures reject. Only proven catalog ambiguity creates Pending. This RawTurnPlanner path does not call the generic ExecutionReadiness helper | Catalog-derived defaults distinct from current evidence |
+| materialize_payload / semantic coverage → compile | Reduced task → typed semantic IR/LogicalPlan | Payload cannot drop semantics/bindings; current-scope compile and pin acceptance required | Deterministic derivation |
+| apply_state_mutation / NEW_TOPIC → sealed state | Plan, checked task version, patch | No state publication for the original 13 rejected cluster cases; no model-generated full TaskSemanticState | Versioned state mutation / scoped seal |
+
+The resolver is called at multiple internal seams; counts in the report use one final observed decision per recorded turn. The transport's 250,000-character rejection is a size limit, not a small recency-based history candidate policy. Historical exposure currently has no small candidate count limit. Task labels contain slot display labels, filter targets, time, relationship/comparison structures, version, payload type and cleared slots; they do not include complete raw chat history, a task-status summary, last explicit operation or a semantic fingerprint.
+
+`MODEL_CONTEXT_INSUFFICIENT` and pre-relation candidate gating are established structural gaps. The existing 15-case cluster does not establish that these gaps caused a wrong target: all selected the expected active task. Five new controlled act-only experiments demonstrate that dialogue-act evidence can fail to attach while the diagnostic model-evidence arm attaches successfully. ADD/REPLACE can also describe initial slot operations, so these controls do not justify making every operation act an unconditional follow-up.
+
+The required division of duties remains: LLM proposes semantic attachment among bounded offered candidates; deterministic code validates current scope, candidate/task/version validity, current-delta preservation and barriers. No new context engine, production rule, score, Prompt or Schema is introduced in this audit.
+
+See [LLM_RULE_ARBITRATION_MATRIX](llm_rule_arbitration_matrix.json), [confidence inventory](confidence_inventory.json), [context exposure measurements](context_exposure_audit.json) and [trace contract](arbitration_trace_contract.json).

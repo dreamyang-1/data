@@ -1,0 +1,373 @@
+{
+  "capture": {
+    "observed_at": "2026-09-08T17:55:36.035255+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+    "status": "ACTUAL_METADATA_ONLY_CAPTURE_LOCAL_SOURCE_BINDING_CHECK",
+    "governed_value_fields": 89,
+    "distinct_source_routes": 1,
+    "declared_vectorization_counts": {
+      "None": 11,
+      "0": 52,
+      "1": 26
+    },
+    "attribute_mapping_outcomes": {
+      "VERIFIED_SOURCE_MAPPING": 89
+    },
+    "records_generated": 290,
+    "private_snapshot_committed": false,
+    "business_source_reads": 0,
+    "real_model_calls": 0,
+    "embedding_calls": 0,
+    "production_external_writes": 0,
+    "native_publication": false,
+    "live_entity_values_verified": false,
+    "configured_route_is_not_server_identity": true
+  },
+  "replay": {
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "outcomes": {
+      "SUPPORTED_PLAN_ONLY": 32,
+      "UNSUPPORTED": 4
+    },
+    "cases": [
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "f936a6892c88e9e95dad612caf9282768ed377875d693df6da2a5ab116cdd4b5",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "9e381c2a2c8c1d634aca9480873d93ba10398a407ee9d0863ba4f6d24b7380a6",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "2c59308f6826a9963ff333b044a8db2b889f01cc27caecbf9cb900a345d9cfcc",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "4bebecab5e332f50442c9b69f22460d8f5c1b7287d63f70b4250dc41d26435be",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "be5e797649a8d99a3bac0397d3721d4e1e2e04398cf9efdd3e26e5a1438aad68",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "d51b9046c4acabbc4e0ddb9a7274a03123019e27df0b6ff38d6c980959297604",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "46cb4ce8b7c9ceb9e78a2059323bc51eeafae7958e5c8083dd71998d5d406839",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "bee7c3b0b332f54f34993b1344a8e613660933a8431c89462f03b83c03efb8f6",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "5b6ae7660e108aaaabc921bea19d6d8ce9c792b746b7ac9dfa76008cd9c9a65b",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "bbabdd94bcf84ce5c13fa95d5a800721f970b9ee6ecd6159bbd7564e62600355",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "320d920877fb5f47b3e82a1e28de879f5b64d060793c1350a728d4802382e971",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "74299d2f450e345f25a90ba8f08e366f802bf257d2c1f07547e11761fd4a1c8f",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "eaf23c9c8d084cd7192173a35c4471e6a9feb120165d0cd43ec08ebb05c18630",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "00d8702f2a074fe62d5071335c1bf147646fd0a740a6e121697b694f70b20240",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "3fde1790bd293acc8f2e4cdd9aeb67ef85ae0000bfe0b239d68dd4a099478667",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "cdc7c89786566fd5cabb362278f199c8a93aeaba1c3ca6f0dd6c2f78b05688c8",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "4137d45256d769a48837de750d0427d4efb7842da2b1e16a6a6f43b04532bb4f",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "93db33acd44d846fe99fcb91c8e1821feb0d774c132164d5abf78aded1608d98",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "7ad344aa22dc5a8717bde186ea7386a167326cc3eb8140fb9d589c2dde6a464d",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "a6668d0b8d5e2c39efd1ff1c22da9957fa6f0c59e9d469448c8f7af5b8e0b5fe",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "d04743a4ea0c9e06115e7fc9e15f9e97ead6bbbe87a3b0415ab6fc6b7309ee47",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "305add475356dfc6530a34f7987d856a350deeb0d2048ab22ea163935a053796",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "55ac657a7d3d8709c93e57e184b2fc376c8c557b53d03cff22b2470d3949bc3b",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "799e2e052727b8f3ed0471a3adf598146051c983d0e8a3d680ad297f8d458462",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "cee1634698cf5a058b4a1b9798c053dd14eacf3aab277ba89b4c12ae9456d357",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "1aeb35f898fac7868d9bf078e2517b145a1229cf72a0709ce1b5b1dd0df02f1c",
+        "projection_columns": 1
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "d2c051a555a67bd5ef0bb004c8360f145e21311d49100dfe7fd9d70ff95fcc60",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "e09a2c62fdeaa7fc15fd1062a1d1a0152af38100b667459a78cab31242806922",
+        "projection_columns": 1
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "4984c4a85f5a63904b0271c2cfed05868c57076bd87f9317a057f081eb617dbe",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "57d8fb10fa41bd2b96560f3f08ecd6bbb16501782668eb90e9fe78b7e841b9fc",
+        "projection_columns": 1
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "4984c4a85f5a63904b0271c2cfed05868c57076bd87f9317a057f081eb617dbe",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "2fe221100eae5e5e8709b668972787c28b9c64e326fa89cb3a3c102aa99d4653",
+        "projection_columns": 2
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "84aea10641d99ba37081e746b8db8d82c605dddd685e0e5c9f988692376febb7",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "8fe087f0c6bf9940b1ac928822ef89ef49995513f5b341bf2877f0d8aa0787f4",
+        "projection_columns": 1
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "84aea10641d99ba37081e746b8db8d82c605dddd685e0e5c9f988692376febb7",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "43fdfef31ff8b697e546b2151f8131b40ee3190395e40d734984a72a07dee263",
+        "projection_columns": 2
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "bfb0bb12a32bc96ad218625ae8140290f13ebcefbc3c7dd23f2ba743f352e872",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "7b213670da0bb9a7cfff158bdebce81e90c8fffd6c82ad4ce43ac7577d33794e",
+        "projection_columns": 1
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "bfb0bb12a32bc96ad218625ae8140290f13ebcefbc3c7dd23f2ba743f352e872",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "78b49bca0900f7f4f1d91250f36fd032db56e6fe6bbd706bbd0fdf33d08ba06b",
+        "projection_columns": 2
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "195c047b2a52ecef167cbc46d449c0693a990182ecfd70a3abb7f2f77ab05ee4",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "7491c5d1683ba51e3db50072e6a0b5ae9b5f8f80a0ba22549ab8e3340aff9ac3",
+        "projection_columns": 1
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "195c047b2a52ecef167cbc46d449c0693a990182ecfd70a3abb7f2f77ab05ee4",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "633e461382bbba038905e6ef81f8f59307dcf6e4ff646eaa5fb4e6eac585af4f",
+        "projection_columns": 2
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "ae62f84e0cd9737ff5671b144fe730adadf455c3f87ce042397c6920e647cb09",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "2832bfde995e1f62e67583c21ae14b02629fd2b83e501aee128d70067b21b2ef",
+        "projection_columns": 1
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "ae62f84e0cd9737ff5671b144fe730adadf455c3f87ce042397c6920e647cb09",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "0a47539e90b1b03ee3679365dafc33fb7f5240922ffad00e9878d2522602febd",
+        "projection_columns": 2
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "5af23b69d57eb3c4592ec9edb8d49ae48b9ba0126a3ade8ca1d8d8fefbe4cddd",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "5af23b69d57eb3c4592ec9edb8d49ae48b9ba0126a3ade8ca1d8d8fefbe4cddd",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "f35cc75cb0afff74a46d08624fab064a231a7e89d0b87acbea36c976a8361f73",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "f35cc75cb0afff74a46d08624fab064a231a7e89d0b87acbea36c976a8361f73",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "e90021416b1e40a9abfcde57a62bca0ff4fa5bf38b2fedcdd3680ba41e7a2232",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "6c2b0de05524f027230a0e381a0f8655b04e3f9d7885d75b9210f17a4a54f62c",
+        "projection_columns": 1
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "e90021416b1e40a9abfcde57a62bca0ff4fa5bf38b2fedcdd3680ba41e7a2232",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "69dee13fc53724f03ba6e154d6323c9e0296b5709fe0c6c556da1bc194be115a",
+        "projection_columns": 2
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "8e54bad9655bf481448defbcfc9eefe3579670602fe3300bfb47359ed3e3ccef",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "31760d4471e92e10c2ff3e633be805f04892a84e6235ace6284236af810d8da6",
+        "projection_columns": 1
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "8e54bad9655bf481448defbcfc9eefe3579670602fe3300bfb47359ed3e3ccef",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "ef8528196cbc599cfe3dc6bdc57f3f611b3fd0dc7b8e5ba1cdffad7b0c51d112",
+        "projection_columns": 2
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "c5e840d404a3a7930f52cfc8dd189445afa7eb81827ea6fd6d5a7bb7d54375b8",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "acabac38394fe36574ce0cac549ded52c9a3277a561d0ee208b1e21941f57b33",
+        "projection_columns": 1
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "c5e840d404a3a7930f52cfc8dd189445afa7eb81827ea6fd6d5a7bb7d54375b8",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "aee6d0987f3cfa771ababd6a75598dd5ddc6e3bd7ef437f716f06b8e961178c7",
+        "projection_columns": 2
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "075b9cd2ca46668ec85d246dff5647d2ad0ece19bef3f35bf1f703b215179f03",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "ceade23baad1bbc5e05bdec128dcbe0000a770f1ffa224d4663d2e5c277a0f38",
+        "projection_columns": 1
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "075b9cd2ca46668ec85d246dff5647d2ad0ece19bef3f35bf1f703b215179f03",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "0be768a5d3578f44eaa0609d9d81cf3c474d92221f56fe501390f1774076b390",
+        "projection_columns": 2
+      }
+    ],
+    "evidence_type": "ACTUAL_METADATA_OFFLINE_TYPED_PLAN_ASL_SQL",
+    "native_persistence": "NOT_USED",
+    "real_model_calls": 0,
+    "embedding_service_calls": 0,
+    "business_source_reads": 0,
+    "sql_executions": 0,
+    "production_writes": 0,
+    "actual_result_validation": false,
+    "natural_language_accuracy_measured": false
+  },
+  "primary_subject_gap": {
+    "metric_definition_hashes": [
+      "5af23b69d57eb3c4592ec9edb8d49ae48b9ba0126a3ade8ca1d8d8fefbe4cddd",
+      "f35cc75cb0afff74a46d08624fab064a231a7e89d0b87acbea36c976a8361f73"
+    ],
+    "distinct_metrics": 2,
+    "affected_plans": 4,
+    "classification": "CATALOG_GOVERNANCE_GAP",
+    "evidence": "Each metric binds two different entity base tables within one source; no primary query subject is proven by this typed plan.",
+    "decision": "Keep unsupported; do not pick by catalog list order or model inference."
+  },
+  "source_timezone": {
+    "status": "UNKNOWN_NEEDS_OWNER_EVIDENCE",
+    "question_pending": true,
+    "evidence": "No source/database timezone contract found in current Agent, Oagnet or SQL Translator source. TimeSpec timezone alone does not prove DATETIME storage semantics."
+  },
+  "native_publication_verified": false,
+  "raw_metadata_and_sql_committed": false
+}

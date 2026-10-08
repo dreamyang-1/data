@@ -1,0 +1,154 @@
+{
+  "baseline_commit": "66c11a1bfa414ba63b4592cb5ff3713492a5b324",
+  "feature_branch": "cutover-state-evaluator-20260909t024300z",
+  "files": [
+    {
+      "repository_path": "tools/cutover/transition_evaluator.py",
+      "development_sha256": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2",
+      "normalized_sha256": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "tools/cutover/build_transition_gold.py",
+      "development_sha256": "25f07d695d464b4759ce621383c96b19f5ca11186dc4affdbb8ab9c06e97f63c",
+      "normalized_sha256": "25f07d695d464b4759ce621383c96b19f5ca11186dc4affdbb8ab9c06e97f63c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "tools/cutover/transition_observations.py",
+      "development_sha256": "138e61448ed422e0fb6ddb7c0639fb916a2b16af74e2ddd634b3580bc6dff15d",
+      "normalized_sha256": "138e61448ed422e0fb6ddb7c0639fb916a2b16af74e2ddd634b3580bc6dff15d",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "tools/cutover/run_transition_baseline.py",
+      "development_sha256": "7705cc2ad3b3599b9fb6f0b5286258670e30b06a4cfdbd05fb13ac81080ae768",
+      "normalized_sha256": "7705cc2ad3b3599b9fb6f0b5286258670e30b06a4cfdbd05fb13ac81080ae768",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "tests/test_cutover_transition_evaluator.py",
+      "development_sha256": "0a795e5f2f1d3103180d87e3ea1b59b7a3754089291549ee1693b96b2c88036c",
+      "normalized_sha256": "0a795e5f2f1d3103180d87e3ea1b59b7a3754089291549ee1693b96b2c88036c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.json",
+      "development_sha256": "7d2dbff4bb96033cf56cd4fa9b496b6a767515f8d164b057591499b5b197236c",
+      "normalized_sha256": "614bd0d1b4f0de58bd47fcf3d71b8c3a697210fa32a53534ce4aaf6f6d83ffb8",
+      "baseline_sha256": "2f4d3528759dc635c9a2582ee0d4ff3776152af1d0b5d1f6612cc618f351cd04"
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.csv",
+      "development_sha256": "a6249c1c17e6533cebf48ee3556ba2eb14f35fb1345ec1ceae3f1cb9b9c910ed",
+      "normalized_sha256": "3dc0bb5a7ee90ed56f46428cace263ea74b5be3eabb868e7f461b7c7c1dbb514",
+      "baseline_sha256": "fb169665ae4923268158a2c66606e15c04575b7515d3ae73dc160ba147ae3d2e"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.json",
+      "development_sha256": "8e679480631b985a85580515d1e0b332f607c4d0cd3c8150b374b40fb46dcbd9",
+      "normalized_sha256": "39b00675586aa1bd0273135449bf6cef8af9fd3c53e9e7dc580753e2081635b5",
+      "baseline_sha256": "a0fd3a6357ac891f4528452f092dfba4d14fcb5bac45f263e2ea4e1604628abf"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.csv",
+      "development_sha256": "1281c9c17a9c209e33fdb35379f17cd925d3e7037a1a6b1fdc4026b20665eac0",
+      "normalized_sha256": "a3d99e1482fa96d0c9ecab92160a7a4dbeb950c9bdab8325cffca5274cc83bd9",
+      "baseline_sha256": "898644fa43bbe64003df17049f453efeffe9de06a3d8331e2d8aac3015e3bc82"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.md",
+      "development_sha256": "9fdbc37a1c341341df45a5231e2f34ee1327f9c63260a8bfd9e421582b1ce423",
+      "normalized_sha256": "22bbd168e5ab7f07254e6c47208f95167789376c514bed1ae6075b51a48e1f62",
+      "baseline_sha256": "dbfed9e2f594e14dec9e6e5499e42ef789c0bb9592187d148e07e5ef6d9c6eca"
+    },
+    {
+      "repository_path": "docs/cutover/closure_report.md",
+      "development_sha256": "8fe44c8f1da374b022b68ea3551f57565513b2da933e160bfc639728785d1506",
+      "normalized_sha256": "550082fd5c05f3fa2fc9afc63854a0ab04f22beda08912d44241f07818c0faf4",
+      "baseline_sha256": "fc2c443f5650510de65ac2913ecad213d292d71221ae0fdd0a23af6a5912fdc9"
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/source_review.md",
+      "development_sha256": "873327902ca42d8c757931601f9a7039d20e4083c693587dd6810af5b73873fc",
+      "normalized_sha256": "873327902ca42d8c757931601f9a7039d20e4083c693587dd6810af5b73873fc",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/closure_report.md",
+      "development_sha256": "cb0a3d764715290d432d326437a290d4f432743b879814c22050cba780a5db8d",
+      "normalized_sha256": "cb0a3d764715290d432d326437a290d4f432743b879814c22050cba780a5db8d",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/transition_gold.jsonl",
+      "development_sha256": "c8df9ae284acfc61d4295c84f6f2ef7e213dac6824e6e0b4888fea4fe1c683e5",
+      "normalized_sha256": "59455a067afd02ecb425840ab8e89a893cb9de8606c7fbf356584f5a69685f5c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/v1_rule_predictions.jsonl",
+      "development_sha256": "a14f05cda67887f4c2b78d1c0c210f1e4ab4991c96c495fffaa9fc8a69f44345",
+      "normalized_sha256": "6bbf9da5ceaf7d35cbcc9f555b8a70ddfc8a639335a37229b0092e0a73ab2667",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/v1_rule_evaluation.json",
+      "development_sha256": "ab6859eb62ee8e14e1d3324020ca7cd0838ab58c623c9cc74e75c3c6bc39552c",
+      "normalized_sha256": "f73f89a74a06f8e5ba32535ea46f02345ae637ba5762ed7366a5fcf759b19ba4",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/test_delta.json",
+      "development_sha256": "f8c04b1ade0398fb4ff8010857737c4a7d49ea46e8b590b749fb3c415609f4c7",
+      "normalized_sha256": "93fc23d4e8f6fc8a8e6fffac446799aabaabf86cdaeb9c9db2815be623ce75cb",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/observed_gaps.json",
+      "development_sha256": "758fbcde3955063f5c8456b81751b05d2c7bce76c094e0c26879bb88cf6c3b77",
+      "normalized_sha256": "66cb8334e354b0100fe853acb2caf96fc938f1f04b09536e7fcbaa0257714eef",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/observed_gaps.csv",
+      "development_sha256": "d309373468bf3b2b51b4da2287a1e98d46a95084d0cbe1a74cdc241eb02aa1a5",
+      "normalized_sha256": "48ccb601d6b61b654e921b848c9dfa97745f9daa610860605a6bb28feabd07c7",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/operation_scores.json",
+      "development_sha256": "d4e2c636ec90a579439c01bcd78cc36d06d646d55e6c099c9eb29cdcedd95545",
+      "normalized_sha256": "053230047ad888799bf5e2c6688ec2d016417c421d6b25c8334092ba87bbb389",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/evaluation_coverage_matrix.json",
+      "development_sha256": "7ab440872706ea32b7b104365f0ce54dbb4fc12bc2e200c055dc6a49fc905c34",
+      "normalized_sha256": "f4d34db57aa35b4132025507719f208def8d8553e4fcfba3a81ca5f820914e18",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/evaluation_coverage_matrix.csv",
+      "development_sha256": "745a993ab07d59e40dcc586f9886ae3e78079e178141895709a47d009635b8d3",
+      "normalized_sha256": "7d00c897fe62f77ffb70e6cfd2a9af3dda9abf5986a56f1fe6c71eff9c3720b9",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/comparison_readiness.json",
+      "development_sha256": "caae8cb24a6c58bab16e3d87e47bc151bb31e93902fecbbc126c9afcca646e8a",
+      "normalized_sha256": "d53eabe59e04e4dc459f8d0bdae3f57bd6f1900bc9e2fd844869f6f01795fe32",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/state_evaluation/model_retry.json",
+      "development_sha256": "adf92f119e99f0bbfa0e58480b7418b4eb50b3cb161cb1fd310e3393527c7ab7",
+      "normalized_sha256": "12cf4a5f34b93adabd8b2160dffb4652ec31d4ab9ce308bf22277f8580d804d2",
+      "baseline_sha256": null
+    }
+  ],
+  "normalization": "CRLF to LF only",
+  "runtime_files_changed": [],
+  "v1_routing_changed": false,
+  "private_snapshot_or_credentials_copied": false
+}

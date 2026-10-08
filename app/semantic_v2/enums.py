@@ -25,6 +25,7 @@ class DialogueAct(StrEnum):
 
 
 class ServiceRoute(StrEnum):
+    CONTROL = "CONTROL"
     DATA_QUERY = "DATA_QUERY"
     DATASET_OPERATION = "DATASET_OPERATION"
     ANALYTICS = "ANALYTICS"
@@ -56,6 +57,8 @@ class AnalysisGoal(StrEnum):
 
 
 class QueryShape(StrEnum):
+    CAPABILITY_HELP = "CAPABILITY_HELP"
+    OUT_OF_SCOPE = "OUT_OF_SCOPE"
     SCALAR_AGGREGATE = "SCALAR_AGGREGATE"
     GROUPED_AGGREGATE = "GROUPED_AGGREGATE"
     TIME_SERIES = "TIME_SERIES"
@@ -208,10 +211,11 @@ class ErrorType(StrEnum):
 class TaskVersionStatus(StrEnum):
     PROVISIONAL = "PROVISIONAL"
     RESOLVED = "RESOLVED"
-    EXECUTABLE = "EXECUTABLE"
-    EXECUTING = "EXECUTING"
-    EXECUTED = "EXECUTED"
-    FAILED = "FAILED"
+    # Deprecated Python constants for 0.2 callers; never serialized as execution state.
+    EXECUTABLE = "RESOLVED"
+    EXECUTING = "RESOLVED"
+    EXECUTED = "RESOLVED"
+    FAILED = "RESOLVED"
     SUPERSEDED = "SUPERSEDED"
     CANCELLED = "CANCELLED"
 
@@ -230,3 +234,69 @@ class CandidateRejectionReason(StrEnum):
     INVALID_GRAIN = "INVALID_GRAIN"
     JOIN_CARDINALITY_UNSAFE = "JOIN_CARDINALITY_UNSAFE"
     UNKNOWN_BUSINESS_RULE = "UNKNOWN_BUSINESS_RULE"
+
+
+class ExecutionBackend(StrEnum):
+    SEMANTIC_QUERY = "SEMANTIC_QUERY"
+    DATASET_LOCAL = "DATASET_LOCAL"
+    SEMANTIC_METADATA = "SEMANTIC_METADATA"
+    ANALYTICS = "ANALYTICS"
+    CHAT_RESPONSE = "CHAT_RESPONSE"
+    CONTROL = "CONTROL"
+    REPORT_COMPOSITION = "REPORT_COMPOSITION"
+
+
+class ControlAction(StrEnum):
+    CANCEL = "CANCEL"
+    CONFIRM = "CONFIRM"
+    REFRESH = "REFRESH"
+    REVISE = "REVISE"
+
+
+class DeliveryMode(StrEnum):
+    TEXT = "TEXT"
+    TABLE = "TABLE"
+    CHART = "CHART"
+    REPORT = "REPORT"
+    EXPORT = "EXPORT"
+    DASHBOARD = "DASHBOARD"
+
+
+class Severity(StrEnum):
+    BLOCKING = "BLOCKING"
+    ADVISORY = "ADVISORY"
+
+
+class ComparisonType(StrEnum):
+    YOY = "YOY"
+    MOM = "MOM"
+    PERIOD_OVER_PERIOD = "PERIOD_OVER_PERIOD"
+    ABSOLUTE_DELTA = "ABSOLUTE_DELTA"
+    PERCENT_CHANGE = "PERCENT_CHANGE"
+    RATIO = "RATIO"
+    CUSTOM_PERIOD = "CUSTOM_PERIOD"
+
+
+class Calculation(StrEnum):
+    ABS_DIFF = "ABS_DIFF"
+    PERCENT_DIFF = "PERCENT_DIFF"
+    GROWTH_RATE = "GROWTH_RATE"
+    RATIO = "RATIO"
+    INDEX = "INDEX"
+
+
+class QualityCheckType(StrEnum):
+    FRESHNESS = "FRESHNESS"
+    COMPLETENESS = "COMPLETENESS"
+    NULL_RATE = "NULL_RATE"
+    DUPLICATION = "DUPLICATION"
+    CONSISTENCY = "CONSISTENCY"
+    RECONCILIATION = "RECONCILIATION"
+
+
+class ExecutionStatus(StrEnum):
+    CREATED = "CREATED"
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"

@@ -1,0 +1,113 @@
+{
+  "status": "V2_CONTEXT_V1_EXECUTION_SLIM_OFFLINE_PASS",
+  "baseline_head": "89880f1bc2d259829278dfd272b60785e3c306e9",
+  "targeted": {
+    "passed": 201,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "affected_comparable": {
+    "baseline": {
+      "passed": 571,
+      "existing_failed": 1,
+      "collection_errors": 0
+    },
+    "final": {
+      "passed": 591,
+      "existing_failed": 1,
+      "collection_errors": 0
+    },
+    "old_pass_to_new_fail": 0,
+    "missing_baseline_nodes": 0
+  },
+  "full_offline": {
+    "baseline": {
+      "passed": 3666,
+      "existing_failed": 106,
+      "collection_errors": 0
+    },
+    "final": {
+      "passed": 3686,
+      "existing_failed": 106,
+      "collection_errors": 0
+    },
+    "new_tests": 20,
+    "old_pass_to_new_fail": 0,
+    "old_fail_to_new_pass": 0,
+    "missing_baseline_nodes": 0
+  },
+  "external_calls": {
+    "model": 0,
+    "benchmark": 0,
+    "business_sql": 0,
+    "production_writes": 0
+  },
+  "live_validation": {
+    "runtime_pid": 35388,
+    "runtime_mode": "V2_CONTEXT_V1_EXECUTION",
+    "live_http_status": 200,
+    "ready_http_status": 200,
+    "platform_route": "/agent_chat/stream",
+    "platform_request_reached": true,
+    "first_failure_stage": "CURRENT_CATALOG_REQUEST_CAPTURE",
+    "error_code": "CATALOG_PHYSICAL_MODEL_MISMATCH",
+    "current_turn_reached": false,
+    "v1_execution_reached": false,
+    "oagent_reached": false,
+    "sql_reached": false,
+    "model_wide_physical_tables": 437,
+    "model_wide_mismatched_tables": 419,
+    "explicit_205_physical_tables": 14,
+    "explicit_205_catalog_records": 290,
+    "code_changes_after_failure": 0
+  },
+  "model_wide_catalog_fix": {
+    "requested_business_domain_ids": [],
+    "resolved_business_domain_ids": [
+      205
+    ],
+    "request_contract_preserved_for_v1": true,
+    "targeted": {
+      "passed": 22,
+      "failed": 0,
+      "collection_errors": 0
+    },
+    "affected_comparable": {
+      "passed": 594,
+      "existing_failed": 1,
+      "collection_errors": 0,
+      "old_pass_to_new_fail": 0,
+      "same_baseline_failure": "tests/test_v2_operation_round1.py::test_rejected_mixed_patch_leaves_state_barriers_versions_and_message_unchanged[slot_conflict]"
+    },
+    "authority_probe": {
+      "status": "PASS",
+      "catalog_records": 290
+    },
+    "live_revalidation": {
+      "runtime_pid": 25288,
+      "runtime_mode": "V2_CONTEXT_V1_EXECUTION",
+      "live_http_status": 200,
+      "ready_http_status": 200,
+      "same_conversation_state_key": true,
+      "first_turn": {
+        "status": "COMPLETED",
+        "bridge_route": "V1_EXECUTION_FALLBACK_NEW_TASK",
+        "state_version": 1,
+        "task_count": 0,
+        "v1_execution_called": true,
+        "oagent_evidence": true,
+        "query_result_evidence": true
+      },
+      "followup": {
+        "status": "SAFE_FALLBACK",
+        "error_code": "V2_CONTEXT_UNRESOLVED",
+        "v1_execution_called": false,
+        "oagent_evidence": false,
+        "query_result_evidence": false
+      },
+      "catalog_fix": "PASS_LIVE",
+      "first_group": "FAIL_NO_PUBLISHED_V2_TASK",
+      "code_changes_after_live_result": 0
+    }
+  }
+}

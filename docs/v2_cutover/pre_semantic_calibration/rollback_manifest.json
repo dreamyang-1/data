@@ -1,0 +1,14 @@
+{
+  "baseline_commit": "5aaf64a235ca1766ee5c72bb24997aba924c10e0",
+  "code_commit": "b2478b5125f2b7d8ce463b0b42b389f1b3462367",
+  "procedure": [
+    "Resolve the evidence commit using git_commit_manifest.json.",
+    "On an isolated review branch, git revert the evidence commit, then git revert b2478b5125f2b7d8ce463b0b42b389f1b3462367.",
+    "Run affected offline tests and verify the production-source diff is empty."
+  ],
+  "production_rollback_required": false,
+  "production_logic_changed": false,
+  "database_migration": false,
+  "secrets_or_private_artifacts_in_git": false,
+  "destructive_reset_or_clean_allowed": false
+}

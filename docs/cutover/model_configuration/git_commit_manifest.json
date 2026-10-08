@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "2cd4d93de8ce151f0b859e8252db3f0ed7ce141c",
+  "feature_branch": "cutover-qwen37-config-20260909t031200z",
+  "final_commit": "Commit containing this manifest",
+  "planned_subject": "config: use user-selected qwen3.7-max model",
+  "runtime_source_changed": true,
+  "evidence": "closure_report.md and test_delta.json",
+  "draft_pr_base": "cutover-state-evaluator-20260909t024300z"
+}

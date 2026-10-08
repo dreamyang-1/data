@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "b0c2d9da2a836b9e16b9986c90d1e3b2065026f0",
+  "feature_branch": "cutover-pinned-sql-catalog-20260909-01",
+  "source_rollback": "Reviewed reverts of service commits followed by explicit manifest resync. Public routing was not changed.",
+  "catalog_identity": "Adding/removing SQL facts changes catalog_version. Never reuse a stale native generation after source rollback; current source/target/embedding checks remain required.",
+  "runtime_rollback_proven": false,
+  "native_publication_performed": false,
+  "production_writes": 0
+}

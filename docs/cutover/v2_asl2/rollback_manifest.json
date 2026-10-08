@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "abd6e82bfffb683d829e408581dda583633ec8d8",
+  "feature_branch": "cutover-v2-asl2-lowering-20260909-01",
+  "source_rollback": "Reviewed reverts of Agent/SQL commits and explicit development resync. No native or business state was written.",
+  "native_publication_performed": false,
+  "runtime_rollback_proven": false,
+  "production_v2_routing_changed": false
+}

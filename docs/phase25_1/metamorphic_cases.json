@@ -1,0 +1,242 @@
+[
+  {
+    "id": "metamorphic:0",
+    "left": "查询销售额和销售量两个指标",
+    "right": "同时查看销售量及销售额",
+    "codes": [
+      "metric_0_a",
+      "metric_0_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:1",
+    "left": "查询收入和订单数两个指标",
+    "right": "同时查看订单数及收入",
+    "codes": [
+      "metric_1_a",
+      "metric_1_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:2",
+    "left": "查询利润和成本两个指标",
+    "right": "同时查看成本及利润",
+    "codes": [
+      "metric_2_a",
+      "metric_2_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:3",
+    "left": "查询退货额和退货量两个指标",
+    "right": "同时查看退货量及退货额",
+    "codes": [
+      "metric_3_a",
+      "metric_3_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:4",
+    "left": "查询库存金额和库存数量两个指标",
+    "right": "同时查看库存数量及库存金额",
+    "codes": [
+      "metric_4_a",
+      "metric_4_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:5",
+    "left": "查询医院数和经销商数两个指标",
+    "right": "同时查看经销商数及医院数",
+    "codes": [
+      "metric_5_a",
+      "metric_5_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:6",
+    "left": "查询含税金额和未税金额两个指标",
+    "right": "同时查看未税金额及含税金额",
+    "codes": [
+      "metric_6_a",
+      "metric_6_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:7",
+    "left": "查询采购额和采购量两个指标",
+    "right": "同时查看采购量及采购额",
+    "codes": [
+      "metric_7_a",
+      "metric_7_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:8",
+    "left": "查询净销售额和折扣额两个指标",
+    "right": "同时查看折扣额及净销售额",
+    "codes": [
+      "metric_8_a",
+      "metric_8_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:9",
+    "left": "查询毛利和净利润两个指标",
+    "right": "同时查看净利润及毛利",
+    "codes": [
+      "metric_9_a",
+      "metric_9_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:10",
+    "left": "查询预算金额和目标金额两个指标",
+    "right": "同时查看目标金额及预算金额",
+    "codes": [
+      "metric_10_a",
+      "metric_10_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:11",
+    "left": "查询付款金额和回款金额两个指标",
+    "right": "同时查看回款金额及付款金额",
+    "codes": [
+      "metric_11_a",
+      "metric_11_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:12",
+    "left": "查询出库数量和入库数量两个指标",
+    "right": "同时查看入库数量及出库数量",
+    "codes": [
+      "metric_12_a",
+      "metric_12_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:13",
+    "left": "查询客单价和订单笔数两个指标",
+    "right": "同时查看订单笔数及客单价",
+    "codes": [
+      "metric_13_a",
+      "metric_13_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:14",
+    "left": "查询发货额和发货量两个指标",
+    "right": "同时查看发货量及发货额",
+    "codes": [
+      "metric_14_a",
+      "metric_14_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:15",
+    "left": "查询成交金额和成交数量两个指标",
+    "right": "同时查看成交数量及成交金额",
+    "codes": [
+      "metric_15_a",
+      "metric_15_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:16",
+    "left": "查询运费和税额两个指标",
+    "right": "同时查看税额及运费",
+    "codes": [
+      "metric_16_a",
+      "metric_16_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:17",
+    "left": "查询开票金额和未开票金额两个指标",
+    "right": "同时查看未开票金额及开票金额",
+    "codes": [
+      "metric_17_a",
+      "metric_17_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:18",
+    "left": "查询应收金额和实收金额两个指标",
+    "right": "同时查看实收金额及应收金额",
+    "codes": [
+      "metric_18_a",
+      "metric_18_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  },
+  {
+    "id": "metamorphic:19",
+    "left": "查询坏账金额和逾期金额两个指标",
+    "right": "同时查看逾期金额及坏账金额",
+    "codes": [
+      "metric_19_a",
+      "metric_19_b"
+    ],
+    "ground_truth_scope": [
+      "TaskSemanticState.metrics SET equality"
+    ]
+  }
+]

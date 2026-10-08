@@ -1,0 +1,23 @@
+{
+  "created_at": "2026-09-09T14:12:47.926191+00:00",
+  "original": 24,
+  "previous_promoted": [
+    "PV81-010",
+    "PV81-016"
+  ],
+  "new_promoted": [
+    {
+      "case_id": "PV81-002",
+      "subcluster": "ADD / extra unconsumed MEASURE reference",
+      "reason": "Single representative to distinguish explicit delta from referential mention"
+    },
+    {
+      "case_id": "PV81-003",
+      "subcluster": "REMOVE / extra unconsumed MEASURE reference",
+      "reason": "Contrast operation with the same unconsumed-evidence boundary"
+    }
+  ],
+  "remaining": 20,
+  "original_inputs_read_before_promotion": false,
+  "blind_access": 0
+}

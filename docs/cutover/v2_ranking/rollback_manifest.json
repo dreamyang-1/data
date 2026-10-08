@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "b6ca3db0d8602f9f7457a64092d60c449a1c725d",
+  "feature_branch": "cutover-v2-ranking-contract-20260909-01",
+  "source_rollback": "Reviewed reverts of Agent and SQL commits with explicit development resync; no native/production state changed.",
+  "native_publication_performed": false,
+  "runtime_rollback_proven": false,
+  "production_v2_routing_changed": false
+}

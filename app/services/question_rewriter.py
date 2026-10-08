@@ -4,6 +4,8 @@ import asyncio
 import hashlib
 import json
 import logging
+import time
+from copy import deepcopy
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from typing import Any, Protocol
@@ -13,6 +15,7 @@ import httpx
 
 from app.domain.models import (
     CanonicalAnalysisRequest,
+    PrimaryIntent,
     SemanticAmbiguity,
     SemanticFilterBinding,
 )
@@ -106,6 +109,10 @@ class HttpEntityAttributeSearcher:
             )
         response.raise_for_status()
         payload = response.json()
+        domains = sorted(set(business_domain_ids or ([business_domain_id] if business_domain_id else [])))
+        if (not isinstance(payload, dict) or payload.get('semantic_model_id') != semantic_model_id
+                or payload.get('business_domain_ids') != domains):
+            raise ValueError('SEMANTIC_SCOPE_MISMATCH: entity retrieval scope was not confirmed')
         matches = payload.get("matches", []) if isinstance(payload, dict) else []
         if not isinstance(matches, list):
             raise ValueError("entity attribute search returned invalid matches")
@@ -119,6 +126,9 @@ class HttpEntityAttributeSearcher:
         for item in matches:
             if not isinstance(item, dict):
                 continue
+            if (domains and item.get('business_domain_id') not in domains
+                    or item.get('semantic_model_id', semantic_model_id) != semantic_model_id):
+                raise ValueError('SEMANTIC_SCOPE_MISMATCH: entity candidate outside authorized scope')
             normalized = dict(item)
             if version is not None and "semantic_model_version" not in normalized:
                 normalized["semantic_model_version"] = str(version)
@@ -132,7 +142,9 @@ class HttpEntityAttributeSearcher:
         semantic_model_id: int,
         business_domain_ids: list[int] | None = None,
     ) -> list[dict[str, Any]]:
-        if not candidates:
+        # The current Oagnet display endpoint adds global domain -1 and omits
+        # candidate domain provenance. It cannot enforce an explicit grant.
+        if not candidates or business_domain_ids:
             return []
         async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout_seconds) as client:
             response = await client.post(
@@ -145,6 +157,8 @@ class HttpEntityAttributeSearcher:
             )
         response.raise_for_status()
         payload = response.json()
+        if not isinstance(payload, dict) or payload.get('semantic_model_id') != semantic_model_id:
+            raise ValueError('SEMANTIC_SCOPE_MISMATCH: display model was not confirmed')
         matches = payload.get("matches", []) if isinstance(payload, dict) else []
         if not isinstance(matches, list):
             raise ValueError("semantic display resolver returned invalid matches")
@@ -209,6 +223,42 @@ class QuestionRewriter:
         self.auto_replace_threshold = auto_replace_threshold
         self.candidate_gap = candidate_gap
         self.typo_similarity_threshold = typo_similarity_threshold
+        # 向量检索是 rewrite 里最贵的远程调用（3s 预算），别名/目录数据只在
+        # 发布时变化，短 TTL 内同一 (query, scope) 直接复用上次结果
+        self._search_cache: dict[tuple, tuple[float, list[dict]]] = {}
+
+    _SEARCH_CACHE_TTL_SECONDS = 60.0
+    _SEARCH_CACHE_MAX_ENTRIES = 128
+
+    async def _search_with_cache(
+        self,
+        query: str,
+        *,
+        semantic_model_id,
+        business_domain_id,
+        business_domain_ids,
+    ) -> list[dict]:
+        key = (
+            query,
+            semantic_model_id,
+            business_domain_id,
+            tuple(business_domain_ids or ()),
+        )
+        cached = self._search_cache.get(key)
+        now = time.monotonic()
+        if cached is not None and now - cached[0] <= self._SEARCH_CACHE_TTL_SECONDS:
+            return deepcopy(cached[1])
+        results = await self.searcher.search(
+            query,
+            semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+            business_domain_ids=business_domain_ids,
+        )
+        if len(self._search_cache) >= self._SEARCH_CACHE_MAX_ENTRIES:
+            oldest = min(self._search_cache, key=lambda k: self._search_cache[k][0])
+            self._search_cache.pop(oldest, None)
+        self._search_cache[key] = (now, deepcopy(list(results)))
+        return list(results)
 
     async def ground_display_slots(
         self,
@@ -316,6 +366,8 @@ class QuestionRewriter:
             str(item.get("candidate_id") or ""): item
             for item in matches
             if isinstance(item, dict) and str(item.get("candidate_id") or "")
+            and item.get('semantic_model_id', request.semantic_model_id) == request.semantic_model_id
+            and (not request.business_domain_ids or item.get('business_domain_id') in request.business_domain_ids)
         }
         display: dict[str, Any] = {}
         metrics: list[str] = []
@@ -384,6 +436,7 @@ class QuestionRewriter:
         semantic_model_id: int | None,
         business_domain_id: int | None,
         business_domain_ids: list[int] | None = None,
+        verified_filter_bindings=None,
     ) -> list[SemanticAmbiguity]:
         """Resolve each filter literal independently against the live catalog.
 
@@ -397,6 +450,48 @@ class QuestionRewriter:
 
         if self.searcher is None or semantic_model_id is None:
             return []
+        original_filter_count = len(request.filters)
+        existing_filter_literals = {
+            str(value or "").strip().strip("%").casefold()
+            for item in request.filters
+            if isinstance(item, dict)
+            for value in (
+                item.get("value")
+                if isinstance(item.get("value"), list)
+                else [item.get("value")]
+            )
+            if str(value or "").strip().strip("%")
+        }
+        untyped_catalog_identifiers: list[str] = []
+        if "CATALOG_IDENTIFIER_GROUNDING_REQUIRED" in request.assumptions:
+            for mention in request.semantic_entity_mentions:
+                literal = str(mention or "").strip().strip("%")
+                if (
+                    literal
+                    and literal.casefold() not in existing_filter_literals
+                    and re.fullmatch(
+                        r"(?=[0-9A-Za-z-]{3,64}$)"
+                        r"(?=[0-9A-Za-z-]*[A-Za-z])"
+                        r"[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
+                        literal,
+                    )
+                ):
+                    untyped_catalog_identifiers.append(literal)
+        untyped_catalog_identifiers = list(dict.fromkeys(
+            untyped_catalog_identifiers
+        ))[:10]
+        for literal in untyped_catalog_identifiers:
+            # ``商品名称`` is a temporary semantic family hint, not a physical
+            # binding. It survives only when the current authorized V1 catalog
+            # returns a high-confidence product-family match for this literal.
+            request.filters.append({
+                "field": "商品名称",
+                "operator": "EQ",
+                "value": literal,
+            })
+        provisional_filter_indices = set(range(
+            original_filter_count, len(request.filters)
+        ))
         literals: list[str] = []
         for item in request.filters:
             if not isinstance(item, dict):
@@ -415,6 +510,32 @@ class QuestionRewriter:
         if not literals:
             return []
 
+        # A filter value already proven executable by a same-conversation
+        # successful query keeps its attribute binding on follow-up turns.
+        # Re-running unstable vector recall for that exact value can demote a
+        # verified name to a wrong field family; the carried provenance is
+        # authoritative and needs no retrieval round trip.
+        verified_by_literal: dict[str, dict[str, str]] = {}
+        for item in verified_filter_bindings or ():
+            surface, canonical_value, canonical_name, attribute_code = item
+            surface = str(surface or "").strip()
+            canonical_value = str(canonical_value or "").strip()
+            canonical_name = str(canonical_name or "").strip()
+            attribute_code = str(attribute_code or "").strip()
+            if not (surface and canonical_value and canonical_name and attribute_code):
+                continue
+            for key in dict.fromkeys((surface, canonical_value)):
+                folded = key.strip("%").casefold()
+                if folded:
+                    verified_by_literal.setdefault(folded, {
+                        "attribute_code": attribute_code,
+                        "canonical_value": canonical_value,
+                        "canonical_name": canonical_name,
+                    })
+        recall_literals = [
+            literal for literal in literals
+            if literal.casefold() not in verified_by_literal
+        ]
         results = await asyncio.gather(*[
             self.searcher.search(
                 literal,
@@ -422,7 +543,7 @@ class QuestionRewriter:
                 business_domain_id=business_domain_id,
                 business_domain_ids=business_domain_ids,
             )
-            for literal in literals
+            for literal in recall_literals
         ], return_exceptions=True)
         confirmed_attribute_codes = {
             value.split("=", 1)[1].strip()
@@ -432,7 +553,17 @@ class QuestionRewriter:
         }
         matches: list[dict[str, Any]] = []
         ambiguities: list[SemanticAmbiguity] = []
-        for literal, result in zip(literals, results, strict=True):
+        for literal in literals:
+            verified = verified_by_literal.get(literal.casefold())
+            if verified is not None:
+                matches.append({
+                    "score": 1.0,
+                    "attribute_code": verified["attribute_code"],
+                    "attribute_name": verified["canonical_name"],
+                    "attribute_value": verified["canonical_value"],
+                    "canonical_value": verified["canonical_value"],
+                })
+        for literal, result in zip(recall_literals, results, strict=True):
             if isinstance(result, Exception):
                 logger.warning(
                     "isolated entity filter grounding skipped safely: literal=%r error=%s",
@@ -440,7 +571,9 @@ class QuestionRewriter:
                     type(result).__name__,
                 )
                 continue
-            current = [dict(item) for item in result if isinstance(item, dict)]
+            current = [dict(item) for item in result if isinstance(item, dict)
+                       and item.get('semantic_model_id', semantic_model_id) == semantic_model_id
+                       and (not business_domain_ids or item.get('business_domain_id') in business_domain_ids)]
             # A user-selected ambiguity option is stronger than another
             # equal-score vector search.  Limit this literal to the confirmed
             # semantic attribute so the same province/city (or similar)
@@ -452,6 +585,13 @@ class QuestionRewriter:
             ]
             if confirmed:
                 current = confirmed
+            else:
+                current = self._prefer_finest_administrative_region(current)
+            if literal in untyped_catalog_identifiers:
+                current = [
+                    item for item in current
+                    if self._semantic_match_family(item) == "product"
+                ]
             matches.extend(current)
             version = self._semantic_model_version(current)
             ambiguities.extend(self._detect_semantic_ambiguities(
@@ -493,10 +633,240 @@ class QuestionRewriter:
             if resolved_domains:
                 request.resolved_business_domain_ids = resolved_domains
 
+        if provisional_filter_indices:
+            accepted_provisional = {
+                binding.filter_index
+                for binding in request.semantic_filter_bindings
+                if binding.filter_index in provisional_filter_indices
+                and self._semantic_match_family({
+                    "attribute_name": binding.canonical_name,
+                    "attribute_code": binding.attribute_code,
+                }) == "product"
+            }
+            keep_indices = [
+                index for index in range(len(request.filters))
+                if index not in provisional_filter_indices
+                or index in accepted_provisional
+            ]
+            index_map = {
+                old_index: new_index
+                for new_index, old_index in enumerate(keep_indices)
+            }
+            request.filters = [request.filters[index] for index in keep_indices]
+            request.semantic_filter_bindings = [
+                binding.model_copy(update={
+                    "filter_index": index_map[binding.filter_index]
+                })
+                for binding in request.semantic_filter_bindings
+                if binding.filter_index in index_map
+            ]
+            if accepted_provisional:
+                request.assumptions.append(
+                    "CATALOG_IDENTIFIER_GROUNDED_FROM_CURRENT_MODEL"
+                )
+
         by_id: dict[str, SemanticAmbiguity] = {}
         for item in ambiguities:
             by_id[item.ambiguity_id or f"{item.type}:{item.phrase}"] = item
         return list(by_id.values())[:5]
+
+    @classmethod
+    def _prefer_finest_administrative_region(
+        cls, matches: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Resolve one geographic value to its finest catalog level.
+
+        A municipality can legitimately occur in both province and city
+        attributes with the same canonical value.  That is a hierarchy, not a
+        business ambiguity.  Collapse only exact same-value region candidates
+        whose administrative levels are known; different values, different
+        semantic families, and unknown levels remain available for the normal
+        ambiguity gate.
+        """
+
+        def level(item: dict[str, Any]) -> int | None:
+            reference = " ".join(
+                str(item.get(key) or "").strip().casefold()
+                for key in (
+                    "attribute_code", "attribute_name", "dimension_name",
+                    "field_name", "entity_name",
+                )
+            )
+            ordered = (
+                (10, ("province", "省份", "自治区", "直辖市")),
+                (50, ("village", "村")),
+                (40, ("street", "town", "乡", "镇", "街道")),
+                (30, ("district", "county", "区县", "区", "县")),
+                (20, ("city", "城市", "地级市", "市")),
+            )
+            return next(
+                (
+                    rank
+                    for rank, markers in ordered
+                    if any(marker in reference for marker in markers)
+                ),
+                None,
+            )
+
+        grouped: dict[tuple[int | None, str], list[tuple[int, dict[str, Any]]]] = {}
+        retained: list[tuple[int, dict[str, Any]]] = []
+        for index, item in enumerate(matches):
+            if cls._semantic_match_family(item) != "region":
+                retained.append((index, item))
+                continue
+            value = str(
+                item.get("canonical_value")
+                or item.get("attribute_value")
+                or ""
+            ).strip().casefold()
+            if not value:
+                retained.append((index, item))
+                continue
+            grouped.setdefault(
+                (item.get("business_domain_id"), value), []
+            ).append((index, item))
+
+        for alternatives in grouped.values():
+            ranked = [(level(item), index, item) for index, item in alternatives]
+            known = [rank for rank, _index, _item in ranked if rank is not None]
+            if len(set(known)) < 2 or len(known) != len(ranked):
+                retained.extend(alternatives)
+                continue
+            finest = max(known)
+            retained.extend(
+                (index, item)
+                for rank, index, item in ranked
+                if rank == finest
+            )
+        return [item for _index, item in sorted(retained, key=lambda pair: pair[0])]
+
+    @staticmethod
+    def _context_filter_family(*values: object) -> str:
+        """Map V1 entity attributes to a safe conversational edit family.
+
+        This deliberately groups product name, brand, manufacturer and product
+        category because users commonly replace one product-scoping surface
+        with another (for example a product name with a parent brand).  It
+        keeps hospitals and trading partners separate so a terse ``X呢`` can
+        never silently change the business role of the prior condition.
+        """
+        material = " ".join(str(value or "").strip().casefold() for value in values)
+        families = (
+            (
+                "COMMERCIAL_PRODUCT",
+                (
+                    "product_name", "goods_name", "商品名称", "产品名称",
+                    "规格型号", "产品规格", "商品规格", "specification",
+                    "商品品牌", "产品品牌", "parent_brand", "母品牌", "母厂牌",
+                    "brand", "厂家", "manufacturer", "商品分类", "产品分类",
+                    "category", "品类",
+                ),
+            ),
+            ("REGION", ("province", "city", "region", "area", "省份", "城市", "地区", "区域")),
+            ("HOSPITAL", ("hospital", "医院", "护理院", "卫生服务中心", "卫生院")),
+            ("PARTNER", ("dealer", "distributor", "supplier", "vendor", "经销商", "供应商")),
+        )
+        matches = [
+            family
+            for family, markers in families
+            if any(marker.casefold() in material for marker in markers)
+        ]
+        return matches[0] if len(matches) == 1 else "OTHER"
+
+    async def resolve_context_filter_value(
+        self,
+        surface: str,
+        *,
+        expected_family: str,
+        preferred_attribute_code: str | None = None,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+        business_domain_ids: list[int] | None = None,
+        tenant_id: str,
+        user_id: str,
+        application_id: str,
+        conversation_id: str,
+    ) -> SemanticFilterBinding | None:
+        """Use V1's existing scoped entity search for one contextual value.
+
+        The returned binding is evidence that V2 may replace one visible
+        surface in ``completed_question``.  It is not copied into an execution
+        request: the completed full question still traverses the ordinary V1
+        rewrite, intent, Oagent and SQL chain and is grounded there again.
+        """
+        literal = surface.strip().strip("%")
+        if (
+            not literal
+            or len(literal) > 500
+            or semantic_model_id is None
+            or expected_family not in {
+                "COMMERCIAL_PRODUCT", "REGION", "HOSPITAL", "PARTNER"
+            }
+        ):
+            return None
+        provisional_field = {
+            "COMMERCIAL_PRODUCT": "商品名称",
+            "REGION": "地区",
+            "HOSPITAL": "医院名称",
+            "PARTNER": "经销商名称",
+        }[expected_family]
+        if (
+            preferred_attribute_code
+            and self._context_filter_family(preferred_attribute_code)
+            == expected_family
+        ):
+            confirmed_attribute = preferred_attribute_code.strip()
+        else:
+            confirmed_attribute = None
+        literals = [literal]
+        if expected_family == "REGION":
+            normalized_region = re.sub(
+                r"(?:(?:壮族|回族|维吾尔)?自治区|特别行政区|省|市|地区)$",
+                "",
+                literal,
+            ).strip()
+            if normalized_region and normalized_region != literal:
+                literals.append(normalized_region)
+
+        for candidate_literal in literals:
+            probe = CanonicalAnalysisRequest(
+                conversation_id=conversation_id,
+                application_id=application_id,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                original_question=candidate_literal,
+                primary_intent=PrimaryIntent.DETAIL_QUERY,
+                semantic_model_id=semantic_model_id,
+                business_domain_ids=list(business_domain_ids or []),
+                assumptions=(
+                    [
+                        "SEMANTIC_AMBIGUITY_CONFIRMED_ATTRIBUTE="
+                        + confirmed_attribute
+                    ]
+                    if confirmed_attribute is not None
+                    else []
+                ),
+                filters=[{
+                    "field": provisional_field,
+                    "operator": "EQ",
+                    "value": candidate_literal,
+                }],
+            )
+            ambiguities = await self.ground_executable_filters(
+                probe,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+                business_domain_ids=list(business_domain_ids or []),
+            )
+            if ambiguities or len(probe.semantic_filter_bindings) != 1:
+                continue
+            binding = probe.semantic_filter_bindings[0]
+            if self._context_filter_family(
+                binding.attribute_code, binding.canonical_name
+            ) != expected_family:
+                continue
+            return binding
+        return None
 
     async def rewrite(
         self,
@@ -507,7 +877,10 @@ class QuestionRewriter:
         business_domain_id: int | None,
         business_domain_ids: list[int] | None = None,
         force_context: bool = False,
+        apply_previous_context: bool = True,
     ) -> RewriteResult:
+        if business_domain_ids is None:
+            business_domain_ids = [business_domain_id] if business_domain_id is not None else []
         original = question.strip()
         locally_normalized, local_events = self._normalize_local_metric_typos(original)
         locally_normalized, word_order_events = self._normalize_polite_word_order(
@@ -522,14 +895,21 @@ class QuestionRewriter:
             locally_normalized
         )
         local_events.extend(temporal_events)
-        rewritten, context_applied = self._apply_context(
-            locally_normalized,
-            previous,
-            semantic_model_id=semantic_model_id,
-            business_domain_ids=business_domain_ids,
-            force_context=force_context,
-        )
-        if previous is not None and self.is_deterministic_slot_update(locally_normalized):
+        if apply_previous_context:
+            rewritten, context_applied = self._apply_context(
+                locally_normalized,
+                previous,
+                semantic_model_id=semantic_model_id,
+                business_domain_ids=business_domain_ids,
+                force_context=force_context,
+            )
+        else:
+            rewritten, context_applied = locally_normalized, False
+        if (
+            apply_previous_context
+            and previous is not None
+            and self.is_deterministic_slot_update(locally_normalized)
+        ):
             return RewriteResult(
                 original, rewritten, local_events, context_applied=context_applied
             )
@@ -552,7 +932,7 @@ class QuestionRewriter:
             if self.candidate_mode == "assist":
                 queries.extend(item.text for item in candidates[:4])
             results = await asyncio.gather(*[
-                self.searcher.search(
+                self._search_with_cache(
                     query,
                     semantic_model_id=semantic_model_id,
                     business_domain_id=business_domain_id,
@@ -578,6 +958,10 @@ class QuestionRewriter:
                 context_applied=context_applied, degraded=True
             )
 
+        matches = [item for item in matches if isinstance(item, dict)
+                   and item.get('semantic_model_id', semantic_model_id) == semantic_model_id
+                   and (not business_domain_ids or item.get('business_domain_id') in business_domain_ids)]
+        matches = self._prefer_finest_administrative_region(matches)
         normalized, events = self._normalize(rewritten, locally_normalized, matches)
         semantic_version = self._semantic_model_version(matches)
         semantic_ambiguities = self._detect_semantic_ambiguities(
@@ -752,7 +1136,10 @@ class QuestionRewriter:
             ("hospital", ("医院", "护理院", "卫生服务中心", "hospital")),
             ("partner", ("经销商", "供应商", "dealer", "supplier", "vendor")),
             ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
-            ("product", ("商品名称", "产品名称", "商品", "产品", "product", "goods", "sku")),
+            ("product", (
+                "商品名称", "产品名称", "规格型号", "产品规格", "商品规格",
+                "specification", "商品", "产品", "product", "goods", "sku",
+            )),
         )
         return next(
             (name for name, aliases in families if any(alias in reference for alias in aliases)),
@@ -850,7 +1237,10 @@ class QuestionRewriter:
                 ("hospital", ("医院", "护理院", "卫生服务中心", "hospital")),
                 ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
                 ("partner", ("经销商", "供应商", "dealer", "supplier", "vendor")),
-                ("product", ("商品名称", "产品名称", "商品", "产品", "product", "goods", "sku")),
+                ("product", (
+                    "商品名称", "产品名称", "规格型号", "产品规格", "商品规格",
+                    "specification", "商品", "产品", "product", "goods", "sku",
+                )),
             )
             return next(
                 (name for name, aliases in families if any(alias in text for alias in aliases)),
@@ -948,6 +1338,10 @@ class QuestionRewriter:
             )
 
         semantic_bindings: list[SemanticFilterBinding] = []
+        rebound_filter_indexes: set[int] = set()
+        prior_bindings_by_index: dict[int, list[SemanticFilterBinding]] = {}
+        for binding in request.semantic_filter_bindings:
+            prior_bindings_by_index.setdefault(binding.filter_index, []).append(binding)
         for filter_index, item in enumerate(request.filters):
             if not isinstance(item, dict):
                 grounded_filters.append(item)
@@ -976,15 +1370,55 @@ class QuestionRewriter:
                     for required in required_values
                 )
             )
-            ranked = sorted(
-                (
-                    candidate for candidate in candidates
-                    if candidate["family"] == current_family
-                    and value_matches(candidate)
-                ),
+            exact_by_field: dict[tuple[str, str], dict[str, Any]] = {}
+            for candidate in candidates:
+                if not (
+                    candidate["score"] >= 0.70
+                    and required_values
+                    and all(
+                        any(
+                            candidate_value.casefold() == required.casefold()
+                            for candidate_value in candidate["values"]
+                        )
+                        for required in required_values
+                    )
+                ):
+                    continue
+                field_identity = (
+                    candidate["family"],
+                    candidate["attribute_code"] or candidate["label"].casefold(),
+                )
+                previous = exact_by_field.get(field_identity)
+                if previous is None or candidate["score"] > previous["score"]:
+                    exact_by_field[field_identity] = candidate
+            exact_hits = sorted(
+                exact_by_field.values(),
                 key=lambda candidate: (-candidate["score"], candidate["label"]),
             )
-            if not ranked:
+            if len(exact_hits) == 1:
+                # A unique exact catalog value is authoritative over the
+                # model's provisional field family.  A lower-score same-family
+                # fuzzy/substring hit must not outrank it, otherwise the
+                # canonical replacement of that fuzzy hit silently overwrites
+                # the user's literal with an unrelated catalog value.
+                ranked = exact_hits
+                family_rebound = exact_hits[0]["family"] != current_family
+            elif exact_hits:
+                # The same literal is an exact catalog value on several
+                # attributes.  Binding by list order or family priority would
+                # guess; keep the provisional field and let the ambiguity
+                # gate fail closed instead.
+                ranked = []
+            else:
+                ranked = sorted(
+                    (
+                        candidate for candidate in candidates
+                        if candidate["family"] == current_family
+                        and value_matches(candidate)
+                    ),
+                    key=lambda candidate: (-candidate["score"], candidate["label"]),
+                )
+            if not ranked and not exact_hits:
                 # The completion model can identify the right literal but
                 # attach a provisional family (for example 商品名称=费森尤斯).
                 # Rebind only from high-confidence, current-model catalog
@@ -1007,6 +1441,7 @@ class QuestionRewriter:
                         family_rebound = best["family"] != current_family
             if ranked and current_family is not None:
                 selected = ranked[0]
+                rebound_filter_indexes.add(filter_index)
                 current["field"] = selected["label"]
                 grounded_by_family[selected["family"]] = selected["label"]
                 canonical_value = selected["canonical_value"]
@@ -1025,9 +1460,19 @@ class QuestionRewriter:
                 attribute_code = selected["attribute_code"]
                 if attribute_code:
                     for required in sorted(required_values):
+                        prior_binding = next((
+                            binding
+                            for binding in prior_bindings_by_index.get(
+                                filter_index, []
+                            )
+                            if binding.canonical_value == canonical_value
+                        ), None)
                         semantic_bindings.append(SemanticFilterBinding(
                             filter_index=filter_index,
-                            input_value=required,
+                            input_value=(
+                                prior_binding.input_value
+                                if prior_binding is not None else required
+                            ),
                             canonical_value=canonical_value,
                             canonical_name=selected["label"],
                             attribute_code=attribute_code,
@@ -1040,8 +1485,31 @@ class QuestionRewriter:
 
         if not grounded_by_family and not canonicalized_literals:
             return request
+        preserved_bindings: list[SemanticFilterBinding] = []
+        for binding in request.semantic_filter_bindings:
+            if (
+                binding.filter_index in rebound_filter_indexes
+                or not 0 <= binding.filter_index < len(grounded_filters)
+            ):
+                continue
+            bound_filter = grounded_filters[binding.filter_index]
+            if not isinstance(bound_filter, dict):
+                continue
+            raw_values = bound_filter.get("value")
+            values = raw_values if isinstance(raw_values, list) else [raw_values]
+            field = str(bound_filter.get("field") or "").strip()
+            if (
+                binding.canonical_value in {
+                    str(value or "").strip() for value in values
+                }
+                and field in {binding.canonical_name, binding.attribute_code}
+            ):
+                preserved_bindings.append(binding.model_copy(deep=True))
         request.filters = grounded_filters
-        request.semantic_filter_bindings = semantic_bindings
+        request.semantic_filter_bindings = sorted(
+            [*preserved_bindings, *semantic_bindings],
+            key=lambda item: (item.filter_index, item.attribute_code),
+        )
         request.dimensions = list(dict.fromkeys(
             grounded_by_family.get(family(value) or "", value)
             for value in request.dimensions
@@ -1262,15 +1730,11 @@ class QuestionRewriter:
     ) -> tuple[str, bool]:
         if previous is None:
             return question, False
-        if (
-            previous.semantic_model_id is not None
-            and semantic_model_id is not None
-            and previous.semantic_model_id != semantic_model_id
-        ):
+        if previous.semantic_model_id != semantic_model_id:
             return question, False
         current_domains = set(business_domain_ids or [])
         previous_domains = set(previous.business_domain_ids)
-        if current_domains and previous_domains and current_domains != previous_domains:
+        if current_domains != previous_domains:
             return question, False
         strong_reference = any(
             marker in question for marker in self._STRONG_CONTEXT_MARKERS

@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "3ab8b4336b290d3560756345c4328278ee1ca9b3",
+  "feature_branch": "cutover-catalog-publication-20260908-01",
+  "base_branch": "cutover-readiness-catalog-20260908-01",
+  "implementation_commit": "369a3619f64f9d8c5e7c47198547053af71026e6",
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "production_operations": false
+}

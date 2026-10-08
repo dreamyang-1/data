@@ -60,10 +60,10 @@ class AnalysisEngine:
         return f"{value:,.4f}".rstrip("0").rstrip(".")
 
     @classmethod
-    def _table_cell(cls, value: Any, *, percentage: bool = False) -> str:
+    def _table_cell(cls, value: Any, *, percentage: bool = False, as_identifier: bool = False) -> str:
         if value is None:
             return "—"
-        number = cls._number(value)
+        number = None if as_identifier else cls._number(value)
         if number is not None:
             rendered = (
                 f"{float(number):.2%}"
@@ -495,6 +495,21 @@ class AnalysisEngine:
                 ):
                     profile_columns.append(candidate)
                     profile_sources[candidate] = candidate
+        # SQL has already resolved the requested to-one display attributes.
+        # Ranking must not discard them when reducing rows to label/value.
+        displays = (request.asl_template or {}).get('display_fields') or []
+        requested_fields = set(request.fields)
+        for item in displays:
+            if isinstance(item, dict):
+                requested_fields.update(str(item[key]) for key in ('name', 'alias') if item.get(key))
+        for column in columns:
+            identity_companion = bool(displays) and any(
+                token in column.lower() for token in ('编码', '编号', '_code', '_id'))
+            if (column in requested_fields or identity_companion) and column not in {
+                label_column, metric_column, *profile_columns
+            } and not column.startswith('_'):
+                profile_columns.append(column)
+                profile_sources[column] = column
         rankings = [
             {
                 "rank": index,
@@ -528,7 +543,8 @@ class AnalysisEngine:
                 self._table_cell(item["label"]),
                 self._table_cell(item["value"], percentage=is_coverage),
                 *(
-                    self._table_cell(item["profile"].get(column))
+                    self._table_cell(item["profile"].get(column), as_identifier=any(
+                        token in column.lower() for token in ('编码', '编号', '_code', '_id')))
                     for column in profile_columns
                 ),
             ]) + " |")
@@ -566,8 +582,15 @@ class AnalysisEngine:
     ) -> str:
         non_metrics = [column for column in columns if column != metric_column]
         scored: list[tuple[int, str]] = []
+        def label_key(value):
+            key = cls._object_key(value).replace('_', '')
+            # Result aliases and semantic dimension names describe the same
+            # business object. A related company label is not the ranked person.
+            for alias in ('销售人员', '销售员', '业务员'):
+                key = key.replace(alias, 'salesperson')
+            return key
         for column in non_metrics:
-            column_key = cls._object_key(column).replace("_", "")
+            column_key = label_key(column)
             leaf_key = column_key.rsplit(".", 1)[-1]
             if any(token in column_key for token in ("id", "code", "编号", "编码", "序号")):
                 continue
@@ -577,7 +600,7 @@ class AnalysisEngine:
                 continue
             score = 0
             for dimension in request.dimensions:
-                dimension_key = cls._object_key(dimension).replace("_", "")
+                dimension_key = label_key(dimension)
                 if column_key == dimension_key:
                     score = max(score, 10)
                 elif column_key in {f"{dimension_key}名称", f"{dimension_key}name"}:

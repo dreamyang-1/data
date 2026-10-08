@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "2e5b5a6fb82d896eacc859af99a1b5eece067f11",
+  "feature_branch": "cutover-v2-temporal-comparisons-20260908-01",
+  "base_branch": "cutover-v2-relation-paths-20260908-01",
+  "implementation_commit": "56f3df3ef82ec11316dff98afe3ad950f5458fdc",
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

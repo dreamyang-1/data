@@ -1,0 +1,35 @@
+{
+  "baseline": "6b3a6e91e06ee5897a44ca2fd5d28532ecb68a79",
+  "branch": "v2-limited-scalar-deployment-ready-20260910T164141Z",
+  "production_files": [
+    ".env.example",
+    "app/api.py",
+    "app/config.py",
+    "app/main.py",
+    "app/semantic_v2/limited_scalar_runtime.py",
+    "app/semantic_v2/persisted_scalar_api.py"
+  ],
+  "test_and_tool_files": [
+    "tests/test_v2_limited_scalar_deployment.py",
+    "tools/cutover/round512_redis_lifecycle.py",
+    "tools/limited_scalar_deployment.py",
+    "tools/limited_scalar_session_admin.py"
+  ],
+  "documentation_files": [
+    "docs/v2_cutover/semantic_round5_12/recovery_checkpoint.md",
+    "docs/v2_cutover/semantic_round5_12/supported_capabilities.json",
+    "docs/v2_cutover/semantic_round5_12/deployment_runbook.md",
+    "docs/v2_cutover/semantic_round5_12/rollback.md",
+    "docs/v2_cutover/semantic_round5_12/test_delta.json",
+    "docs/v2_cutover/semantic_round5_12/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_12/evidence_index.json",
+    "docs/v2_cutover/semantic_round5_12/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_12/closure_report.md"
+  ],
+  "excluded": [".env", ".eval_private", "logs", "cache", "credentials", "business results", "Redis values"],
+  "v1_semantic_logic_changed": false,
+  "prompt_changed": false,
+  "model_schema_changed": false,
+  "public_request_response_or_sse_schema_changed": false,
+  "ui_changed": false
+}

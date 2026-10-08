@@ -1,0 +1,11 @@
+{
+  "baseline_commit": "8bbf35167b15492b37e1ed141abbefef18c90204",
+  "feature_branch": "phase0c-task-recall-20260908-01",
+  "runtime_files": ["app/services/working_memory.py", "app/services/orchestrator.py"],
+  "rollback": "Use a new branch at a reviewed revision or a fresh revert commit. Preserve unrelated edits, rerun historical-recall/Pending/scope/export regressions, and explicitly synchronize reviewed files to development. Do not rewrite history.",
+  "public_schema_migration": false,
+  "persisted_state_schema_migration": false,
+  "external_data_rollback_required": false,
+  "production_v2_routing_changed": false,
+  "forbidden": ["reset --hard", "clean", "force push", "whole-directory overwrite", "automatic merge"]
+}

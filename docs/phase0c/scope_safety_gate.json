@@ -1,0 +1,28 @@
+{
+  "safety_assertions": {
+    "semantic_model_id_required": true,
+    "scope_expansion_from_explicit_domain": 0,
+    "history_scope_expansion": 0,
+    "pending_scope_expansion": 0,
+    "dataset_scope_expansion": 0,
+    "cache_cross_scope_reuse": 0,
+    "explicit_multi_domain_silently_becoming_model_wide": 0
+  },
+  "safety_assertions_status": "PASS_FAIL_CLOSED",
+  "SEMANTIC_SCOPE_CONTRACT": "BLOCKED_EXTERNAL_CONTRACT",
+  "scope_suite_passed": 88,
+  "scope_suite_total": 88,
+  "measurement": "Observed offline acceptance assertions, not production telemetry",
+  "strict_single_domain_execution_supported": false,
+  "explicit_multi_domain_behavior": "EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED",
+  "blockers": [
+    "EXT-SCOPE-01",
+    "EXT-SCOPE-02",
+    "EXT-SCOPE-03",
+    "INTEGRATION-SCOPE-04"
+  ],
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_external_writes": 0,
+  "cross_service_patches_performed": false
+}

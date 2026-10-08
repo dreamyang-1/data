@@ -1,0 +1,29 @@
+{
+  "status": "DOCUMENTATION_AND_EVIDENCE_ONLY",
+  "baseline_commit": "195ab12de7fce571d49606284d5003e3ab370685",
+  "branch": "v2-real-source-value-round2-4-20260912T041452Z",
+  "production_code_changes": 0,
+  "test_code_changes": 0,
+  "prompt_changes": 0,
+  "schema_changes": 0,
+  "oagnet_changes": 0,
+  "sql_translator_changes": 0,
+  "benchmark_changes": 0,
+  "tracked_files": [
+    "docs/v2_context_benchmark/failure_closure_round2_4/SOURCE_VALUE_PROOF_ACQUISITION.md",
+    "docs/v2_context_benchmark/failure_closure_round2_4/RB50_37_OFFLINE_REPLAY.md",
+    "docs/v2_context_benchmark/failure_closure_round2_4/RB50_37_TARGETED_RESULT.md",
+    "docs/v2_context_benchmark/failure_closure_round2_4/round24_summary.md",
+    "docs/v2_context_benchmark/failure_closure_round2_4/test_delta.json",
+    "docs/v2_context_benchmark/failure_closure_round2_4/evidence_index.json",
+    "docs/v2_context_benchmark/failure_closure_round2_4/change_manifest.json",
+    "docs/v2_context_benchmark/failure_closure_round2_4/rollback.md"
+  ],
+  "excluded": [
+    ".eval_private/entity-instance-round2-4",
+    "credentials",
+    "connection_strings",
+    "raw_model_responses",
+    "business_result_rows"
+  ]
+}

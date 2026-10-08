@@ -1,0 +1,32 @@
+{
+  "starting_commit": "4d12cf6dd11239e6f2e76f91f43bbdeed0bc2c2b",
+  "base_branch": "semantic-operation-round1-20260909t122901z",
+  "feature_branch": "semantic-projection-round2-20260909t132659z",
+  "parent_draft_pr": "https://github.com/dreamyang-1/data/pull/55",
+  "tracked_files": 1471,
+  "unexpected_drift": 0,
+  "origin_HEAD_verified": true,
+  "git_clean": true,
+  "started_at": "2026-09-09T13:26:59.889574+00:00",
+  "parent_verifier": {
+    "status": "PASS",
+    "stage_status": "SEMANTIC_ROOT_CLOSURE_ROUND_1_COMPLETE",
+    "conclusion": "NO_GENERIC_OPERATION_DEFECT_PROVEN",
+    "investigated_cases": 13,
+    "evidence_files": 16,
+    "evidence_hash": "fc0145c24e7acda27b599d2cbb0521e74f41496107243b516e0a93faeaaa39ef",
+    "parent_harness_status": "PASS",
+    "parent_calibration_status": "PASS",
+    "production_changes": 0,
+    "model_calls": 0,
+    "private_or_blind_payload_reads": 0,
+    "production_writes": 0
+  },
+  "baseline_tests": {
+    "passed": 3183,
+    "failed": 27
+  },
+  "uncompleted_owned_scripts_or_tests": 0,
+  "original_oagnet_head": "656637304eb1c7dbdf8ddb8714ea3b8df6b0990c",
+  "original_oagnet_index_hash": "ce14d88f7b52b4adf4f0f54114f15635dafdbba672c256fd05f06a2b564fba0b"
+}

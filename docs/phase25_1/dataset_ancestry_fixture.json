@@ -1,0 +1,82 @@
+{
+  "ground_truth_scope": [
+    "DECLARED_FROZEN_DATASET"
+  ],
+  "annotation_status": "COMPLETE",
+  "A0": {
+    "rows": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22
+    ],
+    "root_dataset_id": "A0",
+    "parent_dataset_ids": []
+  },
+  "A1": {
+    "rows": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "root_dataset_id": "A0",
+    "parent_dataset_ids": [
+      "A0"
+    ],
+    "operation": {
+      "operation_type": "LIMIT",
+      "limit": 5,
+      "preserve_existing_order": true
+    }
+  },
+  "turns": [
+    {
+      "text": "展示前10条",
+      "source_dataset_id": "A1",
+      "expected_rows": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "text": "最开始22条里的前10条",
+      "source_dataset_id": "A0",
+      "expected_rows": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    }
+  ],
+  "reference_resolver": "FIXTURE_ONLY_NOT_PRODUCTION"
+}

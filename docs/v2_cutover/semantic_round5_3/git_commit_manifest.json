@@ -1,0 +1,19 @@
+{
+  "baseline_commit": "bf3e8dbb9adb3abe40a4a53f8475f27799cf3da9",
+  "parent_draft_pr": 61,
+  "base_branch": "semantic-downstream-round5-2-20260910t040418z",
+  "feature_branch": "semantic-grounding-round5-3-20260910t052350z",
+  "title": "semantic: bind indexed source candidates and export request invariants",
+  "final_commit": {
+    "resolution": "Commit introducing this manifest",
+    "command": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_3/git_commit_manifest.json"
+  },
+  "publication": {
+    "remote": "https://github.com/dreamyang-1/data",
+    "head": "semantic-grounding-round5-3-20260910t052350z",
+    "base": "semantic-downstream-round5-2-20260910t040418z",
+    "draft": true,
+    "auto_merge": false,
+    "receipt": "Post-publication receipt outside committed tree"
+  }
+}

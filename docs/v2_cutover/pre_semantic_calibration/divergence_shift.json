@@ -1,0 +1,1646 @@
+{
+  "public_dev": {
+    "case_count": 100,
+    "status_counts": {
+      "FAIL": 55,
+      "PASS": 39,
+      "BLOCKED": 6
+    },
+    "distribution": {
+      "TASK_OPERATION": {
+        "n": 18,
+        "N": 100,
+        "case_ids": [
+          "G81-001",
+          "G81-003",
+          "G81-008",
+          "G81-009",
+          "G81-010",
+          "G81-012",
+          "G81-040",
+          "G81-058",
+          "G81-059",
+          "G81-060",
+          "G81-061",
+          "G81-066",
+          "G81-070",
+          "G81-075",
+          "G81-078",
+          "G81-092",
+          "G81-093",
+          "G81-096"
+        ]
+      },
+      "MENTION_BOUNDARY": {
+        "n": 11,
+        "N": 100,
+        "case_ids": [
+          "G81-002",
+          "G81-004",
+          "G81-005",
+          "G81-006",
+          "G81-011",
+          "G81-013",
+          "G81-029",
+          "G81-030",
+          "G81-033",
+          "G81-034",
+          "G81-094"
+        ]
+      },
+      "CATALOG_GAP": {
+        "n": 6,
+        "N": 100,
+        "case_ids": [
+          "G81-007",
+          "G81-056",
+          "G81-062",
+          "G81-063",
+          "G81-064",
+          "G81-065"
+        ]
+      },
+      "QUERY_SHAPE": {
+        "n": 6,
+        "N": 100,
+        "case_ids": [
+          "G81-014",
+          "G81-050",
+          "G81-051",
+          "G81-052",
+          "G81-057",
+          "G81-085"
+        ]
+      },
+      "SEMANTIC_QUERY_IR": {
+        "n": 3,
+        "N": 100,
+        "case_ids": [
+          "G81-053",
+          "G81-081",
+          "G81-099"
+        ]
+      },
+      "CANONICAL_BINDING": {
+        "n": 3,
+        "N": 100,
+        "case_ids": [
+          "G81-054",
+          "G81-055",
+          "G81-098"
+        ]
+      },
+      "EXTERNAL_BLOCKER": {
+        "n": 3,
+        "N": 100,
+        "case_ids": [
+          "G81-067",
+          "G81-071",
+          "G81-073"
+        ]
+      },
+      "ENTITY_VALUE_GROUNDING": {
+        "n": 5,
+        "N": 100,
+        "case_ids": [
+          "G81-068",
+          "G81-069",
+          "G81-074",
+          "G81-080",
+          "G81-087"
+        ]
+      },
+      "FIXTURE_GAP": {
+        "n": 3,
+        "N": 100,
+        "case_ids": [
+          "G81-076",
+          "G81-088",
+          "G81-091"
+        ]
+      },
+      "TURN_RESOLUTION": {
+        "n": 1,
+        "N": 100,
+        "case_ids": [
+          "G81-082"
+        ]
+      },
+      "TIME_NORMALIZATION": {
+        "n": 2,
+        "N": 100,
+        "case_ids": [
+          "G81-084",
+          "G81-090"
+        ]
+      }
+    },
+    "cases": [
+      {
+        "case_id": "G81-001",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-002",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-003",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-004",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-005",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-006",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-007",
+        "status": "FAIL",
+        "first_divergence_stage": "CATALOG_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-008",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-009",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-010",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-011",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-012",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-013",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-014",
+        "status": "FAIL",
+        "first_divergence_stage": "QUERY_SHAPE",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "QUERY_SHAPE",
+          "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-015",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-016",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-017",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-018",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-019",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-020",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-021",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-022",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-023",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-024",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-025",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-026",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-027",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-028",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-029",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-030",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-031",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-032",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-033",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-034",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_ROLE",
+          "reason_code": "V2_RELATION_BINDING_ROLE_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-035",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-036",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-037",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-038",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-039",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-040",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-041",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-042",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-043",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-044",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-045",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-046",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-047",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-048",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-049",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-050",
+        "status": "FAIL",
+        "first_divergence_stage": "QUERY_SHAPE",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "QUERY_SHAPE",
+          "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-051",
+        "status": "FAIL",
+        "first_divergence_stage": "QUERY_SHAPE",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "QUERY_SHAPE",
+          "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-052",
+        "status": "FAIL",
+        "first_divergence_stage": "QUERY_SHAPE",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "QUERY_SHAPE",
+          "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-053",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_QUERY_IR",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_QUERY_IR",
+          "reason_code": "V2_CONTRACT_VALIDATION_FAILURE"
+        }
+      },
+      {
+        "case_id": "G81-054",
+        "status": "FAIL",
+        "first_divergence_stage": "CANONICAL_BINDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "CANONICAL_BINDING",
+          "reason_code": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+        }
+      },
+      {
+        "case_id": "G81-055",
+        "status": "FAIL",
+        "first_divergence_stage": "CANONICAL_BINDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "CANONICAL_BINDING",
+          "reason_code": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+        }
+      },
+      {
+        "case_id": "G81-056",
+        "status": "FAIL",
+        "first_divergence_stage": "CATALOG_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-057",
+        "status": "FAIL",
+        "first_divergence_stage": "QUERY_SHAPE",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "QUERY_SHAPE",
+          "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-058",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-059",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-060",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-061",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-062",
+        "status": "FAIL",
+        "first_divergence_stage": "CATALOG_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-063",
+        "status": "FAIL",
+        "first_divergence_stage": "CATALOG_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-064",
+        "status": "FAIL",
+        "first_divergence_stage": "CATALOG_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-065",
+        "status": "FAIL",
+        "first_divergence_stage": "CATALOG_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "CATALOG_ERROR",
+          "stage": "CATALOG_GAP",
+          "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-066",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-067",
+        "status": "BLOCKED",
+        "first_divergence_stage": "EXTERNAL_BLOCKER",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_TIMEOUT",
+          "stage": "EXTERNAL_BLOCKER",
+          "reason_code": "V2_MODEL_TRANSPORT_FAILURE"
+        }
+      },
+      {
+        "case_id": "G81-068",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+        }
+      },
+      {
+        "case_id": "G81-069",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+        }
+      },
+      {
+        "case_id": "G81-070",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_BINDING_OUTSIDE_EDIT_EVIDENCE"
+        }
+      },
+      {
+        "case_id": "G81-071",
+        "status": "BLOCKED",
+        "first_divergence_stage": "EXTERNAL_BLOCKER",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_TIMEOUT",
+          "stage": "EXTERNAL_BLOCKER",
+          "reason_code": "V2_MODEL_TRANSPORT_FAILURE"
+        }
+      },
+      {
+        "case_id": "G81-072",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-073",
+        "status": "BLOCKED",
+        "first_divergence_stage": "EXTERNAL_BLOCKER",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_TIMEOUT",
+          "stage": "EXTERNAL_BLOCKER",
+          "reason_code": "V2_MODEL_TRANSPORT_FAILURE"
+        }
+      },
+      {
+        "case_id": "G81-074",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+        }
+      },
+      {
+        "case_id": "G81-075",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_FILTER_CURRENT_EVIDENCE_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-076",
+        "status": "BLOCKED",
+        "first_divergence_stage": "FIXTURE_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "FIXTURE_ERROR",
+          "stage": "FIXTURE_GAP",
+          "reason_code": "REFERENCED_HISTORICAL_TASK_NOT_IN_GOLD_HISTORY"
+        }
+      },
+      {
+        "case_id": "G81-077",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-078",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-079",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-080",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+        }
+      },
+      {
+        "case_id": "G81-081",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_QUERY_IR",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_QUERY_IR",
+          "reason_code": "V2_CATALOG_AMBIGUITY_NOT_PROVEN"
+        }
+      },
+      {
+        "case_id": "G81-082",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-083",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-084",
+        "status": "FAIL",
+        "first_divergence_stage": "TIME_NORMALIZATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TIME_NORMALIZATION",
+          "reason_code": "V2_TEMPORAL_BASE_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-085",
+        "status": "FAIL",
+        "first_divergence_stage": "QUERY_SHAPE",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "QUERY_SHAPE",
+          "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-086",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-087",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+        }
+      },
+      {
+        "case_id": "G81-088",
+        "status": "BLOCKED",
+        "first_divergence_stage": "FIXTURE_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "FIXTURE_ERROR",
+          "stage": "FIXTURE_GAP",
+          "reason_code": "REFERENCED_HISTORICAL_TASK_NOT_IN_GOLD_HISTORY"
+        }
+      },
+      {
+        "case_id": "G81-089",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-090",
+        "status": "FAIL",
+        "first_divergence_stage": "TIME_NORMALIZATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TIME_NORMALIZATION",
+          "reason_code": "V2_TEMPORAL_BASE_REQUIRED"
+        }
+      },
+      {
+        "case_id": "G81-091",
+        "status": "BLOCKED",
+        "first_divergence_stage": "FIXTURE_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "FIXTURE_ERROR",
+          "stage": "FIXTURE_GAP",
+          "reason_code": "DATASET_PROOFS_ABSENT_FROM_ORIGINAL_GOLD"
+        }
+      },
+      {
+        "case_id": "G81-092",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+        }
+      },
+      {
+        "case_id": "G81-093",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "G81-094",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_FIELD_ROLE_INVALID"
+        }
+      },
+      {
+        "case_id": "G81-095",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-096",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_CONTRACT_VALIDATION_FAILURE"
+        }
+      },
+      {
+        "case_id": "G81-097",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "G81-098",
+        "status": "FAIL",
+        "first_divergence_stage": "CANONICAL_BINDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "CANONICAL_BINDING",
+          "reason_code": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+        }
+      },
+      {
+        "case_id": "G81-099",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_QUERY_IR",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_QUERY_IR",
+          "reason_code": "V2_RECOGNITION_UNRESOLVED"
+        }
+      },
+      {
+        "case_id": "G81-100",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      }
+    ],
+    "one_primary_per_case": true
+  },
+  "private_validation": {
+    "case_count": 24,
+    "status_counts": {
+      "FAIL": 24
+    },
+    "distribution": {
+      "SEMANTIC_QUERY_IR": {
+        "n": 6,
+        "N": 24,
+        "case_ids": [
+          "PV81-001",
+          "PV81-004",
+          "PV81-009",
+          "PV81-013",
+          "PV81-019",
+          "PV81-022"
+        ]
+      },
+      "TURN_RESOLUTION": {
+        "n": 13,
+        "N": 24,
+        "case_ids": [
+          "PV81-002",
+          "PV81-003",
+          "PV81-005",
+          "PV81-006",
+          "PV81-008",
+          "PV81-011",
+          "PV81-012",
+          "PV81-014",
+          "PV81-015",
+          "PV81-017",
+          "PV81-018",
+          "PV81-020",
+          "PV81-023"
+        ]
+      },
+      "SEMANTIC_ROLE": {
+        "n": 1,
+        "N": 24,
+        "case_ids": [
+          "PV81-007"
+        ]
+      },
+      "TASK_OPERATION": {
+        "n": 2,
+        "N": 24,
+        "case_ids": [
+          "PV81-010",
+          "PV81-016"
+        ]
+      },
+      "MENTION_BOUNDARY": {
+        "n": 2,
+        "N": 24,
+        "case_ids": [
+          "PV81-021",
+          "PV81-024"
+        ]
+      }
+    },
+    "cases": [
+      {
+        "case_id": "PV81-001",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_QUERY_IR",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_QUERY_IR",
+          "reason_code": "V2_RECOGNITION_UNRESOLVED"
+        }
+      },
+      {
+        "case_id": "PV81-002",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-003",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-004",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_QUERY_IR",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_QUERY_IR",
+          "reason_code": "V2_RECOGNITION_UNRESOLVED"
+        }
+      },
+      {
+        "case_id": "PV81-005",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "PV81-006",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-007",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_ROLE",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_ROLE",
+          "reason_code": "V2_RELATION_BINDING_ROLE_CONFLICT"
+        }
+      },
+      {
+        "case_id": "PV81-008",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-009",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_QUERY_IR",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_QUERY_IR",
+          "reason_code": "V2_PAYLOAD_WOULD_DROP_BINDING"
+        }
+      },
+      {
+        "case_id": "PV81-010",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-011",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-012",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-013",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_QUERY_IR",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_QUERY_IR",
+          "reason_code": "V2_RECOGNITION_UNRESOLVED"
+        }
+      },
+      {
+        "case_id": "PV81-014",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-015",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-016",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-017",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-018",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-019",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_QUERY_IR",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_QUERY_IR",
+          "reason_code": "V2_RECOGNITION_UNRESOLVED"
+        }
+      },
+      {
+        "case_id": "PV81-020",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-021",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "RUNTIME_ERROR",
+          "stage": "MENTION_BOUNDARY",
+          "reason_code": "CONTRACT_OR_HARNESS_FAILURE"
+        }
+      },
+      {
+        "case_id": "PV81-022",
+        "status": "FAIL",
+        "first_divergence_stage": "SEMANTIC_QUERY_IR",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "SEMANTIC_QUERY_IR",
+          "reason_code": "V2_RECOGNITION_UNRESOLVED"
+        }
+      },
+      {
+        "case_id": "PV81-023",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+        }
+      },
+      {
+        "case_id": "PV81-024",
+        "status": "FAIL",
+        "first_divergence_stage": "MENTION_BOUNDARY",
+        "downstream_effects": [],
+        "error": {
+          "type": "RUNTIME_ERROR",
+          "stage": "MENTION_BOUNDARY",
+          "reason_code": "CONTRACT_OR_HARNESS_FAILURE"
+        }
+      }
+    ],
+    "one_primary_per_case": true
+  },
+  "transition": {
+    "case_count": 20,
+    "status_counts": {
+      "PASS": 6,
+      "FAIL": 11,
+      "BLOCKED": 3
+    },
+    "distribution": {
+      "TURN_RESOLUTION": {
+        "n": 1,
+        "N": 20,
+        "case_ids": [
+          "S81-002"
+        ]
+      },
+      "ENTITY_VALUE_GROUNDING": {
+        "n": 9,
+        "N": 20,
+        "case_ids": [
+          "S81-004",
+          "S81-005",
+          "S81-006",
+          "S81-007",
+          "S81-008",
+          "S81-009",
+          "S81-010",
+          "S81-015",
+          "S81-016"
+        ]
+      },
+      "TASK_OPERATION": {
+        "n": 1,
+        "N": 20,
+        "case_ids": [
+          "S81-012"
+        ]
+      },
+      "IMPLEMENTATION_GAP": {
+        "n": 3,
+        "N": 20,
+        "case_ids": [
+          "S81-018",
+          "S81-019",
+          "S81-020"
+        ]
+      }
+    },
+    "cases": [
+      {
+        "case_id": "S81-001",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "S81-002",
+        "status": "FAIL",
+        "first_divergence_stage": "TURN_RESOLUTION",
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "S81-003",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "S81-004",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+        }
+      },
+      {
+        "case_id": "S81-005",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+        }
+      },
+      {
+        "case_id": "S81-006",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+        }
+      },
+      {
+        "case_id": "S81-007",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+        }
+      },
+      {
+        "case_id": "S81-008",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+        }
+      },
+      {
+        "case_id": "S81-009",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+        }
+      },
+      {
+        "case_id": "S81-010",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+        }
+      },
+      {
+        "case_id": "S81-011",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "S81-012",
+        "status": "FAIL",
+        "first_divergence_stage": "TASK_OPERATION",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "TASK_OPERATION",
+          "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+        }
+      },
+      {
+        "case_id": "S81-013",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "S81-014",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "S81-015",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+        }
+      },
+      {
+        "case_id": "S81-016",
+        "status": "FAIL",
+        "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+        "downstream_effects": [],
+        "error": {
+          "type": "MODEL_SEMANTIC_ERROR",
+          "stage": "ENTITY_VALUE_GROUNDING",
+          "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+        }
+      },
+      {
+        "case_id": "S81-017",
+        "status": "PASS",
+        "first_divergence_stage": null,
+        "downstream_effects": [],
+        "error": null
+      },
+      {
+        "case_id": "S81-018",
+        "status": "BLOCKED",
+        "first_divergence_stage": "IMPLEMENTATION_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "IMPLEMENTATION_GAP",
+          "stage": "IMPLEMENTATION_GAP",
+          "reason_code": "V2_EXECUTED_DATASET_RECEIPT_ADAPTER_MISSING"
+        }
+      },
+      {
+        "case_id": "S81-019",
+        "status": "BLOCKED",
+        "first_divergence_stage": "IMPLEMENTATION_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "IMPLEMENTATION_GAP",
+          "stage": "IMPLEMENTATION_GAP",
+          "reason_code": "V2_EXECUTED_DATASET_RECEIPT_ADAPTER_MISSING"
+        }
+      },
+      {
+        "case_id": "S81-020",
+        "status": "BLOCKED",
+        "first_divergence_stage": "IMPLEMENTATION_GAP",
+        "downstream_effects": [],
+        "error": {
+          "type": "IMPLEMENTATION_GAP",
+          "stage": "IMPLEMENTATION_GAP",
+          "reason_code": "V2_EXECUTED_DATASET_RECEIPT_ADAPTER_MISSING"
+        }
+      }
+    ],
+    "one_primary_per_case": true
+  }
+}

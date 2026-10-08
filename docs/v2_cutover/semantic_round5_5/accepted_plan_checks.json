@@ -1,0 +1,130 @@
+{
+  "checks": [
+    {
+      "case_id": "HC55-A",
+      "turn_index": 1,
+      "turn_id": "0c98e75aa51e44831455fa61",
+      "expected": {
+        "metrics": [
+          "order_count"
+        ],
+        "regions": [
+          "北京市"
+        ],
+        "year": 2025,
+        "relation": "REPLACE",
+        "target": "task:turn-73de003cd145373786a7a509",
+        "clear_barrier": false
+      },
+      "status": "PASS_ON_DECLARED_AXES",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "HC55-A",
+      "turn_index": 2,
+      "turn_id": "62f98fb4a2fb4dd26ba48a11",
+      "expected": {
+        "metrics": [
+          "order_count"
+        ],
+        "regions": [],
+        "year": 2025,
+        "relation": [
+          "REMOVE",
+          "CLEAR"
+        ],
+        "target": "task:turn-73de003cd145373786a7a509",
+        "clear_barrier": true
+      },
+      "status": "PASS_ON_DECLARED_AXES",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "HC55-A",
+      "turn_index": 3,
+      "turn_id": "9b0234aa706f10c4ef38a705",
+      "expected": {
+        "metrics": [
+          "order_count"
+        ],
+        "regions": [],
+        "year": 2026,
+        "relation": [
+          "MODIFY",
+          "REPLACE"
+        ],
+        "target": "task:turn-73de003cd145373786a7a509",
+        "clear_barrier": true
+      },
+      "status": "PASS_ON_DECLARED_AXES",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "HC55-B",
+      "turn_index": 1,
+      "turn_id": "f21a75524ae64d7441970393",
+      "expected": {
+        "metrics": [
+          "order_count",
+          "sales_total_quantity"
+        ],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2025,
+        "relation": "ADD",
+        "target": "task:turn-73de003cd145373786a7a509",
+        "clear_barrier": false
+      },
+      "status": "PASS_ON_DECLARED_AXES",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "HC55-B",
+      "turn_index": 2,
+      "turn_id": "41e24ffe922b1d8515b2e152",
+      "expected": {
+        "metrics": [
+          "sales_total_quantity"
+        ],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2025,
+        "relation": "REMOVE",
+        "target": "task:turn-73de003cd145373786a7a509",
+        "clear_barrier": false
+      },
+      "status": "PASS_ON_DECLARED_AXES",
+      "whole_plan_gold": false
+    },
+    {
+      "case_id": "HC55-B",
+      "turn_index": 3,
+      "turn_id": "7d698f57d22757d6c60e3f4b",
+      "expected": {
+        "metrics": [
+          "sales_total_quantity"
+        ],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2026,
+        "relation": [
+          "MODIFY",
+          "REPLACE"
+        ],
+        "target": "task:turn-73de003cd145373786a7a509",
+        "clear_barrier": false
+      },
+      "status": "PASS_ON_DECLARED_AXES",
+      "whole_plan_gold": false
+    }
+  ],
+  "passed": 6,
+  "whole_plan_gold": false,
+  "clear_resurrection": 0,
+  "remove_resurrection": 0,
+  "scope_expansion": 0,
+  "state_ir_plan_mismatch": 0
+}

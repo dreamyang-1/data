@@ -37,6 +37,7 @@ class Minio:
         assert len(payload) == length
         self.objects[(bucket, name)] = payload
         self.metadata = kwargs.get("metadata")
+        self.content_type = kwargs.get("content_type")
 
     def presigned_get_object(self, bucket, name, expires):
         return f"http://minio/{bucket}/{name}"
@@ -96,6 +97,33 @@ def test_xlsx_export_neutralizes_formula_injection_and_illegal_controls():
         workbook.close()
 
 
+def test_chart_is_published_as_scoped_svg_with_dataset_provenance():
+    minio = Minio()
+    ref = reference()
+    result = DatasetReportExporter(minio, Store(), bucket="bam").publish_chart(
+        {
+            "chart_type": "LINE",
+            "title": "销售额趋势",
+            "x_field": "月份",
+            "y_fields": ["销售额"],
+            "data": [
+                {"月份": "2026-07", "销售额": 100},
+                {"月份": "2026-08", "销售额": 120},
+            ],
+        },
+        scope=ref.scope,
+        dataset_ids=[ref.dataset_id],
+    )
+
+    payload = minio.objects[("bam", result["object_name"])]
+    assert result["format"] == "svg"
+    assert result["object_name"].startswith("data-analysis/reports/")
+    assert payload.startswith(b"<svg")
+    assert minio.content_type == "image/svg+xml"
+    assert result["dataset_ids"] == [ref.dataset_id]
+    assert result["report_reference"]["scope"]["conversation_id"] == "conversation"
+
+
 def test_composite_xlsx_keeps_independent_datasets_on_separate_sheets():
     from io import BytesIO
     from openpyxl import load_workbook
@@ -127,6 +155,31 @@ def test_composite_xlsx_keeps_independent_datasets_on_separate_sheets():
     finally:
         workbook.close()
     assert result["dataset_ids"] == ["dataset-1", "dataset-2"]
+
+
+def test_selected_single_final_dataset_exports_without_intermediate_sheets():
+    from io import BytesIO
+    from openpyxl import load_workbook
+    minio = Minio()
+    ref = reference()
+    result = DatasetReportExporter(minio, Store(), bucket="bam").export_many(
+        [("最终结果", ref)], scope=DatasetScope("tenant", "user", "app", "root"),
+        file_format="xlsx", title="最终结果")
+    workbook = load_workbook(BytesIO(minio.objects[("bam", result["object_name"])]), read_only=True)
+    try:
+        assert workbook.sheetnames == ["说明", "数据"]
+        assert result["dataset_ids"] == [ref.dataset_id]
+    finally:
+        workbook.close()
+
+
+def test_single_selected_dataset_keeps_semantic_scope_check():
+    from app.services.report_export import ReportExportError
+    with pytest.raises(ReportExportError):
+        DatasetReportExporter(Minio(), Store(), bucket="bam").export_many(
+            [("最终结果", reference())],
+            scope=DatasetScope("tenant", "user", "app", "root", "another-scope"),
+            file_format="xlsx", title="最终结果")
 
 
 @pytest.mark.asyncio

@@ -8,10 +8,16 @@ from app.config import Settings
 from app.domain.models import (
     AnalysisOperator,
     CanonicalAnalysisRequest,
+    ConversationControl,
     PrimaryIntent,
     TrustedIdentity,
+    TurnRelation,
 )
-from app.intent import HybridIntentClassifier, StructuredIntentModelClient
+from app.intent import (
+    HybridIntentClassifier,
+    RuleBasedIntentClassifier,
+    StructuredIntentModelClient,
+)
 
 
 def settings(**updates) -> Settings:
@@ -33,6 +39,65 @@ def model_response(output: dict) -> httpx.Response:
         200,
         json={"choices": [{"message": {"content": json.dumps(output, ensure_ascii=False)}}]},
     )
+
+
+@pytest.mark.asyncio
+async def test_intent_model_loads_platform_user_prompt_into_system_message():
+    captured = {}
+    output = {
+        "primary_intent": "DETAIL_QUERY",
+        "confidence": 0.95,
+    }
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        captured["system"] = body["messages"][0]["content"]
+        return model_response(output)
+
+    client = StructuredIntentModelClient(
+        settings(), httpx.MockTransport(handler)
+    )
+    await client.classify(
+        "查询上海经销商",
+        agent_prompt="平台角色设定：只使用国药业务口径。",
+    )
+
+    assert "智能体用户设定（平台配置" in captured["system"]
+    assert "平台角色设定：只使用国药业务口径。" in captured["system"]
+
+
+def test_pre_resolved_contract_keeps_completed_question_authoritative():
+    question = "请提供百特Prismaflex M60 set使用科室。"
+    request = CanonicalAnalysisRequest(
+        conversation_id="pre-resolved-contract",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="错误的模型改写",
+        rewritten_question="错误的模型改写",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        conversation_control=ConversationControl.FOLLOW_UP,
+        turn_relation=TurnRelation.CURRENT_TOPIC_MODIFICATION,
+        slot_operations=[{
+            "operation": "REPLACE",
+            "slot": "region",
+            "new_value": "上海市",
+            "source": "CURRENT_EXPLICIT",
+        }],
+    )
+
+    result = HybridIntentClassifier._apply_pre_resolved_contract(
+        request,
+        question,
+        True,
+    )
+
+    assert result.original_question == question
+    assert result.rewritten_question == question
+    assert result.conversation_control == ConversationControl.NEW_REQUEST
+    assert result.turn_relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert result.model_turn_relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert result.slot_operations == []
+    assert "CONTEXT_AND_COMPLETION_OWNED_BY_UNIFIED_SEMANTIC_CONTRACT" in result.assumptions
 
 
 def test_metric_name_noun_is_not_query_entity_evidence():
@@ -107,6 +172,106 @@ async def test_model_metric_guess_cannot_turn_relationship_question_into_metric_
 
 
 @pytest.mark.asyncio
+async def test_model_filters_own_flexible_relationship_wording_without_rule_prefix_leak():
+    output = {
+        "primary_intent": "DETAIL_QUERY",
+        "secondary_intents": [],
+        "operators": ["FILTER", "RENDER_TABLE"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.98,
+        "evidence": ["空心纤维血液透析器产品", "经销商名单"],
+        "metrics": [],
+        "dimensions": [],
+        "entity": "经销商",
+        "fields": ["经销商名称"],
+        "filters": [{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器",
+            "evidence_span": "空心纤维血液透析器产品",
+        }],
+        "current_entity_values": ["空心纤维血液透析器"],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "查询空心纤维血液透析器产品合作的经销商名单。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "查一下空心纤维血液透析器产品合作的经销商名单。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-model-filter-authority",
+    )
+
+    assert result.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert result.entity == "经销商"
+    assert result.fields == ["经销商名称"]
+    assert result.filters == [{
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "空心纤维血液透析器",
+    }]
+    assert result.semantic_entity_mentions == ["空心纤维血液透析器"]
+    assert "MODEL_FILTER_EXTRACTION_AUTHORITATIVE" in result.assumptions
+    assert all("查一下" not in str(item.get("value")) for item in result.filters)
+
+
+@pytest.mark.asyncio
+async def test_invalid_model_filter_fails_closed_instead_of_reusing_rule_guess():
+    output = {
+        "primary_intent": "DETAIL_QUERY",
+        "secondary_intents": [],
+        "operators": ["FILTER", "RENDER_TABLE"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.98,
+        "evidence": ["经销商名单"],
+        "metrics": [],
+        "dimensions": [],
+        "entity": "经销商",
+        "fields": ["经销商名称"],
+        "filters": [{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "模型臆造产品",
+            "evidence_span": "空心纤维血液透析器产品",
+        }],
+        "current_entity_values": ["空心纤维血液透析器"],
+        "comparison_type": None,
+        "ambiguities": [],
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "查一下空心纤维血液透析器产品合作的经销商名单。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-invalid-model-filter",
+    )
+
+    assert result.filters == []
+    assert "semantic_ambiguity" in result.missing_slots
+    assert "INVALID_MODEL_FILTERS_DROPPED" in result.assumptions
+    assert "查一下空心纤维血液透析器" not in str(result.filters)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("dedicated_field", [True, False])
 async def test_short_followup_keeps_model_extracted_current_entity_value(
     dedicated_field: bool,
@@ -151,6 +316,98 @@ async def test_short_followup_keeps_model_extracted_current_entity_value(
             "CURRENT_ENTITY_VALUE_RECOVERED_FROM_MODEL_EVIDENCE"
             in result.assumptions
         )
+
+
+@pytest.mark.asyncio
+async def test_named_product_trend_drops_model_span_contaminated_by_time_scaffolding():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET", "FILTER"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.98,
+        "evidence": ["销售趋势", "最近一年", "费森尤斯产品"],
+        "metrics": ["销售额"],
+        "dimensions": [],
+        "entity": "产品",
+        "fields": [],
+        "current_entity_values": ["上海市", "费森尤斯", "费森尤斯产品最近一年"],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "分析上海市费森尤斯产品最近一年的销售趋势。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "分析上海市费森尤斯产品最近一年的销售趋势。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "named-product-trend",
+    )
+
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in result.filters
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in result.filters
+    assert result.semantic_entity_mentions == ["上海市", "费森尤斯"]
+    assert "费森尤斯产品最近一年" not in result.semantic_entity_mentions
+
+
+@pytest.mark.asyncio
+async def test_brand_scoped_half_year_trend_does_not_require_product_grouping():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET", "FILTER"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.98,
+        "evidence": ["销售趋势", "近半年", "费森尤斯产品"],
+        "metrics": ["销售额"],
+        "dimensions": ["产品"],
+        "entity": "产品",
+        "fields": [],
+        "current_entity_values": ["上海", "费森尤斯"],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "上海地区费森尤斯产品近半年销售趋势如何",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "上海地区费森尤斯产品近半年销售趋势如何",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "brand-half-year-trend",
+    )
+
+    assert result.dimensions == []
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in result.filters
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in result.filters
+
+
+def test_explicit_each_product_half_year_trend_keeps_product_grouping():
+    result = RuleBasedIntentClassifier().classify(
+        "上海地区费森尤斯各产品近半年销售趋势如何",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "brand-each-product-half-year-trend",
+    )
+
+    assert "产品" in result.dimensions
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in result.filters
 
 
 @pytest.mark.parametrize(
@@ -527,21 +784,43 @@ async def test_explicit_quantity_metric_still_wins_over_generic_model_fragment()
     assert result.missing_slots == []
 
 
-def test_model_completion_guard_rejects_lost_current_numbers_and_sql():
-    source = (
-        "11月较10月下降多少\n"
-        "已确认的上一轮上下文（当前问题明确内容优先）：指标=销售额"
+@pytest.mark.asyncio
+async def test_model_completed_question_is_taken_verbatim():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.95,
+        "evidence": ["按月", "销售趋势"],
+        "metrics": ["销售额"],
+        "dimensions": ["产品"],
+        "entity": "产品",
+        "fields": [],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "按月统计上海市外周插管中心静脉导管的销售额趋势。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "按月分析外周插管中心静脉导管的销售趋势。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-completion-verbatim",
     )
 
-    assert HybridIntentClassifier._safe_completed_question(
-        "比较11月和10月销售额下降多少", source
-    ) == "比较11月和10月销售额下降多少"
-    assert HybridIntentClassifier._safe_completed_question(
-        "分析11月销售额下降多少", source
-    ) is None
-    assert HybridIntentClassifier._safe_completed_question(
-        "SELECT * FROM sales_order", source
-    ) is None
+    assert result.rewritten_question == output["completed_question"]
+    assert "MODEL_QUESTION_COMPLETION_APPLIED" in result.assumptions
+    assert not hasattr(HybridIntentClassifier, "_safe_completed_question")
 
 
 @pytest.mark.asyncio
@@ -577,7 +856,8 @@ async def test_ranked_partner_shape_restores_sort_after_model_operator_overwrite
         "c-ranked-partner",
     )
 
-    assert result.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
-    assert result.comparison_type == "对象间比较"
+    assert result.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert result.comparison_type is None
     assert AnalysisOperator.GROUP_BY in result.operators
     assert AnalysisOperator.SORT in result.operators
+    assert AnalysisOperator.COMPARE not in result.operators

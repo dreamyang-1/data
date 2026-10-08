@@ -1,0 +1,22 @@
+{
+  "policy": "Promoted before opening original wording/full capture for causal investigation; sealed originals retained as historical evidence.",
+  "PRIVATE_VALIDATION_ORIGINAL": 24,
+  "DEV_PROMOTED_FROM_PRIVATE": 2,
+  "PRIVATE_VALIDATION_REMAINING": 22,
+  "promotions": [
+    {
+      "case_id": "PV81-010",
+      "promotion_reason": "Full frozen capture and utterance required to distinguish operation/operand/target causal boundaries",
+      "promoted_at": "2026-09-09T12:29:01.563575+00:00",
+      "root_subcluster": "OP-R1-PRESENTATION-CUE"
+    },
+    {
+      "case_id": "PV81-016",
+      "promotion_reason": "Full frozen capture and utterance required to distinguish operation/operand/target causal boundaries",
+      "promoted_at": "2026-09-09T12:29:01.563575+00:00",
+      "root_subcluster": "OP-R1-PRESENTATION-CUE"
+    }
+  ],
+  "BLIND_HOLDOUT": "SEALED_NOT_VIEWED_OR_RUN",
+  "blind_calls": 0
+}

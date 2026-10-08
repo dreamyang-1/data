@@ -1,0 +1,15 @@
+{
+  "status": "PASS_RELATED_SCOPE",
+  "command": "pytest -q tests/test_v2_entity_instance_preservation_round23.py tests/test_v2_context_completed_question_trial.py tests/test_v2_source_value_binding.py tests/test_v2_source_value_probe.py tests/test_v2_source_value_failure_closure_round1.py tests/test_v2_targeted_source_values.py tests/test_v2_canonical_execution_bridge.py tests/test_v2_context_followup_critical_slice.py tests/test_v2_raw_turn_recognition.py",
+  "passed": 219,
+  "failed": 0,
+  "collection_errors": 0,
+  "generic_subject_negative_control": "PASS",
+  "subject_plus_instance_control": "PASS",
+  "production_code_changes": 0,
+  "model_calls_during_tests": 0,
+  "sql_calls_during_tests": 0,
+  "full_suite": "NOT_RUN_BY_ROUND_SCOPE",
+  "core50": "NOT_RUN_BY_ROUND_SCOPE",
+  "v1": "NOT_RUN_BY_ROUND_SCOPE"
+}

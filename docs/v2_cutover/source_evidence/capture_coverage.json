@@ -1,0 +1,24 @@
+{
+  "observed_turns": 24,
+  "captured_turns": 24,
+  "model_requests": 48,
+  "successful_result_captures": 13,
+  "failed_turn_captures": 11,
+  "all_capture_hashes_verified": true,
+  "fields": [
+    "exact_model_HTTP_body_without_headers",
+    "raw_model_content",
+    "typed_outputs",
+    "before_scoped_state_pending_plans",
+    "actual_result",
+    "clock",
+    "scope",
+    "catalog_ref",
+    "source_fixture_hash",
+    "observed_outcome"
+  ],
+  "private_business_values_or_credentials_published": false,
+  "unexecuted_turns_have_no_fabricated_captures": true,
+  "full_oracle_evaluation": "NOT_COMPLETE",
+  "production_state_used": false
+}

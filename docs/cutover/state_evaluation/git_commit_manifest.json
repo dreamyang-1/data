@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "66c11a1bfa414ba63b4592cb5ff3713492a5b324",
+  "feature_branch": "cutover-state-evaluator-20260909t024300z",
+  "final_commit": "Commit containing this manifest",
+  "planned_subject": "cutover: add multi-turn state gold and component evaluation",
+  "runtime_source_changed": false,
+  "evidence": "closure_report.md and test_delta.json",
+  "draft_pr_base": "cutover-parser-spans-20260909t015840z"
+}

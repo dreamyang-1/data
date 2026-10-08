@@ -1,0 +1,111 @@
+{
+  "files": [
+    {
+      "path": "docs/phase0b/failure_universe.csv",
+      "workspace_hash": "7c21a17b1b80b8dca2e0e15c5d0ce1c66cdadd034c998a95b6a763fea30a4d85",
+      "previous_git_hash": "d924128a9914d503c02c713d3c84c96e09fa117df8fac93db566d9654099972b"
+    },
+    {
+      "path": "docs/phase0b/failure_universe.json",
+      "workspace_hash": "3a92e65acc98c09558b5b8b5e891d0fa48259e1ed62e11e1cd96f8f3698336c7",
+      "previous_git_hash": "c78ade3101e1eb77a29941786a47168bcc66baed6055d25d733b3d23746930c3"
+    },
+    {
+      "path": "docs/phase0b/failure_universe_baseline.json",
+      "workspace_hash": "c78ade3101e1eb77a29941786a47168bcc66baed6055d25d733b3d23746930c3",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/failure_triage_matrix.csv",
+      "workspace_hash": "fde8ef5969a621d7405e94343fc08b440401fb0849b44202a53a524ef970fcca",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/failure_triage_matrix.json",
+      "workspace_hash": "1de1d93f03d46cbb12480c2b83ceea787bf5a44eba32bd07d69ce4329ae402eb",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/p0_failure_root_cause_report.md",
+      "workspace_hash": "34a185683bead4f11ab958fac76ccae23c245624cb6ad7f72f266fbef41dc234",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/critical_multiturn_scenarios.jsonl",
+      "workspace_hash": "c96a6b29b8de82033601d54dc6beace5f1bdd5cc7144c223598156425e863996",
+      "previous_git_hash": "66cd137972bcf1702bc094c61c4d952e2ba911372baf0969c308dae80d80938f"
+    },
+    {
+      "path": "docs/phase0b/legacy_multiturn_regression_matrix.csv",
+      "workspace_hash": "aeb9057b32f89ba0759391a6769b472fc514397a115e24feddcbb15b8a2d11b7",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/temporal_failure_matrix.csv",
+      "workspace_hash": "733910e83ab781f74d7cfa6b66776c6e8be0abcbe56bf7920264ee095fb21d58",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/semantic_grounding_failure_matrix.csv",
+      "workspace_hash": "d2a39adf02e97217daa9fca8368b3def3979ed5b6934eb2544f2108fcab7fe7f",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/external_service_fix_candidates.md",
+      "workspace_hash": "ef743b8f0e1251e9a678c1e32b23ac9656148e26814bab3b44eff75672b8caa1",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/enterprise_security_blockers.md",
+      "workspace_hash": "fd962f74960e1cd971c7c86b0974edab7dd64edce2b700cff9d86fe0a16ea530",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/gold_candidate_inventory.jsonl",
+      "workspace_hash": "09506c58a792e2cba36807f717f1b7cd4d40abb0bb58e028bc3e757905207860",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/test_delta_report.md",
+      "workspace_hash": "9f62f7274762db95ef549cfb283583b70276813a18475b7ab98ab10dea7f43a7",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/closure_counts.json",
+      "workspace_hash": "2640da82ce9cf292d732be68e72942068a297acd6e57167808f1c107418a4ff3",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/scope_freeze_verification.json",
+      "workspace_hash": "07e45d2e8b884c21d41cb63edb8543ba75ef1e79921fe411093677809cffec0d",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/rollback_manifest.json",
+      "workspace_hash": "b6bc87ffb93a0492cc126cd5fdd3a4adf2d41e8770ec198a9d148db79725f333",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/phase0b_closure_report.md",
+      "workspace_hash": "c6a3b81c8e1e1df0552b01787ce959f7a46c5cb9c3eb91e6b4cab9108bd41081",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/git_commit_manifest.json",
+      "workspace_hash": "0f582c847ebdc45dffa718ef340ecd8e1712abb039e2f83ffe68dadf9c22d068",
+      "previous_git_hash": null
+    },
+    {
+      "path": "tools/phase0/close_evidence.py",
+      "workspace_hash": "5f2f79e6e64b16795ef55a07a2a8a34fe55159107b0456ae7fc8dabf44a340ff",
+      "previous_git_hash": null
+    },
+    {
+      "path": "tools/phase0/finalize_repository.py",
+      "workspace_hash": "d19e69b579fdcb17778fa4870a03df7b673af0bd50fd0448b6363890e771f7ea",
+      "previous_git_hash": null
+    }
+  ],
+  "credential_scan": "PASS",
+  "synchronization": "EXPLICIT_PATHS_ONLY"
+}

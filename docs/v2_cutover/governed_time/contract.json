@@ -1,0 +1,22 @@
+{
+  "status": "INITIAL_EXPLICIT_RANGE_CONTRACT_VERIFIED; WHOLE_TEMPORAL_ACCEPTANCE_OPEN",
+  "business_clock": "existing Asia/Shanghai calendar; injected aware reference clock; internal instants remain UTC",
+  "entry": "initial whole TimeSpec assignment with current edit TIME_RANGE evidence",
+  "range_authority": "existing deterministic calendar parser with whole-expression consumption; no model date authority on this entry",
+  "range_vs_grain": "TIME_RANGE alone means grain NONE; explicit TIME_GRAIN separately normalized",
+  "anchor_authority": "explicit TIME_FIELD preserved; otherwise every selected METRIC time_caliber.time_anchor must map to one same-domain ATTRIBUTE and all metrics must agree",
+  "unsupported": "missing/ambiguous anchor, undocumented stat_cycle/special_rule, partial/unsupported time expressions, fiscal/default/comparison extras fail closed",
+  "remaining": [
+    "Compound metric mention incorrectly split into standalone entity",
+    "Component RANGE edits still use existing typed-date path; full program ownership not yet proven",
+    "Temporal observation axes in transition evaluator still incomplete"
+  ],
+  "regex_new_or_pattern_modified": false,
+  "existing_regex_opt_in_matching_changed": "fullmatch only for new V2 entry; V1 default search unchanged",
+  "new_grain_tokens": "finite calendar unit map; no business entity/metric regex",
+  "prompt_modified": false,
+  "production_v1_routing_changed": false,
+  "real_model_calls": 0,
+  "source_SQL_executions": 0,
+  "production_writes": 0
+}

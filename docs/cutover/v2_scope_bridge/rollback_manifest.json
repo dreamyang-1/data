@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "aa6252f367b7da35774ccbabb17c85545975bd20",
+  "feature_branch": "cutover-v2-scope-bridge-20260908-02",
+  "source_rollback": "Reviewed revert of the scoped-plan implementation commit; explicitly sync manifest paths and rerun V2 contract/critical regressions",
+  "live_operations_performed": false,
+  "production_traffic_rollback_proven": false,
+  "runtime_rollback": "No routing, service restart, index publication or production state write occurred; no live rollback required",
+  "auto_merge": false
+}

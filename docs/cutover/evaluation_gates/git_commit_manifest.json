@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "bcf7d81b57fce85b018e5dc053368b8a6b870108",
+  "feature_branch": "cutover-evaluation-gates-20260909t011632z",
+  "final_commit": "Commit containing this manifest",
+  "planned_subject": "cutover: separate evaluation gates and measure scoped parser readiness",
+  "runtime_source_changed": false,
+  "evidence": "closure_report.md and test_delta.json",
+  "draft_pr_base": "cutover-relation-identity-evidence-20260909-01"
+}

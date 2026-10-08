@@ -1,0 +1,275 @@
+{
+  "evaluator": {
+    "evaluator_version": "runtime-evaluation-harness-v1",
+    "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+    "evaluator_files": {
+      "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+      "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+      "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+      "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+      "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+      "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+      "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+      "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+      "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+      "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+      "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+      "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+      "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+      "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+      "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+      "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+      "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+    }
+  },
+  "unit": "ONE_PRIMARY_STAGE_PER_CASE",
+  "case_count": 144,
+  "pass_count": 45,
+  "nonpass_count": 99,
+  "distribution": [
+    {
+      "stage": "TASK_OPERATION",
+      "case_count": 21,
+      "case_ids": [
+        "G81-001",
+        "G81-003",
+        "G81-008",
+        "G81-009",
+        "G81-010",
+        "G81-012",
+        "G81-040",
+        "G81-058",
+        "G81-059",
+        "G81-060",
+        "G81-061",
+        "G81-066",
+        "G81-070",
+        "G81-075",
+        "G81-078",
+        "G81-092",
+        "G81-093",
+        "G81-096",
+        "S81-012",
+        "PV81-010",
+        "PV81-016"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 21,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    },
+    {
+      "stage": "TURN_RESOLUTION",
+      "case_count": 15,
+      "case_ids": [
+        "G81-082",
+        "S81-002",
+        "PV81-002",
+        "PV81-003",
+        "PV81-005",
+        "PV81-006",
+        "PV81-008",
+        "PV81-011",
+        "PV81-012",
+        "PV81-014",
+        "PV81-015",
+        "PV81-017",
+        "PV81-018",
+        "PV81-020",
+        "PV81-023"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 15,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    },
+    {
+      "stage": "ENTITY_VALUE_GROUNDING",
+      "case_count": 14,
+      "case_ids": [
+        "G81-068",
+        "G81-069",
+        "G81-074",
+        "G81-080",
+        "G81-087",
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-015",
+        "S81-016"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 14,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    },
+    {
+      "stage": "MENTION_BOUNDARY",
+      "case_count": 13,
+      "case_ids": [
+        "G81-002",
+        "G81-004",
+        "G81-005",
+        "G81-006",
+        "G81-011",
+        "G81-013",
+        "G81-029",
+        "G81-030",
+        "G81-033",
+        "G81-034",
+        "G81-094",
+        "PV81-021",
+        "PV81-024"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 13,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    },
+    {
+      "stage": "SEMANTIC_QUERY_IR",
+      "case_count": 9,
+      "case_ids": [
+        "G81-053",
+        "G81-081",
+        "G81-099",
+        "PV81-001",
+        "PV81-004",
+        "PV81-009",
+        "PV81-013",
+        "PV81-019",
+        "PV81-022"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 9,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    },
+    {
+      "stage": "CATALOG_GAP",
+      "case_count": 6,
+      "case_ids": [
+        "G81-007",
+        "G81-056",
+        "G81-062",
+        "G81-063",
+        "G81-064",
+        "G81-065"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 6,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    },
+    {
+      "stage": "QUERY_SHAPE",
+      "case_count": 6,
+      "case_ids": [
+        "G81-014",
+        "G81-050",
+        "G81-051",
+        "G81-052",
+        "G81-057",
+        "G81-085"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 6,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    },
+    {
+      "stage": "CANONICAL_BINDING",
+      "case_count": 3,
+      "case_ids": [
+        "G81-054",
+        "G81-055",
+        "G81-098"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 3,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    },
+    {
+      "stage": "EXTERNAL_BLOCKER",
+      "case_count": 3,
+      "case_ids": [
+        "G81-067",
+        "G81-071",
+        "G81-073"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 3,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "EVALUATION_OR_EXTERNAL_GAP"
+    },
+    {
+      "stage": "FIXTURE_GAP",
+      "case_count": 3,
+      "case_ids": [
+        "G81-076",
+        "G81-088",
+        "G81-091"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 3,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "EVALUATION_OR_EXTERNAL_GAP"
+    },
+    {
+      "stage": "IMPLEMENTATION_GAP",
+      "case_count": 3,
+      "case_ids": [
+        "S81-018",
+        "S81-019",
+        "S81-020"
+      ],
+      "severity": "P0_CAPABILITY_SAFETY_COVERAGE",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 3,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "EVALUATION_OR_EXTERNAL_GAP"
+    },
+    {
+      "stage": "TIME_NORMALIZATION",
+      "case_count": 2,
+      "case_ids": [
+        "G81-084",
+        "G81-090"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 2,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    },
+    {
+      "stage": "SEMANTIC_ROLE",
+      "case_count": 1,
+      "case_ids": [
+        "PV81-007"
+      ],
+      "severity": "P1",
+      "cutover_blocker": true,
+      "one_generic_fix_coverage_upper_bound": 1,
+      "independent_root_count": "NOT_PROVEN_BY_STAGE_COUNT",
+      "classification": "SEMANTIC_CONTRACT_ROOT_CANDIDATE"
+    }
+  ],
+  "scores_are_not_pooled_accuracy": true
+}

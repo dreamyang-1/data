@@ -16,7 +16,9 @@ from app.domain.models import (
     DataQueryResult,
     Dataset,
     EvidenceItem,
+    ExtensionExecution,
     KnowledgeContext,
+    McpConfig,
     MetricRef,
     PrimaryIntent,
     SemanticAmbiguity,
@@ -27,6 +29,7 @@ from app.domain.models import (
 from app.intent import RuleBasedIntentClassifier
 from app.services import DataAnalysisOrchestrator
 from app.services.orchestrator import _requires_deterministic_analysis
+from app.services.progress import progress_scope
 from app.stores import InMemorySessionStore
 from minio_followup_store import DatasetReference, LoadedDataset
 
@@ -301,6 +304,105 @@ async def test_relationship_projection_never_uses_missing_metric_discovery():
     assert request.missing_slots == ["metric"]
 
 
+@pytest.mark.parametrize("text", ["展示前10条", "查询经销商名单，仅返回前10条", "订单明细按金额降序显示前10条"])
+def test_detail_row_limit_is_not_metric_ranking(text):
+    operators = RuleBasedIntentClassifier._operators(PrimaryIntent.DETAIL_QUERY, text)
+    assert AnalysisOperator.TOP_N not in operators
+    assert AnalysisOperator.BOTTOM_N not in operators
+    assert RuleBasedIntentClassifier._ranking_limit(text) == 10
+    assert AnalysisOperator.TOP_N in RuleBasedIntentClassifier._operators(
+        PrimaryIntent.METRIC_QUERY, "各经销商销售额排名前10名"
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("quality", ["PASS", "FAIL"])
+async def test_detail_limit_with_stale_ranking_operator_keeps_rows_and_stage_order(quality):
+    request = CanonicalAnalysisRequest(
+        conversation_id="detail-limit-result", tenant_id="t1", user_id="u1",
+        original_question="查询某商品合作经销商名单，展示前10条",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="dealer", fields=["dealer.dealer_name"], metrics=[],
+        operators=[AnalysisOperator.TOP_N], ranking_limit=10,
+        filters=[{"field": "product.product_name", "operator": "=", "value": "某商品"}],
+    )
+    assert not _requires_deterministic_analysis(request, executed_asl={"metrics": []})
+    rows = [{"经销商名称": f"测试经销商{i}"} for i in range(8)]
+    result = DataQueryResult(
+        asl={"subject": {"entity": "dealer"}, "metrics": [],
+             "dimensions": [{"name": "dealer.dealer_name"}],
+             "filters": request.filters, "limit": 10},
+        sql="SELECT dealer_name FROM approved_view LIMIT 10",
+        dataset=Dataset(columns=["经销商名称"], rows=rows, row_count=8,
+                        snapshot_id="detail-limit", data_as_of=datetime.now(timezone.utc),
+                        quality_status=quality),
+    )
+    events = []
+    with progress_scope(events.append):
+        response = await service(analysis_engine=FailingAnalysisEngine())._complete_query_result(
+            ChatRequest(application_id="app", conversation_id=request.conversation_id,
+                        message_id="m2", question="展示前10条", semantic_model_id=1,
+                        business_domain_id=1),
+            TrustedIdentity(tenant_id="t1", user_id="u1"), request, result,
+        )
+    assert response.status in {"COMPLETED", "PARTIAL_SUCCESS"}
+    assert all(row["经销商名称"] in response.answer for row in rows)
+    assert not response.requirements and not response.missing_slots
+    assert "排名指标" not in response.answer
+    stages = [event["stage"] for event in events]
+    assert stages.index("DATA_RETRIEVAL") < stages.index("RELIABILITY_CHECK") < stages.index("INSIGHT_ANALYSIS")
+    assert request.filters == result.asl["filters"]
+    if quality == "FAIL":
+        assert response.reliability.level == "LIMITED"
+        assert any("质量" in warning for warning in response.reliability.warnings)
+
+
+@pytest.mark.asyncio
+async def test_complete_oversized_result_only_limits_final_table():
+    orchestrator = service()
+    orchestrator.settings.data_query_max_rows = 50
+    request = CanonicalAnalysisRequest(
+        conversation_id="oversized-preview", tenant_id="t1", user_id="u1",
+        original_question="查询明细", primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="order", fields=["订单号", "金额"],
+    )
+    result = DataQueryResult(
+        asl={"metrics": [], "dimensions": [{"name": "order.code"}, {"name": "order.amount"}]},
+        sql="SELECT code, amount FROM approved_view",
+        dataset=Dataset(columns=["订单号", "金额"],
+                        rows=[{"订单号": f"ORDER-{i}", "金额": i} for i in range(60)],
+                        row_count=60, snapshot_id="large", data_as_of=datetime.now(timezone.utc)),
+    )
+    response = await orchestrator._complete_query_result(
+        ChatRequest(application_id="app", conversation_id=request.conversation_id,
+                    message_id="m1", question=request.original_question, semantic_model_id=1),
+        TrustedIdentity(tenant_id="t1", user_id="u1"), request, result,
+    )
+    assert response.status == "COMPLETED"
+    assert "ORDER-19" in response.answer and "ORDER-20" not in response.answer
+    assert "60" in response.answer and "前 20 条" in response.answer
+    query = next(item.payload for item in response.evidence if item.kind == "QUERY_RESULT")
+    assert query["returned_row_count"] == 60 and not query["truncated"]
+    assert response.dataset_id is None
+    assert not response.requirements
+
+
+def test_missing_metric_proof_is_a_warning_after_query_not_a_query_failure():
+    request = CanonicalAnalysisRequest(
+        conversation_id="metric-proof", tenant_id="t1", user_id="u1",
+        original_question="查询销售额", primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="销售额")],
+    )
+    report = DataAnalysisOrchestrator._reliability(request, [EvidenceItem(
+        evidence_id="query:test", kind="QUERY_RESULT", source_ref="data:test",
+        payload={"row_count": 1},
+    )], "PASS")
+    assert report.level == "LIMITED"
+    assert report.gates["metric_bound"] is False
+    assert any("口径证据不完整" in warning for warning in report.warnings)
+    assert DataAnalysisOrchestrator._reliability(request, [], "PASS").level == "FAIL"
+
+
 def test_optional_presentation_failure_does_not_lower_data_reliability() -> None:
     analysis_request = CanonicalAnalysisRequest(
         conversation_id="presentation-degraded",
@@ -479,7 +581,14 @@ class FailingReportExporter:
 
 
 class SynthesisStub:
-    async def synthesize(self, request, analysis, evidence):
+    async def synthesize(self, request, analysis, evidence, *, agent_prompt="", semantic_model_id=None):
+        query_data = analysis.facts["query_data"]
+        assert query_data["columns"] and query_data["rows"]
+        assert len(query_data["rows"]) <= 20
+        assert "sample_only" in query_data
+        executed = analysis.facts["executed_query"]
+        assert isinstance(executed["asl"], dict)
+        assert isinstance(executed["sql"], str) and executed["sql"]
         return (
             "模型整理后的证据化总结",
             SynthesisOutput(
@@ -593,7 +702,7 @@ async def test_empty_application_kb_binding_never_falls_back_to_global_default()
 
 
 @pytest.mark.asyncio
-async def test_truncated_analysis_fails_closed_before_calculation() -> None:
+async def test_truncated_analysis_returns_preview_without_full_data_calculation() -> None:
     response = await service(truncated=True).handle(
         ChatRequest(
             application_id="app",
@@ -605,9 +714,12 @@ async def test_truncated_analysis_fails_closed_before_calculation() -> None:
         ),
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
-    assert response.status == "SAFE_FALLBACK"
+    assert response.status == "PARTIAL_SUCCESS"
     assert "截断" in response.answer
-    assert not response.evidence
+    assert response.evidence
+    assert '2026-01' in response.answer and '100' in response.answer
+    assert response.reliability.level == 'LIMITED'
+    assert response.chart_specs == []
 
 
 @pytest.mark.asyncio
@@ -666,6 +778,7 @@ async def test_download_only_metric_query_returns_file_instead_of_fake_empty_dat
     assert response.files[0].format == "xlsx"
     assert response.files[0].download_url == response.result_file_url
     assert "[下载完整查询结果（XLSX）](http://minio/bam/result.xlsx)" in response.answer
+    assert "\n\n说明：完整结果请使用回答末尾的附件链接下载。" in response.answer
     assert response.dataset_id is None
 
 
@@ -900,14 +1013,253 @@ async def test_qwen_synthesis_is_used_only_after_analysis_evidence_exists() -> N
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
     assert response.status == "COMPLETED"
-    assert response.answer == "模型整理后的证据化总结"
+    assert "模型整理后的证据化总结" not in response.answer
+    assert "销售额" in response.answer
+    assert "#### 图表" in response.answer
+    assert "<svg" in response.answer
+    assert response.chart_specs[0].chart_type == "LINE"
+    assert response.chart_specs[0].point_count == 2
     kinds = [item.kind for item in response.evidence]
     assert kinds.index("ANALYSIS_RESULT") < kinds.index("ANSWER_SYNTHESIS")
+    assert next(e for e in response.evidence if e.kind == "ANSWER_SYNTHESIS").payload["content_validation"] == "NOT_PERFORMED"
+    assert all("query_data" not in e.payload.get("facts", {}) for e in response.evidence)
+    assert all("executed_query" not in e.payload.get("facts", {}) for e in response.evidence)
     synthesis_step = next(
         step for step in response.analysis_process if step.stage == "MODEL_SYNTHESIS"
     )
     assert synthesis_step.status == "COMPLETED"
     assert "模型不被允许新增无证据事实" in synthesis_step.summary
+
+
+@pytest.mark.asyncio
+async def test_trend_chart_is_only_embedded_in_final_answer() -> None:
+    events = []
+    with progress_scope(events.append):
+        response = await service(
+            dataset_store=SmallDatasetStore(),
+            synthesizer=SynthesisStub(),
+        ).handle(
+            ChatRequest(
+                application_id="app",
+                conversation_id="inline-trend-chart",
+                message_id="m1",
+                question="分析2026年1月到2月销售额趋势",
+                semantic_model_id=1,
+                business_domain_id=1,
+            ),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert response.status == "COMPLETED"
+    reliability_text = next(item["message"] for item in events if item["stage"] == "RELIABILITY_CHECK")
+    assert "未进行独立内容校验" in reliability_text
+    assert "条已验证结论" not in reliability_text
+    assert "模型整理后的证据化总结" in insight["message"]
+    assert "模型整理后的证据化总结" not in response.answer
+    assert response.chart_specs[0].chart_type == "LINE"
+    assert insight["chart_image_count"] == 0
+    assert insight["chart_source"] == "NONE"
+    assert "#### 图表" not in insight["message"]
+    assert "<svg" not in insight["message"]
+    assert "已根据本次分析任务生成" not in insight["message"]
+    assert "#### 图表" in response.answer
+    assert '<svg style="max-width:100%;height:auto;display:block"' in response.answer
+    assert "<title id=\"chart-title\">销售额趋势</title>" in response.answer
+    assert "http://minio" not in insight["message"]
+    overview, findings, tips = (
+        response.answer.index(title)
+        for title in ("### 1、概况总结", "### 2、关键发现", "### 3、业务提示")
+    )
+    assert overview < response.answer.index("| 月份 |") < findings
+    assert findings < response.answer.index("<svg") < tips
+    assert response.answer.count("### 1、概况总结") == 1
+    assert "### 1、概况总结" not in insight["message"]
+
+
+@pytest.mark.asyncio
+async def test_failed_insight_is_disclosed_without_repeating_final_conclusions():
+    class UnavailableSynthesis:
+        async def synthesize(self, *args, **kwargs):
+            raise RuntimeError("simulated model failure")
+
+    events = []
+    with progress_scope(events.append):
+        response = await service(synthesizer=UnavailableSynthesis()).handle(
+            ChatRequest(application_id="app", conversation_id="insight-failure-disclosure",
+                        message_id="m1", question="分析2026年1月到2月销售额趋势",
+                        semantic_model_id=1, business_domain_id=1),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert "本次模型分析暂不可用" in insight["message"]
+    assert "以下为查询数据摘要" in insight["message"]
+    assert "销售额" in insight["message"]
+    assert "证据校验" not in insight["message"]
+    assert response.status == "COMPLETED"
+    assert "销售额" in response.answer
+
+
+@pytest.mark.asyncio
+async def test_configured_visualization_mcp_is_used_before_inline_fallback() -> None:
+    class VisualizationDispatcher:
+        async def execute_visualizations(self, *, chat, chart_specs):
+            assert chat.mcp[0].connect_type == "sse"
+            assert chart_specs[0]["chart_type"] == "LINE"
+            return [ExtensionExecution(
+                name="generate_line_chart",
+                kind="MCP_TOOL",
+                status="COMPLETED",
+                output={
+                    "content": [{
+                        "type": "text",
+                        "text": "https://charts.example/sales-trend.jpeg",
+                    }]
+                },
+            )]
+
+        @staticmethod
+        def visualization_url(execution):
+            return execution.output["content"][0]["text"]
+
+        async def execute(self, **_kwargs):
+            return []
+
+    events = []
+    with progress_scope(events.append):
+        response = await service(
+            dataset_store=SmallDatasetStore(),
+            extension_dispatcher=VisualizationDispatcher(),
+        ).handle(
+            ChatRequest(
+                application_id="app",
+                conversation_id="mcp-trend-chart",
+                message_id="m1",
+                question="分析2026年1月到2月销售额趋势",
+                semantic_model_id=1,
+                business_domain_id=1,
+                mcp=[McpConfig(
+                    mcp_server_url="https://mcp.example/sse",
+                    connect_type="sse",
+                    slug="",
+                )],
+            ),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert response.status == "COMPLETED"
+    assert insight["chart_source"] == "NONE"
+    assert insight["chart_image_count"] == 0
+    assert "#### 图表" not in insight["message"]
+    assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" not in insight["message"]
+    assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" in response.answer
+    assert "<img" not in insight["message"]
+    assert "<svg" not in insight["message"]
+    assert response.extension_executions[0].name == "generate_line_chart"
+
+
+@pytest.mark.asyncio
+async def test_failed_visualization_mcp_falls_back_to_inline_chart() -> None:
+    class FailedVisualizationDispatcher:
+        async def execute_visualizations(self, **_kwargs):
+            return [ExtensionExecution(
+                name="generate_line_chart",
+                kind="MCP_TOOL",
+                status="FAILED",
+                error="network unavailable",
+            )]
+
+        @staticmethod
+        def visualization_url(_execution):
+            return None
+
+        async def execute(self, **_kwargs):
+            return []
+
+    events = []
+    with progress_scope(events.append):
+        response = await service(
+            dataset_store=SmallDatasetStore(),
+            extension_dispatcher=FailedVisualizationDispatcher(),
+        ).handle(
+            ChatRequest(
+                application_id="app",
+                conversation_id="mcp-trend-fallback",
+                message_id="m1",
+                question="分析2026年1月到2月销售额趋势",
+                semantic_model_id=1,
+                business_domain_id=1,
+                mcp=[McpConfig(
+                    mcp_server_url="https://mcp.example/sse",
+                    connect_type="sse",
+                )],
+            ),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert response.status == "COMPLETED"
+    assert insight["chart_source"] == "NONE"
+    assert insight["chart_image_count"] == 0
+    assert "<svg" not in insight["message"]
+    assert "#### 图表" in response.answer
+    assert "<svg" in response.answer
+    assert response.extension_executions == []
+
+
+@pytest.mark.asyncio
+async def test_inline_chart_render_failure_keeps_valid_analysis_result(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.orchestrator.render_chart_svg",
+        lambda _chart_spec: None,
+    )
+    events = []
+    with progress_scope(events.append):
+        response = await service(
+            dataset_store=SmallDatasetStore(),
+        ).handle(
+            ChatRequest(
+                application_id="app",
+                conversation_id="inline-chart-failure",
+                message_id="m1",
+                question="分析2026年1月到2月销售额趋势",
+                semantic_model_id=1,
+                business_domain_id=1,
+            ),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert response.status == "COMPLETED"
+    assert response.chart_specs[0].chart_type == "LINE"
+    assert insight["chart_image_count"] == 0
+    assert insight["chart_source"] == "NONE"
+    assert "#### 图表" not in insight["message"]
+
+
+@pytest.mark.asyncio
+async def test_plain_metric_query_uses_model_for_insight_but_keeps_query_answer() -> None:
+    response = await service(synthesizer=SynthesisStub()).handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id="metric-synthesis",
+            message_id="m1",
+            question="查询2026年1月到2月销售额",
+            semantic_model_id=1,
+            business_domain_id=1,
+        ),
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+    )
+
+    assert response.status == "COMPLETED"
+    assert response.answer != "模型整理后的证据化总结"
+    assert "2026-01" in response.answer
+    analysis_evidence = next(
+        item for item in response.evidence if item.kind == "ANALYSIS_RESULT"
+    )
+    assert analysis_evidence.payload["method"] == "validated_query_result_summary"
+    assert any(item.kind == "ANSWER_SYNTHESIS" for item in response.evidence)
 
 
 @pytest.mark.asyncio
@@ -923,13 +1275,16 @@ async def test_analysis_failure_preserves_query_and_metric_evidence() -> None:
         ),
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
-    assert response.status == "SAFE_FALLBACK"
-    assert {item.kind for item in response.evidence} == {
+    assert response.status == "PARTIAL_SUCCESS"
+    assert {item.kind for item in response.evidence} >= {
         "QUERY_RESULT",
         "SEMANTIC_METRIC_RESOLUTION",
     }
-    assert response.analysis_process[-1].stage == "SAFE_TERMINATION"
-    assert response.analysis_process[-1].status == "FAILED"
+    assert '2026-01' in response.answer and '125' in response.answer
+    assert '测试中的数据形状不支持分析' in response.answer
+    assert response.reliability.level == 'LIMITED'
+    assert not response.requirements and not response.missing_slots
+    assert all(step.stage != 'SAFE_TERMINATION' for step in response.analysis_process)
 
 
 @pytest.mark.asyncio
@@ -946,5 +1301,5 @@ async def test_analysis_warnings_are_visible_in_answer() -> None:
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
     assert response.status == "COMPLETED"
-    assert "注意事项" in response.answer
+    assert "### 3、业务提示" in response.answer
     assert "这是必须向用户披露的限制" in response.answer

@@ -1,0 +1,77 @@
+{
+  "baseline_commit": "5583d8c48db49e22d236e2ee543b26dc89fa3264",
+  "reviewer": "Self-review; no sub-agent",
+  "source_files": [
+    {
+      "path": "Oagnet/mysql_tool.py",
+      "sha256": "1f4c0238137d73e6197013264cfbd7d8524721fb59875381078b537ab7cc428c"
+    },
+    {
+      "path": "Oagnet/tests/test_catalog_relation_declarations.py",
+      "sha256": "5960de7b0aa0edb6c1633979729214a7f991279b392d0b9e9937b15b1d77b516"
+    },
+    {
+      "path": "app/semantic_v2/catalog_bridge.py",
+      "sha256": "e42652b694f282db8536d4e44f96cf101038a58a65db07bb0d45f2b26059d7e1"
+    },
+    {
+      "path": "app/semantic_v2/catalog_plans.py",
+      "sha256": "741f73893b3e54c66ef8076719222bc0ae4201f928a7ddef22faf896826fb829"
+    },
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "sha256": "15cb2934b993f020f24b002936eeaefbe7ccd51ea2adee25e74fc23db54f8a77"
+    },
+    {
+      "path": "tests/test_v2_catalog_plans.py",
+      "sha256": "b5d99c13b1fd284a57db32011b35bc719985469b1519ae282da61860e0257d6a"
+    },
+    {
+      "path": "specs/semantic_v2/semantic_task_draft_v4.schema.json",
+      "sha256": "362157f04b75022bd1d38a0fce409767a061caafc408da95b0ea0272178d2582"
+    }
+  ],
+  "first_divergence": [
+    {
+      "service": "Oagnet",
+      "stage": "OAGNET_SEMANTIC_RETRIEVAL",
+      "finding": "SQL selects r.type but _row_to_relation_dict discarded it",
+      "confidence": "PROVEN"
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "stage": "STRUCTURED_INTENT",
+      "finding": "No governed default/relationship construction in raw draft-to-plan path",
+      "confidence": "PROVEN"
+    }
+  ],
+  "authoritative_sources": [
+    "Oagnet/mysql_tool.py::entity_value_vectorization_decision documents main-attribute display semantics",
+    "Oagnet/mysql_tool.py::_row_to_attr_dict retains is_main_attribute and field_mapping",
+    "sql-translator/sql_translator_prod.py::_canonical_cardinality and relation_type loader",
+    "Oagnet/mysql_tool.py::get_entities SQL selects relation type under current model/domain",
+    "Actual selected 81/[205] capture and offline typed plan acceptance"
+  ],
+  "verified": [
+    "Catalog, not model, selects the complete current owned main-attribute projection and policy identity",
+    "Projection policy is rederived at compile; missing/foreign/partial projection cannot claim the default",
+    "Current source/target endpoints, join evidence and declared cardinality determine the relationship",
+    "Reverse direction swaps endpoints and inverts cardinality; mismatched subject/endpoint/cardinality rejects",
+    "Same-named attributes expose catalog owner labels; enum parents are not mislabeled as entities",
+    "Attribute projections/filters must belong to entities actually declared by the detail/relation plan",
+    "Pending subject answer completes catalog defaults in the existing deterministic state mutation",
+    "Catalog default completion preserves TaskPatch RESET so prior metrics cannot be resurrected",
+    "Explicit fields remain explicit, explicit CLEAR does not revive default fields, subject/target changes rebind defaults",
+    "Full catalog acceptance and current scope proof remain mandatory"
+  ],
+  "retained_gates": [
+    "Multi-hop relations and alias-sensitive/self relations need a path/alias contract; this preserves existing single RelationshipSpec",
+    "Dimension/physical-field binding to execution aliases remains in downstream planning scope",
+    "Entity-value retrieval, dependent comparisons, remaining analytical and typed decision coverage",
+    "Native catalog publication/deployed trust, actual recognition quality, Gold/model benchmark/shadow"
+  ],
+  "public_io_changed": false,
+  "v1_routing_changed": false,
+  "sql_source_changed": false,
+  "real_models_called": false
+}

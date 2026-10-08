@@ -1,0 +1,963 @@
+{
+  "manifest_version": "evaluation-input-freeze-v1",
+  "git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "evaluator_version": "runtime-evaluation-harness-v1",
+  "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+  "evaluator_files": {
+    "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+    "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+    "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+    "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+    "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+    "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+    "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+    "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+    "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+    "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+    "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+    "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+    "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+    "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+    "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+    "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+    "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+  },
+  "prompt_freeze": "FROZEN_NO_SEMANTIC_EDITS",
+  "prompts": {
+    "PARSE": {
+      "version": "v2-current-recognition-v8",
+      "hash": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+      "line_count": 16,
+      "sentence_units": 19
+    },
+    "DRAFT": {
+      "version": "v2-current-recognition-v8",
+      "hash": "446b110d7b3411d585858c8e6919dafc7739c5152b5d3934127908e91ff1122d",
+      "line_count": 63,
+      "sentence_units": 63
+    },
+    "PROBE": {
+      "version": "v2-source-value-choice-v1",
+      "hash": "18c52183ff785de85c9c9afc2b906cdacfdd56b0cb852451b452387d32968fcf",
+      "line_count": 8,
+      "sentence_units": 10
+    }
+  },
+  "schema_freeze": "FROZEN_TEMPLATES_WITH_RUNTIME_OFFERED_HANDLE_INSTANTIATION",
+  "schema_hashes": {
+    "current_turn": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "semantic_draft_template": "306d5c5f8a9191a0923b100ef6d5ef4e0ff4fe1d98668e521dbe5b3b9fa86421",
+    "value_choice_template": "ae2cb6191e0bbf34e5fa39e11fc976414cf10c52df1d07a47bd820474aca0bf7"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "candidate_snapshot_version": "frozen-native-candidate-universe-v1",
+  "candidate_snapshot_hash": "d7668b20c8f611570829a6b4115d8c7dd5d19e4b051bc271e93810579276d007",
+  "candidate_mode": "ALL_PINNED_ROLE_COMPATIBLE_ROWS_NOT_RANKED_LIVE_RETRIEVAL",
+  "split_manifest_hash": "a2bf2cbd1564107101271139914165d3c8f45a1f992ca9ece554eebc0ff9e447",
+  "runtime_source_hashes": {
+    "app/semantic_v2/__init__.py": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+    "app/semantic_v2/asl2.py": "b4ab7978bc7b0575cad45db6eb549fa3ba164e0fb02e9691292b86fd88b76759",
+    "app/semantic_v2/authorized_contract.py": "43528e54bcedb8e0646b8ad634617150fe957a011ff4cc1cbca906e5a471751f",
+    "app/semantic_v2/catalog_bridge.py": "fcf609fc22e50cc172abccde7de0332694af0715c6b4e6ad502f2fdb1d354214",
+    "app/semantic_v2/catalog_mentions.py": "61cba704b689d0e3924b4fc2ddc1899ebd38ce39a9955bffa2edb8f598f94271",
+    "app/semantic_v2/catalog_paths.py": "dfdd61935121196ac64efc60c0eb5030390dab80f7b80c0123855da2e9dd6d77",
+    "app/semantic_v2/catalog_plans.py": "d284963c5b851631b67810103486c2e15dd7e8a598f6c2961a63bb8bbb4b90c7",
+    "app/semantic_v2/clarification.py": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+    "app/semantic_v2/enums.py": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+    "app/semantic_v2/explicit_time.py": "f9628794693b1a1dedc39c0cf4cff25c40d280c70267830f1351332c03cbca69",
+    "app/semantic_v2/legacy_adapter.py": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
+    "app/semantic_v2/migration.py": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+    "app/semantic_v2/models.py": "e23643d4f97abcb5391b1124fd5214da2f6d94077499ddcf9f102ea0e911af78",
+    "app/semantic_v2/pending_recognition.py": "93f3daf560ac574d41caeb08e79dfa09c4acef202bae6ad4243de619f13a6d5b",
+    "app/semantic_v2/pipeline.py": "56715d069f2deca374fa619473136b0bc9b3e57b93d5a383030719bc3392280b",
+    "app/semantic_v2/recognition.py": "456659bcbafa4b9b99c17750eeabf908cd704e67a2ae33fcb3fbdd0704911941",
+    "app/semantic_v2/recognition_client.py": "ba5462734b9bacf48b59d7a6baba43246d63d739d1197f9daeff0ad457154ce4",
+    "app/semantic_v2/recognition_repairs.py": "b92cf8d46bcaceced32c0593a9eec37f2a702a297510460280c5301055e2ad86",
+    "app/semantic_v2/registries.py": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+    "app/semantic_v2/result_contract.py": "9189859325a15b8cc712294b312ec3ab21f39228a7be2db81c7a249bef029754",
+    "app/semantic_v2/schema.py": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+    "app/semantic_v2/slot_reducer.py": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+    "app/semantic_v2/source_value_binding.py": "9b03090dc22517080c7b5b3b05b9f63e44635b50a77a70f7cde25b36ec598e95",
+    "app/semantic_v2/source_value_probe.py": "c4aacb397a81860601ef233f73c511b525b03053c35de95c9b45a7eee1f2a59f",
+    "app/semantic_v2/source_value_recognition.py": "7d4c5bce12b955f51d337396da7104badeb1175602112475766e6bcee51667a9",
+    "app/semantic_v2/state_machine.py": "f85d1157a44dd17c0e6a12d033460c6ae016282c1d8bb393228fcca61fcafa4f",
+    "app/semantic_v2/structured_edits.py": "ffac0964d837f9dba9bb4abd3320234cfa548ac4e07ceea535254128cdc28dbd",
+    "app/semantic_v2/temporal_comparisons.py": "624128af0ed814c3d686e00678727bb27cde5d1d3fadc4aa8e9ec01d8c9429dd",
+    "app/semantic_v2/trace_models.py": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+    "app/semantic_v2/validators.py": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15"
+  },
+  "runtime_source_hash": "bde2f66fc3bb2462cdb7e8935d727278a49ddc12c9ee7c0274b137ab76b9485b",
+  "as_of": "2026-09-09T09:00:00+08:00",
+  "timezone": "Asia/Shanghai",
+  "calendar_version": "gregorian-business-calendar-v1",
+  "model": "qwen3.7-max",
+  "thinking_mode": false,
+  "temperature": 0,
+  "top_p": "NOT_SENT_PROVIDER_DEFAULT",
+  "seed": "NOT_SENT_SUPPORT_UNVERIFIED",
+  "randomness": "PROVIDER_DETERMINISM_NOT_ESTABLISHED",
+  "retry_policy": {
+    "max_retries": 0
+  },
+  "timeout_seconds": 30.0,
+  "max_tokens": "NOT_SENT_PROVIDER_DEFAULT",
+  "api_provider": "CONFIGURED_COMPATIBLE_GATEWAY",
+  "endpoint_hash": "8b2745bf62ffc25c22839cae7ccd329991f2d07fcd4fd9e86858f97809f05c05",
+  "formal_model_benchmark_allowed": false,
+  "semantic_candidate_baseline_id": null,
+  "baseline_status": "FINAL_EVALUATOR_FROZEN_FOR_POST_HARNESS_REPLAY_NOT_SEMANTIC_CANDIDATE",
+  "included_prs": [
+    {
+      "number": 1,
+      "head": "phase0a-repro-closure-20260907-01",
+      "commit": "e4d3bb59026d3b219c9268ac53f87dccf58f3c28",
+      "base": "phase25.1-final-contract-20260907-closure",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 2,
+      "head": "phase0b-legacy-multiturn-p0-closure-20260907-01",
+      "commit": "3b3d60ccdd2698887ba57e2b849564861adf7e7c",
+      "base": "phase0a-repro-closure-20260907-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 3,
+      "head": "phase0c-trust-semantic-scope-20260908-01",
+      "commit": "e406029c83692d6e785b0880815d2a64773157c7",
+      "base": "phase0b-legacy-multiturn-p0-closure-20260907-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 4,
+      "head": "oagnet-source-import-20260908-01",
+      "commit": "813073ff3d34a5935e98c5433207ab38d55ccf6b",
+      "base": "phase0c-trust-semantic-scope-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 5,
+      "head": "phase0c-scope-root-cause-20260908-01",
+      "commit": "8711a3f93a088c63053dcd447d68c2c1b2f9bbcc",
+      "base": "oagnet-source-import-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 6,
+      "head": "phase0c-single-domain-execution-20260908-01",
+      "commit": "cdb2a8cfb059c841fbd8de51eb3c3a59cb0cf981",
+      "base": "phase0c-scope-root-cause-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 7,
+      "head": "phase0c-oagnet-scope-closure-20260908-01",
+      "commit": "5acfa99140f5dfede8f7c10ab3e0fd09db9c59f3",
+      "base": "phase0c-single-domain-execution-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 8,
+      "head": "phase0c-conversation-trust-20260908-01",
+      "commit": "119d84d70d46867f655e8de2bf44838f44d2cd46",
+      "base": "phase0c-oagnet-scope-closure-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 9,
+      "head": "phase0c-dataset-lineage-20260908-01",
+      "commit": "89643b95a10a782dd096b388bd28db9cf383c0eb",
+      "base": "phase0c-conversation-trust-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 10,
+      "head": "phase0c-semantic-choice-20260908-01",
+      "commit": "dfdcd1b76ab9f8dbdbfb8d88777abeabb7215f36",
+      "base": "phase0c-dataset-lineage-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 11,
+      "head": "phase0c-candidate-integrity-20260908-01",
+      "commit": "8bbf35167b15492b37e1ed141abbefef18c90204",
+      "base": "phase0c-semantic-choice-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 12,
+      "head": "phase0c-task-recall-20260908-01",
+      "commit": "b9d6dc9ed46e819b2f34055256be00a95910d207",
+      "base": "phase0c-candidate-integrity-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 13,
+      "head": "phase0c-structural-scope-20260908-01",
+      "commit": "098c3ed9489de925b44eb4f814b98c686683acc7",
+      "base": "phase0c-task-recall-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 14,
+      "head": "phase0c-dimension-mutation-20260908-01",
+      "commit": "b80492044882b409559a67d7e4bd60c1497be3fc",
+      "base": "phase0c-structural-scope-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 15,
+      "head": "phase0c-metric-edit-grounding-20260908-01",
+      "commit": "c2fa1411d1909a6380f924ebe1bb4723a2518df8",
+      "base": "phase0c-dimension-mutation-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 16,
+      "head": "phase0c-product-clear-20260908-01",
+      "commit": "80533c309a69851542dd182de92fff70b1e39e4c",
+      "base": "phase0c-metric-edit-grounding-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 17,
+      "head": "phase0c-region-list-20260908-01",
+      "commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+      "base": "phase0c-product-clear-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 18,
+      "head": "cutover-readiness-catalog-20260908-01",
+      "commit": "3ab8b4336b290d3560756345c4328278ee1ca9b3",
+      "base": "phase0c-region-list-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 19,
+      "head": "cutover-catalog-publication-20260908-01",
+      "commit": "a1708a796c9eb103309bc189280a94fb51b0ebfd",
+      "base": "cutover-readiness-catalog-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 20,
+      "head": "cutover-catalog-identity-20260908-01",
+      "commit": "aa6252f367b7da35774ccbabb17c85545975bd20",
+      "base": "cutover-catalog-publication-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 21,
+      "head": "cutover-v2-scope-bridge-20260908-02",
+      "commit": "47608b0a8db4a20b54973d717bf4176e621d1b2a",
+      "base": "cutover-catalog-identity-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 22,
+      "head": "cutover-v2-recognition-20260908-01",
+      "commit": "d798dc6f7a9342f3090ed418439d2fa0672a6c54",
+      "base": "cutover-v2-scope-bridge-20260908-02",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 23,
+      "head": "cutover-v2-pending-20260908-01",
+      "commit": "fc7c5fc2fe63c9dd4284a88d6c268a10b6b72c52",
+      "base": "cutover-v2-recognition-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 24,
+      "head": "cutover-v2-slot-edits-20260908-01",
+      "commit": "5583d8c48db49e22d236e2ee543b26dc89fa3264",
+      "base": "cutover-v2-pending-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 25,
+      "head": "cutover-v2-catalog-plans-20260908-01",
+      "commit": "b5037e7d15ecfd8e733551c853cbf9441be7c4bd",
+      "base": "cutover-v2-slot-edits-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 26,
+      "head": "cutover-v2-relation-paths-20260908-01",
+      "commit": "2e5b5a6fb82d896eacc859af99a1b5eece067f11",
+      "base": "cutover-v2-catalog-plans-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 27,
+      "head": "cutover-v2-temporal-comparisons-20260908-01",
+      "commit": "0bb3f92327e69372e8450c7f49c2a8e2c0871630",
+      "base": "cutover-v2-relation-paths-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 28,
+      "head": "cutover-v2-entity-value-sources-20260908-01",
+      "commit": "ff389dc4cd3fe4e0dabe1c665e3672b80b445330",
+      "base": "cutover-v2-temporal-comparisons-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 29,
+      "head": "cutover-v2-source-value-binding-20260908-01",
+      "commit": "df09b52ea4ab76254f5005619aefa8e4cb87ac5f",
+      "base": "cutover-v2-entity-value-sources-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 30,
+      "head": "cutover-catalog-publication-candidate-20260909-01",
+      "commit": "b0c2d9da2a836b9e16b9986c90d1e3b2065026f0",
+      "base": "cutover-v2-source-value-binding-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 31,
+      "head": "cutover-pinned-sql-catalog-20260909-01",
+      "commit": "abd6e82bfffb683d829e408581dda583633ec8d8",
+      "base": "cutover-catalog-publication-candidate-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 32,
+      "head": "cutover-v2-asl2-lowering-20260909-01",
+      "commit": "b6ca3db0d8602f9f7457a64092d60c449a1c725d",
+      "base": "cutover-pinned-sql-catalog-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 33,
+      "head": "cutover-v2-ranking-contract-20260909-01",
+      "commit": "ed35bc37c8c9685e1b1fec265c183862bf418488",
+      "base": "cutover-v2-asl2-lowering-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 34,
+      "head": "cutover-v2-filter-tree-20260909-01",
+      "commit": "e80132164b4335d38edd7081fd8d884551baa7fe",
+      "base": "cutover-v2-ranking-contract-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 35,
+      "head": "cutover-v2-bound-sql-20260909-01",
+      "commit": "2881cd7e52a7d8ca21bbb66e808746bd4566e137",
+      "base": "cutover-v2-filter-tree-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 36,
+      "head": "cutover-pinned-relation-endpoints-20260909-01",
+      "commit": "011a7193f5eafda1101255209129b4d4e2ad4f94",
+      "base": "cutover-v2-bound-sql-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 37,
+      "head": "cutover-relation-identity-evidence-20260909-01",
+      "commit": "bcf7d81b57fce85b018e5dc053368b8a6b870108",
+      "base": "cutover-pinned-relation-endpoints-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 38,
+      "head": "cutover-evaluation-gates-20260909t011632z",
+      "commit": "f15969dcc0f90e75a399a3d80d4a489d58139dec",
+      "base": "cutover-relation-identity-evidence-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 39,
+      "head": "cutover-parser-spans-20260909t015840z",
+      "commit": "66c11a1bfa414ba63b4592cb5ff3713492a5b324",
+      "base": "cutover-evaluation-gates-20260909t011632z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 40,
+      "head": "cutover-state-evaluator-20260909t024300z",
+      "commit": "2cd4d93de8ce151f0b859e8252db3f0ed7ce141c",
+      "base": "cutover-parser-spans-20260909t015840z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 41,
+      "head": "cutover-qwen37-config-20260909t031200z",
+      "commit": "037839d7df9127fa946b1580363ddf84d32c50bb",
+      "base": "cutover-state-evaluator-20260909t024300z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 42,
+      "head": "cutover-qwen37-benchmark-20260909t031600z",
+      "commit": "b42fdaf913e6e54d7de9bdb8a343183536703586",
+      "base": "cutover-qwen37-config-20260909t031200z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 43,
+      "head": "cutover-transition-runner-20260909t034400z",
+      "commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
+      "base": "cutover-qwen37-benchmark-20260909t031600z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 44,
+      "head": "cutover-task-context-20260909t042538z",
+      "commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
+      "base": "cutover-transition-runner-20260909t034400z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 45,
+      "head": "cutover-replacement-oracle-20260909t045212z",
+      "commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
+      "base": "cutover-task-context-20260909t042538z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 46,
+      "head": "cutover-source-evidence-20260909t052100z",
+      "commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
+      "base": "cutover-replacement-oracle-20260909t045212z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 47,
+      "head": "cutover-recorded-oracle-20260909t055600z",
+      "commit": "c19e65544664395200d814300e27d330006ea9a1",
+      "base": "cutover-source-evidence-20260909t052100z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 48,
+      "head": "cutover-governed-time-20260909t062000z",
+      "commit": "9d680ae096b9deafe42767d0d7952e0525be0c0a",
+      "base": "cutover-recorded-oracle-20260909t055600z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 49,
+      "head": "cutover-compound-mention-20260909t064400z",
+      "commit": "42547ca85fcc9a2ad6f83260df444ada3ea81ddd",
+      "base": "cutover-governed-time-20260909t062000z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 50,
+      "head": "cutover-time-components-20260909t070300z",
+      "commit": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28",
+      "base": "cutover-compound-mention-20260909t064400z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 51,
+      "head": "cutover-source-alias-20260909t071700z",
+      "commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
+      "base": "cutover-time-components-20260909t070300z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 52,
+      "head": "semantic-cutover-triage-20260909t074900z",
+      "commit": "ec48f654d6bcaa48ed09d41d7aca4fcbaedcd82e",
+      "base": "cutover-source-alias-20260909t071700z",
+      "draft": true,
+      "merged_at": null
+    }
+  ],
+  "current_draft_pr": "To be assigned after evidence commit; base PR 52",
+  "gold_version": "harness-corpus-v1",
+  "gold_hashes": {
+    "PUBLIC_DEV": "f7fe68dd3164bbbf50aba7b197db1c96547c8f9366dfde8fb23f5bffd47d4af1",
+    "TRANSITION": "ed38aa5a7040b96fd27509583e1559a8bd0f8c6e06df176aa9682732543c8151",
+    "PRIVATE_VALIDATION": "782c9c7b01a848d04f6a0ec72115b0f9979b6fd1e362050f6c05d7ec862732a2"
+  },
+  "split_manifests": {
+    "version": "sequestered-contract-splits-v1",
+    "created_at": "2026-09-09T09:30:43.424785+00:00",
+    "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "label_version": "explicit-metric-operation-contract-v1",
+    "label_source": [
+      "BUSINESS_CONTRACT",
+      "CATALOG_PROVEN",
+      "DETERMINISTIC_RULE"
+    ],
+    "creation_method": "PROGRAMMATIC_COMPOSITION_AFTER_PROMPT_FREEZE",
+    "independent_human_adjudication": false,
+    "representativeness": "EVIDENCE_INSUFFICIENT",
+    "splits": {
+      "PRIVATE_VALIDATION": {
+        "case_count": 24,
+        "case_ids_hash": "7aa5f2681d4f643510ccd7d0f15afd8e6c8aa63d0485470313df5941f464b9a0",
+        "manifest_hash": "782c9c7b01a848d04f6a0ec72115b0f9979b6fd1e362050f6c05d7ec862732a2",
+        "file_sha256": "a9c975fdfe703c30d4b7a808bd8343a8e670dd40a8e2ec36735024c9df83bca8",
+        "public_overlap": 0,
+        "access_status": "SEALED_NOT_VIEWED_OR_RUN",
+        "original_utterances_published": false,
+        "prompt_or_rule_training_use": false
+      },
+      "BLIND_HOLDOUT": {
+        "case_count": 24,
+        "case_ids_hash": "39eef8f5ce03cd83b2c88638b999bf0291c91324608be1fc2b5d7a8cace6b0ae",
+        "manifest_hash": "faa347cd76fe9e8482358213863f4e4652ab34b23f62d3646787e51cd9353eef",
+        "file_sha256": "206dcc76c50852bb2fd810ab04e3a1c8131d88dad674d343b37f2b60285233d1",
+        "public_overlap": 0,
+        "access_status": "SEALED_NOT_VIEWED_OR_RUN",
+        "original_utterances_published": false,
+        "prompt_or_rule_training_use": false
+      }
+    },
+    "holdout_manifest_hash": "faa347cd76fe9e8482358213863f4e4652ab34b23f62d3646787e51cd9353eef",
+    "manifest_hash": "a2bf2cbd1564107101271139914165d3c8f45a1f992ca9ece554eebc0ff9e447"
+  },
+  "public_dev_hash": "f7fe68dd3164bbbf50aba7b197db1c96547c8f9366dfde8fb23f5bffd47d4af1",
+  "private_validation_hash": "782c9c7b01a848d04f6a0ec72115b0f9979b6fd1e362050f6c05d7ec862732a2",
+  "blind_holdout_hash": "206dcc76c50852bb2fd810ab04e3a1c8131d88dad674d343b37f2b60285233d1",
+  "source_value_evidence": {
+    "format": "FROZEN_SOURCE_VALUE_OBSERVATIONS_V1",
+    "artifact_hash": "593bd6f5e4efb2eaa913dd4e36766b6957ebe58f82bdc0f3603f3e9abf48bc27",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "snapshot_sha256": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+    "private_storage": ".eval_private/harness-20260909T083000Z/source_observations.json",
+    "entries": [
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094307294823661570",
+          "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "EXACT_NORMALIZED",
+        "query_value": "PRIVATE",
+        "query_value_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+        "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "returned_count": 0,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:39.417984+00:00",
+        "observation_hash": "116fabad755e99b11d7c298109fadc74c07d20398f175846965067337ac65dfc"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094307294823661570",
+          "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "CANDIDATE_DISCOVERY",
+        "query_value": "PRIVATE",
+        "query_value_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+        "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "returned_count": 0,
+        "complete": false,
+        "observed_at": "2026-09-09T07:38:40.723164+00:00",
+        "observation_hash": "b7e52b599205aa98029dc5398e1c435ff98001dfab801965544de567cf5978d9"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094307294823661570",
+          "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "EXACT_NORMALIZED",
+        "query_value": "PRIVATE",
+        "query_value_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+        "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "returned_count": 0,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:40.982904+00:00",
+        "observation_hash": "9b3f0525e3efd9a6bc5369b3e259ba22d5b6e0cb461ce76797dfd00452b0f93e"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094307294823661570",
+          "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "CANDIDATE_DISCOVERY",
+        "query_value": "PRIVATE",
+        "query_value_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+        "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "returned_count": 0,
+        "complete": false,
+        "observed_at": "2026-09-09T07:38:41.447212+00:00",
+        "observation_hash": "46d7dc43422ac0626affe0b93ce51ed2198a33d3ffb8d320dbd46190ab238c32"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094307294823661570",
+          "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "EXACT_NORMALIZED",
+        "query_value": "PRIVATE",
+        "query_value_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+        "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "returned_count": 0,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:41.651552+00:00",
+        "observation_hash": "1b1576deff3e5c5f9395cbc02b5565120959cc4c051e4d0b73c1a718c918df59"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094307294823661570",
+          "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "CANDIDATE_DISCOVERY",
+        "query_value": "PRIVATE",
+        "query_value_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+        "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "returned_count": 0,
+        "complete": false,
+        "observed_at": "2026-09-09T07:38:42.073616+00:00",
+        "observation_hash": "8b47f349676673d248d47ad19e14e0aecef55eb38529a88374c632c85f5c15d1"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094306753653587970",
+          "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "EXACT_NORMALIZED",
+        "query_value": "PRIVATE",
+        "query_value_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+        "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "returned_count": 0,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:43.968346+00:00",
+        "observation_hash": "4f0c0f91e4e68985b2257848ee1251c1f360c47303751b99b3e9bad27905dd36"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094306753653587970",
+          "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "CANDIDATE_DISCOVERY",
+        "query_value": "PRIVATE",
+        "query_value_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+        "returned_candidates_hash": "cd1b351e7a83f93a2700b0cde55eaee6498ce1afee9edebf2b841ef88015fa2a",
+        "returned_count": 34,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:44.486550+00:00",
+        "observation_hash": "9bbf2197ee2f038c62b33f1a044064e649df404bd9cc2f64a45aa32d9aa49752"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094306753653587970",
+          "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "EXACT_NORMALIZED",
+        "query_value": "PRIVATE",
+        "query_value_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+        "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "returned_count": 0,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:44.967805+00:00",
+        "observation_hash": "4efff31f7a13805a3c618f42261987b3c566c3a6ffe8ba9da8e9a4e3231e5744"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094306753653587970",
+          "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "CANDIDATE_DISCOVERY",
+        "query_value": "PRIVATE",
+        "query_value_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+        "returned_candidates_hash": "cd1b351e7a83f93a2700b0cde55eaee6498ce1afee9edebf2b841ef88015fa2a",
+        "returned_count": 34,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:45.719371+00:00",
+        "observation_hash": "83489827691a2d15f26449a743dab4279f2ec44c2d018f655d70de02d5909c93"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094306753653587970",
+          "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "EXACT_NORMALIZED",
+        "query_value": "PRIVATE",
+        "query_value_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+        "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "returned_count": 0,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:45.955093+00:00",
+        "observation_hash": "60fb8c0229f72c592b6b5290dd3ed13f1d8de9b94e1f7348bb522bc351878628"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094306753653587970",
+          "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "CANDIDATE_DISCOVERY",
+        "query_value": "PRIVATE",
+        "query_value_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+        "returned_candidates_hash": "cd1b351e7a83f93a2700b0cde55eaee6498ce1afee9edebf2b841ef88015fa2a",
+        "returned_count": 34,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:46.932491+00:00",
+        "observation_hash": "dbfe4dd0c6377b5122a6c1ef24a44f28dbe6d5bbb1b453c9a26221535b2baafc"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094306753653587970",
+          "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "EXACT_NORMALIZED",
+        "query_value": "PRIVATE",
+        "query_value_hash": "432f80464c3ff7ccec37b8fb70fd8c702e1a0b102968bb81e482ee5dfbe8bc04",
+        "returned_candidates_hash": "715b46430352e3e388b60798e8ef0a7793eac5dc1d75869c357eb65ecc899c74",
+        "returned_count": 1,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:47.286216+00:00",
+        "observation_hash": "70a9725aeee33052cff334dbef5ae6f4b830943ee2aa1e4e08fe5c18aa5d654d"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094306753653587970",
+          "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "EXACT_NORMALIZED",
+        "query_value": "PRIVATE",
+        "query_value_hash": "1ff7507cd9bd7bd5dea51aed5a59f9e285ab57d267c1869f3767c00e814a1bd2",
+        "returned_candidates_hash": "5231f7fabc01c69dabc7950b97d8b894b601437aaad8e741da0fd01ef99b0def",
+        "returned_count": 1,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:47.532758+00:00",
+        "observation_hash": "85ef8e79b957087defb9be6f60b7f99b130ffbe318ea76ee2206fbf2c1c95026"
+      },
+      {
+        "field_ref": {
+          "semantic_model_id": 81,
+          "business_domain_id": 205,
+          "attribute_id": "2094306753653587970",
+          "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+        },
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "match_mode": "EXACT_NORMALIZED",
+        "query_value": "PRIVATE",
+        "query_value_hash": "dca766cb422d1e113310f1adff861d181f02fe44d39f5bb51f41d33489a62122",
+        "returned_candidates_hash": "d99a4edfba8ea4f1d093717b62a1430b78154515b959802a61aa1589d3b35534",
+        "returned_count": 1,
+        "complete": true,
+        "observed_at": "2026-09-09T07:38:47.761424+00:00",
+        "observation_hash": "80d5b0bf13afc0e85f815876e609b096938132fde1eba3d433280fb046184361"
+      }
+    ]
+  },
+  "catalog_snapshot_sha256": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+  "capture_runtime_commit": "871183e62ada81c5526e51948a7e11ba2d3c8908",
+  "capture_provenance_policy": "Intermediate live score metadata is superseded: scorer changed during capture. Frozen runtime source and model request bytes are verified by final offline replay; original captures remain immutable.",
+  "included_unpublished_stage_commits": [
+    "871183e62ada81c5526e51948a7e11ba2d3c8908",
+    "ac42bc72ec480c754dc39ce7a6bc5b1d274f9c32",
+    "8748d3d64d9a51e6a57c6769954eec90f849137e",
+    "4f23205198576cc42cb4cb0823a85917e9c0b511",
+    "f6ce319591d714d658916f48cdc6fe7c70d9b252"
+  ]
+}

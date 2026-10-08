@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "b5037e7d15ecfd8e733551c853cbf9441be7c4bd",
+  "feature_branch": "cutover-v2-relation-paths-20260908-01",
+  "rollback": "Reviewed revert of the path source/evidence commits, explicit development resync and affected/critical tests. Do not deserialize 0.2.2 path artifacts into a flat legacy plan; reject incompatible artifacts. No deployed traffic or native catalog change was performed.",
+  "native_publication_performed": false,
+  "production_traffic_rollback_proven": false,
+  "auto_merge": false
+}

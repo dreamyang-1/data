@@ -1,0 +1,81 @@
+{
+  "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "seam_only": true,
+  "production_queries": 0,
+  "external_call_attempts": {
+    "model_attempts": 0,
+    "database_attempts": 0,
+    "network_attempts": 0,
+    "redis_attempts": 0
+  },
+  "entities": [
+    {
+      "entity": "city",
+      "governed_attribute_codes": [
+        "city_name"
+      ],
+      "status": "PROVEN_ON_FROZEN_CATALOG",
+      "mode": "SEMANTIC_DEFAULT",
+      "policy_id": "catalog-display:a1ad65cbf9a4b2d363550dc7591b5e2bd9509fbc30c7581bd8509e6d9cacdec9",
+      "evidence": "ScopedPlanSession + native default_projection; embedded and separately bound is_main_attribute/field_mapping agree"
+    },
+    {
+      "entity": "main_data_domain_ent_manufacturer",
+      "governed_attribute_codes": [
+        "manufacturer_name"
+      ],
+      "status": "PROVEN_ON_FROZEN_CATALOG",
+      "mode": "SEMANTIC_DEFAULT",
+      "policy_id": "catalog-display:7c658045a556c569a4f5f7fbf94ac52fc5cc918fd947c2264f4fe90d1ad8c39e",
+      "evidence": "ScopedPlanSession + native default_projection; embedded and separately bound is_main_attribute/field_mapping agree"
+    },
+    {
+      "entity": "product_line",
+      "governed_attribute_codes": [
+        "product_line_id"
+      ],
+      "status": "PROVEN_ON_FROZEN_CATALOG",
+      "mode": "SEMANTIC_DEFAULT",
+      "policy_id": "catalog-display:bddc85657457ae2c84d99bf88ecfa6570b6b345e91e78a93419232bd2e3a4e29",
+      "evidence": "ScopedPlanSession + native default_projection; embedded and separately bound is_main_attribute/field_mapping agree"
+    },
+    {
+      "entity": "project",
+      "governed_attribute_codes": [
+        "project_name"
+      ],
+      "status": "PROVEN_ON_FROZEN_CATALOG",
+      "mode": "SEMANTIC_DEFAULT",
+      "policy_id": "catalog-display:6fd739d4b608a22deadbc4f48e2bc56456a0901d40e2fe1e542664eee54f2330",
+      "evidence": "ScopedPlanSession + native default_projection; embedded and separately bound is_main_attribute/field_mapping agree"
+    },
+    {
+      "entity": "province",
+      "governed_attribute_codes": [
+        "province_name"
+      ],
+      "status": "PROVEN_ON_FROZEN_CATALOG",
+      "mode": "SEMANTIC_DEFAULT",
+      "policy_id": "catalog-display:0a63f9e4f4eddbb13ca535d1a830ad2199c865f5378ac89600a6a615792ab4d3",
+      "evidence": "ScopedPlanSession + native default_projection; embedded and separately bound is_main_attribute/field_mapping agree"
+    },
+    {
+      "entity": "sales_company",
+      "governed_attribute_codes": [
+        "guoyao_name"
+      ],
+      "status": "PROVEN_ON_FROZEN_CATALOG",
+      "mode": "SEMANTIC_DEFAULT",
+      "policy_id": "catalog-display:4d1d07ef6b2d0d8203d2cc2a8dd2f363f68a3097e5b0749e65c93b1808036dc5",
+      "evidence": "ScopedPlanSession + native default_projection; embedded and separately bound is_main_attribute/field_mapping agree"
+    }
+  ],
+  "limit": "Does not repair query shape or prove the six rejected RELATION_LIST drafts valid."
+}

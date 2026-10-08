@@ -1,0 +1,102 @@
+{
+  "baseline": "bc5bc3f418c374f3f155403550649b23c64ce4e5",
+  "branch": "semantic-downstream-round5-2-20260910t040418z",
+  "files": [
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "action": "MODIFY",
+      "sha256": "d92164bd9b1b4961433c95a643018583c3e0d765917a384e4a8d991964a3c4bc",
+      "previous_sha256": "a7a24f9e6eeac22a5bc0e384c7f5c3ffdc4e2ce6ed529cda808ba4b80ff21f56"
+    },
+    {
+      "path": "app/semantic_v2/recognition_initialization.py",
+      "action": "ADD",
+      "sha256": "360d0a635ff8ec11e3d8d12d18dfc7cb04a9ecb434d05bf86f10bf8ef80ccdf9",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_2/causal_receipt.json",
+      "action": "ADD",
+      "sha256": "06616e32ae00c0c43da657141343c50ec05819e7e0d9043fb3e6c2e7f8590130",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_2/closure_report.md",
+      "action": "ADD",
+      "sha256": "668154f9c0e03b96c92b112ab422c3fbf7c0404a6c3b1a51b81975b815106b9d",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_2/live_recheck.json",
+      "action": "ADD",
+      "sha256": "580105a8c5a75f86a253e8b738db7af75453f16183169b2cf7fa6d95936d92ea",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_2/performance_receipt.json",
+      "action": "ADD",
+      "sha256": "c176cd7b85e3a8c00a8aa8cec45093c8558569f8d42472aa2e3cce9d808a6776",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_2/root_clusters.json",
+      "action": "ADD",
+      "sha256": "bf947f613151c251a4b88b0a027c6be2eee9975d53894aa01ee1d7e4ab07c799",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_2/round5_2_manifest.json",
+      "action": "ADD",
+      "sha256": "b06831f9a146eb6306d1bf8e472047874c05330227d76e249e13c7097db82ffd",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_2/test_delta.json",
+      "action": "ADD",
+      "sha256": "de7cc8b15977fbc61e77d34b2d076d5c2385785eb6125a4fd12aa84247ada940",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_2/validation_receipt.json",
+      "action": "ADD",
+      "sha256": "21c2d073d77b2add00e0e746d3616962dcf0a30f6b55b1fe1039b64716a5925e",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_2/verify_round5_2.py",
+      "action": "ADD",
+      "sha256": "29f24ebbbfa591bfa643555aaa325e73f18491778492ba769b5480aefee3609a",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/test_v2_initialization_round52.py",
+      "action": "ADD",
+      "sha256": "a041f83ddbd096c4de3bcee750002f2ddff5a1f6b5a7f44b3d7656203a373957",
+      "previous_sha256": null
+    },
+    {
+      "path": "tools/cutover/round52_live_recheck.py",
+      "action": "ADD",
+      "sha256": "54075fbaabccd3757bf3fa83a2b0c2cb4a495c75d503b08b64cdba2711d6e2da",
+      "previous_sha256": null
+    },
+    {
+      "path": "tools/cutover/round52_recorded_causes.py",
+      "action": "ADD",
+      "sha256": "3991e4a430d878ecd271ae83f2e73fb06621d3f52594bb51d8eb8852ccb6dcac",
+      "previous_sha256": null
+    }
+  ],
+  "commit_sealed_manifest_files": [
+    "docs/v2_cutover/semantic_round5_2/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/workspace_git_hash_verification.json"
+  ],
+  "hash_mode": "SHA256 after CRLF -> LF normalization",
+  "secrets_env_private_captures_included": false,
+  "source_changes": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/recognition_initialization.py"
+  ]
+}

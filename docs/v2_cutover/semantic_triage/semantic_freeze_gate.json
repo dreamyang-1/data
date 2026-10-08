@@ -1,0 +1,79 @@
+{
+  "status": "V2_SEMANTIC_FREEZE_GATE=FAIL",
+  "formal_model_benchmark_allowed": false,
+  "audited_commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
+  "gates": [
+    {
+      "gate": "CRITICAL_GOLD_EVALUABLE",
+      "status": "FAIL",
+      "reason": "116/120 execute their existing limited entry; four critical state cases are explicitly skipped. Full-state/IR/Oracle labels remain incomplete."
+    },
+    {
+      "gate": "FIRST_DIVERGENCE_CONVERGED",
+      "status": "FAIL",
+      "reason": "41nonpassing records:11root-cause groups, including8semantic and3evaluation/fixture. Coverage gaps mean this is a lower-bound inventory, not proof of all remaining bugs."
+    },
+    {
+      "gate": "PROMPT_FROZEN",
+      "status": "NOT_FROZEN",
+      "reason": "Current three prompt hashes are recorded, but no accepted freeze/change-control receipt;92sentence units and developmental corpus exposure require holdout evaluation."
+    },
+    {
+      "gate": "SCHEMA_FROZEN",
+      "status": "NOT_FROZEN",
+      "reason": "Typed schemas are hashable; semantic edit/value-choice generation schemas are context-dependent. Need versioned template plus offered-handle contract and accepted freeze."
+    },
+    {
+      "gate": "CANDIDATE_SNAPSHOT_FROZEN",
+      "status": "PARTIAL",
+      "reason": "Catalog and private turn candidate contexts are hashed. No identical ranked candidate corpus for all120cases or Recall@k ground truth."
+    },
+    {
+      "gate": "CATALOG_SNAPSHOT_FROZEN",
+      "status": "PASS",
+      "reason": "Certified frozen81/[205] catalog and source snapshot hashes already recorded. Production publication is a separate Canary/Cutover gate."
+    },
+    {
+      "gate": "EVALUATOR_FROZEN",
+      "status": "FAIL",
+      "reason": "Parser proxy differs from runtime; missing state fixtures, region/safety observations, complete IR and pinned dry-plan coverage."
+    },
+    {
+      "gate": "BLIND_HOLDOUT_UNEXPOSED",
+      "status": "NOT_ESTABLISHED",
+      "reason": "The current100+20 records are exposed development/diagnostic data. No separately certified untouched holdout manifest/access record found; do not relabel these as blind."
+    },
+    {
+      "gate": "CRITICAL_SAFETY_GATE",
+      "status": "NOT_EVALUATED",
+      "reason": "Critical160offline regression tests pass, but all7 live semantic safety gates are NOT_EVALUATED; these are distinct denominators."
+    }
+  ],
+  "current_artifacts": {
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "catalog_snapshot_sha256": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+    "single_gold_hash": "b2db7b903c691d2f696edeba3dbb90e4e1af7da80566d2a0635e1a7c9fd381b6",
+    "transition_gold_hash": "f9307933e72e2c85fe189dcdad6855edfa09dce85926e761539beee2f621f825",
+    "prompts": {
+      "PARSE_PROMPT": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+      "DRAFT_PROMPT": "446b110d7b3411d585858c8e6919dafc7739c5152b5d3934127908e91ff1122d",
+      "PROBE_PROMPT": "18c52183ff785de85c9c9afc2b906cdacfdd56b0cb852451b452387d32968fcf"
+    },
+    "source_files": {
+      "app/semantic_v2/recognition.py": "456659bcbafa4b9b99c17750eeabf908cd704e67a2ae33fcb3fbdd0704911941",
+      "app/semantic_v2/pipeline.py": "56715d069f2deca374fa619473136b0bc9b3e57b93d5a383030719bc3392280b",
+      "app/semantic_v2/structured_edits.py": "ffac0964d837f9dba9bb4abd3320234cfa548ac4e07ceea535254128cdc28dbd",
+      "app/semantic_v2/source_value_probe.py": "c4aacb397a81860601ef233f73c511b525b03053c35de95c9b45a7eee1f2a59f",
+      "tools/cutover/semantic_evaluator.py": "371d1045a10d5fb952e56ba121c95a583f15362e905ee9f7f3e5a44f8c821757",
+      "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2",
+      "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+      "tools/cutover/run_raw_transition_benchmark.py": "42b08f59381c18c3967a4e06964470f3e3a4be53c74425dcbf5e43bee7394e9a"
+    }
+  },
+  "acceptance": "All gates must PASS using current-version executable evidence, not mock-only coverage, unobserved zero violations or output-only Oracle substitutions.",
+  "change_control": "Freeze prompt/schema/candidate/catalog/evaluator versions together; semantic changes reopen affected gates. Holdout requires independent provenance and no use for tuning.",
+  "production_routing": "V1",
+  "formal_replacement_requires_user_approval": true,
+  "file_hash_policy": "SHA-256 after CRLF-to-LF normalization; frozen input/canonical JSON hashes unchanged"
+}

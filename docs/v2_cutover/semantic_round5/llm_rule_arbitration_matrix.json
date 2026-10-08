@@ -1,0 +1,91 @@
+{
+  "rows": [
+    {
+      "signal_source": "trusted request + native scoped restore",
+      "semantic_purpose": "Authorization and legal state membership",
+      "LLM_or_deterministic": "deterministic",
+      "hard_constraint_or_soft_evidence": "hard",
+      "can_veto_model": true,
+      "can_override_model": false,
+      "current_precedence": "Before exposure and before compiler proof",
+      "risk": "Reject incompatible state; never widen current scope"
+    },
+    {
+      "signal_source": "active/Pending/recent ordering, cap 4",
+      "semantic_purpose": "Candidate exposure only",
+      "LLM_or_deterministic": "deterministic",
+      "hard_constraint_or_soft_evidence": "bounded retrieval policy",
+      "can_veto_model": false,
+      "can_override_model": false,
+      "current_precedence": "Before model, no parse/relation input",
+      "risk": "Older omitted task cannot be selected; not a calibrated ranking"
+    },
+    {
+      "signal_source": "context_proposal.status/relation/target",
+      "semantic_purpose": "Natural-language relation and target semantics",
+      "LLM_or_deterministic": "LLM",
+      "hard_constraint_or_soft_evidence": "semantic evidence",
+      "can_veto_model": false,
+      "can_override_model": false,
+      "current_precedence": "Primary semantic decision after hard validation",
+      "risk": "Legal model choice can still be semantically wrong; no accuracy guarantee"
+    },
+    {
+      "signal_source": "old acts/reference/followup/shift fields",
+      "semantic_purpose": "Current surface evidence and backward-compatible diagnostics",
+      "LLM_or_deterministic": "LLM",
+      "hard_constraint_or_soft_evidence": "soft",
+      "can_veto_model": false,
+      "can_override_model": false,
+      "current_precedence": "Cannot veto the joint proposal in Raw runtime",
+      "risk": "Explicit disagreement tested; legacy direct resolver remains versioned separately"
+    },
+    {
+      "signal_source": "candidate/state/task/Pending version checks",
+      "semantic_purpose": "Reject fabricated, stale or inconsistent selections",
+      "LLM_or_deterministic": "deterministic",
+      "hard_constraint_or_soft_evidence": "hard",
+      "can_veto_model": true,
+      "can_override_model": false,
+      "current_precedence": "After model; reject without selecting an alternative",
+      "risk": "All vetoes have codes; active/historical meaning is a declared cross-field contract"
+    },
+    {
+      "signal_source": "Pending selected_option + receipt validation",
+      "semantic_purpose": "Verify an explicitly proposed Pending answer",
+      "LLM_or_deterministic": "deterministic",
+      "hard_constraint_or_soft_evidence": "hard",
+      "can_veto_model": true,
+      "can_override_model": false,
+      "current_precedence": "Only after ANSWER_CLARIFICATION proposal",
+      "risk": "Exact option matching cannot hijack NEW_TASK"
+    },
+    {
+      "signal_source": "native explicit-edit guards and Reducer",
+      "semantic_purpose": "Current evidence, ADD/REMOVE/CLEAR and state invariants",
+      "LLM_or_deterministic": "deterministic",
+      "hard_constraint_or_soft_evidence": "hard",
+      "can_veto_model": true,
+      "can_override_model": false,
+      "current_precedence": "After selected target and draft; unchanged",
+      "risk": "Safe rejection is not business success"
+    },
+    {
+      "signal_source": "confidence / keyword / missing-slot weighting",
+      "semantic_purpose": "None in joint context arbitration",
+      "LLM_or_deterministic": "not used",
+      "hard_constraint_or_soft_evidence": "not used",
+      "can_veto_model": false,
+      "can_override_model": false,
+      "current_precedence": "No competing scores or fallback thresholds",
+      "risk": "Legacy confidence constants are unchanged and outside this Raw path"
+    }
+  ],
+  "live_model_decision_accepted": 11,
+  "live_model_ambiguous_terminal": 1,
+  "live_model_vetoed_by_hard_constraint": 0,
+  "live_model_vetoed_by_soft_rule": 0,
+  "rule_only_decisions": 0,
+  "model_unavailable_fallback": 0,
+  "coverage_scope": "12 live current-turn proposals; hard vetoes additionally tested offline"
+}

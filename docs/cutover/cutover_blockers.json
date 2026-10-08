@@ -1,0 +1,303 @@
+{
+  "baseline_commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+  "items": [
+    {
+      "blocker_id": "C-01",
+      "classification": "CATALOG_BLOCKER",
+      "blocking_level": "P0",
+      "status": "FROZEN_SCOPED_EVALUATION_CATALOG_VERIFIED",
+      "summary": "Actual 81/[205] capture and 127-fact frozen evaluation projection verified. Native publication remains unproven; it no longer globally gates offline Gold/evaluation/benchmark.",
+      "evidence": [
+        "docs/cutover/catalog_identity/live_scope_evidence.json",
+        "Oagnet/catalog_generation.py",
+        "Oagnet/mysql_tool.py",
+        "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
+        "docs/cutover/v2_relation_paths/catalog_path_evidence.json",
+        "docs/cutover/v2_entity_value_sources/catalog_source_evidence.json",
+        "docs/cutover/catalog_publication_candidate/live_scope_evidence.json",
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
+      ],
+      "next_action": "Continue offline axis evaluation against the frozen hash; complete native publication before production canary/cutover.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": true
+    },
+    {
+      "blocker_id": "C-02",
+      "classification": "CATALOG_BLOCKER",
+      "blocking_level": "P0",
+      "status": "PRODUCTION_PUBLICATION_AND_RECOVERY_GAP",
+      "summary": "Native publication absent. DataAnalysis session Redis DB3 is directly reachable; AOF off, save empty, no replicas, deployed volume/restore unproven. Session code capability is not registry-publication or recovery evidence.",
+      "evidence": [
+        "docs/cutover/catalog_identity/live_scope_evidence.json",
+        "docs/cutover/catalog_publication_candidate/closure_report.md",
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
+      ],
+      "next_action": "Keep production recovery/publication as Canary/Cutover gates. Offline evaluation and isolated plan-only shadow do not depend on Redis production recovery.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": true
+    },
+    {
+      "blocker_id": "C-03",
+      "classification": "CATALOG_BLOCKER",
+      "blocking_level": "P0",
+      "status": "PROVISIONAL_IDENTITIES_VERIFIED_PER_SHAPE",
+      "summary": "All 14 entities now have snapshot-verified ID/code candidates and physical constraints. Current catalog flags still differ from the three user-reported declarations. Two relationship endpoints and two metric subjects remain unresolved.",
+      "evidence": [
+        "app/semantic_v2/catalog_bridge.py",
+        "Oagnet/catalog_publication.py::PinnedCatalog.identity",
+        "docs/cutover/v2_scope_bridge/test_delta.json",
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md",
+        "docs/cutover/v2_ranking/closure_report.md",
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md",
+        "docs/cutover/pinned_relation_endpoints/closure_report.md",
+        "docs/cutover/relation_identity/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
+      ],
+      "next_action": "Use the reviewed provisional identities per eligible shape; keep exact order/entity grain and unresolved relation paths scoped to affected cases. Continue independent role/mention/turn evaluation.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "C-04",
+      "classification": "CATALOG_BLOCKER",
+      "blocking_level": "P0",
+      "status": "ACTUAL_SOURCE_AGGREGATE_READ_VERIFIED",
+      "summary": "Current governed source connections, 14 physical tables and 29 identity candidates audited with aggregate read-only SQL. Exact/fuzzy value retrieval quality is a separate per-query gap; no native publication claim.",
+      "evidence": [
+        "docs/cutover/catalog_identity/live_scope_evidence.json",
+        "docs/cutover/catalog_identity/source_review.json",
+        "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
+        "docs/cutover/v2_relation_paths/catalog_path_evidence.json",
+        "docs/cutover/v2_entity_value_sources/closure_report.md",
+        "docs/cutover/v2_source_value_binding/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
+      ],
+      "next_action": "Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "X-01",
+      "classification": "EXTERNAL_BLOCKER",
+      "blocking_level": "P0",
+      "status": "DATA_AGENT_REDIS_RUNTIME_VERIFIED_DEPLOYMENT_RECOVERY_OPEN",
+      "summary": "Actual DataAnalysis settings resolve redis mode, DB3, prefix youo:data-analysis:v2 and TTL7200. Read-only persistence/replication/config verified. Deployment storage/restart/restore and deployed trusted caller remain unproven.",
+      "evidence": [
+        "docs/cutover/catalog_identity/live_scope_evidence.json",
+        "docs/cutover/catalog_publication_candidate/live_scope_evidence.json",
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
+      ],
+      "next_action": "Close production deployment trust and recovery before canary/cutover; continue offline evaluation now.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": true
+    },
+    {
+      "blocker_id": "V-01",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "COLLECTION_EDIT_REPRESENTATION_GAPS_FIXED_SEMANTIC_QUALITY_OPEN",
+      "summary": "Full qwen3.7-max parser run: 100 HTTP200, 98 accepted; 29 cases have at least one failed labeled axis. Scoped full-plan probing exposed singleton collection edits and wrong-mention copies of the same canonical handle; guarded representation fixes are verified. The bootstrap now plans correctly; a later model output still fails, so complete transition acceptance remains open.",
+      "evidence": [
+        "app/semantic_v2/recognition.py",
+        "app/semantic_v2/temporal_comparisons.py",
+        "docs/cutover/v2_temporal_comparisons/closure_report.md",
+        "docs/cutover/v2_temporal_comparisons/temporal_policy_gaps.json",
+        "docs/cutover/v2_source_value_binding/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md",
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/qwen37_benchmark/closure_report.md"
+      ],
+      "next_action": "Capture the remaining typed-output/reference failures without guessing repairs, then complete frozen-catalog multi-turn and canonical evaluation. Preserve failed bootstrap/current-turn denominators and all safety guards.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "V-02",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "FIXED_SOURCE_OFFLINE",
+      "summary": "Explicit logical-plan 0.2.2 scope bridge accepts current MODEL_WIDE/explicit scope with optional database, uses pinned catalog membership rather than invented ACLs, and checks state/cache/task/dataset context. Legacy 0.2.1 authorization branch remains enforced.",
+      "evidence": [
+        "app/semantic_v2/authorized_contract.py",
+        "app/semantic_v2/catalog_bridge.py",
+        "docs/cutover/v2_scope_bridge/test_delta.json"
+      ],
+      "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "V-03",
+      "classification": "CUTOVER_BLOCKER_P1",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "summary": "Actual output aliases, catalog pin, filter/rank policies and bound statement/value receipts are connected offline. The opt-in executor copies/binds values and fingerprints them in snapshot identity. Native source snapshots, collation, period pairing and analytics remain unproven.",
+      "evidence": [
+        "app/semantic_v2/legacy_adapter.py::assess_legacy_adapter",
+        "app/semantic_v2/result_contract.py",
+        "docs/cutover/v2_temporal_comparisons/closure_report.md",
+        "docs/cutover/v2_ranking/closure_report.md",
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
+      ],
+      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "S-01",
+      "classification": "SCHEMA_DRIFT",
+      "blocking_level": "P1",
+      "status": "PARTIAL_TYPED_BACKEND_PER_QUERY_SHAPE",
+      "summary": "Common/ranked/Boolean plans retain receipts. All entities have provisional observed identities; exact order grain, two relation paths, temporal storage policy and unsupported query shapes remain scoped gaps.",
+      "evidence": [
+        "app/semantic_v2/legacy_adapter.py",
+        "Oagnet/prompt_build.py::SYSTEM_PROMPT",
+        "Oagnet/agent.py::_validate_asl_output",
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md",
+        "docs/cutover/v2_ranking/closure_report.md",
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md",
+        "docs/cutover/pinned_relation_endpoints/closure_report.md",
+        "docs/cutover/relation_identity/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
+      ],
+      "next_action": "Complete loss-aware lowering for supported identity/query-shape combinations; keep unsupported cases explicit without gating turn/role/mention Gold.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "B-01",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "FIXED_SOURCE_OFFLINE",
+      "summary": "A source-confirmed unique entity name was broadened to a LIKE wildcard predicate; two old Oagnet failures share this root.",
+      "evidence": [
+        "Oagnet/agent.py::_normalize_relation_name_filters",
+        "Oagnet/tests/test_cutover_binding_safety.py"
+      ],
+      "next_action": "Keep the regression in cutover safety acceptance and verify the deployed service revision before canary.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "E-01",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P0",
+      "status": "STATE_TRANSITION_GOLD_AND_SERVICE_BASELINE_ESTABLISHED",
+      "summary": "100 fixed axis records plus 20 reviewed transition records now have deterministic per-slot/state scoring. V1 rule/dataset services measured; full V1/V2, canonical, clarification and safety observations remain incomplete.",
+      "evidence": [
+        "docs/phase2/gold_cases_seed.jsonl",
+        "docs/phase25/gold_v2_seed.jsonl",
+        "docs/phase25_1/gold_v0_2_1.jsonl",
+        "docs/phase0b/gold_candidate_inventory.jsonl",
+        "docs/cutover/evaluation_gates/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
+      ],
+      "next_action": "Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "E-02",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P1",
+      "status": "QWEN37_FULL_PARSER_MEASURED_FULL_COMPARISON_OPEN",
+      "summary": "User-selected qwen3.7-max measured on unchanged 100-case Gold/prompt/schema: mention/role recall 80/89, role purity 74/89, operations 9/13, shapes 40/56, relation 67/72. Seven isolated full-planner model calls supplied root-cause evidence; no complete live transition pass or model winner is claimed.",
+      "evidence": [
+        "docs/phase0c_region_list/closure_report.md",
+        "app/semantic_v2/pipeline.py::CurrentTurnParser",
+        "docs/cutover/evaluation_gates/closure_report.md",
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/comparison_readiness.json",
+        "docs/cutover/model_configuration/closure_report.md",
+        "docs/cutover/qwen37_benchmark/closure_report.md"
+      ],
+      "next_action": "Complete paired full V1/V2 state/canonical observations and outstanding candidate/Thinking requirements. Keep the user-selected default; do not infer a winner from parser acceptance or one run.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "H-01",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P0",
+      "status": "ELIGIBLE_WITH_ISOLATION_AFTER_EVALUATION_ACCEPTANCE",
+      "summary": "Production Redis recovery/publication do not globally gate isolated plan-only shadow. Real shadow evidence is still absent and current parser evaluation is not accepted.",
+      "evidence": [
+        "tools/phase25/run_semantic_v2_shadow.py",
+        "docs/phase25_1/phase25_1_closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
+      ],
+      "next_action": "After relevant evaluation passes, run isolated plan-only shadow without SQL, production-state writes or response takeover.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "R-01",
+      "classification": "CUTOVER_BLOCKER_P1",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "summary": "Git revert is available; deployment rollback, automatic stop conditions and <=5% canary evidence are not implemented/proven.",
+      "evidence": [
+        "docs/phase0c_region_list/rollback_manifest.json",
+        "app/workflow.py"
+      ],
+      "next_action": "After offline and real shadow gates, prepare canary flag, automatic stop/rollback procedure and drill; obtain user approval before formal replacement.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": true
+    },
+    {
+      "blocker_id": "B-02",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "FIXED_SOURCE_WITH_READ_ONLY_TARGET_EVIDENCE",
+      "summary": "Governed UUID entity/attribute IDs were rejected as missing by catalog generation and projection; fixed with exact supported UUID identity plus legacy decimal handling.",
+      "evidence": [
+        "docs/cutover/catalog_identity/closure_report.md",
+        "docs/cutover/catalog_identity/test_delta.json"
+      ],
+      "next_action": "Retain safety regressions and deploy only through the controlled pinned-catalog path; no target release/traffic change performed.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    },
+    {
+      "blocker_id": "B-03",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "FIXED_SOURCE_WITH_READ_ONLY_TARGET_EVIDENCE",
+      "summary": "Copied models reuse entity IDs; catalog loading and attribute discovery joined foreign model attributes and relations. Fixed current-model SQL constraints, including uniqueness checks; actual 13/13 dimensions now resolve.",
+      "evidence": [
+        "docs/cutover/catalog_identity/closure_report.md",
+        "docs/cutover/catalog_identity/test_delta.json"
+      ],
+      "next_action": "Retain safety regressions and deploy only through the controlled pinned-catalog path; no target release/traffic change performed.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
+    }
+  ],
+  "counts": {
+    "CATALOG_BLOCKER": 4,
+    "EXTERNAL_BLOCKER": 1,
+    "CUTOVER_BLOCKER_P0": 5,
+    "CUTOVER_BLOCKER_P1": 2,
+    "SCHEMA_DRIFT": 1,
+    "EVALUATION_GAP": 3
+  },
+  "open_p0": 8,
+  "open_p1": 4,
+  "readiness": "NOT_READY",
+  "catalog_cutover_blocker_closed": false,
+  "latest_source_delivery_baseline": "037839d7df9127fa946b1580363ddf84d32c50bb",
+  "gate_authority": "USER_DECISION_2026_09_09",
+  "gate_matrix": "docs/cutover/evaluation_gates/gate_matrix.json",
+  "open_count_scope": "Production replacement acceptance; not eligibility to execute offline evaluation",
+  "current_stage": "QWEN37_COMPONENT_BENCHMARK_AND_COLLECTION_EDIT_CLOSURE",
+  "offline_evaluation_eligible": true
+}

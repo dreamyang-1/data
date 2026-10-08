@@ -22,6 +22,7 @@ class ToolSelectionOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     selected_tools: list[str] = Field(default_factory=list)
+    selection_reasons: dict[str, str] = Field(default_factory=dict)
 
 
 class OptionalToolSelector:
@@ -125,7 +126,10 @@ class OptionalToolSelector:
                         "Select a tool only when it adds information needed to answer the "
                         "current question. The core data query has already run, so do not "
                         "select tools that merely repeat SQL/AST generation. Return an empty "
-                        "list when no tool is necessary. Never invent a tool name. Return only "
+                        "list when no tool is necessary. Never invent a tool name. For every "
+                        "selected tool, include a concise selection_reasons entry explaining "
+                        "which missing answer requirement it satisfies. Do not select a tool "
+                        "when the existing query result already satisfies the request. Return only "
                         "JSON conforming to this schema: "
                         + json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
                     ),

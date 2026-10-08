@@ -1,0 +1,791 @@
+{
+  "contract": "runtime-evaluation-harness-v1",
+  "evaluator_version": "runtime-evaluation-harness-v1",
+  "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+  "evaluator_files": {
+    "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+    "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+    "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+    "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+    "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+    "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+    "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+    "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+    "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+    "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+    "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+    "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+    "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+    "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+    "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+    "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+    "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+  },
+  "corpus": "TRANSITION",
+  "mode": "RECORDED_RUNTIME_REEVALUATION",
+  "gold_hash": "ed38aa5a7040b96fd27509583e1559a8bd0f8c6e06df176aa9682732543c8151",
+  "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "candidate_snapshot_hash": "d7668b20c8f611570829a6b4115d8c7dd5d19e4b051bc271e93810579276d007",
+  "as_of": "2026-09-09T09:00:00+08:00",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "capture_runtime_commit": "871183e62ada81c5526e51948a7e11ba2d3c8908",
+  "observation_contract": "IMMUTABLE_NATIVE_CALL_TRACES_WITH_EXACT_REPLAY",
+  "runtime_parity_verified": true,
+  "runtime_parity_boundary": "RawTurnPlanner only; see artifact matrix for excluded capabilities",
+  "baseline_manifest_hash": "e3f1030df2531f12f6a483d3af4fe8619f33b8fd872801e639aaf94a5fc1eab9",
+  "case_count": 20,
+  "turn_count": 39,
+  "executed_turn_count": 27,
+  "evaluable_case_count": 8,
+  "fully_evaluable_case_count": 7,
+  "status_counts": {
+    "PASS": 6,
+    "FAIL": 11,
+    "NOT_RUN": 0,
+    "BLOCKED": 3
+  },
+  "CASE_LEVEL": {
+    "exact_match": {
+      "n": 6,
+      "N": 17,
+      "value": 0.35294117647058826,
+      "evidence": "EVIDENCE_INSUFFICIENT"
+    },
+    "excluded_not_run_or_blocked": 3,
+    "fully_labeled_axis_coverage": {
+      "n": 7,
+      "N": 20,
+      "value": 0.35,
+      "evidence": "EVIDENCE_INSUFFICIENT"
+    }
+  },
+  "TURN_LEVEL": {
+    "semantic_match": {
+      "n": 6,
+      "N": 9,
+      "value": 0.6666666666666666,
+      "evidence": "EVIDENCE_INSUFFICIENT"
+    },
+    "unlabeled_or_unobserved": 30,
+    "turns_are_correlated": "Do not treat turns as independent case samples"
+  },
+  "FULL_PLAN_GOLD_COUNT": 0,
+  "WHOLE_PLAN_PASS": 0,
+  "WHOLE_PLAN_FAIL": 0,
+  "WHOLE_PLAN_UNOBSERVED": 0,
+  "POST_HARNESS_FIRST_DIVERGENCE": {
+    "TURN_RESOLUTION": 1,
+    "ENTITY_VALUE_GROUNDING": 9,
+    "TASK_OPERATION": 1,
+    "IMPLEMENTATION_GAP": 3
+  },
+  "details": [
+    {
+      "case_id": "S81-001",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "canonical_metrics": "PASS",
+        "turn_relation": "PASS",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-002",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "turn_relation": "FAIL",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-003",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "turn_relation": "PASS",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-004",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "time_relation": "NOT_OBSERVED",
+        "time_grain": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "time_relation",
+        "time_grain",
+        "target_task",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-005",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "time_relation": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "time_relation",
+        "turn_relation",
+        "target_task",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-006",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "region_operations": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "target_task",
+        "region_operations",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-007",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "region_operations": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "target_task",
+        "region_operations",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-008",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "region_operations": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "target_task",
+        "region_operations",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-009",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "turn_relation",
+        "target_task",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-010",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "turn_relation",
+        "target_task",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-011",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "dimension_surfaces": "PASS",
+        "target_task": "PASS",
+        "dimension_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-012",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "dimension_surfaces": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "dimension_operations": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "dimension_surfaces",
+        "target_task",
+        "dimension_operations",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-013",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "dimension_surfaces": "PASS",
+        "target_task": "PASS",
+        "dimension_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-014",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "time_relation": "PASS",
+        "target_task": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-015",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "metric_clarification_required": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "target_task",
+        "metric_clarification_required",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-016",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "target_task": "NOT_OBSERVED",
+        "metric_surfaces": "NOT_OBSERVED",
+        "pending_action": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "target_task",
+        "metric_surfaces",
+        "pending_action",
+        "safety:pending_hijack",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "pending_hijack",
+        "wrong_inheritance"
+      ],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-017",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "target_task": "PASS",
+        "metric_surfaces": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-018",
+      "status": "BLOCKED",
+      "axis_results": {
+        "dataset_route": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "dataset_route",
+        "scope_evidence",
+        "safety:unsafe_truncated_ranking"
+      ],
+      "error": {
+        "type": "IMPLEMENTATION_GAP",
+        "stage": "IMPLEMENTATION_GAP",
+        "reason_code": "V2_EXECUTED_DATASET_RECEIPT_ADAPTER_MISSING"
+      },
+      "first_divergence_stage": "IMPLEMENTATION_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "unsafe_truncated_ranking"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-019",
+      "status": "BLOCKED",
+      "axis_results": {
+        "dataset_route": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "dataset_route",
+        "scope_evidence",
+        "safety:unsafe_truncated_ranking"
+      ],
+      "error": {
+        "type": "IMPLEMENTATION_GAP",
+        "stage": "IMPLEMENTATION_GAP",
+        "reason_code": "V2_EXECUTED_DATASET_RECEIPT_ADAPTER_MISSING"
+      },
+      "first_divergence_stage": "IMPLEMENTATION_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "unsafe_truncated_ranking"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "S81-020",
+      "status": "BLOCKED",
+      "axis_results": {
+        "dataset_route": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "dataset_route",
+        "scope_evidence",
+        "safety:unsafe_truncated_ranking"
+      ],
+      "error": {
+        "type": "IMPLEMENTATION_GAP",
+        "stage": "IMPLEMENTATION_GAP",
+        "reason_code": "V2_EXECUTED_DATASET_RECEIPT_ADAPTER_MISSING"
+      },
+      "first_divergence_stage": "IMPLEMENTATION_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "unsafe_truncated_ranking"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    }
+  ],
+  "production_cutover_pass": false,
+  "stage_observation_coverage": {
+    "AuthorizedSemanticScope": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "CandidateSet": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "CanonicalBinding": {
+      "observed_turns": 25,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "CatalogSnapshot": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "CurrentClock": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "CurrentTurnParseInput": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "DatasetReference": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "HistoricalTasks": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "LogicalPlan": {
+      "observed_turns": 17,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "ModelInput": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "PendingState": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "PreviousTask": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "RecentTasks": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "SemanticQueryIR": {
+      "observed_turns": 17,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "SemanticResolutionInput": {
+      "observed_turns": 17,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "TaskPatchInput": {
+      "observed_turns": 18,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "TaskSemanticState": {
+      "observed_turns": 17,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    },
+    "TurnResolutionInput": {
+      "observed_turns": 27,
+      "executed_turn_denominator": 27,
+      "required_turn_denominator": 39
+    }
+  },
+  "real_model_calls": 0,
+  "source_capture_model_calls": 54,
+  "source_SQL_calls": 0,
+  "milvus_calls": 0,
+  "production_redis_writes": 0,
+  "production_state_mutations": 0,
+  "formal_model_benchmark": false,
+  "blind_holdout_run": false,
+  "full_production_orchestrator": false,
+  "fixture_receipts": {
+    "S81-016": {
+      "format": "TYPED_PENDING_PRECONDITION_V1",
+      "origin": "BUSINESS_CONTRACT_PRECONDITION",
+      "history_text_executed": false,
+      "catalog_synonym_collision_claimed": false,
+      "state_hash": "814564b6c4b6a4300bec226890cf7448bbdeba069a1602736934c33d7a8935e5",
+      "pending_hash": "4e56d16697b6c0647c5c807d9ae58a98c04c6093003b9e852e13eab8c6fbb0d1",
+      "version": 1,
+      "remaining_questions": 1,
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "clarification_reason": "USER_DECLARED_CHOICE_PENDING",
+      "serialization_roundtrip": "PASS"
+    },
+    "S81-018": {
+      "format": "NATIVE_DATASET_REFERENCE_FIXTURE_V1",
+      "reference_hash": "295d93759c6b7d9fc85f7d64b7acacf73c05a2452294aefa90862e38edffcc5a",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "source_complete": false,
+      "row_count": 2,
+      "snapshot_hash": "d57bdc6d59e979ba581308a0e4c9a046e99fbe23e28d4cda82a69c3e54ecbc22",
+      "truncated": true,
+      "ranking_proof": "NOT_PROVEN",
+      "ordering_proof": "NOT_PROVEN",
+      "serialization_roundtrip": "PASS",
+      "v2_adapter": "IMPLEMENTATION_GAP"
+    },
+    "S81-019": {
+      "format": "NATIVE_DATASET_REFERENCE_FIXTURE_V1",
+      "reference_hash": "7f3b3a558f4880c4b78cdfd21ac6f7d2e48c28f585e086f0ab9b25d502851100",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "source_complete": false,
+      "row_count": 2,
+      "snapshot_hash": "d57bdc6d59e979ba581308a0e4c9a046e99fbe23e28d4cda82a69c3e54ecbc22",
+      "truncated": true,
+      "ranking_proof": "NOT_PROVEN",
+      "ordering_proof": "NOT_PROVEN",
+      "serialization_roundtrip": "PASS",
+      "v2_adapter": "IMPLEMENTATION_GAP"
+    },
+    "S81-020": {
+      "format": "NATIVE_DATASET_REFERENCE_FIXTURE_V1",
+      "reference_hash": "2bead66a08279202d6dd3889c08011941f116643f08742687365ef25fcaea709",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "source_complete": true,
+      "row_count": 2,
+      "snapshot_hash": "2d1366f87d04fbf0df8c95fe36f1f2350a6794a1feb1be42cd1f9da419a7b9d6",
+      "truncated": false,
+      "ranking_proof": "NOT_PROVEN",
+      "ordering_proof": "NOT_PROVEN",
+      "serialization_roundtrip": "PASS",
+      "v2_adapter": "IMPLEMENTATION_GAP"
+    }
+  },
+  "capture_manifest_hash": "58c344f6ac02904eb735f0d1df4f3dfd73bac5700bd0ef9d8b9ab315ad4fcfb9"
+}

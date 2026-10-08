@@ -1,0 +1,81 @@
+{
+  "evidence_integrity": "PASS",
+  "baseline": "bf3e8dbb9adb3abe40a4a53f8475f27799cf3da9",
+  "production_files": [
+    "app/semantic_v2/catalog_bridge.py",
+    "app/semantic_v2/source_value_probe.py",
+    "app/semantic_v2/source_value_recognition.py",
+    "Oagnet/catalog_publication.py",
+    "Oagnet/catalog_value_candidates.py"
+  ],
+  "source_hashes": {
+    "app/semantic_v2/catalog_bridge.py": "2c16a2d216254aca64296fe57bf447e5c9a24fa1aede18bb5a1cf585ac39f40e",
+    "app/semantic_v2/source_value_probe.py": "55b4700f79776dea5569364b4ded2b0300b4e7ee99bc5c59808a3488dc5123fa",
+    "app/semantic_v2/source_value_recognition.py": "216c085ab6fb89f3c2d4f2ec7e85e4c4e39fd2999b8223040baebb6edd89e16c",
+    "Oagnet/catalog_publication.py": "153e959f73c39f29360f868b8b38c34a4ed9f6c6f893008d8543fbe084cb616f",
+    "Oagnet/catalog_value_candidates.py": "34b5f23e9b324563d5a9484b1952b16ff178065e7a8d18066ca1ef65426f1047",
+    "tests/test_v2_targeted_source_values.py": "d6b8152aa3f497156e410a36bd892f0990b3b2da7883c3682eb08e03cad45380",
+    "tests/test_round53_fixture_integrity.py": "b87e9d0b2fb13886551019684cb2d3138a98695cc0d369f6c6aa67523df88f12",
+    "Oagnet/tests/test_catalog_value_candidates.py": "4ac11aedb2bf488c67828524548f1daeabb6b6e2618ad6d5c5393e96bed75160",
+    "tools/cutover/round53_source_evidence.py": "ad71d3f73dd6f8bc15cb5f9111f6dc363b124c037dfc94e5a86691fd42ac9479",
+    "tools/cutover/round53_live_recheck.py": "a2d23209f00985e78f41f71a8eccb509b82316b2ea1269c3062c37dd1bd830aa",
+    "tools/cutover/round53_healthy_cases.py": "de37b5aadd5bfa61299fc3c2a6b9bbd29a5248b9fcebc6bd458f0c9eb875a68b"
+  },
+  "evidence_hashes": {
+    "catalog_healthy_slice.json": "c4767186f00673998b531c399369bef42018ea4359f5385f4938fb2699609fc6",
+    "catalog_time_contract.json": "0f74628efeee664c8530247ab503fb0961d3ebf6e3a23b57e7b60fe198d79290",
+    "closure_report.md": "b97ebf0a0c4a9e28c3640b90445b09d7a04e758cf2f6910a55fe75ecd9410dc7",
+    "live_coverage.json": "ef26ca326265ccaf55234edb895a9cf4f13f9e366cdc9482f7462f703a0476dc",
+    "performance_receipt.json": "f48405ee78d8142ee7f6f72aa64df6488969d1419c5b629e1a98463f2415ad62",
+    "root_closure.json": "f5b7308a423eee197806e9eb8533648c5f6496fbb650e6b140460d8f5b8a361f",
+    "round5_3_manifest.json": "0e1554f807978c12655bb0b7f75b7a3bb8e53185dc41c1d80859e202b9d219d0",
+    "source_value_current_path.json": "87e8482a3ab75a865c236c3eb29eba9e5cd5314d150f920996d857a2f5056bca",
+    "test_delta.json": "6a127ba8e0b8a1ab44f046300f922ce3cde38cdd28f847a21835da2c9938a0ec",
+    "verify_round5_3.py": "fef3eccdb2739b9d1b9be0fcc29a3b9d16e1ecb23d605ec9fc0f4cfe77f28040"
+  },
+  "parent_pr_verification": [
+    {
+      "number": 60,
+      "head": "bc5bc3f418c374f3f155403550649b23c64ce4e5",
+      "head_branch": "semantic-live-followup-round5-1-20260910t032044z",
+      "base_branch": "semantic-context-production-wiring-round5-20260910t015554z",
+      "draft": true,
+      "state": "open",
+      "merged": false,
+      "url": "https://github.com/dreamyang-1/data/pull/60"
+    },
+    {
+      "number": 61,
+      "head": "bf3e8dbb9adb3abe40a4a53f8475f27799cf3da9",
+      "head_branch": "semantic-downstream-round5-2-20260910t040418z",
+      "base_branch": "semantic-live-followup-round5-1-20260910t032044z",
+      "draft": true,
+      "state": "open",
+      "merged": false,
+      "url": "https://github.com/dreamyang-1/data/pull/61"
+    }
+  ],
+  "baseline_unexpected_drift": 0,
+  "Agent": 563,
+  "Oagnet": 261,
+  "context_cases": 8,
+  "context_turns": 18,
+  "critical": 160,
+  "target_preserved": 15,
+  "new_regression_failures": 0,
+  "collection_errors": 0,
+  "live_model_calls": 11,
+  "invalid_fixture_calls": 3,
+  "private_captures_not_committed": true,
+  "review": [
+    "Source scope/owner/mapping/implicit-policy and exact bind unchanged",
+    "Indexed parameterized lookup; binary candidate distinct; cap8 and safe failure",
+    "XOR exported without changing validator; no automatic request consumption",
+    "Invalid live inputs classified as fixture errors, all charges retained",
+    "No valid healthy-live coverage claimed; future input hash freeze/preflight checked"
+  ],
+  "business_sql_executed": 0,
+  "catalog_writes": 0,
+  "production_writes": 0,
+  "blind_access": 0
+}

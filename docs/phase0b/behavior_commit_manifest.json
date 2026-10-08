@@ -1,0 +1,96 @@
+{
+  "files": [
+    {
+      "path": "app/domain/models.py",
+      "workspace_hash": "fcb3f4f1a2e2b43755c354edb211456ea8b1007700efdab24ad7b0abb2c20997",
+      "previous_git_hash": "f374a95f642185fb9fab07d93cc16f066b78334b22c8d849d1311008a2bb7186"
+    },
+    {
+      "path": "app/intent/classifier.py",
+      "workspace_hash": "76ed596868bff6951858cd53776986a10c4ee28a6962046e7e5d4a3f5b9cbb05",
+      "previous_git_hash": "45f023fdd88a48c8270fbc0adfba1966e916e16a009755aa5e0793692aad8df1"
+    },
+    {
+      "path": "app/services/turn_admission.py",
+      "workspace_hash": "2bdaed1545c689014f146b5114937fc1d35fb3292eb25ab8569dcfa44db8f0bd",
+      "previous_git_hash": "dfc3157033c0d13f556b0286311f55b05131fa6bfe9a21188a5571847e8a9f36"
+    },
+    {
+      "path": "app/services/orchestrator.py",
+      "workspace_hash": "848bc565cfbfb392609253c8b6f7d6a984c27d5313741886dcdc22b1387ddc5e",
+      "previous_git_hash": "f69795b266c2593d489c09632cdc61584331172eca585d16d085271c2a59027a"
+    },
+    {
+      "path": "app/services/dataset_followup.py",
+      "workspace_hash": "7559cabff81a3b0d490c3bfb8882f9a63c000e833ea654ccc2fd2da50ac390d7",
+      "previous_git_hash": "93179d1668d70fc67a2231a52bcf25f549bf359220df35fef710ccb0839b04dd"
+    },
+    {
+      "path": "app/services/legacy_guards.py",
+      "workspace_hash": "6094416687d30d2c06e3145e7f12f35aeeb68e3fdec9ed321343e080a3d2f02e",
+      "previous_git_hash": null
+    },
+    {
+      "path": "app/services/clarification_policy.py",
+      "workspace_hash": "c5cb27266557db35087f0bcc4ebab96b773f4a43d852bb9dfdfa77a3589f65ff",
+      "previous_git_hash": null
+    },
+    {
+      "path": "tests/test_orchestrator.py",
+      "workspace_hash": "994d73a4d4dc2402a1dd8fe653e558294382599a86a93108ea3fc95ad7d895ca",
+      "previous_git_hash": "bda2fb25c4f0170dc26821bff78db652be57dbfb2aacd3f3b1a7136a1ce30608"
+    },
+    {
+      "path": "tests/test_turn_admission.py",
+      "workspace_hash": "2c8d0870e46d7b055b6a2237a87ba803bba1f78258d1d546c6d49897ff3a8633",
+      "previous_git_hash": "e9ecf9f2774adcdc14f691970ddee2c93014d553e351e7b25b31e762434f0560"
+    },
+    {
+      "path": "tests/test_phase0b_critical.py",
+      "workspace_hash": "20ff749cef1670739f2446eeec267213161ec9f786a306f921ac2da20f0322d8",
+      "previous_git_hash": "9313da62208aecf9494996066937ecc33b3b8a475029433483106bb5a5d35596"
+    },
+    {
+      "path": "tests/test_phase0b_regressions.py",
+      "workspace_hash": "9ed61e9012873d50c8b3148e4adbfc5fe9d91bdae0c9f66fdaf0fdc83c9ee270",
+      "previous_git_hash": null
+    },
+    {
+      "path": "tools/phase0/repro.py",
+      "workspace_hash": "192d5cca243fe672fb1fbd6b0cacb0ff77d1bdf65ed8e3b924ff25c73185ba7d",
+      "previous_git_hash": "115af24dba7848e766c4b551778f7e0bddebcaff98477bc282f24d73e625fddd"
+    },
+    {
+      "path": "tools/phase0/run_offline.py",
+      "workspace_hash": "c9230410d3bbf9d4f7dd85529e755e90357047fda6c1a8494fbc97770fe5f802",
+      "previous_git_hash": "be637c46805295acff4a8b17dc17ba3dab45b39b289c4f192a97ff92c4d7bd8e"
+    },
+    {
+      "path": "docs/phase0b/final_verified_test_gate.json",
+      "workspace_hash": "f7d7800dff22d5d44bed68f0c56d9074d823e500a392e5933dc25d15806c1310",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/clarification_trace_contract.md",
+      "workspace_hash": "2f3ce0a71b8c5cf6c000276f36ed59a29a12411bceca446792dde7fcf37058b9",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/stale_test_decisions.md",
+      "workspace_hash": "e12c7038077c951a8a663608e80708cf1263e6453b8f90abe5cdb4f356de1d4c",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/regex_change_register.md",
+      "workspace_hash": "f5610a888d77f49620fb45d055e136162295ca42559dfc87b536958aa853d71f",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0b/phase0a_evidence_corrections.json",
+      "workspace_hash": "e611f6bf4f63a5eebb8acb91cf3386e84b804490b0d027415560ca020a011a89",
+      "previous_git_hash": null
+    }
+  ],
+  "credential_scan": "PASS",
+  "synchronization": "EXPLICIT_PATHS_ONLY"
+}

@@ -1,0 +1,73 @@
+{
+  "baseline_commit": "2cd4d93de8ce151f0b859e8252db3f0ed7ce141c",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline_counts": {
+        "passed": 2799,
+        "failed": 27
+      },
+      "final_counts": {
+        "passed": 2799,
+        "failed": 27
+      },
+      "baseline_evidence": "../state_evaluation/test_delta.json and its referenced exact outcomes",
+      "all_existing_node_outcomes_unchanged": true,
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {},
+      "removed_tests": [],
+      "collection_errors": [],
+      "final_receipt_sha256": "ca2378492621f2d4dc7b995e53303b142d9a4af66a2f2778946ca306bc0feef5",
+      "real_model_calls": 0,
+      "production_external_writes": 0,
+      "critical": {
+        "passed": 160,
+        "failed": 0
+      },
+      "clarification_coverage": {
+        "public_clarification_responses": 89,
+        "with_reason_trace": 89
+      }
+    },
+    "Oagnet": {
+      "baseline_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "final_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "baseline_evidence": "../state_evaluation/test_delta.json and its referenced exact outcomes",
+      "all_existing_node_outcomes_unchanged": true,
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {},
+      "removed_tests": [],
+      "collection_errors": [],
+      "final_receipt_sha256": "79b32909c6165535d980c2d31c84c79fa64f95c01b7a39adec3fed5a39b7c6a7",
+      "real_model_calls": 0,
+      "production_external_writes": 0
+    },
+    "SQL_Translator": {
+      "baseline_counts": {
+        "passed": 381
+      },
+      "final_counts": {
+        "passed": 381
+      },
+      "baseline_evidence": "../state_evaluation/test_delta.json and its referenced exact outcomes",
+      "all_existing_node_outcomes_unchanged": true,
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {},
+      "removed_tests": [],
+      "collection_errors": [],
+      "final_receipt_sha256": "ff47ab9bcb6773bb0421db0a9646800f27bf1c1f9f432901e13a9cd3f416abe1",
+      "real_model_calls": 0,
+      "production_external_writes": 0
+    }
+  },
+  "verification_scope": "Three existing complete offline service suites; environment/network guards remain enabled. Separate one-request model smoke is not an offline test.",
+  "new_test_policy": "No tests added for literal default changes; existing transport, scope, critical and full regression suites exercised."
+}

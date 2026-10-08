@@ -1,0 +1,277 @@
+{
+  "version": "catalog-healthy-filter-round54-v1",
+  "cases": [
+    {
+      "case_id": "HC54-A",
+      "capability": "REGION_REPLACE",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "换成北京市"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-B",
+      "capability": "TIME_REPLACE",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "换今年"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-C",
+      "capability": "ADD",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "再加销售总数量"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-D",
+      "capability": "REMOVE",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "再加销售总数量",
+        "不要销售总数量"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-E",
+      "capability": "CLEAR_NO_RESURRECTION",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "不限地区",
+        "换今年"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-F",
+      "capability": "CORRECTION",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "不是江苏，是北京市"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-G",
+      "capability": "NEW_TASK",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "查询今年北京市销售总数量"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-H",
+      "capability": "HISTORICAL_RETURN",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "查询今年北京市销售总数量",
+        "返回刚才江苏订单笔数那个任务"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-I",
+      "capability": "PENDING_NEW_TASK",
+      "utterances": [
+        "查询今年北京市订单笔数"
+      ],
+      "initial_pending": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-J",
+      "capability": "TRUE_AMBIGUITY",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "查询今年北京市销售总数量",
+        "前面两个任务选一个继续，具体哪个我还没确定"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    },
+    {
+      "case_id": "HC54-K",
+      "capability": "SELF_CONTAINED_NEW_TASK",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "查询今年北京市销售总数量"
+      ],
+      "initial_pending": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "split": "PUBLIC_DEV"
+    }
+  ],
+  "certification": {
+    "status": "CATALOG_HEALTHY_FIXTURE",
+    "metrics": {
+      "order_count": {
+        "name": "订单笔数",
+        "time_anchor": "sales_order.created_date",
+        "formula": "order_count=COUNT(DISTINCT sales_order.order_key)",
+        "time_field": "sales_order.created_date",
+        "business_definition": "指定时间范围内全部销售记录按业务订单键去重后的订单数量"
+      },
+      "sales_total_quantity": {
+        "name": "销售总数量",
+        "time_anchor": "sales_order.created_date",
+        "formula": "sales_total_quantity=SUM(sales_order.quantity)",
+        "time_field": "sales_order.created_date",
+        "business_definition": "指定时间范围内全部销售记录的商品数量净额合计；退货或冲销按源数据负值抵减"
+      }
+    },
+    "fields": {
+      "province": "dim_province.province_name",
+      "city": "dim_city.city_name"
+    },
+    "source_values": "CERTIFIED_FROZEN_EXACT_OBSERVATIONS",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ]
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "snapshot_hash": "fdfa44add8a3cb6c0e10970faeb54a3ef79d670a16e39643c778b7bef74dd4b7",
+    "sales_amount_time_gap": true,
+    "boundary": "Planning metadata and source proof; no executed SQL or entity-count identity certification"
+  },
+  "preflight": {
+    "status": "PASS",
+    "fixture_sha256": "0b0f28b46afab4288811d12e5763b70464c7ed94d3781d20bad2762058afb3b2",
+    "case_hash": "f68565b7574bb10c8676b93eb2b6e617b6c9cc44133e8bfc0cb2bff7e25d6610",
+    "case_count": 11,
+    "declared_turns": 25,
+    "catalog_health": {
+      "status": "CATALOG_HEALTHY_FIXTURE",
+      "metrics": {
+        "order_count": {
+          "name": "订单笔数",
+          "time_anchor": "sales_order.created_date",
+          "formula": "order_count=COUNT(DISTINCT sales_order.order_key)",
+          "time_field": "sales_order.created_date",
+          "business_definition": "指定时间范围内全部销售记录按业务订单键去重后的订单数量"
+        },
+        "sales_total_quantity": {
+          "name": "销售总数量",
+          "time_anchor": "sales_order.created_date",
+          "formula": "sales_total_quantity=SUM(sales_order.quantity)",
+          "time_field": "sales_order.created_date",
+          "business_definition": "指定时间范围内全部销售记录的商品数量净额合计；退货或冲销按源数据负值抵减"
+        }
+      },
+      "fields": {
+        "province": "dim_province.province_name",
+        "city": "dim_city.city_name"
+      },
+      "source_values": "CERTIFIED_FROZEN_EXACT_OBSERVATIONS",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "snapshot_hash": "fdfa44add8a3cb6c0e10970faeb54a3ef79d670a16e39643c778b7bef74dd4b7",
+      "sales_amount_time_gap": true,
+      "boundary": "Planning metadata and source proof; no executed SQL or entity-count identity certification"
+    },
+    "model_calls": 0,
+    "catalog_pin_restore": "PASS"
+  },
+  "truth_source": "CURRENT_READ_ONLY_CATALOG + USER_OPERATION_CONTRACT",
+  "seed_capture_hash": "ed632fcddf8d768ec94ea4634e38b5afec87fa7d40a97d92c16bbe19299605dc",
+  "independent_labels_not_model_output": true,
+  "live_inference_uses_frozen_source_observations": true,
+  "production_catalog_publication_claim": false
+}

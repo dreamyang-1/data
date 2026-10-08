@@ -1,0 +1,43 @@
+{
+  "observations": 81,
+  "source_observations": {
+    "CURRENT_PYTEST": 32,
+    "HISTORICAL": 30,
+    "CRITICAL": 15,
+    "CLOSURE_AUDIT": 4
+  },
+  "acceptance_controls": 3,
+  "unique_failure_signatures": 35,
+  "categories": {
+    "STALE_TEST": 4,
+    "REAL_PRODUCTION_BUG": 17,
+    "UNKNOWN_NEEDS_EVIDENCE": 11,
+    "LEGACY_BEHAVIOR_DEBT": 1,
+    "CATALOG_GOVERNANCE_GAP": 1,
+    "EXTERNAL_SERVICE_CONTRACT_BUG": 1
+  },
+  "real_production_bugs": 17,
+  "p0_before": 17,
+  "p0_fixed": 16,
+  "p0_remaining": 1,
+  "deterministic_current": 32,
+  "flaky": 0,
+  "environment": 0,
+  "baseline_passed": 1696,
+  "baseline_failed": 32,
+  "final_passed": 1763,
+  "final_failed": 29,
+  "collection_errors": 0,
+  "old_pass_to_new_fail": 0,
+  "new_regression_tests": 64,
+  "critical_scenarios": 15,
+  "critical_passed": 15,
+  "clarification_coverage": {
+    "public_clarification_responses": 23,
+    "with_reason_trace": 23,
+    "untraced": 0,
+    "unsafe_asks": 0
+  },
+  "readiness": "CONDITIONALLY_READY_FOR_PHASE_0C",
+  "highest_blocker": "SECURITY_P0: fixed trusted identity; catalog/default-display and typed lineage contracts also await owners"
+}
