@@ -3256,6 +3256,64 @@ class SQLTranslatorProd:
             )
         return expr
 
+    def _aggregate_display_dimensions(self, ast: Dict, model_id: str) -> List[Dict]:
+        """Project to-one related attributes without changing the declared grain.
+
+        GROUP BY the dependent attribute satisfies ONLY_FULL_GROUP_BY. The
+        declared to-one path means it cannot split an identity group. Unknown
+        and to-many relationships are not guessed or reduced with MIN/MAX.
+        """
+        displays = ast.get('display_fields') or []
+        if not isinstance(displays, list):
+            raise ValueError('display_fields必须是数组')
+        if not displays:
+            return []
+        if not ast.get('metrics'):
+            raise ValueError('明细展示字段继续由dimensions承载')
+        starts = []
+        for dim in ast.get('dimensions') or []:
+            code = str(dim.get('name') or '')
+            if dim.get('granularity'):
+                continue
+            if '.' in code:
+                for entity in self.loader.iter_entities(model_id):
+                    owner = entity.get('entity_code')
+                    if any(a.get('field_mapping') == code and (
+                            self._semantic_flag(a.get('is_primary_key'))
+                            or self._semantic_flag(a.get('is_unique'))
+                            or a.get('attr_code') == str(owner)+'_code') for a in entity.get('attributes') or []):
+                        starts.append(owner)
+                continue
+            if not self._get_entity(code, model_id):
+                continue
+            definition = self._get_dimension(code, model_id) or {}
+            if not definition.get('enum_list'):
+                starts.append(code)
+        result = []
+        for item in displays:
+            field = item.get('name') if isinstance(item, dict) else None
+            if not isinstance(field, str) or not re.fullmatch(r'[A-Za-z_]\w*\.[A-Za-z_]\w*', field):
+                raise ValueError('展示字段必须使用已注册的表.字段')
+            table = field.split('.')[0]
+            owners = [e for e in self.loader.iter_entities(model_id)
+                      if any(a.get('field_mapping') == field for a in e.get('attributes') or [])]
+            if not owners:
+                raise ValueError(f'展示字段未注册: {field}')
+            safe = False
+            for source in starts:
+                if self._get_entity_base_table(source, model_id) == table:
+                    continue
+                path = self._relation_path(source, table, model_id)
+                if path and all(RedisDSLLoader._canonical_cardinality(r.get('relation_type'))
+                                in {'ONE_TO_ONE', 'MANY_TO_ONE'} for r in path):
+                    safe = True
+                    break
+            if not safe:
+                raise ValueError(f'展示字段与分组实体没有唯一的N:1/1:1关联: {field}')
+            if field not in {d.get('name') for d in result}:
+                result.append(dict(item))
+        return result
+
     def _relation_path(self, start_entity: str, target_table: str,
                        model_id: Optional[str]) -> Optional[List[Dict]]:
         queue = [(start_entity, [])]
@@ -3441,7 +3499,7 @@ class SQLTranslatorProd:
         model_id = self._validate_ast_contract(ast, model_id)
 
         metrics = ast.get('metrics', [])
-        dimensions = ast.get('dimensions', [])
+        dimensions = [*ast.get('dimensions', []), *self._aggregate_display_dimensions(ast, model_id)]
         filters = ast.get('filters', [])
         time_context = ast.get('time_context')
         subject = ast.get('subject', {})
