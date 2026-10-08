@@ -7841,6 +7841,17 @@ class DataAnalysisOrchestrator:
         单任务口径在回答末尾补一条「附件：」Markdown 链接；失败时把合并正文
         里摘出的各任务附件链接补回去，保证下载入口不丢。
         """
+        if selected_task_ids == []:
+            return
+        if not fallback_links and not any(
+            isinstance(value, AgentResponse)
+            and value.status in {"COMPLETED", "PARTIAL_SUCCESS"}
+            for task_id, value in responses.items()
+            if selected_task_ids is None or task_id in selected_task_ids
+        ):
+            # Preserve a failed/clarification-only response without attempting
+            # exports or appending unrelated storage configuration notices.
+            return
         if self.report_exporter is None:
             if markdown_link and fallback_links:
                 response.answer += "\n\n附件：" + "；".join(fallback_links)
@@ -7862,6 +7873,7 @@ class DataAnalysisOrchestrator:
             value = responses.get(task.task_id)
             if (
                 not isinstance(value, AgentResponse)
+                or value.status not in {"COMPLETED", "PARTIAL_SUCCESS"}
                 or not value.dataset_id
                 or value.dataset_id in seen_dataset_ids
             ):
@@ -13444,10 +13456,14 @@ class DataAnalysisOrchestrator:
             "ASL_ANALYSIS_SHAPE_INVALID": "语义查询没有返回分析所需的分组维度，本次未执行可能产生误导的单值分析。",
             "SQL_TRANSLATION_FAILED": "ASL 转 SQL 服务未能生成可执行查询。",
             "SEMANTIC_VALIDATION_FAILED": (
-                "本次语义查询未通过语义校验：查询条件无法在已发布的语义模型中"
-                "唯一确定查询主体或其实体关系路径，为避免返回错误数据，本次未执行查询。"
-                "请在完整问题中写明查询对象后重试；若反复出现，需系统维护人员检查"
-                "该模型的实体、关系路径与主体绑定配置。"
+                "本次SQL生成未通过处理校验，尚未执行查询。当前响应未提供足够的具体诊断，"
+                "无法确认是字段绑定、实体关系还是服务内部处理错误。"
+                "需由系统维护人员检查SQL翻译日志；用户无需补充已明确的条件。"
+            ),
+            "AGGREGATE_DISPLAY_RELATION_UNSAFE": (
+                "本次SQL生成停在关联展示字段校验：尚未确认展示字段与分组对象之间的单一归属关系，"
+                "因此没有执行查询。需由系统维护人员检查已发布关系的连接字段、方向和基数；"
+                "用户无需重复补充已明确的查询对象。"
             ),
             "SQL_EXECUTION_FAILED": "SQL 查询执行失败，本次不返回数据。",
             "SQL_TRANSLATION_ENDPOINT_UNAVAILABLE": "SQL服务尚未部署独立翻译接口，请先发布或重启新版SQL Translator。",

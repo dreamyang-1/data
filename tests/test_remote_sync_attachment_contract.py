@@ -50,3 +50,47 @@ def test_computation_summary_is_not_wrapped_in_an_extra_task_heading():
     assert answer.count(computation.answer) == 1
     assert "不再查询数据库" not in answer
     assert links == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('status', ['FAILED', 'SAFE_FALLBACK', 'NEEDS_CLARIFICATION', 'CANCELLED', 'SKIPPED'])
+@pytest.mark.parametrize('selection', [None, []])
+@pytest.mark.parametrize('exporter_enabled', [False, True])
+async def test_no_completed_output_never_adds_download_notices(status, selection, exporter_enabled):
+    service = object.__new__(DataAnalysisOrchestrator)
+    exporter = SimpleNamespace(export_many=AsyncMock())
+    service.report_exporter = exporter if exporter_enabled else None
+    service.sessions = SimpleNamespace(get_recent_dataset_references=AsyncMock())
+    chat = ChatRequest(application_id='app', conversation_id='root', message_id='m',
+                       question='查询人员及其公司', semantic_model_id=120)
+    plan = TaskPlan(planner='STRUCTURED_MODEL', tasks=[AtomicTask(task_id='failed', question=chat.question),
+        AtomicTask(task_id='derived', question='根据结果计算排名', depends_on=['failed'])])
+    response = AgentResponse(request_id=uuid4(), conversation_id='root', status=status,
+                             intent=PrimaryIntent.METRIC_QUERY, answer='具体失败原因或需要补充的内容')
+    await service._attach_composite_report(response, chat=chat,
+        identity=TrustedIdentity(tenant_id='t', user_id='u'), plan=plan,
+        responses={'failed': response.model_copy(update={'dataset_id': 'stale-dataset'})},
+        conversation_by_task={}, markdown_link=True, selected_task_ids=selection)
+    assert response.answer == '具体失败原因或需要补充的内容'
+    assert response.files == []
+    service.sessions.get_recent_dataset_references.assert_not_called()
+    exporter.export_many.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_empty_final_selection_does_not_export_completed_intermediate():
+    service = object.__new__(DataAnalysisOrchestrator)
+    service.report_exporter = SimpleNamespace(export_many=AsyncMock())
+    service.sessions = SimpleNamespace(get_recent_dataset_references=AsyncMock())
+    chat = ChatRequest(application_id='app', conversation_id='root', message_id='m',
+                       question='查询人员及其公司', semantic_model_id=120)
+    plan = TaskPlan(planner='STRUCTURED_MODEL', tasks=[AtomicTask(task_id='source', question='中间查询'),
+        AtomicTask(task_id='derived', question='根据结果计算排名', depends_on=['source'])])
+    response = AgentResponse(request_id=uuid4(), conversation_id='root', status='SAFE_FALLBACK',
+                             intent=PrimaryIntent.METRIC_QUERY, answer='无法完成最终计算')
+    source = response.model_copy(update={'status': 'COMPLETED', 'dataset_id': 'source'})
+    await service._attach_composite_report(response, chat=chat,
+        identity=TrustedIdentity(tenant_id='t', user_id='u'), plan=plan,
+        responses={'source': source}, conversation_by_task={}, selected_task_ids=[])
+    assert response.answer == '无法完成最终计算'
+    service.report_exporter.export_many.assert_not_called()
