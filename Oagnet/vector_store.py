@@ -26,6 +26,7 @@ from typing import Any, Sequence
 import chromadb
 from chromadb.config import Settings
 from dimension_scope import project_dimension_to_domain
+from publication_vectors import PublicationVectors, assign_vectors, publication_stage
 
 # 默认持久化目录
 DEFAULT_PERSIST_DIR = Path(__file__).parent / "vector_store" / "chroma"
@@ -88,6 +89,8 @@ class ChromaVectorStore:
         self.persist_dir = Path(persist_dir)
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         self.collection_name = collection_name
+        from config import EMBEDDING_DIM
+        self.embedding_dim = EMBEDDING_DIM
         self._client = chromadb.PersistentClient(
             path=str(self.persist_dir),
             settings=Settings(anonymized_telemetry=False, allow_reset=True),
@@ -186,6 +189,21 @@ class ChromaVectorStore:
             )
             for record_id, document, metadata in zip(ids, documents, metadatas)
         ]
+
+    def get_catalog_inventory(self, where: dict) -> list[VectorRecord]:
+        # Chroma IDs are not metadata fields; keep the same inventory contract
+        # as Milvus without modifying persisted schemas.
+        parts = where.get("$and", [where])
+        ids = next((part["record_id"]["$in"] for part in parts if "record_id" in part), None)
+        filters = [part for part in parts if "record_id" not in part]
+        selected = {"$and": filters} if len(filters) > 1 else filters[0] if filters else None
+        result = self._collection.get(ids=ids, where=selected,
+                                      include=["documents", "metadatas", "embeddings"])
+        vectors = result.get("embeddings")
+        vectors = vectors if vectors is not None else []
+        return [VectorRecord(str(rid), str(text or ""), list(vector), self._deserialize_meta(meta or {}))
+                for rid, text, meta, vector in zip(result.get("ids", []), result.get("documents", []),
+                                                   result.get("metadatas", []), vectors)]
 
     def count_by_where(self, where: dict) -> int:
         """按 where 条件统计记录数"""
@@ -807,7 +825,7 @@ def load_all_dsl() -> list[dict]:
     return docs
 
 
-def build_records_from_dsl(doc: dict, embed_fn) -> list[VectorRecord]:
+def build_records_from_dsl(doc: dict, embed_fn, *, vectorizer=None) -> list[VectorRecord]:
     """从单个作用域 DSL 文档构建向量记录，metadata 注入 semantic_model_id / business_domain_id。
 
     Args:
@@ -869,21 +887,13 @@ def build_records_from_dsl(doc: dict, embed_fn) -> list[VectorRecord]:
     for metric in doc["metrics"]:
         pending.append((_build_metric_text(metric), {"kind": "metric", "obj": metric}))
 
-    texts = [t for t, _ in pending]
-    vectors = embed_fn(texts) if texts else []
-    if len(vectors) != len(pending):
-        raise RuntimeError(
-            "Embedding 返回数量不一致: "
-            f"expected={len(pending)}, actual={len(vectors)}"
-        )
-
     # 实体/属性/关系/指标 ID 带 sm+bd 前缀；
     # 维度/枚举 ID 只带 sm 前缀（跨业务域共享），同一 sm 下多次 upsert 会去重
     bd_scope_prefix = f"sm{sm_id}_bd{bd_id}" if bd_id != -1 else f"sm{sm_id}"
     sm_only_prefix = f"sm{sm_id}"
 
     records: list[VectorRecord] = []
-    for (text, ctx), vec in zip(pending, vectors):
+    for text, ctx in pending:
         kind = ctx["kind"]
         obj = ctx["obj"]
 
@@ -955,14 +965,14 @@ def build_records_from_dsl(doc: dict, embed_fn) -> list[VectorRecord]:
         meta["business_domain_name"] = scope_bd_name
 
         meta = {k: v for k, v in meta.items() if v is not None}
-        records.append(VectorRecord(id=rid, text=text, vector=vec, metadata=meta))
+        records.append(VectorRecord(id=rid, text=text, vector=[], metadata=meta))
 
     # 按 id 去重（同一作用域内可能因数据源重复行导致 rid 冲突，保留首份）
     deduped: dict[str, VectorRecord] = {}
     for r in records:
         if r.id not in deduped:
             deduped[r.id] = r
-    return list(deduped.values())
+    return assign_vectors(list(deduped.values()), embed_fn, vectorizer)
 
 
 def build_scope_filter(semantic_model_id: int, business_domain_id: int = None) -> dict:
@@ -1031,6 +1041,7 @@ def rebuild_index_by_scope(
     business_domain_id: int = None,
     *,
     attribute_enums: dict | None = None,
+    vectorizer=None,
 ) -> dict:
     """按作用域增量重建向量索引（只处理指定 sm/bd，不影响其他作用域）
 
@@ -1050,6 +1061,7 @@ def rebuild_index_by_scope(
         统计信息 dict（含 deleted 字段表示本次删除的历史记录数）
     """
     from mysql_tool import get_business_domains, get_dsl_by_scope
+    vectorizer = vectorizer or PublicationVectors(store)
 
     # 1. 构造作用域 where 条件（需与 build_scope_filter 查询条件保持一致，
     #    维度/枚举 business_domain_id=-1 为跨域共享，删除时也要一并清理）
@@ -1102,7 +1114,8 @@ def rebuild_index_by_scope(
                     key = (domain_id, entity.get("entity_code"), attr.get("attr_code"), attr.get("field_mapping"))
                     if key in attribute_enums:
                         attr["enum_values"] = deepcopy(attribute_enums[key])
-        scope_records = build_records_from_dsl(doc, embed_fn)
+        with publication_stage("semantic_embedding", model=semantic_model_id, domain=business_domain_id):
+            scope_records = build_records_from_dsl(doc, embed_fn, vectorizer=vectorizer)
         scope_stats.append({
             "business_domain_id": (
                 doc["business_domain"]["id"] if doc.get("business_domain") else None
@@ -1121,7 +1134,8 @@ def rebuild_index_by_scope(
     current_ids = {record.id for record in records}
 
     # 3. upsert 新快照成功后，再删除新快照中已不存在的旧记录。
-    store.add(records)
+    with publication_stage("semantic_write", model=semantic_model_id, domain=business_domain_id):
+        vectorizer.write(records)
     stale_ids = sorted(previous_ids - current_ids)
     store.delete_by_ids(stale_ids)
 
@@ -1171,7 +1185,7 @@ def _build_field_text(field: dict) -> str:
     )
 
 
-def build_records_from_tables(doc: dict, embed_fn) -> list[VectorRecord]:
+def build_records_from_tables(doc: dict, embed_fn, *, vectorizer=None) -> list[VectorRecord]:
     """从数据源作用域文档构建向量记录，metadata 注入 data_source_id。
 
     Args:
@@ -1201,16 +1215,8 @@ def build_records_from_tables(doc: dict, embed_fn) -> list[VectorRecord]:
                 "table_name": table.get("table_name"),
             }))
 
-    texts = [t for t, _ in pending]
-    vectors = embed_fn(texts) if texts else []
-    if len(vectors) != len(pending):
-        raise RuntimeError(
-            "Embedding 返回数量不一致: "
-            f"expected={len(pending)}, actual={len(vectors)}"
-        )
-
     records: list[VectorRecord] = []
-    for (text, ctx), vec in zip(pending, vectors):
+    for text, ctx in pending:
         kind = ctx["kind"]
         obj = ctx["obj"]
         table_name = obj.get("table_name") if kind == "table" else ctx.get("table_name")
@@ -1236,14 +1242,14 @@ def build_records_from_tables(doc: dict, embed_fn) -> list[VectorRecord]:
         meta["semantic_model_id"] = sm_id_meta
 
         meta = {k: v for k, v in meta.items() if v is not None}
-        records.append(VectorRecord(id=rid, text=text, vector=vec, metadata=meta))
+        records.append(VectorRecord(id=rid, text=text, vector=[], metadata=meta))
 
     # 按 id 去重（同一作用域内 table_name + field_name 重复时保留首份）
     deduped: dict[str, VectorRecord] = {}
     for r in records:
         if r.id not in deduped:
             deduped[r.id] = r
-    return list(deduped.values())
+    return assign_vectors(list(deduped.values()), embed_fn, vectorizer)
 
 
 def build_table_field_scope_filter(
@@ -1392,6 +1398,7 @@ def _daily_value(value: Any) -> str:
 def build_records_from_entity_attributes(
     rows: Sequence[dict],
     embed_fn,
+    *, vectorizer=None,
 ) -> list[VectorRecord]:
     """Convert a governed entity-value snapshot into isolated vector records."""
     pending: list[tuple[str, dict, str]] = []
@@ -1446,11 +1453,8 @@ def build_records_from_entity_attributes(
                 metadata[optional] = _daily_value(row[optional])
         pending.append((text, metadata, record_id))
 
-    vectors = embed_fn([text for text, _, _ in pending]) if pending else []
-    if len(vectors) != len(pending):
-        raise RuntimeError(f"Embedding 返回数量不一致: expected={len(pending)}, actual={len(vectors)}")
-    return [VectorRecord(id=rid, text=text, vector=vec, metadata=meta)
-            for (text, meta, rid), vec in zip(pending, vectors)]
+    return assign_vectors([VectorRecord(id=rid, text=text, vector=[], metadata=meta)
+                           for text, meta, rid in pending], embed_fn, vectorizer)
 
 
 def replace_entity_attribute_index(
@@ -1468,7 +1472,8 @@ def replace_entity_attribute_index(
         "load_complete_entity_attribute_vector_source",
         mysql_tool.load_entity_attribute_vector_source,
     )
-    rows = loader(semantic_model_id, business_domain_id)
+    with publication_stage("attribute_value_read", model=semantic_model_id, domain=business_domain_id):
+        rows = loader(semantic_model_id, business_domain_id)
     policy_loader = getattr(
         mysql_tool, "load_entity_attribute_vector_policy_audit", None
     )
@@ -1525,9 +1530,12 @@ def replace_entity_attribute_index(
             "excluded_attributes": policy_audit["excluded_attributes"],
             "persist_dir": str(store.persist_dir),
         }
-    records = build_records_from_entity_attributes(rows, embed_fn)
+    vectorizer = PublicationVectors(store)
+    with publication_stage("attribute_value_embedding", model=semantic_model_id, domain=business_domain_id):
+        records = build_records_from_entity_attributes(rows, embed_fn, vectorizer=vectorizer)
     current_ids = {record.id for record in records}
-    store.add(records)
+    with publication_stage("attribute_value_write", model=semantic_model_id, domain=business_domain_id):
+        vectorizer.write(records)
     stale_ids = sorted(previous_ids - current_ids)
     store.delete_by_ids(stale_ids)
     return {

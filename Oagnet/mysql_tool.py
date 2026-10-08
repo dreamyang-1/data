@@ -38,11 +38,12 @@ MySQL 查询工具 - 适配新数据库表结构（层级隔离版）
 import hashlib
 import json
 import re
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from contextvars import ContextVar
 
 import pymysql
 from pymysql.cursors import DictCursor
+from publication_vectors import publication_stage
 
 from config import (
     MYSQL_HOST,
@@ -1023,63 +1024,72 @@ def load_complete_entity_attribute_vector_source(
     definitions = [row for row in definitions if _should_vectorize_entity_value(row)]
     result: list[dict] = []
     seen: set[tuple[str, str, str]] = set()
-    for definition in definitions:
-        db_type = re.sub(r"[^a-z]", "", str(definition.get("db_type") or "").casefold())
-        if db_type not in {"mysql", "mariadb"}:
-            continue
-        table = _validated_identifier(str(definition["mapping_table"]), label="table name")
-        column = _validated_identifier(str(definition["mapping_column"]), label="column name")
-        conn = pymysql.connect(
-            host=str(definition.get("host") or "").strip(),
-            port=int(definition.get("port")),
-            user=str(definition.get("username") or "").strip(),
-            password=definition.get("password") or "",
-            database=str(definition.get("db_name") or "").strip(),
-            charset=MYSQL_CHARSET,
-            connect_timeout=MYSQL_CONNECT_TIMEOUT,
-            read_timeout=MYSQL_READ_TIMEOUT,
-            write_timeout=MYSQL_READ_TIMEOUT,
-            autocommit=True,
-        )
-        try:
-            with conn.cursor() as cursor:
-                expression = f"TRIM(CAST(`{column}` AS CHAR))"
-                cursor.execute(
-                    f"SELECT DISTINCT {expression} AS canonical_value "
-                    f"FROM `{table}` WHERE `{column}` IS NOT NULL "
-                    f"AND {expression} <> '' ORDER BY canonical_value LIMIT %s",
-                    (per_attribute_limit,),
-                )
-                values = [str(row[0]).strip() for row in cursor.fetchall() if row and row[0]]
-        finally:
-            conn.close()
-        for value in values:
-            normalized_value = normalize_catalog_text(value)
-            identity = (
-                str(definition["entity_code"]),
-                str(definition["attr_code"]),
-                normalized_value.casefold(),
-            )
-            if identity in seen:
+    # Reuse connections only within this one authorized snapshot, never across
+    # models/requests or threads. Shared physical columns are read once but still
+    # projected into each distinct owning entity/attribute below.
+    connections, physical_values = {}, {}
+    with ExitStack() as cleanup:
+        for definition in definitions:
+            db_type = re.sub(r"[^a-z]", "", str(definition.get("db_type") or "").casefold())
+            if db_type not in {"mysql", "mariadb"}:
                 continue
-            seen.add(identity)
-            digest = hashlib.sha256("\x1f".join(identity).encode("utf-8")).hexdigest()
-            result.append({
-                "id": digest,
-                "semantic_model_id": semantic_model_id,
-                "business_domain_id": business_domain_id,
-                "data_source_id": int(definition["data_source_id"]),
-                "entity_code": definition["entity_code"],
-                "entity_name": definition["entity_name"],
-                "entity_alias": definition.get("entity_alias"),
-                "entity_description": definition.get("entity_description"),
-                "attr_code": definition["attr_code"],
-                "attr_name": definition["attr_name"],
-                "attr_description": definition.get("attr_description"),
-                "attr_value": value,
-                "source_table": table,
-                "source_field": column,
-            })
+            table = _validated_identifier(str(definition["mapping_table"]), label="table name")
+            column = _validated_identifier(str(definition["mapping_column"]), label="column name")
+            connect_args = dict(
+                host=str(definition.get("host") or "").strip(),
+                port=int(definition.get("port")),
+                user=str(definition.get("username") or "").strip(),
+                password=definition.get("password") or "",
+                database=str(definition.get("db_name") or "").strip(),
+                charset=MYSQL_CHARSET, connect_timeout=MYSQL_CONNECT_TIMEOUT,
+                read_timeout=MYSQL_READ_TIMEOUT, write_timeout=MYSQL_READ_TIMEOUT,
+                autocommit=True,
+            )
+            connection_key = (int(definition["data_source_id"]), tuple(connect_args.items()))
+            physical_key = (connection_key, table, column)
+            if physical_key not in physical_values:
+                conn = connections.get(connection_key)
+                if conn is None:
+                    conn = pymysql.connect(**connect_args)
+                    cleanup.callback(conn.close)
+                    connections[connection_key] = conn
+                with publication_stage("attribute_column_read", model=semantic_model_id, domain=business_domain_id):
+                    with conn.cursor() as cursor:
+                        expression = f"TRIM(CAST(`{column}` AS CHAR))"
+                        cursor.execute(
+                            f"SELECT DISTINCT {expression} AS canonical_value "
+                            f"FROM `{table}` WHERE `{column}` IS NOT NULL "
+                            f"AND {expression} <> '' ORDER BY canonical_value LIMIT %s",
+                            (per_attribute_limit,),
+                        )
+                        physical_values[physical_key] = [str(row[0]).strip() for row in cursor.fetchall() if row and row[0]]
+            for value in physical_values[physical_key]:
+                normalized_value = normalize_catalog_text(value)
+                identity = (
+                    str(definition["entity_code"]),
+                    str(definition["attr_code"]),
+                    normalized_value.casefold(),
+                )
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                digest = hashlib.sha256("\x1f".join(identity).encode("utf-8")).hexdigest()
+                result.append({
+                    "id": digest,
+                    "semantic_model_id": semantic_model_id,
+                    "business_domain_id": business_domain_id,
+                    "data_source_id": int(definition["data_source_id"]),
+                    "entity_code": definition["entity_code"],
+                    "entity_name": definition["entity_name"],
+                    "entity_alias": definition.get("entity_alias"),
+                    "entity_description": definition.get("entity_description"),
+                    "attr_code": definition["attr_code"],
+                    "attr_name": definition["attr_name"],
+                    "attr_description": definition.get("attr_description"),
+                    "attr_value": value,
+                    "source_table": table,
+                    "source_field": column,
+                })
     return result
 
 

@@ -24,6 +24,7 @@ class PhysicalCatalogPlan:
     records: list
     table_keys: set
     attribute_enums: dict
+    vectorizer: object = None
 
 
 def _attribute_enums(values):
@@ -39,7 +40,7 @@ def _attribute_enums(values):
             for value in values if isinstance(value, (dict, str, int, float, bool))]
 
 
-def prepare_physical_catalog(model, domain, embed_fn):
+def prepare_physical_catalog(model, domain, embed_fn, *, vectorizer=None):
     """Build the entire scoped snapshot before touching any vector record."""
     require_model_id(model)
     if domain is not None:
@@ -72,7 +73,8 @@ def prepare_physical_catalog(model, domain, embed_fn):
     records = []
     for ds, tables in sorted(by_source.items()):
         records.extend(build_records_from_tables(
-            {'scope': {'semantic_model_id': model, 'data_source_id': ds}, 'tables': tables}, embed_fn))
+            {'scope': {'semantic_model_id': model, 'data_source_id': ds}, 'tables': tables}, embed_fn,
+            vectorizer=vectorizer))
     if any(not record.vector or any(not math.isfinite(float(value)) for value in record.vector)
            for record in records):
         raise ValueError('PHYSICAL_CATALOG_EMBEDDING_INVALID: empty or non-finite embedding')
@@ -90,7 +92,7 @@ def prepare_physical_catalog(model, domain, embed_fn):
         if key in enums and enums[key] != values:
             raise ValueError('PHYSICAL_CATALOG_SOURCE_INVALID: ambiguous attribute data source')
         enums[key] = deepcopy(values)
-    return PhysicalCatalogPlan(model, domain, records, table_keys, enums)
+    return PhysicalCatalogPlan(model, domain, records, table_keys, enums, vectorizer)
 
 
 def publish_physical_catalog(store, plan):
@@ -116,7 +118,10 @@ def publish_physical_catalog(store, plan):
         if any(record.metadata.get('semantic_model_id') != plan.model
                for record in store.get_by_where(identity_filter)):
             raise ValueError('PHYSICAL_CATALOG_SOURCE_INVALID: data-source index belongs to another model')
-        store.add(plan.records)
+        if plan.vectorizer is not None:
+            plan.vectorizer.write(plan.records)
+        else:
+            store.add(plan.records)
         inventory = getattr(store, 'get_catalog_inventory', None)
         readback = inventory(identity_filter) if callable(inventory) else store.get_by_where(identity_filter)
         actual = {record.id: record for record in readback}
