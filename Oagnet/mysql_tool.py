@@ -2110,7 +2110,13 @@ def get_table_field_by_scope(semantic_model_id=None, data_source_id=None, *, bus
                 WHERE b.semantic_model_id=%s AND b.id=%s
                   AND COALESCE(b.is_deleted,0)=0
                   AND COALESCE(e.is_deleted,0)=0 AND e.status=1
-                  AND e.main_table_name=t.name AND e.data_source_id=t.data_source_id
+                  AND (e.semantic_model_id=b.semantic_model_id OR e.semantic_model_id IS NULL)
+                  AND e.data_source_id=t.data_source_id
+                  AND (e.main_table_name=t.name OR EXISTS (
+                      SELECT 1 FROM semantic_model_entity_sub_table_mapping s
+                      WHERE s.entity_type_id=e.id AND s.semantic_model_id=b.semantic_model_id
+                        AND COALESCE(s.is_deleted,0)=0 AND s.sub_table_name=t.name
+                  ))
             )'''
         args = [semantic_model_id, semantic_model_id, domain_ids[0]]
         if data_source_id is not None:

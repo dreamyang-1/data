@@ -43,7 +43,8 @@ from config import (
 )
 from daily_job_store import DailyJobStoreError, daily_job_store
 from logger import logger
-from mysql_tool import mysql_advisory_lock, normalize_catalog_text
+from mysql_tool import consistent_catalog_read, mysql_advisory_lock, normalize_catalog_text
+from physical_catalog_sync import prepare_physical_catalog, publish_physical_catalog
 from vector_store import (
     rebuild_index_by_scope,
     replace_daily_table_index,
@@ -156,12 +157,21 @@ def vector_rebuild(req: RebuildRequest):
         # Use one model-level lock so these two forms cannot race each other.
         lock_name = f"oagnet:dsl:{req.semantic_model_id}"
         with mysql_advisory_lock(lock_name[:64]):
-            stats = rebuild_index_by_scope(
-                _store,
-                embed_documents,
-                semantic_model_id=req.semantic_model_id,
-                business_domain_id=req.business_domain_id,
-            )
+            with consistent_catalog_read():
+                physical = prepare_physical_catalog(
+                    req.semantic_model_id, req.business_domain_id, embed_documents)
+                stats = rebuild_index_by_scope(
+                    _store,
+                    embed_documents,
+                    semantic_model_id=req.semantic_model_id,
+                    business_domain_id=req.business_domain_id,
+                    attribute_enums=physical.attribute_enums,
+                )
+            physical_stats = publish_physical_catalog(_store, physical)
+            stats = dict(stats, total=stats.get("total", 0) + physical_stats["total"],
+                         by_type=dict(stats.get("by_type") or {}))
+            for kind, count in physical_stats['by_type'].items():
+                stats['by_type'][kind] = stats['by_type'].get(kind, 0) + count
         logger.info(
             f"向量库按作用域重建: sm={req.semantic_model_id}, bd={req.business_domain_id}, {stats}"
         )

@@ -477,12 +477,15 @@ class MilvusVectorStore:
             if field not in cls._FILTER_FIELDS:
                 raise ValueError(f"unsupported Milvus filter field: {raw_field}")
             if isinstance(condition, dict):
-                if set(condition) != {"$in"}:
+                if set(condition) == {"$in"}:
+                    values = condition["$in"]
+                    expressions.append(
+                        f"{field} in [{','.join(cls._literal(v) for v in values)}]"
+                    )
+                elif set(condition) == {"$like"}:
+                    expressions.append(f"{field} like {cls._literal(condition['$like'])}")
+                else:
                     raise ValueError(f"unsupported Milvus filter operator for {raw_field}")
-                values = condition["$in"]
-                expressions.append(
-                    f"{field} in [{','.join(cls._literal(v) for v in values)}]"
-                )
             else:
                 expressions.append(f"{field} == {cls._literal(condition)}")
         return " and ".join(expressions) or "record_id != \"\""
@@ -605,6 +608,10 @@ class MilvusVectorStore:
         """Return exact scalar matches from explicit Milvus fields."""
         return self.get_by_where(where)
 
+    def find_like(self, where: dict) -> list[SearchResult]:
+        """Return suffix/prefix literal matches from explicit Milvus fields."""
+        return self.get_by_where(where)
+
     def count_by_where(self, where: dict) -> int:
         return len(self.get_ids_by_where(where))
 
@@ -711,11 +718,12 @@ def _build_entity_text(entity: dict) -> str:
 
 
 def _build_attr_text(attr: dict) -> str:
-    """属性向量化字段: attr_name + description + data_type"""
+    """属性向量化字段: attr_name + description + data_type + enum_values"""
     return _join_parts(
         attr.get("attr_name"),
         attr.get("description"),
         attr.get("data_type"),
+        attr.get("enum_values"),
     )
 
 
@@ -1021,6 +1029,8 @@ def rebuild_index_by_scope(
     embed_fn,
     semantic_model_id: int,
     business_domain_id: int = None,
+    *,
+    attribute_enums: dict | None = None,
 ) -> dict:
     """按作用域增量重建向量索引（只处理指定 sm/bd，不影响其他作用域）
 
@@ -1080,6 +1090,18 @@ def rebuild_index_by_scope(
     deduped: dict[str, VectorRecord] = {}
     scope_stats: list[dict[str, Any]] = []
     for doc in docs:
+        if attribute_enums:
+            # Only publication supplies this map, grounded in the same SQL
+            # snapshot's model/domain/data-source/field ownership. Query-time
+            # retrieval reads these enums through its existing attributes.
+            from copy import deepcopy
+            doc = deepcopy(doc)
+            domain_id = doc["business_domain"]["id"] if doc.get("business_domain") else -1
+            for entity in doc["entities"]:
+                for attr in entity.get("attributes") or []:
+                    key = (domain_id, entity.get("entity_code"), attr.get("attr_code"), attr.get("field_mapping"))
+                    if key in attribute_enums:
+                        attr["enum_values"] = deepcopy(attribute_enums[key])
         scope_records = build_records_from_dsl(doc, embed_fn)
         scope_stats.append({
             "business_domain_id": (
