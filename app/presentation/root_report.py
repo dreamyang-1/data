@@ -143,7 +143,9 @@ def render_root_report(
             notes.extend(item.get("presentation", {}).get("notes") or [])
         if item["status"] not in {"COMPLETED", "PARTIAL_SUCCESS"}:
             reason = "；".join(item.get("missing_information") or []) or str(item.get("summary") or "该部分未完成")
-            notes.append(f"尚未完成的内容：{item['question']}。{reason}")
+            label = ("未执行的后续任务" if item["status"] == "SKIPPED" and item.get("depends_on")
+                     else "尚未完成的内容")
+            notes.append(f"{label}：{item['question']}。{reason}")
         for query in (item.get("query_results") or []) if item["task_id"] in selected_ids else []:
             if query.get("truncated"):
                 notes.append(f"“{item['question']}”仅提供{query.get('returned_row_count', '部分')}条预览，不能作为全量统计。")

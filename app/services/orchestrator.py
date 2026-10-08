@@ -38,6 +38,7 @@ from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
 from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import MultiQuestionPlanner, TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
+from app.planning.task_dependencies import TaskDependencySkipped, dependency_skip
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
     applicable_department_filter_slot,
@@ -2605,22 +2606,25 @@ class DataAnalysisOrchestrator:
         }
 
         async def run(task: AtomicTask) -> tuple[str, AgentResponse | Exception]:
+            blocked = dependency_skip(
+                task.depends_on, responses,
+                {task_id: f"任务{index + 1}" for task_id, index in task_index_by_id.items()},
+            )
+            if blocked is not None:
+                # Readiness precedes cached-child reuse, dataset compilation,
+                # context inference and ASL. Never ask a child for a business
+                # object that its empty/unavailable predecessor cannot provide.
+                if task.task_id in responses:
+                    responses.pop(task.task_id, None)
+                    deferred_insights.pop(task.task_id, None)
+                    await save_checkpoint()
+                return task.task_id, blocked
             restored = responses.get(task.task_id)
             if isinstance(restored, AgentResponse):
                 return task.task_id, restored
             dependency_responses = [
                 responses.get(task_id) for task_id in task.depends_on
             ]
-            failed_dependency = next(
-                (
-                    value for value in dependency_responses
-                    if not isinstance(value, AgentResponse)
-                    or value.status not in {"COMPLETED", "PARTIAL_SUCCESS"}
-                ),
-                None,
-            )
-            if failed_dependency is not None:
-                return task.task_id, RuntimeError("DEPENDENCY_NOT_COMPLETED")
             contextual_root_task = (
                 not task.depends_on
                 and bool(re.match(r"\s*(?:再|那|那么|另外|还|加上|改成|换成)", task.question))
@@ -2805,7 +2809,7 @@ class DataAnalysisOrchestrator:
 
         async def report_terminal(task: AtomicTask, value: AgentResponse | Exception) -> None:
             status = value.status if isinstance(value, AgentResponse) else (
-                "SKIPPED" if str(value) == "DEPENDENCY_NOT_COMPLETED" else "FAILED"
+                "SKIPPED" if isinstance(value, TaskDependencySkipped) else "FAILED"
             )
             if status == "NEEDS_CLARIFICATION":
                 message = "本任务需要补充条件，暂未完成；其他独立任务不受影响。"
@@ -2814,7 +2818,7 @@ class DataAnalysisOrchestrator:
             elif status in {"COMPLETED", "PARTIAL_SUCCESS"}:
                 message = "本任务处理完成。"
             elif status == "SKIPPED":
-                message = "依赖任务尚未完成，本任务未执行；其他独立任务不受影响。"
+                message = str(value) if isinstance(value, TaskDependencySkipped) else "本任务未执行。"
             else:
                 message = "本任务未完成，请查看本任务最终输出；其他独立任务不受影响。"
             progress_status = (
@@ -2909,10 +2913,10 @@ class DataAnalysisOrchestrator:
                 task_results.append(TaskExecutionResult(
                     task_id=task.task_id,
                     question=task.question,
-                    status="SKIPPED" if str(value) == "DEPENDENCY_NOT_COMPLETED" else "FAILED",
+                    status="SKIPPED" if isinstance(value, TaskDependencySkipped) else "FAILED",
                     answer=(
-                        "依赖任务尚未完成，本任务未执行。"
-                        if str(value) == "DEPENDENCY_NOT_COMPLETED"
+                        str(value)
+                        if isinstance(value, TaskDependencySkipped)
                         else "该子任务执行失败，其他独立任务不受影响。"
                     ),
                 ))
@@ -2988,7 +2992,7 @@ class DataAnalysisOrchestrator:
                     report_sections.append({
                         "task_id": task.task_id,
                         "question": task.question,
-                        "status": "FAILED",
+                        "status": "SKIPPED" if isinstance(value, TaskDependencySkipped) else "FAILED",
                         "dataset_id": None,
                         "result_file_url": None,
                         "evidence_ids": [],
