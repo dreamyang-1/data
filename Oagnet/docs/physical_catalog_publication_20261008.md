@@ -76,6 +76,20 @@ invoke the platform's existing publish operation once for each copied model.
 Only its successful completed synchronization is evidence that production
 indexes are populated; existing copy behavior and unpublished status are retained.
 
+Deployment verified: code commit `877d9a5` was pushed to the existing feature
+branch/Draft PR without merging. Four explicit runtime files were backed up and
+installed, retaining the pre-existing server LIKE support. Oagnet restarted;
+the new worker started after the installed files, all runtime SHA-256 hashes
+match the validated candidate, and vector health is successful. The full live
+OpenAPI equals the pre-deployment source's generated OpenAPI. Neighboring
+DataAnalysis readiness is `READY` and SQL health is `ok`.
+
+The initial restart command exceeded its 60-second caller deadline while the
+old worker was exiting under the existing service stop policy. Inspection and
+subsequent verification confirmed the queued restart had completed; no repeated
+restart, manual process kill or service configuration change was needed.
+No production vector rebuild was invoked during deployment or verification.
+
 Current stage: V2_CONTEXT_V1_EXECUTION unchanged. Current task code/tests can be
 verified independently of cutover. Catalog gap: the old copied-model indexes
 still require the authorized platform publication. V1 replacement readiness
