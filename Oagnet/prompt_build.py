@@ -7,6 +7,7 @@ import re
 
 from vector_store import ChromaVectorStore, SearchResult, normalize_vector_text
 from scope_contract import normalize_domains, require_model_id, scope_filter, require_candidate_scope
+from binding_ownership import resolve_entities
 
 SYSTEM_PROMPT = """
 【角色】
@@ -444,8 +445,8 @@ class PromptBuilder:
                     item_type,
                     metadata.get("semantic_model_id"),
                     metadata.get("business_domain_id"),
-                    str(metadata.get("entity_name") or ""),
-                    str(metadata.get("attr_code") or ""),
+                    str(metadata.get("entity_code") or metadata.get("entity_name") or ""),
+                    str(metadata.get("attr_code") or metadata.get("attribute_id") or metadata.get("source_field") or ""),
                     str(metadata.get("attr_value") or ""),
                 )
             else:
@@ -587,9 +588,85 @@ class PromptBuilder:
             records.extend(matches)
         return self._dedupe_results(records)
 
+    def _equivalent_value_mentions(self) -> list[SearchResult]:
+        """品牌/机构简称的标准值字面回补。
+
+        向量召回对两三字短词不稳定（江苏苏云 vs 苏云），这里按
+        "标准值以输入结尾"的后缀匹配把候选带回池子，再经
+        _vector_value_equivalent 的类别词/省份前缀约束过滤，防止任意包含误召回。
+        只处理短中文词，长句仍走向量路径。
+        """
+        loader = getattr(self.store, "find_like", None)
+        if not callable(loader):
+            return []
+        from structured_binding import _vector_value_equivalent
+        records: list[SearchResult] = []
+        base_where = self._build_where("entity_attribute_value")
+        for mention in self.surface_mentions:
+            canonical = normalize_vector_text(mention)
+            if not canonical or not (2 <= len(canonical) <= 6):
+                continue
+            if not re.search(r"[\u4e00-\u9fff]", canonical):
+                continue
+            try:
+                # 类别词尾（上海市=上海）要走前缀匹配，简称收尾（张三-上海）走后缀匹配
+                matches = list(loader({
+                    "$or": [
+                        {"$and": [base_where, {"canonical_value": {"$like": f"{canonical}%"}}]},
+                        {"$and": [base_where, {"canonical_value": {"$like": f"%{canonical}"}}]},
+                    ],
+                }))
+            except Exception:
+                continue
+            self._validate_record_scope(matches)
+            kept = [item for item in matches
+                    if _vector_value_equivalent(canonical, str((item.metadata or {}).get("canonical_value") or ""))]
+            for item in kept[:6]:
+                item.score = 1.0
+            records.extend(kept[:6])
+        return self._dedupe_results(records)
+
     def _validate_record_scope(self, records):
         for record in records:
             require_candidate_scope(record.metadata, self.semantic_model_id, self.business_domain_ids)
+
+    def _structured_owner_recall(self, direct_entities, direct_attributes):
+        """Complete explicit parameter owners before same-name top-k can hide them.
+
+        Broad recall remains available for incorrectly typed model/spec values.
+        These extra queries are bounded to request scope and slot owners, not
+        the SQL subject. No index/database writes or API changes are involved.
+        """
+        extraction = getattr(self, 'structured_extraction', None) or {}
+        slots = [item for section in ('维度', '展示字段', '过滤条件', '排序')
+                 for item in extraction.get(section) or []
+                 if isinstance(item, dict) and item.get('entity')]
+        if not slots:
+            return direct_entities, direct_attributes, []
+        entities = self._load_scope_records('entity', direct_entities)
+        by_code = {item.metadata['entity_code']: item.metadata for item in entities if item.metadata.get('entity_code')}
+        requested = set()
+        values = []
+        loader = getattr(self.store, 'get_by_where', None)
+        for slot in slots:
+            owners = resolve_entities(slot['entity'], by_code)
+            requested.update(owners)
+            raw = slot.get('value', [])
+            raw = raw if isinstance(raw, list) else [raw]
+            if not owners or not any(isinstance(value, str) for value in raw):
+                continue
+            query = ' '.join(str(value) for value in [slot.get('entity'), slot.get('field') or slot.get('name'), *raw] if value is not None)
+            hits = self.store.search(self.embed_fn(query), top_k=40, where={'$and': [
+                self._build_where('entity_attribute_value'), {'entity_code': {'$in': sorted(owners)}}]})
+            self._validate_record_scope(hits)
+            values.extend(item for item in hits if item.metadata.get('entity_code') in owners)
+        extra = []
+        if requested and callable(loader):
+            extra = list(loader({'$and': [self._build_where('attribute'), {'parent': {'$in': sorted(requested)}}]}))
+            self._validate_record_scope(extra)
+            extra = [item for item in extra if item.metadata.get('parent') in requested]
+        return (self._dedupe_results([*direct_entities, *(item for item in entities if item.metadata.get('entity_code') in requested)]),
+                self._dedupe_results([*direct_attributes, *extra]), self._dedupe_results(values))
 
     @staticmethod
     def _relation_endpoints(result: SearchResult) -> tuple[str, str] | None:
@@ -921,8 +998,10 @@ class PromptBuilder:
         # question, allowing a nearby “商品总金额” metric to be selected instead.
         candidate_k = min(40, max(12, self.top_k * 4))
         exact_entity_value_mentions = self._exact_entity_value_mentions()
+        equivalent_value_mentions = self._equivalent_value_mentions()
 
         candidate_pools: dict[str, list[SearchResult]] = {}
+        owned_value_candidates = []
 
         def retrieve_type(type_name: str) -> list[SearchResult]:
             # Short names, brands and model numbers are easy to misclassify and
@@ -937,7 +1016,9 @@ class PromptBuilder:
             self._validate_record_scope(candidates)
             if type_name == "entity_attribute_value":
                 candidates = self._dedupe_results([
+                    *owned_value_candidates,
                     *exact_entity_value_mentions,
+                    *equivalent_value_mentions,
                     *candidates,
                 ])
                 # Structured field/value pairs each receive the same bounded
@@ -995,6 +1076,7 @@ class PromptBuilder:
 
         direct_entities = retrieve_type("entity")
         direct_attributes = retrieve_type("attribute")
+        direct_entities, direct_attributes, owned_value_candidates = self._structured_owner_recall(direct_entities, direct_attributes)
         direct_relations = retrieve_type("relation")
         metrics = retrieve_type("metric")
         if self.authoritative_entity_scope and len(self.business_domain_ids) == 1:

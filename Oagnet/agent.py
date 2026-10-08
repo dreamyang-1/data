@@ -1858,7 +1858,7 @@ def _all_non_key_attribute_candidates(
 _CATALOG_IDENTITY_ATTRIBUTE = re.compile(
     r"(?<![a-z0-9])(?:name|title|label|brand|manufacturer|maker|category|"
     r"classification|type|kind|model|variant|spec|specification|sku)(?![a-z0-9])|"
-    r"名称|姓名|标题|品牌|厂牌|厂家|生产商|制造商|分类|类别|品类|类型|型号|规格|规格型号",
+    r"名称|姓名|标题|品牌|厂牌|厂家|生产商|制造商|分类|类别|品类|类型",
     re.IGNORECASE,
 )
 _CATALOG_NON_IDENTITY_ATTRIBUTE = re.compile(
@@ -9061,6 +9061,7 @@ def main(
         # No legacy prompt construction, question extraction or inferred mentions.
         builder.surface_mentions = retrieval_terms(structured_extraction)
         builder.value_queries = filter_value_queries(structured_extraction)
+        builder.structured_extraction = structured_extraction
         knowledge = builder.retrieve(structured_text)
         knowledge["_contextual_metric_selection"] = True
         knowledge["_vector_authorized_fields"] = sorted(_known_physical_fields(knowledge))
@@ -9088,6 +9089,17 @@ def main(
             if not relationship_required and ast.get("related_filters"):
                 ast["ambiguity"].append(issue("输出要求", structured_extraction.get("输出要求"),
                     "目录绑定改变了结构化声明的直接筛选范围，需确认关联口径"))
+            # 明细去重是执行口径：契约或结构化声明去重时落到 ASL，
+            # 让 SQL 层直接 SELECT DISTINCT，而不是拿回数据后再剔除重复行
+            if not ast.get("ambiguity") and not ast.get("metrics") and ast.get("dimensions"):
+                mode = ""
+                if isinstance(intent_asl_contract, dict):
+                    mode = str(intent_asl_contract.get("projection_mode") or "").strip().upper()
+                if mode not in {"DISTINCT", "ROWS"}:
+                    dedup = str(structured_extraction.get("是否去重") or "").strip().casefold()
+                    mode = "DISTINCT" if dedup in {"是", "true", "1", "yes", "y", "distinct"} else ""
+                if mode == "DISTINCT":
+                    ast["projection_mode"] = "DISTINCT"
         result = json.dumps(ast, ensure_ascii=False)
         if not ast.get("ambiguity"):
             try:

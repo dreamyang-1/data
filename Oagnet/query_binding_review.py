@@ -9,6 +9,7 @@ import copy
 from datetime import date
 import json
 import re
+from binding_ownership import parameter_owners
 
 
 def _metadata(item):
@@ -35,11 +36,18 @@ def binding_options(ast, knowledge):
     allowed = set(knowledge.get("_vector_authorized_fields") or [])
     entities = [_metadata(item) for item in knowledge.get("entities", [])]
     owners = {}
+    by_entity = {entity.get('entity_code'): entity for entity in entities if entity.get('entity_code')}
+    def add_owner(field, entity):
+        if isinstance(field, str) and field in allowed and entity.get('entity_code'):
+            owners.setdefault(field, {})[entity['entity_code']] = entity
     for entity in entities:
         for attr in _object(entity.get("attributes")) or []:
             field = _field(attr.get("field_mapping"))
-            if isinstance(field, str) and field in allowed:
-                owners[field] = entity
+            add_owner(field, entity)
+    for item in knowledge.get('attributes', []):
+        attr = _metadata(item)
+        if attr.get('parent') in by_entity:
+            add_owner(_field(attr.get('field_mapping')), by_entity[attr['parent']])
     relations = [_metadata(item) for item in knowledge.get("relations", [])]
     for entity in entities:
         relations.extend(_object(entity.get("relations")) or [])
@@ -67,17 +75,21 @@ def binding_options(ast, knowledge):
                         or foreign.partition(".")[0] == table):
                     continue
                 # Both dictionary columns must belong to the same scoped entity.
-                if owners[key].get("entity_code") != owners[field].get("entity_code"):
-                    continue
-                choice = {
-                    "field": foreign, "dictionary_key": key,
-                    "dictionary_entity": owners[key].get("entity_code"),
-                    "business_domain_id": owners[key].get("business_domain_id") or owners[key].get("business_domain"),
-                    "owner": owners[foreign].get("entity_name") or owners[foreign].get("entity_code"),
-                    "relation": relation.get("relation_semantic") or relation.get("description") or "",
-                }
-                if choice not in choices:
-                    choices.append(choice)
+                for dictionary in sorted(owners[key].keys() & owners[field].keys()):
+                    for owner in owners[foreign].values():
+                        choice = {
+                            "field": foreign, "dictionary_key": key,
+                            "dictionary_entity": dictionary,
+                            "business_domain_id": owners[key][dictionary].get("business_domain_id") or owners[key][dictionary].get("business_domain"),
+                            "owner": owner.get("entity_name") or owner.get("entity_code"),
+                            "owner_entity": owner.get("entity_code"),
+                            "relation": relation.get("relation_semantic") or relation.get("description") or "",
+                        }
+                        # Repeated published edges do not create a second
+                        # business-owner choice when their executable keys agree.
+                        identity = ('field', 'dictionary_key', 'dictionary_entity', 'business_domain_id', 'owner_entity')
+                        if not any(all(existing.get(k) == choice.get(k) for k in identity) for existing in choices):
+                            choices.append(choice)
         if choices:
             result.append({"filter_index": index, "predicate": predicate, "choices": choices})
     return result
@@ -148,6 +160,26 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     by_index = {o["filter_index"]: o for o in options}
     seen = set()
     bindings = decision.get("bindings")
+    # Preserve index correspondence: owner requirements belong to each filter,
+    # not the GROUP BY entity or overall execution subject.
+    declared_filters = extraction.get('过滤条件') or []
+    entity_catalog = {entity['entity_code']: entity for entity in entities if entity.get('entity_code')}
+    bindings = list(bindings) if isinstance(bindings, list) else []
+    origins = knowledge.get('_structured_filter_origins')
+    for index, option in by_index.items():
+        source_index = origins[index] if isinstance(origins, list) and len(origins) == len(ast.get('filters') or []) else index
+        if type(source_index) is not int or not 0 <= source_index < len(declared_filters) or index in target_indices:
+            continue
+        required = parameter_owners(declared_filters[source_index], {'entities': entity_catalog})
+        if not required:
+            continue
+        bindings = [b for b in bindings if not isinstance(b, dict) or b.get('filter_index') != index]
+        matches = [i for i, choice in enumerate(option['choices']) if choice.get('owner_entity') in required]
+        if len(matches) == 1:
+            bindings.append({'filter_index': index, 'choice_index': matches[0], 'bind_owner': True,
+                             'reason': '结构化条件明确指定所属实体，按已发布关系绑定该实体'})
+        elif required:
+            bindings.append({'filter_index': index})  # unresolved owner cannot silently keep a shared predicate
     for binding in bindings if isinstance(bindings, list) else []:
         if not isinstance(binding, dict):
             continue
