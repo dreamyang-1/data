@@ -55,3 +55,82 @@ def test_display_cannot_reference_unregistered_attribute():
     value,ast=fixture();ast['display_fields'][0]['name']='company.secret'
     with pytest.raises(ValueError,match='未注册'):
         value.translate(json.dumps(ast),'81')
+
+
+@pytest.mark.parametrize('card', ['1:N', '1:M', 'ONE_TO_MANY', '1:1', 'ONE_TO_ONE'])
+def test_parent_only_relation_is_reversed_for_aggregate_display(card):
+    value, ast = fixture()
+    value.loader.entities['staff']['relations'] = value.loader.entities['staff']['relations'][1:]
+    value.loader.entities['company']['relations'] = [{
+        'target_entity': 'staff', 'join_key': 'company.code = staff.company', 'relation_type': card}]
+    before = copy.deepcopy(ast)
+    assert value._relation_path('staff', 'company', '120') is None  # subject policy unchanged
+    sql = value.translate(json.dumps(ast), '120')
+    assert 'company.name AS `所属公司`' in sql
+    assert sql.count('JOIN company ') == 1
+    assert 'company.code = staff.company' in sql
+    assert ast == before
+
+
+@pytest.mark.parametrize('card', ['N:1', 'MANY_TO_ONE', 'N:M', 'UNKNOWN', ''])
+def test_reverse_relation_that_fans_out_is_not_allowed(card):
+    value, ast = fixture()
+    value.loader.entities['staff']['relations'] = value.loader.entities['staff']['relations'][1:]
+    value.loader.entities['company']['relations'] = [{
+        'target_entity': 'staff', 'join_key': 'company.code = staff.company', 'relation_type': card}]
+    with pytest.raises(ValueError, match='唯一'):
+        value.translate(json.dumps(ast), '120')
+
+
+def test_reverse_display_can_follow_multiple_to_one_hops():
+    value, ast = fixture()
+    value.loader.entities['staff']['relations'] = value.loader.entities['staff']['relations'][1:]
+    value.loader.entities['team'] = {'entity_code': 'team',
+        'physical_table_join': {'base_table': 'team'}, 'attributes': [],
+        'relations': [{'target_entity': 'staff', 'join_key': 'team.code = staff.team', 'relation_type': '1:N'}]}
+    value.loader.entities['company']['relations'] = [{
+        'target_entity': 'team', 'join_key': 'company.code = team.company', 'relation_type': '1:N'}]
+    sql = value.translate(json.dumps(ast), '120')
+    assert sql.count('JOIN team ') == sql.count('JOIN company ') == 1
+    assert sql.index('JOIN team ') < sql.index('JOIN company ')
+
+
+def test_display_relation_uses_authoritative_graph_not_stale_loader_edges():
+    from types import SimpleNamespace
+    value, ast = fixture()
+    value.loader.entities['staff']['relations'] = value.loader.entities['staff']['relations'][1:]
+    value.loader.entities['company']['relations'] = [{
+        'target_entity': 'staff', 'join_key': 'company.code = staff.company', 'relation_type': '1:N'}]
+    value.catalog = SimpleNamespace(entity_relationship_metadata=lambda _model: {
+        'company': {'base_table': 'company', 'relations': []}})
+    with pytest.raises(ValueError, match='唯一'):
+        value._aggregate_display_dimensions(ast, '120')
+
+
+def test_broken_reverse_join_is_not_evidence_for_a_display_field():
+    value, ast = fixture()
+    value.loader.entities['staff']['relations'] = value.loader.entities['staff']['relations'][1:]
+    value.loader.entities['company']['relations'] = [{
+        'target_entity': 'staff', 'join_key': 'unregistered.code = staff.company', 'relation_type': '1:N'}]
+    with pytest.raises(ValueError, match='唯一'):
+        value.translate(json.dumps(ast), '120')
+
+
+def test_unsafe_display_has_specific_sanitized_error_in_both_endpoints():
+    value, ast = fixture('1:N')
+    for endpoint in ['translate_only', 'execute_query']:
+        result = getattr(value, endpoint)(json.dumps(ast), '120')
+        assert result['success'] is False
+        assert result['semantic_validation_report']['errors'][0]['code'] == 'AGGREGATE_DISPLAY_RELATION_UNSAFE'
+        assert 'company.name' in result['error']
+        assert '单一归属关系' in result['error']
+        assert '主实体' not in result['error']
+
+
+def test_display_error_never_echoes_arbitrary_exception_suffix():
+    value, _ = fixture()
+    from sql_translator_prod import SQLTranslatorProd
+    result = SQLTranslatorProd._controlled_translation_failure(
+        ValueError('展示字段与分组实体没有唯一的N:1/1:1关联: company.name password=PRIVATE_SENTINEL'), False)
+    assert result['error_code'] == 'AGGREGATE_DISPLAY_RELATION_UNSAFE'
+    assert 'PRIVATE_SENTINEL' not in json.dumps(result)

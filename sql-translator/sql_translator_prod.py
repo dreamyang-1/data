@@ -1139,7 +1139,7 @@ class RedisDSLLoader:
 
     @staticmethod
     def _canonical_cardinality(value: Any) -> str:
-        normalized = str(value or '').strip().upper().replace(' ', '').replace('-', '')
+        normalized = str(value or '').strip().upper().replace(' ', '').replace('-', '').replace('_', '')
         return {
             '1:1': 'ONE_TO_ONE', 'ONETOONE': 'ONE_TO_ONE',
             '1:N': 'ONE_TO_MANY', '1:M': 'ONE_TO_MANY', '1:*': 'ONE_TO_MANY',
@@ -3303,7 +3303,7 @@ class SQLTranslatorProd:
             for source in starts:
                 if self._get_entity_base_table(source, model_id) == table:
                     continue
-                path = self._relation_path(source, table, model_id)
+                path = self._relation_path(source, table, model_id, to_one_only=True)
                 if path and all(RedisDSLLoader._canonical_cardinality(r.get('relation_type'))
                                 in {'ONE_TO_ONE', 'MANY_TO_ONE'} for r in path):
                     safe = True
@@ -3315,7 +3315,10 @@ class SQLTranslatorProd:
         return result
 
     def _relation_path(self, start_entity: str, target_table: str,
-                       model_id: Optional[str]) -> Optional[List[Dict]]:
+                       model_id: Optional[str], *, to_one_only: bool = False) -> Optional[List[Dict]]:
+        # Subject derivation keeps its existing forward-only behavior. Related
+        # aggregate attributes use the same published reverse edges as JOIN
+        # generation, with cardinality reversed relative to the traversal.
         queue = [(start_entity, [])]
         visited = set()
         while queue:
@@ -3326,8 +3329,41 @@ class SQLTranslatorProd:
             if self._get_entity_base_table(entity_code, model_id) == target_table:
                 return path
             entity = self._get_entity(entity_code, model_id) or {}
-            for relation in entity.get('relations', []) or []:
-                target = relation.get('target_entity')
+            candidates = [(relation, None) for relation in entity.get('relations', []) or []]
+            if to_one_only:
+                for registered in self.loader.iter_entities(model_id):
+                    source = registered.get('entity_code')
+                    if not source or source == entity_code:
+                        continue
+                    # Use the request's authoritative, domain-filtered graph,
+                    # not stale relationships in the underlying Redis payload.
+                    authoritative = self._get_entity(source, model_id) or {}
+                    candidates.extend((relation, source)
+                        for relation in authoritative.get('relations', []) or []
+                        if relation.get('target_entity') == entity_code)
+            for relation, reverse_source in candidates:
+                target = reverse_source or relation.get('target_entity')
+                if to_one_only:
+                    cardinality = RedisDSLLoader._canonical_cardinality(relation.get('relation_type'))
+                    if reverse_source:
+                        cardinality = RedisDSLLoader._reverse_cardinality(cardinality)
+                    if cardinality not in {'ONE_TO_ONE', 'MANY_TO_ONE'}:
+                        continue
+                    current_table = self._get_entity_base_table(entity_code, model_id)
+                    next_table = self._get_entity_base_table(target, model_id)
+                    join_key = relation.get('join_key') or ''
+                    segments = (self._build_reverse_join_segments(
+                        join_key, current_table, next_table, entity_code, model_id)
+                        if reverse_source else self._build_join_segments(
+                            join_key, current_table, next_table, target, model_id,
+                            source_entity=entity_code))
+                    if not segments:
+                        continue
+                    try:
+                        validate_join_connectivity('SELECT 1 FROM ' + current_table + ' ' + ' '.join(segments))
+                    except SQLJoinError:
+                        continue
+                    relation = dict(relation, target_entity=target, relation_type=cardinality)
                 if target and target not in visited:
                     queue.append((target, path + [relation]))
         return None
@@ -4307,6 +4343,8 @@ class SQLTranslatorProd:
     def _semantic_validation_error_code(cls, message: str) -> str:
         mappings = (
             (r'^SQL_JOIN_INVALID:', 'SQL_JOIN_INVALID'),
+            (r'^展示字段与分组实体没有唯一的N:1/1:1关联:', 'AGGREGATE_DISPLAY_RELATION_UNSAFE'),
+            (r'^展示字段未注册:', 'SEMANTIC_ASSET_NOT_FOUND'),
             (r'不存在(实体|指标|维度|维度字段|过滤字段)', 'SEMANTIC_ASSET_NOT_FOUND'),
             (r'Join基数未配置', 'JOIN_CARDINALITY_MISSING'),
             (r'一对多Join会导致指标重复累计', 'AGGREGATION_FANOUT_RISK'),
@@ -4362,12 +4400,17 @@ class SQLTranslatorProd:
             )
             if match is not None:
                 identity = f'不存在{match.group(1)}: {match.group(2)}'
+            display_match = re.fullmatch(
+                r'展示字段(?:未注册|与分组实体没有唯一的N:1/1:1关联):\s*([A-Za-z_]\w*\.[A-Za-z_]\w*)', raw)
+            if display_match is not None and len(display_match.group(1)) <= 128:
+                identity = f'展示字段: {display_match.group(1)}'
         category_messages = {
             'SQL_JOIN_INVALID': '关联条件没有连接正确的表或引用了未加入的表，已阻止执行，请检查语义关联配置',
             'SEMANTIC_ASSET_NOT_FOUND': '引用的实体、指标、维度或过滤字段不存在于当前语义模型',
             'RELATIONSHIP_PATH_NOT_FOUND': '无法在已发布语义关系中找到所需的关联路径',
             'JOIN_CARDINALITY_MISSING': '关系基数未配置，已阻止可能重复累计的Join',
             'AGGREGATION_FANOUT_RISK': '一对多Join会导致指标重复累计，已阻止生成SQL',
+            'AGGREGATE_DISPLAY_RELATION_UNSAFE': '展示字段与分组对象之间缺少可确认的单一归属关系，不能安全加入汇总结果，请检查已发布的关联配置',
             'SEMANTIC_AMBIGUITY': 'DSL存在未解决的歧义',
             'QUERY_SHAPE_INVALID': '查询形态不符合语义层约束',
             'ASL_SYNTAX_INVALID': 'ASL结构不合法',
