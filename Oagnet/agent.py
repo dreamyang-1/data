@@ -5341,6 +5341,9 @@ def _validate_asl_output(
         ):
             raise ValueError("ASL metric time_anchor was not retrieved from semantic scope")
     selected_dimensions: set[str] = set()
+    for item in ast.get('display_fields') or []:
+        if not isinstance(item, dict) or str(item.get('name') or '') not in known_fields:
+            raise ValueError('ASL display field was not retrieved from semantic scope')
     for item in ast["dimensions"]:
         if not isinstance(item, dict) or not str(item.get("name") or "").strip():
             raise ValueError("ASL dimension name is required")
@@ -8847,6 +8850,9 @@ def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
         raise ValueError('ASL related filter field was not validated by vector semantic scope')
     vector_metrics = _known_codes(knowledge, "metrics", "metric_code")
     vector_dimensions = _known_codes(knowledge, "dimensions", "dim_code")
+    for item in ast.get('display_fields') or []:
+        if not isinstance(item, dict) or str(item.get('name') or '') not in vector_fields:
+            raise ValueError('ASL display field was not validated by vector semantic scope')
     vector_subjects = _known_subject_codes(knowledge, {
         str(item.get("name"))
         for item in ast.get("metrics") or []
@@ -8918,6 +8924,8 @@ def _verify_missing_asl_fields_in_vector_store(
     """
     ast = json.loads(content)
     requested: set[str] = set()
+    requested.update(str(item['name']) for item in ast.get('display_fields') or []
+                     if isinstance(item, dict) and item.get('name'))
     from related_scope import related_fields
     requested.update(related_fields(ast))
     for item in ast.get("dimensions") or []:

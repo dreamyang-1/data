@@ -151,7 +151,59 @@ def catalog_candidates(knowledge):
                 label = enum.get('name', enum.get('label'))
                 add_value(field, code if code is not None else label, label)
     values = [dict(record, id=index) for index, record in enumerate(values)]
-    return dict(entities=entities, metrics=metrics, fields=fields, dimensions=dimensions, values=values)
+    relations = [_metadata(item) for item in knowledge.get('relations', [])]
+    for entity in entities.values():
+        relations.extend(_object(entity.get('relations')) or [])
+    return dict(entities=entities, metrics=metrics, fields=fields, dimensions=dimensions, values=values,
+                relations=relations)
+
+
+def _related_display_field(groups, field, catalog):
+    """A display attribute may follow a declared to-one path, never a fanout."""
+    target_table = field.split('.')[0]
+    starts = set()
+    for group in groups:
+        if group.get('granularity'):
+            continue
+        code = group['name']
+        definition = catalog['dimensions'].get(code) or {}
+        entity = catalog['entities'].get(code)
+        if '.' in code:
+            owner = catalog['fields'].get(code, {}).get('owner')
+            entity = catalog['entities'].get(owner) or {}
+            attributes = _object(entity.get('attributes')) or []
+            if any(_field(attr.get('field_mapping')) == code and (
+                    str(attr.get('is_primary_key')).lower() in {'true', '1'}
+                    or str(attr.get('is_unique')).lower() in {'true', '1'}
+                    or attr.get('attr_code') == str(owner)+'_code') for attr in attributes):
+                starts.add(code.split('.')[0])
+            continue
+        if not entity or definition.get('enum_list'):
+            continue
+        physical = _dim_bound_field(code, catalog)
+        if physical:
+            starts.add(physical.split('.')[0])
+    edges = {}
+    for relation in catalog['relations']:
+        join = _object(relation.get('join_key'))
+        if not isinstance(join, dict):
+            continue
+        a, b = (_field(join.get(k)) for k in ('source_field', 'target_field'))
+        if not a or not b:
+            continue
+        card = str(relation.get('cardinality') or relation.get('relation_type') or relation.get('type') or '').upper()
+        left, right = a.split('.')[0], b.split('.')[0]
+        if card in {'N:1', 'M:1', 'MANY_TO_ONE', '1:1', 'ONE_TO_ONE'}:
+            edges.setdefault(left, set()).add(right)
+        if card in {'1:N', '1:M', 'ONE_TO_MANY', '1:1', 'ONE_TO_ONE'}:
+            edges.setdefault(right, set()).add(left)
+    seen, pending = set(starts), list(starts)
+    while pending:
+        current = pending.pop()
+        for neighbor in edges.get(current, set()) - seen:
+            seen.add(neighbor)
+            pending.append(neighbor)
+    return target_table not in starts and target_table in seen
 
 
 def _group_exposes_field(group, field, catalog):
@@ -641,7 +693,12 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
             elif target in {'dimensions', 'display_fields'}:
                 if target == 'display_fields' and extraction['指标']:
                     if not any(_group_exposes_field(d, key, catalog) for d in ast['dimensions']):
-                        ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '聚合查询的展示列没有声明为分组维度，请上游明确展示口径'))
+                        if _related_display_field(ast['dimensions'], key, catalog):
+                            fields = ast.setdefault('display_fields', [])
+                            if not any(d['name'] == key for d in fields):
+                                fields.append({'name': key, 'alias': allowed[key].get('attr_name') or key})
+                        else:
+                            ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '该展示属性与分组对象之间没有可确认的唯一关联，无法在不改变统计粒度的情况下返回'))
                 elif key not in {d['name'] for d in ast['dimensions']}:
                     temporal = extraction.get('时间粒度') or {}
                     try:
