@@ -2508,6 +2508,7 @@ class HttpDataRetrievalAdapter:
             if isinstance(asl.get("subject"), dict)
             else asl.get("subject"),
             "dimensions / display_fields": asl.get("dimensions") or [],
+            **({"关联展示字段": asl['display_fields']} if asl.get('display_fields') else {}),
             "字段用途": (
                 "dimensions" if asl.get("metrics") else "display_fields"
             ) if asl.get("dimensions") else None,

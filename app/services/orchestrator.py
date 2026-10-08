@@ -1849,7 +1849,8 @@ class DataAnalysisOrchestrator:
         Reusing the predecessor conversation or dataset would silently repeat the
         first result and could incorrectly mark it HIGH reliability.
         """
-        entity_markers = ("供应商", "经销商", "商品", "门店", "客户", "订单")
+        entity_markers = ("供应商", "经销商", "商品", "门店", "客户", "订单",
+                          "销售公司", "所属公司", "业务员", "销售人员", "生产厂家")
         requested = {marker for marker in entity_markers if marker in question}
         if not requested:
             return False
@@ -2235,7 +2236,7 @@ class DataAnalysisOrchestrator:
             "COMPLETED",
             "该任务基于前序任务的查询结果计算，不再调用数据库。",
         )
-        fallback = await self._pure_computation_chat_fallback(chat)
+        fallback = self._pure_computation_unavailable(chat)
         if self.dataset_store is None:
             return fallback
         references = []
@@ -2273,6 +2274,8 @@ class DataAnalysisOrchestrator:
             references.append((source, loaded.rows))
         single_rows = [item for item in references if item[0].row_count == 1]
         multi_rows = [item for item in references if item[0].row_count > 1]
+        if len(references) == 1 or (not single_rows and len(multi_rows) == len(references)):
+            return await self._respond_dataset_computation(chat, identity, task, references)
         if len(single_rows) != 1 or not multi_rows:
             logger.warning(
                 "pure computation fallback: unexpected dataset shape %s",
@@ -2444,40 +2447,73 @@ class DataAnalysisOrchestrator:
             )],
         )
 
-    async def _pure_computation_chat_fallback(self, chat: ChatRequest) -> AgentResponse:
-        """前序结果集不可用时，退回受控聊天模型基于问答文本直接回复。"""
-        answer = "暂时无法基于前序任务的查询结果完成计算，请稍后重试。"
-        if self.chat_responder is not None:
-            try:
-                answer = await self.chat_responder.respond(
-                    chat.question,
-                    agent_prompt=await self._agent_prompt_text(chat),
-                    history=(
-                        [
-                            {"role": item.role, "content": item.content}
-                            for item in chat.history
-                        ]
-                        or None
-                    ),
-                )
-            except Exception as exc:
-                logger.warning("controlled chat model unavailable: %s", exc)
+    @staticmethod
+    def _pure_computation_unavailable(chat: ChatRequest) -> AgentResponse:
+        """No artifact means no successful calculation, irrespective of prose."""
         return AgentResponse(
             request_id=uuid4(),
             conversation_id=chat.conversation_id,
-            status="COMPLETED",
+            status="FAILED",
             intent=PrimaryIntent.CHAT,
             intent_source="TASK_PLANNER",
-            answer=answer,
+            answer="本次尚未生成可复核的计算结果，计算、排序或筛选未完成。请核对前序数据是否完整、计算要求是否明确；本次不以模型文字替代计算结果。已完成的查询结果仍会保留。",
             reliability=ReliabilityReport(
-                level="HIGH",
-                score=1,
+                level="FAIL",
+                score=0,
                 gates={
                     "no_data_claim": True,
-                    "controlled_chat_model": True,
+                    "deterministic_computation": False,
                 },
             ),
         )
+
+    async def _respond_dataset_computation(self, chat, identity, task, references):
+        """Execute bounded dataset operations and publish the exact final artifact."""
+        from app.services.computation_delivery import aligned_input, computation_material
+        from minio_followup_store import dataset_source_complete
+        try:
+            if not all(dataset_source_complete(ref, len(rows)) and len(rows) == ref.row_count
+                       for ref, rows in references):
+                raise ValueError('计算输入不是完整数据集')
+            columns, rows = aligned_input(references)
+            operation = plan_dataset_followup(task.question, columns, rows, source_complete=True)
+            if operation is None:
+                raise ValueError('未能将计算要求映射为明确的受控数据操作')
+            scope = DatasetScope(tenant_id=identity.tenant_id, user_id=identity.user_id,
+                application_id=chat.application_id, conversation_id=chat.conversation_id,
+                authorized_semantic_scope_fingerprint=chat.authorized_semantic_scope.fingerprint())
+            source = references[0][0]
+            if len(references) > 1:
+                source = await asyncio.to_thread(self.dataset_store.save_dataset,
+                    scope=scope, columns=columns, rows=rows, snapshot_id='',
+                    data_as_of=datetime.fromisoformat(source.data_as_of), source_type='DERIVED_COMPUTATION',
+                    source_ref='/'.join(ref.dataset_id for ref, _ in references),
+                    semantic_model_id=chat.semantic_model_id,
+                    parent_dataset_ids=[ref.dataset_id for ref, _ in references],
+                    transformation_log=({'type':'inner_join','source_truncated':False},),
+                    ttl_seconds=self.settings.dataset_ttl_seconds)
+                await self.sessions.put_dataset_reference(source.to_dict(), recent_limit=self.settings.dataset_recent_limit)
+            result = await asyncio.to_thread(self.dataset_store.execute_followup, source,
+                current_scope=source.scope, operation=operation,
+                ttl_seconds=self.settings.dataset_ttl_seconds, preview_rows=20)
+            loaded = await asyncio.to_thread(self.dataset_store.load_dataset, result.reference,
+                current_scope=result.reference.scope)
+            if len(loaded.rows) != result.reference.row_count:
+                raise ValueError('计算结果与保存的全量数据不一致')
+            await self.sessions.put_dataset_reference(result.reference.to_dict(), recent_limit=self.settings.dataset_recent_limit)
+            chat._dag_deferred_insight = computation_material(task.question, result.reference, loaded.rows,
+                operation, self._markdown_result_table)
+            return AgentResponse(request_id=uuid4(), conversation_id=chat.conversation_id,
+                status='COMPLETED', intent=PrimaryIntent.CHAT, intent_source='TASK_DAG_COMPUTATION',
+                answer=chat._dag_deferred_insight['summary'], dataset_id=result.reference.dataset_id,
+                reliability=ReliabilityReport(level='HIGH', score=1,
+                    gates={'deterministic_computation':True,'full_result':True}),
+                evidence=[EvidenceItem(evidence_id='derived-computation', kind='ANALYSIS_RESULT',
+                    source_ref=result.reference.dataset_id, payload={'operation':operation,
+                    'row_count':len(loaded.rows),'preview':list(loaded.rows[:20])})])
+        except Exception as exc:
+            logger.warning('dataset computation not completed: %s', exc)
+            return self._pure_computation_unavailable(chat)
 
     async def _handle_task_plan(
         self,
@@ -2589,7 +2625,11 @@ class DataAnalysisOrchestrator:
                 not task.depends_on
                 and bool(re.match(r"\s*(?:再|那|那么|另外|还|加上|改成|换成)", task.question))
             )
-            requires_new_entity = self._dag_requires_new_entity(
+            pure_computation = bool(task.depends_on and "不再查询数据库" in task.question)
+            # A declared local computation consumes data, not a database
+            # entity query. Display aliases in predecessor prose cannot turn
+            # it into an enrichment branch before its operation is validated.
+            requires_new_entity = not pure_computation and self._dag_requires_new_entity(
                 task.question, dependency_responses
             )
             dependency_constraints: list[DependencyConstraint] = []
@@ -2704,7 +2744,7 @@ class DataAnalysisOrchestrator:
                     parameters=list(task.parameters),
                     structured=task.extraction,
                 )
-            if task.depends_on and "不再查询数据库" in task.question:
+            if pure_computation:
                 # 复合指标拆出的纯计算任务：不进查询链路，基于前序任务结果回复
                 child._dag_pure_computation = True
             if task.task_id in pure_computation_dependency_ids:

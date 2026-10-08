@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.config import Settings
 from app.observability.langfuse_client import trace_generation
 from app.domain.models import AtomicTask, PlannerExtraction, PrimaryIntent, TaskPlan
+from app.planning.calculation_targets import declared_calculation_targets
 
 
 # 不查业务库的意图：参数提取强制为空，与编排器展示守卫保持一致。
@@ -402,6 +403,8 @@ _SYSTEM_PROMPT = """你是数据智能体的业务任务理解与拆分器。只
 7. 排名后再查询入选对象的关系或明细，后一步消费前一步名单，属于DEPENDENT_TASKS。例如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”。普通的“查询并分析”不自动建立依赖。
 8. “对比今年和去年销售额”是一个比较目标，可作为SINGLE_TASK；“分别查询今年和去年销售额，并比较同比变化”明确要求两份查询结果和后续比较，应拆为两个并行查询加一个依赖二者的比较任务。
 9. 业务语义规范中指标层级为“复合口径指标”的指标（依赖多个原子指标计算，如区域医院覆盖率依赖已合作医院数和区域全部医院总数），不能作为一个查询任务直接执行，应拆为DEPENDENT_TASKS：每个依赖指标各一个并行查询任务（分母类指标按其口径只带区域条件、不带经销商等分组条件），最后增加一个依赖全部前序任务的计算任务；计算任务的问题写明“根据上述任务的查询结果计算×××，不再查询数据库”，primary_intent输出COMPARISON_ANALYSIS，extraction输出null。分析内容等文字描述中任务编号一律从任务1开始，depends_on字段仍按从0开始的下标输出。
+10. 用户需要订单平均金额/客单价而目录仅有含税销售总额和订单笔数时，拆成统计加纯计算：统计任务在同一份数据中按目标对象唯一编号查询含税销售总额、订单笔数，并完整保留用户要求的所属公司/厂家等展示字段及时间筛选，不提前按某个原子指标排序或截断；计算任务明确写出“含税销售总额除以订单笔数得到订单平均金额，按订单平均金额降序取前五名，不再查询数据库”（数量和方向按用户要求）。不能把订单行金额的平均值当作订单平均金额，不能只用文字完成计算。对于其他同粒度可计算指标同样保留完整输入和最终限制。
+11. “前N名销售人员以及所属公司”等同一对象的唯一关联属性，不是额外的分组目标，也不必拆成新的关系查询；把关联属性保留在统计任务的展示字段中，由授权目录验证N:1/1:1关系。只有多值关系或不同粒度的明细才另设依赖查询任务；任何用户要求返回的属性不得遗漏。
 
 子任务生成规则：
 1. 每个子任务必须是自然、完整、可独立理解和执行的业务问题。补全原句中对该任务生效的产品、地区、指标、时间、筛选、排序及排除条件，不保留只有“另一个、上述条件”等内容的空泛指代。依赖任务应写成“根据上一步返回的某对象名单/范围……”并同时写明业务对象和后续动作。
@@ -819,7 +822,8 @@ class MultiQuestionPlanner:
                 expected_output=(
                     item.expected_output.strip()
                     if item.expected_output and item.expected_output.strip()
-                    else None
+                    else (('、'.join(declared_calculation_targets(item.question)) or None)
+                          if '不再查询数据库' in item.question else None)
                 ),
                 parameters=extraction_to_parameters(structured),
                 extraction=structured,
@@ -1176,7 +1180,7 @@ class MultiQuestionPlanner:
             "ROOT_CAUSE": r"归因|原因|为什么|影响因素",
             "FORECAST": r"预测|预估|预计|推算",
             "DETAIL": r"明细|名单|逐笔|每一条|列表",
-            "RANK": r"前\d+|后\d+|最高|最低|排名|排序",
+            "RANK": r"(?:前|后)[\d一二三四五六七八九十百]+|最高|最低|排名|排序|降序|升序|从高到低|从低到高",
             "DEFINITION": r"口径|定义|公式|怎么算",
             "LINEAGE": r"血缘|来源表|来源字段|来自哪",
             "QUALITY": r"数据质量|缺失|重复|空值|对账|延迟",

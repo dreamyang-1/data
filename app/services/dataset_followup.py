@@ -128,9 +128,10 @@ def plan_dataset_followup(
         )
     ]
 
-    if "客单价" in compact:
-        sales_column = _single_matching_column(columns, ("销售额", "成交额", "实付金额"))
-        order_column = _single_matching_column(columns, ("订单量", "订单数"))
+    average_label = next((label for label in ('订单平均金额', '平均订单金额', '客单价') if label in compact), None)
+    if average_label:
+        sales_column = _single_matching_column(columns, ("含税销售总额", "销售额", "成交额", "实付金额"))
+        order_column = _single_matching_column(columns, ("订单笔数", "订单量", "订单数"))
         if sales_column is None or order_column is None:
             return None
         operations: list[dict[str, Any]] = [{
@@ -138,18 +139,17 @@ def plan_dataset_followup(
             "left_field": sales_column,
             "right_field": order_column,
             "operator": "divide",
-            "result_field": "客单价",
+            "result_field": average_label,
         }]
-        if any(word in compact for word in ("谁高", "最高", "最大")):
+        rank = re.search(r'(?:前|Top)(\d{1,5}|[一二三四五六七八九十]{1,3})', compact, re.I)
+        descending = any(word in compact for word in ("谁高", "最高", "最大", "降序", "从高到低"))
+        ascending = any(word in compact for word in ("谁低", "最低", "最小", "升序", "从低到高"))
+        if descending or ascending:
             operations.extend([
-                {"type": "sort", "field": "客单价", "descending": True},
-                {"type": "limit", "count": 1},
+                {"type": "sort", "field": average_label, "descending": descending},
             ])
-        elif any(word in compact for word in ("谁低", "最低", "最小")):
-            operations.extend([
-                {"type": "sort", "field": "客单价", "descending": False},
-                {"type": "limit", "count": 1},
-            ])
+            if rank or any(word in compact for word in ('最高', '最低', '最大', '最小', '谁高', '谁低')):
+                operations.append({'type':'limit','count':_ranking_count(rank.group(1)) if rank else 1})
         operation: dict[str, Any] = (
             operations[0]
             if len(operations) == 1
@@ -187,7 +187,7 @@ def plan_dataset_followup(
         })
 
     if (wants_maximum or wants_minimum) and extrema_target is not None:
-        explicit_count = re.search(r"(?:最高|最低|最大|最小)(\d{1,5}|[一二三四五六七八九十]{1,3})(?:名|条|个)", compact)
+        explicit_count = re.search(r"(?:前|top|最高|最低|最大|最小)(\d{1,5}|[一二三四五六七八九十]{1,3})(?:名|条|个|位)?", compact, re.I)
         return _with_sheet_filter(sheet_filter, {
             "type": "sort_limit",
             "field": extrema_target,

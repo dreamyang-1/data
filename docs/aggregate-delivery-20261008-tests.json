@@ -1,0 +1,96 @@
+{
+  "baseline": {
+    "source": "Recorded validated release at 6b75574",
+    "DataAnalysis_Agent": 4542,
+    "Oagnet": 1224,
+    "SQL_Translator": 604
+  },
+  "final": {
+    "DataAnalysis_Agent": 4567,
+    "Oagnet": 1228,
+    "SQL_Translator": 610,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "delta": {
+    "added": 35,
+    "old_pass_to_new_fail": 0,
+    "existing_assertions_changed": 0
+  },
+  "remote_candidate": {
+    "DataAnalysis_Agent": 337,
+    "Oagnet": 49,
+    "SQL_Translator": 610,
+    "SQL_subtests": 3
+  },
+  "live": {
+    "all_passed": true,
+    "cases": [
+      {
+        "question": "筛选出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+        "passed": true,
+        "rows": 5,
+        "company_present": true,
+        "independent_sql_equal": true,
+        "columns": [
+          "销售员姓名",
+          "业务员（编码）",
+          "国药公司名称",
+          "含税销售总额",
+          "订单笔数",
+          "订单平均金额"
+        ],
+        "attachment_checked": true
+      },
+      {
+        "question": "列出2025年订单平均金额最低的前三位销售人员及所属销售公司",
+        "passed": true,
+        "rows": 3,
+        "company_present": true,
+        "independent_sql_equal": true,
+        "columns": [
+          "销售员姓名",
+          "业务员（编码）",
+          "国药公司名称",
+          "含税销售总额",
+          "订单笔数",
+          "订单平均金额"
+        ],
+        "attachment_checked": true
+      },
+      {
+        "question": "筛选2025年含税销售总额最高的前五位销售人员及所属销售公司",
+        "passed": true,
+        "rows": 5,
+        "company_present": true,
+        "independent_sql_equal": true,
+        "columns": [
+          "排名",
+          "销售员姓名",
+          "含税销售总额",
+          "业务员（编码）",
+          "国药公司名称"
+        ],
+        "attachment_checked": false
+      },
+      {
+        "question": "查询2025年订单笔数最高的前四位销售人员，以及他们所在的销售公司",
+        "passed": true,
+        "rows": 4,
+        "company_present": true,
+        "independent_sql_equal": true,
+        "columns": [
+          "排名",
+          "销售员姓名",
+          "订单笔数",
+          "业务员（编码）",
+          "国药公司名称"
+        ],
+        "attachment_checked": false
+      }
+    ],
+    "failures": []
+  },
+  "known_blockers": [],
+  "qualification": "Validated bounded aggregate/display/ranking delivery; does not claim all possible natural-language inputs are supported. Unsupported or ambiguous calculations remain explicit failures. No semantic-store/index/RBAC/runtime-route changes."
+}

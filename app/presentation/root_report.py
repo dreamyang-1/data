@@ -119,6 +119,15 @@ def render_root_report(
     valid_selection = bool(requested) and all(item in available_ids for item in requested)
     if valid_selection:
         selected = [item for item in available if item["task_id"] in requested]
+        # A real computed deliverable supersedes its intermediate statistics.
+        # Optional model selection must not replace TopN with its raw input.
+        computed = [item for item in available if item.get('facts', {}).get('delivery_operation')]
+        for item in computed:
+            deps = set(item.get('depends_on', []))
+            if deps.intersection(value['task_id'] for value in selected):
+                selected = [value for value in selected if value['task_id'] not in deps]
+                if item not in selected:
+                    selected.append(item)
     else:
         # Use the actual dependency graph, not keywords or the last task index.
         # Only a successful downstream result supersedes its inputs. If the
