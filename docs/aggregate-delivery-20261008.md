@@ -47,6 +47,12 @@
 
 候选服务关键回归：DataAnalysis 337、SQL 610（另 3 个子测试）、Oagnet 49 通过。与上一版已记录基线相比新增 35 项测试：DataAnalysis 25、Oagnet 4、SQL 6；未发现旧通过变为失败。
 
-三个服务待按已授权流程部署重启，部署后另行记录进程变化和健康检查。
+三个服务已部署并重启，健康检查均为 HTTP 200：SQL `ok`、Oagnet `healthy=true/backend=milvus`、DataAnalysis `READY`。进程已变化：SQL 635684 → 1019541，Oagnet 3178304 → 1019502，DataAnalysis 876440 → 1019542。
+
+代码提交并已推送现有功能分支：Oagnet `5e4724b`、SQL Translator `cc073f9`、DataAnalysis `5cc7050`；既有 Draft PR #85 保持打开，未自动合并。
+
+发布批次 `aggregate-delivery-20261008-094222`。部署前再次核对远程基线，逐个备份 11 个运行文件；替换及重启后清单以外源码、配置哈希均保持不变。正式模式仍为 `V2_CONTEXT_V1_EXECUTION`，没有切流。
+
+部署后逐个核对正式安装文件哈希，再通过正式 Agent/SQL 接口重新执行原问题：返回 5 位销售人员、公司、实际订单平均金额，排名与独立 SQL 一致；正式返回附件的数据区也逐行一致。生产冒烟通过。
 
 Current Stage：V1 有界排名/计算交付修复；不开展 V2 切流，不作全系统上线就绪声明。
