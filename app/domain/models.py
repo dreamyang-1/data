@@ -1311,7 +1311,7 @@ class ChartSpec(StrictModel):
     """Stable, renderer-neutral visualization contract for web clients."""
 
     schema_version: str = "1.0"
-    chart_type: Literal["LINE", "BAR", "PIE", "SCATTER", "TABLE"]
+    chart_type: Literal["LINE", "BAR", "PIE", "SCATTER", "TABLE", "TREE"]
     title: str = Field(min_length=1, max_length=200)
     x_field: str | None = None
     y_fields: list[str] = Field(default_factory=list, max_length=10)

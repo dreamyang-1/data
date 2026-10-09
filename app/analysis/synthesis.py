@@ -84,6 +84,15 @@ COMBINED_ADDENDUM = """本次调用面向一个完整用户目标，而不是分
 - 输出必须同时包含 claims 和 final_answer，示例结构：{"claims":[{"statement":"整体分析正文"}],"final_answer":{"overview":"回答补全后的问题","findings":[],"tips":[],"result_task_ids":["最终交付结果的任务ID"],"result_titles":{"最终交付结果的任务ID":"概括用户在这份结果中要求返回的内容"}}}。分子、分母等中间取数只作为依据，用户只问计算后的指标时，不选中这些中间表；只有用户明确同时索要中间指标时才另选。不得将不同经销商的去重医院数相加，声称是合并后的去重医院覆盖数。
 """
 
+FINAL_SUMMARY_ADDENDUM = """
+同时提供 final_answer.overview，作为最终输出的简短总结：以 completed_question
+为准，结合本轮实际查询和计算数据，用1至3句话（通常不超过200字）直接回答用户。
+不要只写“查询成功”“见表格”，不要复述工具过程或整份详细分析。保留必要的对象、
+时间、指标和范围；预览、缺失结果、零结果与执行失败必须区分，不猜原因或补造数字。
+用户要求的图型交给程序依据真实结果绘制，摘要不输出图片、表格或下载链接。
+该摘要与 claims 详细分析分别输出；不存在可用数据时如实说明，不能编造成功结论。
+"""
+
 # Adapt the context-driven method from NL_Agent/node/step3_Planner_and_execute.py
 # and step5_output.py. Do not import their query, clarification or tool workflows.
 SENIOR_ANALYSIS_EXPERT_PROMPT = """
@@ -145,7 +154,7 @@ class QwenAnalysisSynthesizer:
             "\n智能体用户设定（平台配置，仅用于表达风格，分析事实仍以本轮问题和数据为准）：\n" + agent_prompt.strip()
             if agent_prompt.strip() else ""
         )
-        system = SYSTEM_PROMPT + SENIOR_ANALYSIS_EXPERT_PROMPT + agent_section
+        system = SYSTEM_PROMPT + SENIOR_ANALYSIS_EXPERT_PROMPT + FINAL_SUMMARY_ADDENDUM + agent_section
         return await self._generate(
             system, prompt_input, name="analysis-synthesis", source_ids=set(sources),
         )
@@ -171,7 +180,7 @@ class QwenAnalysisSynthesizer:
             "\n智能体用户设定（平台配置，仅用于表达风格，分析事实仍以本轮问题和数据为准）：\n" + agent_prompt.strip()
             if agent_prompt.strip() else ""
         )
-        system = SYSTEM_PROMPT + COMBINED_ADDENDUM + SENIOR_ANALYSIS_EXPERT_PROMPT + agent_section
+        system = SYSTEM_PROMPT + COMBINED_ADDENDUM + SENIOR_ANALYSIS_EXPERT_PROMPT + FINAL_SUMMARY_ADDENDUM + agent_section
         return await self._generate(
             system, prompt_input, name="analysis-synthesis-combined", source_ids=set(),
         )
