@@ -412,6 +412,17 @@ def _semantic_filter_field_matches(field_name: str | None, metadata: dict[str, A
     """
     if not field_name:
         return True
+    if '.' in field_name:
+        hint = field_name.strip()
+        physical = {str(metadata.get(key) or '').strip() for key in ('source_field', 'field_mapping')}
+        if any(hint.casefold() == field.casefold() for field in physical if field):
+            return True
+        parent, _, attribute = hint.rpartition('.')
+        parents = {str(metadata.get(key) or '').strip().casefold()
+                   for key in ('entity_code', 'entity_name', 'parent', 'parent_name')}
+        parents.update(term.casefold() for term in _semantic_term_values(metadata.get('entity_alias')))
+        attributes = {str(metadata.get(key) or '').strip().casefold() for key in ('attr_name', 'attr_code')}
+        return parent.casefold() in parents and attribute.casefold() in attributes
     expected = _semantic_display_key(field_name)
     terms = {
         _semantic_display_key(metadata.get(key))
@@ -475,6 +486,7 @@ def semantic_display_elements_resolve(
         input_key = _semantic_display_key(candidate.value)
         exact: list[SemanticDisplayMatch] = []
         exact_specificity: list[int] = []
+        exact_identities: list[tuple[str, str, str]] = []
         for result in results:
             metadata = result.metadata or {}
             try:
@@ -552,25 +564,33 @@ def semantic_display_elements_resolve(
                 score=max(0.0, min(1.0, float(result.score))),
             ))
             exact_specificity.append(match_specificity)
+            # Parent display names may be absent or homonymous. Keep the
+            # registered parent and physical attribute identity internally;
+            # do not collapse two entities/fields solely by their labels.
+            exact_identities.append((
+                str(metadata.get('entity_code') or metadata.get('parent') or metadata.get('entity_id') or ''),
+                str(metadata.get('attribute_id') or metadata.get('attr_code') or ''),
+                str(metadata.get('source_field') or metadata.get('field_mapping') or ''),
+            ))
         if candidate.slot == "metric" and exact_specificity:
             # A shorter alias can be nested inside the intended compound
             # metric (for example ``医院覆盖`` inside ``区域医院覆盖率``).
             # Keep only the longest registered lexical proof before applying
             # the ordinary multi-canonical ambiguity gate.
             strongest = max(exact_specificity)
-            exact = [
-                item
-                for item, specificity in zip(exact, exact_specificity)
-                if specificity == strongest
-            ]
+            kept = [(item, identity) for item, identity, specificity in zip(exact, exact_identities, exact_specificity)
+                    if specificity == strongest]
+            exact = [item for item, _ in kept]
+            exact_identities = [identity for _, identity in kept]
         canonical_keys = {
             (
                 item.canonical_code or "",
                 item.canonical_name,
                 item.canonical_value or "",
                 item.parent_name or "",
+                identity if candidate.slot in {'field', 'filter'} else (),
             )
-            for item in exact
+            for item, identity in zip(exact, exact_identities)
         }
         # Multiple canonical records for one surface form are ambiguous. They
         # are intentionally omitted here and handled by the clarification path.

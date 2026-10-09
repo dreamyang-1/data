@@ -17,12 +17,30 @@ def normalized(value):
     return re.sub(r'\s+', '', unicodedata.normalize('NFKC', str(value or ''))).casefold()
 
 
+def registered_terms(value):
+    """Flatten published aliases only; never derive terms from descriptions."""
+    value = decoded(value)
+    if isinstance(value, str):
+        return [term.strip() for term in re.split('[,，;；、]', value) if term.strip()]
+    if isinstance(value, (list, tuple, set)):
+        return [term for item in value for term in registered_terms(item)]
+    return []
+
+
 def entity_terms(code, meta):
-    aliases = decoded(meta.get('entity_alias')) or []
-    if isinstance(aliases, str):
-        aliases = re.split('[,，;；]', aliases)
     return [code, meta.get('entity_name'), str(meta.get('entity_id') or ''),
-            *(aliases if isinstance(aliases, list) else [])]
+            *registered_terms(meta.get('entity_alias'))]
+
+
+def entity_label_candidates(label, entities):
+    if not isinstance(label, (str, int)) or isinstance(label, bool) or not normalized(label):
+        return set()
+    term = normalized(label)
+    codes = {code for code, meta in entities.items()
+             if term in {normalized(code), normalized(meta.get('entity_id'))}}
+    names = {code for code, meta in entities.items() if term == normalized(meta.get('entity_name'))}
+    return codes or names or {code for code, meta in entities.items()
+        if term in {normalized(alias) for alias in registered_terms(meta.get('entity_alias'))}}
 
 
 def resolve_entities(label, entities):
@@ -35,10 +53,7 @@ def resolve_entities(label, entities):
         term = normalized(value)
         if not term:
             return set()
-        exact = {code for code, meta in entities.items()
-                 if term in {normalized(code), normalized(meta.get('entity_id'))}}
-        matches = exact or {code for code, meta in entities.items()
-                            if term in {normalized(v) for v in entity_terms(code, meta) if v}}
+        matches = entity_label_candidates(value, entities)
         if len(matches) != 1:
             return set()
         owners.update(matches)
@@ -57,7 +72,7 @@ def parameter_owners(original, catalog):
     return resolve_entities(original['entity'], catalog['entities'])
 
 
-def matching_fields(original, catalog):
+def matching_fields(original, catalog, *, aliases=True):
     label = original.get('name') or original.get('field') if isinstance(original, dict) else original
     if not isinstance(label, str):
         return []
@@ -65,11 +80,15 @@ def matching_fields(original, catalog):
     for field, meta in catalog['fields'].items():
         terms = [field]
         for attr in meta.get('attribute_bindings') or [meta]:
-            terms.extend([attr.get('attr_code'), attr.get('attr_name')])
+            labels = [attr.get('attr_name'),
+                      *(registered_terms(attr.get('synonyms')) if aliases else [])]
+            terms.extend([attr.get('attr_code'), *labels])
             for owner in field_owners(attr):
                 for entity in entity_terms(owner, catalog['entities'].get(owner, {})):
-                    if entity and attr.get('attr_name'):
-                        terms.extend([str(entity) + str(attr['attr_name']), str(entity) + '.' + str(attr['attr_name'])])
+                    if entity and entity_label_candidates(entity, catalog['entities']) == {owner}:
+                        for name in labels:
+                            if name:
+                                terms.extend([str(entity) + str(name), str(entity) + '.' + str(name)])
         if normalized(label) in {normalized(term) for term in terms if term}:
             matched.append(field)
     return matched
@@ -86,18 +105,22 @@ def parameter_catalog(catalog, original, extraction, target):
     if target == 'metrics':
         return catalog
     owners = parameter_owners(original, catalog)
-    exact = matching_fields(original, catalog)
-    if not owners and not exact and target in {'filters', 'display_fields'} and isinstance(original, dict):
+    exact = (matching_fields(original, catalog, aliases=False)
+             or matching_fields(original, catalog))
+    if (isinstance(original, dict) and original.get('entity') and not owners
+            and entity_label_candidates(original.get('field') or original.get('name'), catalog['entities'])):
+        # Do not silently substitute the label's entity for a contradictory,
+        # unresolved explicit owner. Legacy field-only grounding is unchanged.
+        candidates = entity_label_candidates(original['entity'], catalog['entities'])
+        return dict(catalog, _parameter_owner_error='指定实体未在当前授权目录中唯一匹配',
+                    _parameter_owner_candidates=sorted(candidates))
+    if not owners and not exact:
         # A whole entity name/alias used as a slot label supplies its parent,
         # not an arbitrary same-named attribute on another entity. Explicit
         # attribute names and explicit slot owners retain their old priority.
-        label = normalized(original.get('field') or original.get('name') or '')
+        label = (original.get('field') or original.get('name')) if isinstance(original, dict) else original
         if label:
-            entities = catalog['entities']
-            canonical = {code for code, meta in entities.items()
-                         if label in {normalized(code), normalized(meta.get('entity_id'))}}
-            matches = canonical or {code for code, meta in entities.items()
-                if label in {normalized(term) for term in entity_terms(code, meta) if term}}
+            matches = entity_label_candidates(label, catalog['entities'])
             if len(matches) > 1:
                 return dict(catalog, _parameter_owner_candidates=sorted(matches))
             owners = matches
