@@ -43,6 +43,13 @@ def test_planner_sanitization_does_not_drop_owners():
     assert '条件归属' in extraction_parser_prompt()
 
 
+def test_planner_final_role_guidance_keeps_names_separate_from_foreign_keys():
+    from app.planning.task_dag import _EXTRACTION_ROLE_GUIDANCE
+    assert '上海市各经销商→entity=经销商' in _EXTRACTION_ROLE_GUIDANCE
+    assert '上海医院按经销商汇总→entity=医院' in _EXTRACTION_ROLE_GUIDANCE
+    assert '不能因为目录只在医院/经销商下列出“关联省份ID”' in _EXTRACTION_ROLE_GUIDANCE
+
+
 @pytest.mark.parametrize('owner', ['医院','经销商'])
 def test_execution_entry_point_keeps_explicit_owner_over_legacy_region_role(owner):
     req = request([{'field':'业务城市','operator':'EQ','value':'上海市'}])
