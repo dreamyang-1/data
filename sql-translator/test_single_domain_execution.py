@@ -3,6 +3,7 @@ import copy
 import io
 import json
 import sqlite3
+from threading import RLock
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -30,6 +31,7 @@ def catalog_db():
         'entity_bind_indicator': 'entity_code TEXT, indicator_code TEXT, indicator_logic TEXT',
         'table': 'id INTEGER, name TEXT, data_source_id INTEGER, description TEXT, comment TEXT',
         'field': 'id INTEGER, table_id INTEGER, name TEXT, type TEXT, null_flag INTEGER, description TEXT, comment TEXT',
+        'data_source': 'id INTEGER, name TEXT',
     }
     for name, columns in schemas.items():
         domain_column='' if name=='dimension' else 'business_domain_id INTEGER,'
@@ -45,6 +47,7 @@ def catalog_db():
         put('dimension',semantic_model_id=model,id=source,dim_code=code+'_date',dim_name=code+' date',dim_type='time',update_time='2026-09-08',entity_attribute=json.dumps([{'entity':code,'mappingTable':code,'mappingColumn':'created_at'}]))
         put('table',**common,id=source,name=code,data_source_id=source)
         put('field',**common,id=source,table_id=source,name='created_at',type='DATETIME')
+        put('data_source',**common,id=source,name='offline')
     put('relation_config',semantic_model_id=81,business_domain_id=205,code='bad_join',type='N:1',source_entity_type_id='sales',target_entity_type_id='inventory',source_table_column_name='sales-id',target_table_column_name='inventory-id',status=1)
     yield db
     db.close()
@@ -53,9 +56,13 @@ def catalog_db():
 @pytest.fixture
 def backend(catalog_db, monkeypatch):
     sql_reads=[]
+    # One SQLite fixture connection is shared by concurrency tests. Serialize
+    # its C/Python JSON callbacks; production uses one MySQL connection per read.
+    db_lock=RLock()
     def query(self, sql, params=()):
-        sql_reads.append((sql,params))
-        return [dict(r) for r in catalog_db.execute(sql.replace('%s','?'),params)]
+        with db_lock:
+            sql_reads.append((sql,params))
+            return [dict(r) for r in catalog_db.execute(sql.replace('%s','?'),params)]
     monkeypatch.setattr(SemanticCatalog,'_query',query)
     base=SQLTranslatorProd()
     payloads={}
@@ -108,7 +115,7 @@ def test_actual_single_domain_translation_and_execution(backend):
     assert plan['authorized_scope_fingerprint']==scope.evidence()['authorized_scope_fingerprint']
     status,result=request_api('_handle_execute',dict(payload,sql=plan['sql'],dataSourceId=plan['dataSourceId']))
     assert status==200 and result['success'],result
-    assert len(executed)==1 and executed[0][1]=='10'
+    assert len(executed)==1 and str(executed[0][1])=='10'
     assert result['business_domain_ids']==[205]
     assert base.loader._metric_cache=={} and base.loader._entity_cache=={}
     assert all('business_domain_id=205' in sql for sql,_ in queries)
@@ -176,11 +183,11 @@ def test_unknown_catalog_table_fails_closed(backend):
 
 @pytest.mark.parametrize('domain',[None,-1,206])
 @pytest.mark.parametrize('kind',['entity','metric'])
-def test_cache_payload_without_exact_domain_is_not_admitted(backend,domain,kind):
+def test_database_record_without_exact_domain_is_not_admitted(backend,catalog_db,domain,kind):
     base,_,_=backend
     code={'entity':'sales','metric':'sales_amount','dimension':'sales_date'}[kind]
-    key=f'semantic_model:81:{kind}:{code}'
-    base.loader.redis.payloads[key]['business_domain_id']=domain
+    table,field = ('entity_type','code') if kind=='entity' else ('indicator','indicator_code')
+    catalog_db.execute(f'UPDATE semantic_model_{table} SET business_domain_id=? WHERE {field}=?',(domain,code))
     loader=ScopedLoader(grant(),base.loader)
     assert getattr(loader,'get_'+kind)(code,'81') is None
 
@@ -192,17 +199,18 @@ def test_request_local_indexes_survive_interleaved_domains(backend):
         for _ in range(5):
             assert loader.get_entity(code,'81')
             assert loader._find_entity_code_by_id('inventory' if domain==205 else 'sales','81') is None
+        loader._build_table_index('81')
         return set(loader._entity_id_to_code)
     with ThreadPoolExecutor(max_workers=2) as pool:
         a=pool.submit(run,205,'sales');b=pool.submit(run,206,'inventory')
         assert a.result()=={'sales'} and b.result()=={'inventory'}
 
 
-def test_republish_between_translation_and_execution_invalidates_plan(backend):
+def test_republish_between_translation_and_execution_invalidates_plan(backend,catalog_db):
     base,_,executed=backend
     first=ScopedTranslator(grant(),base).translate_only(asl(),'81')
     assert first['success'],first
-    base.loader.redis.payloads['semantic_model:81:metric:sales_amount']['business_domain_id']='206'
+    catalog_db.execute('UPDATE semantic_model_indicator SET business_domain_id=206 WHERE indicator_code=?',('sales_amount',))
     result=ScopedTranslator(grant(),base).execute_scoped(asl(),first['sql'],'81','10')
     assert result['success'] is False and executed==[]
 
@@ -254,8 +262,6 @@ def test_explicit_plan_rejects_more_than_one_physical_source(backend,catalog_db)
     base,_,executed=backend
     catalog_db.execute('UPDATE semantic_model_indicator SET business_domain_id=205 WHERE indicator_code=?',('inventory_amount',))
     catalog_db.execute('UPDATE semantic_model_entity_type SET business_domain_id=205 WHERE code=?',('inventory',))
-    base.loader.redis.payloads['semantic_model:81:entity:inventory']['business_domain_id']='205'
-    base.loader.redis.payloads['semantic_model:81:metric:inventory_amount']['business_domain_id']='205'
     body=json.loads(asl());body['metrics'].append({'name':'inventory_amount'})
     result=ScopedTranslator(grant(),base).execute_query(json.dumps(body),'81')
     assert result['code']=='DATA_SOURCE_SCOPE_MISMATCH' and not executed
@@ -285,9 +291,6 @@ def test_subjectless_detail_plan_still_rejects_cross_source_fields(
         'UPDATE semantic_model_entity_type SET business_domain_id=205 WHERE code=?',
         ('inventory',),
     )
-    base.loader.redis.payloads[
-        'semantic_model:81:entity:inventory'
-    ]['business_domain_id'] = '205'
     body = {
         'subject': {'entity': None},
         'metrics': [],
@@ -312,12 +315,12 @@ def test_asl_scope_claim_cannot_override_current_request(backend,claim):
     assert not result['success'] and not backend[2]
 
 
-def test_missing_planned_data_source_does_not_scan_for_substitute(backend):
-    base,_,executed=backend
-    del base.loader.redis.payloads['semantic_model:data_source:10']
+def test_missing_planned_data_source_does_not_scan_for_substitute(backend,catalog_db):
+    base,reads,executed=backend
+    catalog_db.execute('DELETE FROM semantic_model_data_source WHERE id=10')
     result=ScopedTranslator(grant(),base).execute_query(asl(),'81')
     assert not result['success'] and not executed
-    assert 'semantic_model:data_source:*' not in base.loader.redis.scans
+    assert any('semantic_model_data_source' in sql and 'id=%s' in sql for sql,_ in reads)
 
 
 @pytest.mark.parametrize('operation',['group','filter','time','detail'])
