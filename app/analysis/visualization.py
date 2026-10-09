@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import re
 import unicodedata
+from collections import Counter
 from decimal import Decimal, InvalidOperation
 from typing import Any, Mapping
 from xml.sax.saxutils import escape
@@ -135,8 +136,11 @@ def requested_chart_specs(
             if kind == 'LINE' and len({(str(row.get(axis)), str(row.get(series)) if series else '') for row in plotted}) != len(plotted):
                 notes.append(f'{metric}的时间/系列键重复，未把不同记录连接成一条折线。')
                 continue
-            specs.extend(_one(kind, axis, metric, plotted, f'{metric}{next(word for word, code in _REQUESTED_CHARTS.items() if code == kind)}',
-                horizontal=kind == 'BAR' and '条形图' in text, series_field=series))
+            generated = _one(kind, axis, metric, plotted, f'{metric}{next(word for word, code in _REQUESTED_CHARTS.items() if code == kind)}',
+                horizontal=kind == 'BAR' and '条形图' in text, series_field=series)
+            specs.extend(generated)
+            if not generated and kind in {'BAR', 'PIE'}:
+                notes.append('图表类别存在重复且缺少可唯一对应的编码，已保留表格，未合并或累加数值。')
     if any(spec.data_truncated for spec in specs):
         notes.append(f'图表仅绘制前{MAX_CHART_POINTS}条返回记录，校验与分析仍使用全部可用数据。')
     if len(specs) > 3:
@@ -294,10 +298,13 @@ def render_chart_svg(
             or is_identifier_column(y_fields[0])
             or (chart_type == "SCATTER" and is_identifier_column(x_field))):
         return None
+    if chart_type in {'BAR', 'PIE'} and len({str(row.get(x_field, '')).strip() for row in rows}) != len(rows):
+        return None  # Never overlap or aggregate unresolved categories.
 
     width = max(640, min(int(width), 1600))
     height = max(360, min(int(height), 1000))
-    horizontal = bool(raw.get("horizontal")) or (chart_type == "BAR" and len(rows) > 12)
+    horizontal = bool(raw.get("horizontal")) or (chart_type == "BAR" and (
+        len(rows) > 12 or any(len(str(row.get(x_field, ''))) > 14 for row in rows)))
     if chart_type == "BAR" and horizontal:
         height = max(height, min(len(rows), MAX_CHART_POINTS) * 28 + 110)
     if chart_type == "PIE":
@@ -428,6 +435,30 @@ def _value_text(x: float, y: float, value: str, *, anchor: str = "middle") -> st
         'paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">'
         f'{escape(value)}</text>'
     )
+
+
+def _bar_value_label(metric: str, value: Any, exact: str | None = None) -> str:
+    """Abbreviate large monetary labels only; data and hover text stay exact."""
+    if re.search(r'金额|销售额|总额|费用|成本|收入|利润|amount|revenue|cost|profit', metric, re.I):
+        number = _decimal_number(value)
+        if number is not None and abs(number) >= 10_000:
+            divisor, suffix = (Decimal(100_000_000), '亿') if abs(number) >= 100_000_000 else (Decimal(10_000), '万')
+            return f'{number / divisor:,.2f}{suffix}'
+    return exact if exact is not None else _value_label(value)
+
+
+def requires_local_bar_format(spec: Mapping[str, Any]) -> bool:
+    """The external tool has no guaranteed exact-hover/compact-label option."""
+    metrics = spec.get('y_fields') or []
+    return bool(spec.get('chart_type') == 'BAR' and spec.get('horizontal') and len(metrics) == 1
+                and any(_bar_value_label(metrics[0], row.get(metrics[0])) != _value_label(row.get(metrics[0]))
+                        for row in spec.get('data') or []))
+
+
+def _bar_category_label(label: str) -> str:
+    # Keep identity suffixes visible even when the business name is shortened.
+    name, marker, code = label.rpartition('（编码：')
+    return _short_label(name, 16) + marker + code if marker else _short_label(label, 24)
 
 
 def _chart_bounds(values: list[float], *, include_zero: bool = False) -> tuple[float, float]:
@@ -563,7 +594,7 @@ def _render_bars(
     if not values:
         return None
     if horizontal:
-        return _render_horizontal_bars(values, width, height)
+        return _render_horizontal_bars(values, width, height, metric=y_field)
 
     left, right, top, bottom = 70.0, width - 28.0, 62.0, height - 92.0
     plot_width, plot_height = right - left, bottom - top
@@ -594,7 +625,7 @@ def _render_bars(
             f'rx="3" fill="{color}"><title>{escape(label)}：{escape(text)}</title></rect>'
         )
         label_y = max(top + 12, scale(value) - 8) if value >= 0 else min(bottom - 2, scale(value) + 16)
-        parts.append(_value_text(x + bar_width / 2, label_y, text))
+        parts.append(_value_text(x + bar_width / 2, label_y, _bar_value_label(y_field, value, text)))
         if index % label_step == 0 or index == len(values) - 1:
             parts.append(
                 f'<text x="{x + bar_width / 2:.1f}" y="{bottom + 22:.1f}" text-anchor="middle" '
@@ -605,9 +636,11 @@ def _render_bars(
 
 
 def _render_horizontal_bars(
-    values: list[tuple[str, float, str]], width: int, height: int
+    values: list[tuple[str, float, str]], width: int, height: int, *, metric: str = ''
 ) -> str:
-    left, right, top, bottom = 190.0, width - 110.0, 62.0, height - 38.0
+    label_units = max(sum(2 if unicodedata.east_asian_width(char) in {'W', 'F'} else 1
+                          for char in _bar_category_label(label)) for label, _, _ in values)
+    left, right, top, bottom = min(width * .55, max(190.0, label_units * 6 + 24)), width - 110.0, 62.0, height - 38.0
     plot_width, plot_height = right - left, bottom - top
     low, high = _chart_bounds([value for _, value, _ in values], include_zero=True)
     scale = lambda value: left + (value - low) / (high - low) * plot_width
@@ -623,13 +656,13 @@ def _render_horizontal_bars(
         parts.append(
             f'<text x="{left - 10:.1f}" y="{y + bar_height * .72:.1f}" text-anchor="end" '
             'font-family="Microsoft YaHei, sans-serif" font-size="11" fill="#4b5563">'
-            f'{escape(_short_label(label, 18))}</text>'
+            f'{escape(_bar_category_label(label))}<title>{escape(label)}</title></text>'
             f'<rect x="{x:.1f}" y="{y:.1f}" width="{bar_width:.1f}" height="{bar_height:.1f}" '
             f'rx="3" fill="{color}"><title>{escape(label)}：{escape(text)}</title></rect>'
         )
         # Values sit inside negative bars to avoid colliding with category names.
         label_x = scale(value) + 6
-        parts.append(_value_text(label_x, y + bar_height * .72, text, anchor="start"))
+        parts.append(_value_text(label_x, y + bar_height * .72, _bar_value_label(metric, value, text), anchor="start"))
     return "".join(parts)
 
 
@@ -712,6 +745,10 @@ def _one(
 ) -> list[ChartSpec]:
     if not label or not metric:
         return []
+    if chart_type in {'BAR', 'PIE'}:
+        rows = _distinct_category_rows(label, rows)
+        if rows is None:
+            return []
     selected_fields = [label, metric]
     if series_field and series_field not in selected_fields:
         selected_fields.append(series_field)
@@ -728,9 +765,41 @@ def _one(
         data=selected,
         point_count=len(selected),
         data_truncated=len(rows) > MAX_CHART_POINTS,
-        horizontal=horizontal or (chart_type == "BAR" and len(selected) > 12),
+        horizontal=horizontal or (chart_type == "BAR" and (len(selected) > 12
+            or any(len(str(row.get(label, ''))) > 14 for row in selected))),
         reason="依据分析意图和字段类型自动选择的确定性图表",
     )]
+
+
+def _category_stem(column: str) -> str:
+    name = unicodedata.normalize('NFKC', column).strip().lower()
+    return re.sub(r'[._\s()]*(?:名称|名字|编码|编号|代码|标识|主键|name|code|id|key)[()]?$', '', name)
+
+
+def _distinct_category_rows(label: str, rows: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
+    """Disambiguate display labels using the corresponding returned identity.
+
+    This is a chart projection, not entity binding or a replacement for SQL
+    grouping. Never sum values, infer identities, or use an unrelated code.
+    """
+    categories = [str(row.get(label, '')).strip() for row in rows]
+    repeated = {category for category, count in Counter(categories).items() if count > 1}
+    if not repeated:
+        return rows
+    candidates = [column for column in rows[0]
+                  if is_identifier_column(column) and _category_stem(column) == _category_stem(label)]
+    usable = []
+    for column in candidates:
+        identities = [str(row.get(column)).strip() if row.get(column) is not None else '' for row in rows]
+        if any(not identity for category, identity in zip(categories, identities) if category in repeated):
+            continue
+        labels = [f'{category}（编码：{identity}）' if category in repeated else category
+                  for category, identity in zip(categories, identities)]
+        if len(set(labels)) == len(labels):
+            usable.append(labels)
+    if len(usable) != 1:
+        return None
+    return [{**row, label: category} for row, category in zip(rows, usable[0])]
 
 
 def _first_numeric_column(
