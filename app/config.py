@@ -161,10 +161,10 @@ class Settings(BaseSettings):
     # service that translates/executes ASL; keep one platform dependency rather
     # than pointing metadata intents at a non-existent standalone service.
     semantic_base_url: str = "http://192.168.1.49:48000"
-    # 语义模型发布后生成的语义描述文件服务，按模型ID提供 semantic_model_{id}.md
+    # 平台 semantic_model.semantic_desc_file_url 的可信下载源；不再按ID拼接文件名。
     semantic_description_base_url: str = "http://192.168.1.49:8012"
     semantic_description_timeout_seconds: float = Field(default=3.0, gt=0, le=15)
-    semantic_description_cache_ttl_seconds: int = Field(default=30, ge=0, le=3600)
+    semantic_description_max_bytes: int = Field(default=1024 * 1024, ge=1024, le=8 * 1024 * 1024)
     policy_base_url: str = "http://localhost:8102"
     policy_authorize_path: str = "/v1/authorize"
     analysis_base_url: str = "http://localhost:8104"

@@ -11,20 +11,24 @@ from app.adapters.asl_notices import binding_notices
 
 
 def test_user_prompt_contains_entire_maintained_description():
-    source = Path(__file__).resolve().parents[1] / "语义描述文件.md"
-    description = source.read_text(encoding="utf-8-sig").strip()
-    prompt = task_dag.extraction_user_prompt("查询商品销售额")
-    assert description in prompt
-    assert prompt.endswith("【本次补全后的问题】\n查询商品销售额")
+    # STALE_TEST: 平台文件替代本地文件，不再使用已移除的 user_prompt 旧入口。
+    assert not (Path(__file__).resolve().parents[1] / "语义描述文件.md").exists()
+    assert task_dag.extraction_embedded_spec() == ""
+    assert "输出字段与定义" in task_dag.extraction_parser_prompt()
 
 
 def test_missing_optional_description_preserves_question(monkeypatch, tmp_path):
-    monkeypatch.setattr(task_dag, "_USER_SEMANTIC_DESCRIPTION_PATH", tmp_path / "absent.md")
-    assert task_dag.extraction_user_prompt("查询销售额") == "查询销售额"
+    assert task_dag.extraction_embedded_spec() == ""
 
 
 @pytest.mark.asyncio
-async def test_real_model_request_uses_user_description_and_keeps_roles_distinct():
+async def test_real_model_request_uses_user_description_and_keeps_roles_distinct(monkeypatch):
+    from app.domain import semantic_description as sd
+    async def load(settings, model_id):
+        assert model_id == 121
+        return {"source": "semantic_model_121.md", "available": True,
+                "content": "# 当前平台文件\n商品科室关联\n## 四、常见问题映射示例"}
+    monkeypatch.setattr(sd, "load_semantic_description", load)
     captured = {}
     async def handler(request):
         captured.update(json.loads(request.content))
@@ -39,14 +43,16 @@ async def test_real_model_request_uses_user_description_and_keeps_roles_distinct
         _env_file=None, env="test", intent_model_api_key=SecretStr("fixture-key"),
         multi_question_model_enabled=True,
     ), transport=httpx.MockTransport(handler))
-    outcome = await planner.plan("查询万益特或贝朗的商品销售额", semantic_context="# 业务语义规范\n调用方补充")
+    outcome = await planner.plan("查询万益特或贝朗的商品销售额", semantic_model_id=121,
+                                 semantic_context="# 业务语义规范\n调用方补充")
     system, user = captured["messages"]
-    assert "调用方补充" in system["content"]
+    assert "当前平台文件" in system["content"] and "调用方补充" not in system["content"]
     assert "实体表示本次查询涉及" in system["content"]
     assert "不能拆成同时满足的多个等号" in system["content"]
     assert user["role"] == "user"
-    assert "商品科室关联" in user["content"]
-    assert "## 四、常见问题映射示例" in user["content"]  # no truncation
+    assert "商品科室关联" in system["content"]
+    assert "## 四、常见问题映射示例" in system["content"]  # no truncation
+    assert user["content"] == "查询万益特或贝朗的商品销售额"
     mentions = task_dag.parse_parameter_mentions(list(outcome.single_parameters))
     assert {"text": "商品", "role_hint": "实体"} in mentions
     assert {"text": "含税销售总额", "role_hint": "指标"} in mentions
