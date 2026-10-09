@@ -64,6 +64,9 @@ from app.adapters.semantic_query import CompositeSemanticQueryTool
 # single evidence-enriched semantic re-plan for the explicitly whitelisted
 # repairable subset.
 _NON_RETRYABLE_UPSTREAM_CODES = frozenset({
+    "ASL_BINDING_AUTH_FAILED",
+    "ASL_BINDING_RESPONSE_INVALID",
+    "ASL_BINDING_FAILED",
     "ASL_ENTITY_MENTION_UNRESOLVED",
     "ASL_FILTER_INVALID",
     "ASL_REQUIRED_FILTER_MISSING",
