@@ -135,3 +135,28 @@ def test_full_binding_keeps_name_catalog_then_resolves_declared_hospital_owner()
     result,_,calls,_=resolve(extraction,ast=ast,knowledge=k)
     assert not calls and not result['ambiguity']
     assert result['filters']==[{'field':'hospital.province_id','operator':'=','value':'001'}]
+
+
+def test_explicit_foreign_key_name_uses_only_its_own_dictionary_edge():
+    from structured_binding import catalog_candidates as build_catalog, _vector_correct_filter
+    from binding_ownership import parameter_catalog
+    k = catalog()
+    k['entities'][0].metadata['attributes'][0]['attr_name'] = '关联省份ID'
+    k['entities'][0].metadata['attributes'].append({'attr_code':'city_id', 'attr_name':'关联城市ID',
+        'field_mapping':'hospital.city_id'})
+    k['entities'].append(SimpleNamespace(metadata={'entity_code':'city','entity_name':'城市',
+        'attributes':[{'attr_code':'city_name','attr_name':'城市名称','field_mapping':'dim_city.city_name'},
+                      {'attr_code':'city_id','attr_name':'城市ID','field_mapping':'dim_city.city_id'}]}))
+    k['relations'].append(SimpleNamespace(metadata={'join_key':{
+        'source_field':'hospital.city_id','target_field':'dim_city.city_id'}}))
+    k['_vector_authorized_fields'].extend(['hospital.city_id','dim_city.city_id','dim_city.city_name'])
+    k['entity_attribute_values'] = [SimpleNamespace(metadata={
+        'entity_code':owner,'attr_code':attr,'source_field':field,'attr_value':'上海市'})
+        for owner,attr,field in [('province','province_name','dim_province.province_name'),
+                                 ('city','city_name','dim_city.city_name')]]
+    source = {'entity':'医院','field':'关联省份ID','op':'=','value':['上海']}
+    scoped = parameter_catalog(build_catalog(k),source,{'实体':['医院']},'filters')
+    assert 'dim_province.province_name' in scoped['fields']
+    assert 'dim_city.city_name' not in scoped['fields']
+    assert _vector_correct_filter('hospital.province_id',['上海'],scoped,'=') == (
+        'dim_province.province_name',['上海市'])

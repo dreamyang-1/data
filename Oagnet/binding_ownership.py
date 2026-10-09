@@ -145,7 +145,10 @@ def parameter_catalog(catalog, original, extraction, target):
     identifiers = all(key.rsplit('.', 1)[-1].casefold().endswith(('_id', '_code', '_key')) for key in direct)
     if target == 'filters' and (not direct or identifiers):
         fields.update({key: catalog['fields'][key] for key, candidates in catalog.get('_dictionary_owners', {}).items()
-                       if candidates & owners and key in catalog['fields']})
+                       if candidates & owners and key in catalog['fields']
+                       and (not direct or '_dictionary_choices' not in catalog or any(
+                           choice['field'] in direct and choice['owner_entity'] in owners
+                           for choice in catalog['_dictionary_choices'].get(key, [])))})
     result = dict(catalog, fields=fields, _parameter_owners=owners)
     return result
 
