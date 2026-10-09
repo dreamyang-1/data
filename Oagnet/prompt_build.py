@@ -7,7 +7,7 @@ import re
 
 from vector_store import ChromaVectorStore, SearchResult, normalize_vector_text
 from scope_contract import normalize_domains, require_model_id, scope_filter, require_candidate_scope
-from binding_ownership import resolve_entities
+from binding_ownership import entity_label_candidates, matching_fields, resolve_entities
 
 SYSTEM_PROMPT = """
 【角色】
@@ -631,7 +631,7 @@ class PromptBuilder:
             require_candidate_scope(record.metadata, self.semantic_model_id, self.business_domain_ids)
 
     def _structured_owner_recall(self, direct_entities, direct_attributes):
-        """Complete explicit parameter owners before same-name top-k can hide them.
+        """Complete explicit/name/alias owners before same-name top-k hides them.
 
         Broad recall remains available for incorrectly typed model/spec values.
         These extra queries are bounded to request scope and slot owners, not
@@ -640,22 +640,39 @@ class PromptBuilder:
         extraction = getattr(self, 'structured_extraction', None) or {}
         slots = [item for section in ('维度', '展示字段', '过滤条件', '排序')
                  for item in extraction.get(section) or []
-                 if isinstance(item, dict) and item.get('entity')]
+                 if isinstance(item, str) or isinstance(item, dict)]
         if not slots:
             return direct_entities, direct_attributes, []
         entities = self._load_scope_records('entity', direct_entities)
         by_code = {item.metadata['entity_code']: item.metadata for item in entities if item.metadata.get('entity_code')}
+        fields = {}
+        for code, meta in by_code.items():
+            for attr in self._entity_attributes(meta):
+                field = self._physical_field(attr.get('field_mapping'))
+                if field:
+                    fields.setdefault(field, {'attribute_bindings': []})['attribute_bindings'].append(dict(attr, owner=code))
+        for record in direct_attributes:
+            attr = record.metadata
+            field = self._physical_field(attr.get('field_mapping'))
+            if field:
+                fields.setdefault(field, {'attribute_bindings': []})['attribute_bindings'].append(dict(attr, owner=attr.get('parent')))
+        owner_catalog = {'entities': by_code, 'fields': fields}
         requested = set()
         values = []
         loader = getattr(self.store, 'get_by_where', None)
         for slot in slots:
-            owners = resolve_entities(slot['entity'], by_code)
+            label = (slot.get('field') or slot.get('name')) if isinstance(slot, dict) else slot
+            explicit = slot.get('entity') if isinstance(slot, dict) else None
+            owners = resolve_entities(explicit, by_code) if explicit else set()
+            if not explicit and not matching_fields(slot, owner_catalog):
+                candidates = entity_label_candidates(label, by_code)
+                owners = candidates if len(candidates) == 1 else set()
             requested.update(owners)
-            raw = slot.get('value', [])
+            raw = slot.get('value', []) if isinstance(slot, dict) else []
             raw = raw if isinstance(raw, list) else [raw]
             if not owners or not any(isinstance(value, str) for value in raw):
                 continue
-            query = ' '.join(str(value) for value in [slot.get('entity'), slot.get('field') or slot.get('name'), *raw] if value is not None)
+            query = ' '.join(str(value) for value in [explicit, label, *raw] if value is not None)
             hits = self.store.search(self.embed_fn(query), top_k=40, where={'$and': [
                 self._build_where('entity_attribute_value'), {'entity_code': {'$in': sorted(owners)}}]})
             self._validate_record_scope(hits)

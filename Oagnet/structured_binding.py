@@ -4,7 +4,8 @@ import re
 from datetime import date, timedelta
 from query_binding_review import _metadata, _object, _field
 from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields
-from binding_ownership import field_owners, matching_fields, parameter_catalog, resolve_entities, value_allowed
+from binding_ownership import (entity_label_candidates, field_owners, matching_fields,
+                               normalized, parameter_catalog, registered_terms, resolve_entities, value_allowed)
 
 SECTIONS = {'指标': 'metrics', '维度': 'dimensions', '展示字段': 'display_fields', '过滤条件': 'filters', '排序': 'sort'}
 OPERATORS = {'=', '!=', '>', '>=', '<', '<=', 'IN', 'NOT IN', 'LIKE', 'BETWEEN'}
@@ -427,18 +428,39 @@ def _exact_choice_keys(target, original, catalog):
     if label in pool:
         return [label]
     exact = []
-    field_matches = set(matching_fields(original, catalog))
+    field_matches = set(matching_fields(original, catalog, aliases=False))
     for key, metadata in pool.items():
         terms = [key, *_metadata_terms(metadata)]
         if (key in field_matches or any(_vector_surface(label) == _vector_surface(term) for term in terms
                if isinstance(term, str))) and key not in exact:
             exact.append(key)
-    return exact
+    if exact:
+        return exact
+    field_aliases = set(matching_fields(original, catalog))
+    aliases = [key for key, metadata in pool.items()
+               if key in field_aliases or normalized(label) in {
+                   normalized(term) for term in registered_terms(metadata.get('synonyms'))}]
+    if aliases:
+        return aliases
+    # A whole entity alias denotes its published identity dimension (grouping)
+    # or main display attribute (projection/sort), not a neighbor's homonym.
+    owners = entity_label_candidates(label, catalog['entities'])
+    if len(owners) != 1 or target not in {'dimensions', 'display_fields', 'sort'}:
+        return []
+    owner = next(iter(owners))
+    entity = catalog['entities'][owner]
+    if target == 'dimensions':
+        return [key for key, metadata in catalog['dimensions'].items()
+                if key == owner or normalized(metadata.get('dim_name')) == normalized(entity.get('entity_name'))]
+    return [key for key, metadata in catalog['fields'].items()
+            if any(attr.get('is_main_attribute') is True and owner in field_owners(attr)
+                   for attr in metadata.get('attribute_bindings') or [metadata])]
 
 def _field_is_identifier(field, metadata):
     column = str(field or '').rsplit('.', 1)[-1].casefold()
     attr_code = str((metadata or {}).get('attr_code') or '').casefold()
-    return column.endswith(('_id', '_code', '_key')) or attr_code.endswith(('_id', '_code', '_key'))
+    return (column in {'id', 'code', 'key'} or attr_code in {'id', 'code', 'key'}
+            or column.endswith(('_id', '_code', '_key')) or attr_code.endswith(('_id', '_code', '_key')))
 
 
 def _name_field_candidates(key, catalog):
@@ -454,7 +476,11 @@ def _name_field_candidates(key, catalog):
         attr_code = str(metadata.get('attr_code') or '').casefold()
         attr_name = str(metadata.get('attr_name') or '').casefold()
         same_stem = re.sub(r'(_name|_label|_title)$', '', candidate_column.casefold()) == stem
-        is_name = candidate_column.casefold().endswith(('_name', '_label', '_title')) or attr_code.endswith(('_name', '_label', '_title')) or 'name' in attr_name or 'label' in attr_name
+        is_name = (candidate_column.casefold() in {'name', 'label', 'title'}
+                   or attr_code in {'name', 'label', 'title'}
+                   or metadata.get('is_main_attribute') is True
+                   or candidate_column.casefold().endswith(('_name', '_label', '_title'))
+                   or attr_code.endswith(('_name', '_label', '_title')) or 'name' in attr_name or 'label' in attr_name)
         if is_name and (candidate_table == table or (owner and metadata.get('owner') == owner) or same_stem):
             ranked.append(((0 if same_stem else 1, 0 if candidate_table == table else 1, field), field))
     return [field for _, field in sorted(ranked)]
@@ -703,9 +729,10 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
         for index, original in enumerate(extraction[source]):
             slot_catalog = parameter_catalog(catalog, original, extraction, target)
             owner_candidates = slot_catalog.get('_parameter_owner_candidates')
-            if owner_candidates:
+            owner_error = slot_catalog.get('_parameter_owner_error')
+            if owner_candidates or owner_error:
                 ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
-                    '该名称或别名对应多个实体，尚未明确参数归属', owner_candidates))
+                    owner_error or '该名称或别名对应多个实体，尚未明确参数归属', owner_candidates or []))
                 continue
             label = (original.get('name') or original.get('field')) if isinstance(original,dict) else original
             if not isinstance(label,str) or not label.strip():
@@ -738,16 +765,18 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 key = exact_keys[0]
                 choice = dict(choice, key=key)
                 choice.pop('error', None)
-            elif len(exact_keys) > 1 and all(value in slot_catalog['fields'] for value in exact_keys):
+            elif len(exact_keys) > 1:
                 # Do not let a model pick one homonym by vector rank. Filters
                 # may still be disambiguated by a unique value below.
-                choice = dict(choice, error='同名属性属于不同实体或字段，当前参数未能唯一确定归属', candidates=exact_keys)
+                choice = dict(choice, error='同名名称或别名对应多个目录项，当前参数未能唯一确定含义', candidates=exact_keys)
             required_owners = slot_catalog.get('_parameter_owners') or set()
             if target in {'dimensions', 'sort'} and isinstance(key, str) and key in catalog['dimensions'] and required_owners:
                 definition = catalog['dimensions'][key]
                 bindings = [item for item in _object(definition.get('bind_entities')) or [] if isinstance(item, dict)
                             and (resolve_entities(item.get('entity'), catalog['entities']) & required_owners
                                  or f"{item.get('mappingTable')}.{item.get('mappingColumn')}" in slot_catalog['fields'])]
+                if definition.get('bind_entities') and not bindings:
+                    choice = dict(choice, error='该维度的已发布映射不属于参数指定的实体')
                 if target == 'sort':
                     resolved = _dim_bound_field(key, slot_catalog)
                     if resolved:
@@ -880,6 +909,7 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     if any(
                         catalog['values'][i].get('field') != key
                         or not value_allowed(catalog['values'][i], slot_catalog)
+                        or (corrected is not None and bound != value)
                         or (
                             re.search(r'[0-9A-Za-z]', value)
                             and value != str(bound)
