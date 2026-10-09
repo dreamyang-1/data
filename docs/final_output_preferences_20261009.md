@@ -116,3 +116,17 @@ Evaluation and Shadow gaps and V1 replacement readiness are unchanged. The next
 shortest release path is resolving or explicitly waiving reproduced release
 blockers, then checking remote differences and deploying only the affected
 DataAnalysis service; no index rebuild, semantic publication or automatic merge.
+
+## Authorized rollout closure — 2026-10-09
+
+The blocked-release paragraph above records the earlier state. The user later
+explicitly authorized retaining verified old failures provided no new failures
+appear, and limited deployment to verified Agent, Oagnet and SQL updates (no
+Java backend). These seven runtime modules were included in the first bounded
+owner-binding rollout. Exact-file backups, protected configuration/source
+hashes, service restart and health checks passed. The combined affected Agent
+suite passes 190 cases, including the 49 new presentation cases. Full regression
+and native ingress evidence is recorded in `filter_owner_binding_20261009.md`.
+The functional follow-up remains Draft PR #89; no automatic merge, semantic
+asset/index writes, authorization expansion or V2 cutover occurred. Additional
+unverified development edits appearing during release were not deployed.

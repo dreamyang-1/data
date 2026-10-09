@@ -48,6 +48,7 @@ def test_planner_final_role_guidance_keeps_names_separate_from_foreign_keys():
     assert '上海市各经销商→entity=经销商' in _EXTRACTION_ROLE_GUIDANCE
     assert '上海医院按经销商汇总→entity=医院' in _EXTRACTION_ROLE_GUIDANCE
     assert '不能因为目录只在医院/经销商下列出“关联省份ID”' in _EXTRACTION_ROLE_GUIDANCE
+    assert '临床科室属于科室实体' in _EXTRACTION_ROLE_GUIDANCE
 
 
 @pytest.mark.parametrize('question,owner', [
