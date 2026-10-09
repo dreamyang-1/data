@@ -91,6 +91,40 @@ _EXTRACTION_ROLE_GUIDANCE = """
 """
 
 
+def _ground_location_owners(extraction: dict[str, Any] | None, question: str) -> None:
+    """Correct only explicit location modifiers at the NL extraction boundary.
+
+    A model can still pick the wrong catalog parent despite prompt examples.
+    Do not infer ownership from grouping alone, and never alter fields/values.
+    """
+    if not extraction or not question:
+        return
+    candidates = {item for section in ('实体', '维度') for item in extraction.get(section) or []
+                  if isinstance(item, str) and len(item) >= 2}
+    candidates.update(item.get('entity') for section in ('过滤条件', '展示字段')
+                      for item in extraction.get(section) or []
+                      if isinstance(item, dict) and isinstance(item.get('entity'), str))
+    for item in extraction.get('过滤条件') or []:
+        if not isinstance(item, dict) or not re.search(
+                r'省份|城市|地区|区域|所在地|province|city|region', str(item.get('field') or ''), re.I):
+            continue
+        raw = item.get('value')
+        values = raw if isinstance(raw, list) else [raw]
+        owners = set()
+        for owner in candidates:
+            for value in values:
+                if not isinstance(value, str) or len(value.strip()) < 2:
+                    continue
+                place, entity = re.escape(value.strip()), re.escape(owner)
+                if re.search(entity + r'(?:的)?(?:所在地|所在省份|所在城市|所在地区|省份|城市)'
+                             + r'(?:为|是|在|等于|=|：|:)?\s*' + place, question) or re.search(
+                                 place + r'(?:市|省)?(?:的)?(?:各个|各家|所有|每个|每家|各)?' + entity,
+                                 question):
+                    owners.add(owner)
+        if len(owners) == 1:
+            item['entity'] = next(iter(owners))
+
+
 @lru_cache(maxsize=1)
 def _load_extraction_prompt_sections() -> tuple[str, str]:
     """读取国药结构化提取提示词，按标记拆成解析器规范与内置语义规范。"""
@@ -974,6 +1008,7 @@ class MultiQuestionPlanner:
             structured = self._sanitize_extraction(
                 result.single_task_extraction, intent=single_intent
             )
+            _ground_location_owners(structured, question)
             if structured is not None and single_intent in {None, *_CHINESE_INTENT_TO_PRIMARY.values()}:
                 # The displayed extraction is the single execution contract.
                 single_intent = _CHINESE_INTENT_TO_PRIMARY.get(
@@ -1012,6 +1047,7 @@ class MultiQuestionPlanner:
         for index, item in enumerate(result.tasks):
             intent = self._sanitize_intent(item.primary_intent)
             structured = self._sanitize_extraction(item.extraction, intent=intent)
+            _ground_location_owners(structured, item.question)
             if structured is not None and intent in {None, *_CHINESE_INTENT_TO_PRIMARY.values()}:
                 intent = _CHINESE_INTENT_TO_PRIMARY.get(
                     str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip(), intent

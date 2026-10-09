@@ -50,6 +50,33 @@ def test_planner_final_role_guidance_keeps_names_separate_from_foreign_keys():
     assert '不能因为目录只在医院/经销商下列出“关联省份ID”' in _EXTRACTION_ROLE_GUIDANCE
 
 
+@pytest.mark.parametrize('question,owner', [
+    ('统计2025年9月上海市各经销商的订单笔数', '经销商'),
+    ('统计2025年9月医院所在地为上海市的订单笔数，按经销商汇总', '医院'),
+    ('上海医院按经销商统计订单笔数', '医院'),
+    ('供应商所在地为上海市，按医院统计', '供应商'),
+])
+def test_explicit_location_modifier_corrects_wrong_model_owner_only(question,owner):
+    from app.planning.task_dag import _ground_location_owners
+    source={'实体':['销售订单','医院','经销商','供应商'],'维度':['经销商'],
+            '过滤条件':[{'entity':'医院' if owner!='医院' else '经销商',
+                         'field':'省份名称','op':'=','value':['上海']}],
+            '时间粒度':{'unit':'月','time_range':'2025年9月'}}
+    _ground_location_owners(source,question)
+    assert source['过滤条件']==[{'entity':owner,'field':'省份名称','op':'=','value':['上海']}]
+    assert source['时间粒度']=={'unit':'月','time_range':'2025年9月'}
+
+
+def test_location_owner_is_never_inferred_from_grouping_or_proper_name():
+    from app.planning.task_dag import _ground_location_owners
+    predicate={'entity':None,'field':'省份名称','op':'=','value':['上海']}
+    for question in ['上海订单按经销商汇总','上海交通大学医学院附属医院的订单笔数']:
+        source={'实体':['销售订单','医院','经销商'],'维度':['经销商'],
+                '过滤条件':[dict(predicate)]}
+        _ground_location_owners(source,question)
+        assert source['过滤条件']==[predicate]
+
+
 @pytest.mark.parametrize('owner', ['医院','经销商'])
 def test_execution_entry_point_keeps_explicit_owner_over_legacy_region_role(owner):
     req = request([{'field':'业务城市','operator':'EQ','value':'上海市'}])
