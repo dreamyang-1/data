@@ -29,9 +29,24 @@
     "Same-code assets remain isolated across models; cache refresh does not affect another model",
     "No Milvus rebuild, semantic database mutation, conversation-state change or V2 routing change"
   ],
-  "deployment_status": "Awaiting guarded native read-only smoke and exact-file release",
+  "deployment_status": {
+    "status": "DEPLOYED_VERIFIED",
+    "target": "Agreed server 49, SQL service only",
+    "release": "mysql-semantics-20261009-145423",
+    "runtime_files": ["sql_translator_prod.py", "semantic_scope.py", "api_server_prod.py"],
+    "staged_offline_passed": 647,
+    "staged_test_environment": "Unused optional Chroma import mocked with forbidden client constructors; in-memory cross-service fixtures copied to isolated staging. Local and PR suites pass with installed dependency. No production dependency changes.",
+    "redis_disabled_read_only_probe": {"models": [81, 120, 121], "translate_passed": 3, "execute_passed": 3},
+    "post_restart_native_read_only_probe": {"models": [81, 120, 121], "translate_passed": 3, "execute_passed": 3},
+    "health": "ok; dsl_source=mysql; all three runtime hashes match canonical source",
+    "configuration_preserved": true,
+    "protected_backup_created": true,
+    "existing_redis_keys_deleted": false,
+    "pr": {"number": 88, "draft": true, "automatically_merged": false}
+  },
   "platform_stop_write": {
-    "status": "Prepared separately; not built or deployed",
+    "status": "Locally committed separately; not built or deployed",
+    "commit": "d051d88e",
     "blocker": "Java platform deployment entry and compiler/Maven toolchain unavailable",
     "impact": "Old platform can still write disposable Redis copies; SQL no longer consumes them after this release"
   },
