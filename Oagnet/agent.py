@@ -8198,6 +8198,27 @@ def _validate_intent_asl_contract(
 
     def canonical_expected_filter(expected: dict) -> dict:
         normalized = dict(expected)
+        # Shared-dictionary owner binding can legitimately turn a name into
+        # verified foreign keys. Validate that exact per-predicate receipt,
+        # never a global same-value replacement across business owners.
+        for receipt in (knowledge or {}).get('_filter_owner_bindings', []):
+            source = receipt.get('source_filter') or {}
+            expected_values = expected.get('value')
+            expected_values = expected_values if isinstance(expected_values, list) else [expected_values]
+            source_values = source.get('value')
+            source_values = source_values if isinstance(source_values, list) else [source_values]
+            previous_values = (receipt.get('previous_filter') or {}).get('value')
+            previous_values = previous_values if isinstance(previous_values, list) else [previous_values]
+            def operator(value):
+                value = str(value or '=').upper().replace('_', ' ')
+                return '=' if value == 'EQ' else '!=' if value == 'NE' else value
+            expected_owner = str(expected.get('entity') or '').strip()
+            if (expected_owner and expected_owner == str(source.get('entity') or '').strip()
+                    and str(expected.get('field') or '') == str(source.get('field') or '')
+                    and operator(expected.get('operator')) == operator(source.get('op'))
+                    and {str(v) for v in expected_values} in (
+                        {str(v) for v in source_values}, {str(v) for v in previous_values})):
+                return dict(expected, **receipt['resolved_filter'])
         raw_value = expected.get("value")
 
         def canonical(value: object) -> object:
@@ -8213,10 +8234,13 @@ def _validate_intent_asl_contract(
 
     for expected in contract.get("filters") or []:
         validation_expected = canonical_expected_filter(expected)
-        candidates = _contract_filter_candidates(
-            str(expected.get("field") or ""), knowledge or {},
+        candidates = ([validation_expected['field']]
+            if validation_expected.get('field') != expected.get('field')
+            and validation_expected.get('field') in _known_physical_fields(knowledge or {})
+            else _contract_filter_candidates(
+            str(validation_expected.get("field") or ""), knowledge or {},
             query_object=contract.get("query_object"),
-        )
+        ))
         if (
             knowledge is not None and not candidates
         ) or not _contract_filter_present(
@@ -8231,10 +8255,13 @@ def _validate_intent_asl_contract(
             )
     for expected in contract.get("negative_filters") or []:
         validation_expected = canonical_expected_filter(expected)
-        candidates = _contract_filter_candidates(
-            str(expected.get("field") or ""), knowledge or {},
+        candidates = ([validation_expected['field']]
+            if validation_expected.get('field') != expected.get('field')
+            and validation_expected.get('field') in _known_physical_fields(knowledge or {})
+            else _contract_filter_candidates(
+            str(validation_expected.get("field") or ""), knowledge or {},
             query_object=contract.get("query_object"),
-        )
+        ))
         if (
             knowledge is not None and not candidates
         ) or not _contract_filter_present(
@@ -9078,6 +9105,7 @@ def main(
                 semantic_model_id, domain_scope,
                 explicit_time=bool((structured_extraction.get("时间粒度") or {}).get("time_range")),
                 structured_only=True,
+                relationship_required=relationship_required,
             )
             ast = json.loads(content)
             repairs.extend(binding_repairs)

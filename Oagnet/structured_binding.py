@@ -184,10 +184,13 @@ def catalog_candidates(knowledge):
     from query_binding_review import binding_options
     options = binding_options({'filters': [{'field': field, 'operator': '=', 'value': None} for field in fields]}, knowledge)
     dictionary_owners = {}
+    dictionary_choices = {}
     for option in options:
         dictionary_owners[option['predicate']['field']] = {choice['owner_entity'] for choice in option['choices']}
+        dictionary_choices[option['predicate']['field']] = option['choices']
     return dict(entities=entities, metrics=metrics, fields=fields, dimensions=dimensions, values=values,
-                relations=relations, _dictionary_owners=dictionary_owners, _value_owners=value_owners)
+                relations=relations, _dictionary_owners=dictionary_owners,
+                _dictionary_choices=dictionary_choices, _value_owners=value_owners)
 
 
 def _related_display_field(groups, field, catalog):
