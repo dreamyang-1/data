@@ -105,7 +105,7 @@ from app.presentation import (
     render_reliability_validation,
 )
 from app.presentation.root_report import collect_root_materials, render_root_report, preview_result_tables, apply_requested_root_charts
-from app.presentation.summary import brief_summary
+from app.presentation.summary import brief_summary, result_introduction
 from app.skills import DynamicSkillLoader, skill_for_intent
 from minio_followup_store import (
     DatasetScope,
@@ -6761,6 +6761,10 @@ class DataAnalysisOrchestrator:
             )
             if list_was_cleaned:
                 answer += "\n\n" + name_list_result_summary(query_result)
+            answer = result_introduction(
+                request.rewritten_question or request.original_question,
+                analysis=request.primary_intent.value.endswith('_ANALYSIS'),
+            ) + '\n\n' + answer
             request.assumptions.append("LATEST_RESULT_DATASET_NOT_REUSABLE")
             await self.sessions.put_last_request(request)
             return await self._finish_terminal(request, AgentResponse(
@@ -6892,6 +6896,9 @@ class DataAnalysisOrchestrator:
                 )
                 if list_was_cleaned:
                     response.answer = name_list_result_summary(query_result)
+                response.answer = result_introduction(
+                    request.rewritten_question or request.original_question,
+                ) + '\n\n' + response.answer
                 return await self._finish_terminal(request, response)
             scope = "、".join(
                 f"{item.get('field')}={item.get('value')}"
@@ -7647,6 +7654,7 @@ class DataAnalysisOrchestrator:
             answer = answer_plan.render_report(
                 question=request.rewritten_question or request.original_question,
                 table=result_table, chart=chart_display, notes=final_notes,
+                analysis=request.primary_intent.value.endswith('_ANALYSIS'),
             )
         else:
             summary = final_summary or brief_summary(insight_output.answer if insight_output is not None else '')
@@ -7656,6 +7664,10 @@ class DataAnalysisOrchestrator:
                 answer += "\n\n" + "\n\n".join(final_notes)
             if chart_display and chart_display not in answer:
                 answer += chart_display
+            answer = result_introduction(
+                request.rewritten_question or request.original_question,
+                analysis=request.primary_intent.value.endswith('_ANALYSIS'),
+            ) + '\n\n' + answer
         answer = preview_result_tables(answer)
         incomplete_result = bool(
             query_result.dataset.truncated and not query_result.result_file_url
