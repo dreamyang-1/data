@@ -125,3 +125,49 @@ Catalog/Evaluation/Shadow gaps and V1 replacement readiness are unchanged; these
 tests do not establish production replacement readiness. The next shortest
 release path is classification/resolution or explicit waiver of the reproduced
 release blockers, followed by remote-difference checks and an Oagnet-only rollout.
+
+## 2026-10-09 deployment closure
+
+This section supersedes the morning's not-deployed release status above. The
+user explicitly authorized retaining reproduced old failures and deploying only
+this department/alias ownership repair. Functional source commits are `22eb7fc`
+and `0195eeb`; the existing Draft PR remains unmerged.
+
+The five runtime sources matched the original remote baseline before release.
+They were backed up, installed by an explicit manifest, and hash-verified after
+restarting Oagnet. A fresh worker and vector health were verified. Public API
+schema, other sources, configuration, and the DataAnalysis/SQL service processes
+were unchanged. DataAnalysis readiness and SQL's MySQL-source health passed.
+There was no semantic publication, index rebuild, V2 cutover, or business-data
+write.
+
+Release checks used the complete private test bundle in isolated directories on
+the deployment host; an earlier incomplete test-bundle attempt was invalid and
+was not used to authorize release:
+
+| Remote isolated suite | Result |
+| --- | --- |
+| Candidate critical | 505 passed |
+| Original full | 1,337 passed, 11 failed |
+| Candidate full | 1,508 passed, the same 11 failed |
+| Added tests | 171 passed |
+| New failures / collection errors / removed existing tests | 0 / 0 / 0 |
+
+These host-specific counts do not mean the morning's Windows-only blockers or
+other local failures were repaired. The retained remote failure set was compared
+by test identity and covered by the user's explicit waiver.
+
+Four deployed native ASL-to-SQL-to-execution checks passed: the original
+department-alias question, the corresponding alias on the other model, a
+multi-value department filter, and an explicit fourth-quarter range. Models 120
+and 121 were used. Department predicates bound to `department.dept_name`; the
+metric, limit, values, and month/quarter ranges were retained. Returned row counts
+were respectively 0, 1, 1, and 1. This establishes binding and execution, not
+independently verified business-answer correctness.
+
+PROVEN separate limitation: the executed SQL still routes the shared province
+filter through the dealer's province. Consequently, the original question's
+zero rows must not be interpreted as proof that Shanghai hospitals had no
+orders. Geographic-owner attribution is a retained, separately scoped issue;
+this department-only deployment did not change it. No raw production rows,
+credentials, private traces, or infrastructure addresses are included here.
