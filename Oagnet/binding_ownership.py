@@ -108,7 +108,8 @@ def parameter_catalog(catalog, original, extraction, target):
     exact = (matching_fields(original, catalog, aliases=False)
              or matching_fields(original, catalog))
     if (isinstance(original, dict) and original.get('entity') and not owners
-            and entity_label_candidates(original.get('field') or original.get('name'), catalog['entities'])):
+            and (target == 'filters' or entity_label_candidates(
+                original.get('field') or original.get('name'), catalog['entities']))):
         # Do not silently substitute the label's entity for a contradictory,
         # unresolved explicit owner. Legacy field-only grounding is unchanged.
         candidates = entity_label_candidates(original['entity'], catalog['entities'])

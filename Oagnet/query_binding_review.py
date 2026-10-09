@@ -97,11 +97,12 @@ def binding_options(ast, knowledge):
 
 def review_bindings(content, knowledge, question, extraction, model, resolve_keys,
                     semantic_model_id, domain_scope, *, today=None, explicit_time=False,
-                    structured_only=False):
+                    structured_only=False, relationship_required=None):
     ast = json.loads(content)
     options = binding_options(ast, knowledge)
     from related_scope import shared_scope_options, apply_shared_scope
-    related_options = shared_scope_options(ast, knowledge) if ast.get('metrics') else []
+    related_options = (shared_scope_options(ast, knowledge)
+                       if ast.get('metrics') and relationship_required is not False else [])
     if not options and not related_options:
         return content, []
     selected = {m.get("name") for m in ast.get("metrics") or []}
@@ -118,17 +119,25 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         attr = _metadata(item)
         if attr.get('parent') in entity_catalog:
             fields.setdefault(_field(attr.get('field_mapping')), set()).add(attr['parent'])
-    required_owners, directly_owned = {}, set()
+    required_owners, directly_owned, source_filters = {}, set(), {}
     for option in options:
         index = option['filter_index']
         source_index = origins[index] if isinstance(origins, list) and len(origins) == len(ast.get('filters') or []) else index
         if type(source_index) is not int or not 0 <= source_index < len(declared_filters):
             continue
         original = declared_filters[source_index]
+        source_filters[index] = original
         required = parameter_owners(original, {'entities': entity_catalog})
         if isinstance(original, dict) and not original.get('entity'):
             aliases = entity_label_candidates(original.get('field') or original.get('name'), entity_catalog)
-            if len(aliases) == 1:
+            # A bare geography/dictionary label identifies the value catalog,
+            # not whose location it is. Keep established entity aliases (e.g.
+            # department aliases) intact; location ownership needs evidence.
+            shared_location = (structured_only
+                and re.search(r'province|city|district|county|region|省份|城市|地区|区域',
+                              option['predicate']['field'], re.I)
+                and len({c['owner_entity'] for c in option['choices']}) > 1)
+            if len(aliases) == 1 and not shared_location:
                 required = aliases
         required_owners[index] = required
         if required and fields.get(option['predicate']['field'], set()) & required:
@@ -137,6 +146,27 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         # Already grounded on the requested entity, not a shared dictionary
         # that needs foreign-owner selection. No model/FK rewrite is needed.
         return content, []
+    # A declared owner and one authorized edge need no second linguistic
+    # decision. In strict planner mode an unowned shared dictionary must not
+    # be kept merely because a model says so: SQL cannot recover the owner.
+    deterministic = []
+    pending = []
+    for option in options:
+        index = option['filter_index']
+        required = required_owners.get(index) or set()
+        if index in directly_owned:
+            deterministic.append({'filter_index': index, 'keep': True,
+                                  'reason': '字段已经属于结构化条件指定实体'})
+        elif required:
+            matches = [i for i, choice in enumerate(option['choices'])
+                       if choice.get('owner_entity') in required]
+            deterministic.append({'filter_index': index, 'bind_owner': True,
+                                  'choice_index': matches[0] if len(matches) == 1 else None,
+                                  'reason': '按结构化条件所属实体和已发布关系绑定'})
+        elif structured_only and len({c['owner_entity'] for c in option['choices']}) > 1:
+            deterministic.append({'filter_index': index})  # report missing ownership below
+        else:
+            pending.append(option)
     # Policy evidence is restricted to the selected metric / subject; an unrelated
     # recalled metric cannot supply a default period.
     subject = (ast.get("subject") or {}).get("entity")
@@ -173,8 +203,11 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
             )},
             {'role': 'user', 'content': json.dumps(context, ensure_ascii=False, default=str)},
         ]
-        response = model.invoke(messages)
-        decision = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", response.content.strip()))
+        if pending or related_options:
+            response = model.invoke(messages)
+            decision = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", response.content.strip()))
+        else:
+            decision = {'bindings': [], 'related_scope': {'mode': 'direct'}}
         if not isinstance(decision, dict):
             raise ValueError('invalid binding response')
     except Exception:
@@ -193,6 +226,9 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     # Preserve index correspondence: owner requirements belong to each filter,
     # not the GROUP BY entity or overall execution subject.
     bindings = list(bindings) if isinstance(bindings, list) else []
+    fixed_indices = {b['filter_index'] for b in deterministic}
+    bindings = [b for b in bindings if isinstance(b, dict) and b.get('filter_index') not in fixed_indices]
+    bindings.extend(deterministic)
     for index, option in by_index.items():
         source_index = origins[index] if isinstance(origins, list) and len(origins) == len(ast.get('filters') or []) else index
         if type(source_index) is not int or not 0 <= source_index < len(declared_filters) or index in target_indices:
@@ -254,7 +290,10 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         ast["filters"][index] = dict(old, field=choice["field"], operator=operator, value=value)
         repairs.append({"type": "RESOLVE_FILTER_BUSINESS_OWNER", "previous_filter": old,
                         "resolved_filter": ast["filters"][index], "reason": str(binding["reason"])[:300],
+                        "owner_entity": choice['owner_entity'],
+                        "source_filter": copy.deepcopy(source_filters.get(index)),
                         "source": "SCOPED_RELATION_AND_DICTIONARY"})
+        knowledge.setdefault('_filter_owner_bindings', []).append(copy.deepcopy(repairs[-1]))
     from structured_binding import issue
     for option in options:
         index = option['filter_index']
