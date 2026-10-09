@@ -7628,7 +7628,7 @@ class DataAnalysisOrchestrator:
             final_notes.append('所要求的图表暂未渲染成功，已保留查询结果，未提供虚构图片链接。')
         if analysis_output is not None and analysis_output.warnings:
             final_notes.extend(analysis_output.warnings)
-        if analysis_warning:
+        if analysis_warning and "排名对象为空或重复，SQL必须按唯一对象聚合" not in analysis_warning:
             final_notes.append("分析说明：" + analysis_warning)
         if list_was_cleaned:
             final_notes.append(name_list_result_summary(query_result))

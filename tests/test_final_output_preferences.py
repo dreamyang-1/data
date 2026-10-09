@@ -6,7 +6,7 @@ import pytest
 
 from app.domain.models import (
     CanonicalAnalysisRequest, ChatRequest, DataQueryResult, Dataset,
-    MetricRef, PrimaryIntent, TrustedIdentity,
+    MetricRef, PrimaryIntent, TrustedIdentity, AnalysisOperator,
 )
 from app.presentation.root_report import render_root_report
 from app.presentation.root_report import apply_requested_root_charts
@@ -26,7 +26,7 @@ class FinalSummaryModel:
 
 
 async def complete(question, *, rewritten=None, rows=None, synthesizer=None,
-                   intent=PrimaryIntent.METRIC_QUERY, dispatcher=None, mcp=None):
+                   intent=PrimaryIntent.METRIC_QUERY, dispatcher=None, mcp=None, operators=None):
     rows = rows if rows is not None else [
         {'省份名称': '上海市', '省份（编码）': 310000, '订单笔数': 35206},
         {'省份名称': '江苏省', '省份（编码）': 320000, '订单笔数': 3762},
@@ -35,6 +35,7 @@ async def complete(question, *, rewritten=None, rows=None, synthesizer=None,
         conversation_id='final-output-test', tenant_id='t', user_id='u',
         original_question=question, rewritten_question=rewritten,
         primary_intent=intent, metrics=[MetricRef(input='订单笔数')],
+        operators=operators or [],
     )
     chat = ChatRequest(application_id='app', conversation_id=request.conversation_id,
         message_id='m1', question=question, semantic_model_id=1, mcp=mcp or [])
@@ -54,6 +55,20 @@ async def complete(question, *, rewritten=None, rows=None, synthesizer=None,
         assert all('<svg' not in event['message'] for event in progress)
     assert result.dataset.rows == before
     return response
+
+
+@pytest.mark.asyncio
+async def test_duplicate_ranking_note_is_omitted_but_rows_chart_and_diagnostic_survive():
+    response = await complete('查询订单笔数最高的商品，用柱状图展示',
+        rows=[{'商品名称': '同名商品', '商品编码': 'A', '订单笔数': 100},
+              {'商品名称': '同名商品', '商品编码': 'B', '订单笔数': 80}],
+        intent=PrimaryIntent.COMPARISON_ANALYSIS, operators=[AnalysisOperator.TOP_N])
+    assert response.status == 'PARTIAL_SUCCESS'
+    assert '分析说明：' not in response.answer and '排名对象为空或重复' not in response.answer
+    assert '| A |' in response.answer and '| B |' in response.answer
+    assert response.chart_specs and '<svg' in response.answer
+    assert any('排名对象为空或重复' in warning for warning in response.reliability.warnings)
+    assert response.answer.startswith('订单笔数最高的商品，用柱状图展示分析结果如下：')
 
 
 @pytest.mark.asyncio
