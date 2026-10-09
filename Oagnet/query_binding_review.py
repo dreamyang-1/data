@@ -9,7 +9,7 @@ import copy
 from datetime import date
 import json
 import re
-from binding_ownership import parameter_owners
+from binding_ownership import entity_label_candidates, parameter_owners
 
 
 def _metadata(item):
@@ -107,6 +107,36 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     selected = {m.get("name") for m in ast.get("metrics") or []}
     metrics = [_metadata(m) for m in knowledge.get("metrics", []) if _metadata(m).get("metric_code") in selected]
     entities = [_metadata(e) for e in knowledge.get("entities", [])]
+    declared_filters = (extraction.get('过滤条件') or []) if isinstance(extraction, dict) else []
+    origins = knowledge.get('_structured_filter_origins')
+    entity_catalog = {entity['entity_code']: entity for entity in entities if entity.get('entity_code')}
+    fields = {}
+    for code, entity in entity_catalog.items():
+        for attr in _object(entity.get('attributes')) or []:
+            fields.setdefault(_field(attr.get('field_mapping')), set()).add(code)
+    for item in knowledge.get('attributes', []):
+        attr = _metadata(item)
+        if attr.get('parent') in entity_catalog:
+            fields.setdefault(_field(attr.get('field_mapping')), set()).add(attr['parent'])
+    required_owners, directly_owned = {}, set()
+    for option in options:
+        index = option['filter_index']
+        source_index = origins[index] if isinstance(origins, list) and len(origins) == len(ast.get('filters') or []) else index
+        if type(source_index) is not int or not 0 <= source_index < len(declared_filters):
+            continue
+        original = declared_filters[source_index]
+        required = parameter_owners(original, {'entities': entity_catalog})
+        if isinstance(original, dict) and not original.get('entity'):
+            aliases = entity_label_candidates(original.get('field') or original.get('name'), entity_catalog)
+            if len(aliases) == 1:
+                required = aliases
+        required_owners[index] = required
+        if required and fields.get(option['predicate']['field'], set()) & required:
+            directly_owned.add(index)
+    if not related_options and directly_owned == {option['filter_index'] for option in options}:
+        # Already grounded on the requested entity, not a shared dictionary
+        # that needs foreign-owner selection. No model/FK rewrite is needed.
+        return content, []
     # Policy evidence is restricted to the selected metric / subject; an unrelated
     # recalled metric cannot supply a default period.
     subject = (ast.get("subject") or {}).get("entity")
@@ -162,15 +192,16 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     bindings = decision.get("bindings")
     # Preserve index correspondence: owner requirements belong to each filter,
     # not the GROUP BY entity or overall execution subject.
-    declared_filters = extraction.get('过滤条件') or []
-    entity_catalog = {entity['entity_code']: entity for entity in entities if entity.get('entity_code')}
     bindings = list(bindings) if isinstance(bindings, list) else []
-    origins = knowledge.get('_structured_filter_origins')
     for index, option in by_index.items():
         source_index = origins[index] if isinstance(origins, list) and len(origins) == len(ast.get('filters') or []) else index
         if type(source_index) is not int or not 0 <= source_index < len(declared_filters) or index in target_indices:
             continue
-        required = parameter_owners(declared_filters[source_index], {'entities': entity_catalog})
+        if index in directly_owned:
+            bindings = [b for b in bindings if not isinstance(b, dict) or b.get('filter_index') != index]
+            bindings.append({'filter_index': index, 'keep': True, 'reason': '筛选字段已经属于结构化参数指定的实体，保留标准名称和值'})
+            continue
+        required = required_owners.get(index) or set()
         if not required:
             continue
         bindings = [b for b in bindings if not isinstance(b, dict) or b.get('filter_index') != index]
