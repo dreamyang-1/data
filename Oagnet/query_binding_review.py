@@ -10,6 +10,7 @@ from datetime import date
 import json
 import re
 from binding_ownership import entity_label_candidates, parameter_owners
+from binding_errors import dependency_failure, invoke_binding_object
 
 
 def _metadata(item):
@@ -120,6 +121,12 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         if attr.get('parent') in entity_catalog:
             fields.setdefault(_field(attr.get('field_mapping')), set()).add(attr['parent'])
     required_owners, directly_owned, source_filters = {}, set(), {}
+    # Reuse the authorized attribute/alias catalog, not subject/grouping.
+    # A table's consumers do not make every ordinary attribute shared.
+    from structured_binding import (catalog_candidates, _exact_choice_keys,
+                                    _dimension_filter_field, _dim_bound_field)
+    from binding_ownership import matching_fields, field_owners
+    attribute_catalog = catalog_candidates(knowledge)
     for option in options:
         index = option['filter_index']
         source_index = origins[index] if isinstance(origins, list) and len(origins) == len(ast.get('filters') or []) else index
@@ -139,6 +146,24 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                 and len({c['owner_entity'] for c in option['choices']}) > 1)
             if len(aliases) == 1 and not shared_location:
                 required = aliases
+            if not required and not shared_location:
+                matches = matching_fields(original, attribute_catalog)
+                if not matches:
+                    # A structured filter may name a governed dimension rather
+                    # than an attribute (e.g. an enum dimension). Reuse the
+                    # binder's exact mapping rules; unresolved alternatives
+                    # must not be discarded to manufacture a unique owner.
+                    keys = _exact_choice_keys('filters', original, attribute_catalog)
+                    mapped = [(_dimension_filter_field(key, original, attribute_catalog)
+                               or _dim_bound_field(key, attribute_catalog))
+                              if key in attribute_catalog['dimensions'] else None for key in keys]
+                    if mapped and all(field in attribute_catalog['fields'] for field in mapped):
+                        matches = mapped
+                matched_owners = set().union(*(
+                    field_owners(attribute_catalog['fields'][field]) for field in matches))
+                bound_owners = fields.get(option['predicate']['field'], set())
+                if len(matched_owners) == 1 and matched_owners == bound_owners:
+                    required = matched_owners
         required_owners[index] = required
         if required and fields.get(option['predicate']['field'], set()) & required:
             directly_owned.add(index)
@@ -180,8 +205,7 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                ]) for i, option in enumerate(related_options)],
                "current_date": (today or date.today()).isoformat()}
     question = json.dumps(extraction, ensure_ascii=False, separators=(',', ':'))
-    try:
-        messages = [
+    messages = [
             {'role': 'system', 'content': (
                 '仅将structured_extraction已声明的筛选归属和关联要求映射到授权目录。没有原问题，不得重新提取要求。'
                 '不改主体、指标、分组、展示、排序、时间和限制。实体是表，不是条件值。'
@@ -203,18 +227,10 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
             )},
             {'role': 'user', 'content': json.dumps(context, ensure_ascii=False, default=str)},
         ]
-        if pending or related_options:
-            response = model.invoke(messages)
-            decision = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", response.content.strip()))
-        else:
-            decision = {'bindings': [], 'related_scope': {'mode': 'direct'}}
-        if not isinstance(decision, dict):
-            raise ValueError('invalid binding response')
-    except Exception:
-        from structured_binding import issue
-        ast.setdefault('ambiguity', []).append(issue('筛选归属/关联范围', extraction,
-            '目录绑定服务未返回可用结果，请稍后重试；当前不能确认关联范围'))
-        return json.dumps(ast, ensure_ascii=False), []
+    if pending or related_options:
+        decision = invoke_binding_object(model, messages, stage='relationship_binding')
+    else:
+        decision = {'bindings': [], 'related_scope': {'mode': 'direct'}}
     repairs = []
     scope_probe = copy.deepcopy(ast)
     scope_repairs = apply_shared_scope(scope_probe, related_options, decision.get('related_scope'), question)
@@ -274,10 +290,13 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
             for value in values:
                 found = resolve_keys(semantic_model_id, domain_scope, choice, old["field"], value)
                 if not found:
-                    raise ValueError("dictionary key unavailable")
+                    keys = []
+                    break
                 keys.extend(k for k in found if k not in keys)
-        except Exception:
-            continue  # Never manufacture a region code from its name.
+        except (ValueError, TypeError, KeyError):
+            continue  # Unusable catalog mapping; never manufacture keys.
+        except Exception as exc:
+            raise dependency_failure(exc, 'dictionary_lookup') from exc
         if not keys:
             continue
         seen.add(index)

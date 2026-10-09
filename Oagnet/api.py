@@ -43,6 +43,7 @@ from config import (
 )
 from daily_job_store import DailyJobStoreError, daily_job_store
 from logger import logger
+from binding_errors import BindingServiceError
 from mysql_tool import consistent_catalog_read, mysql_advisory_lock, normalize_catalog_text
 from physical_catalog_sync import prepare_physical_catalog, publish_physical_catalog
 from publication_vectors import PublicationVectors, publication_stage
@@ -1595,6 +1596,13 @@ def agent_query(req: QueryRequest, request: Request = None):
             },
             headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
+    except BindingServiceError as exc:
+        logger.warning(
+            'ASL binding failed: sm=%s, bds=%s, stage=%s, code=%s, error_type=%s, retryable=%s',
+            req.semantic_model_id, req.business_domain_ids or None,
+            exc.stage, exc.code, exc.error_type, exc.retryable,
+        )
+        raise HTTPException(status_code=exc.status_code, detail=exc.public_detail()) from exc
     except AslGenerationDeadlineExceeded as exc:
         logger.warning(
             "ASL request deadline exceeded: sm=%s, bds=%s, deadline=%ss",

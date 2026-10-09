@@ -163,10 +163,15 @@ def test_unselected_metric_cannot_supply_default_rule():
 
 
 def test_owner_resolution_failure_requests_clarification():
+    # STALE_TEST(2026-10-09): user explicitly distinguishes service failure
+    # from missing business inputs. Timeout must no longer create Pending.
+    from binding_errors import BindingServiceError
     def fail(*a): raise TimeoutError('offline')
     original = json.dumps(draft())
-    result,repairs = review_bindings(original,catalog(),'问题',None,SimpleNamespace(invoke=fail),None,81,205)
-    assert json.loads(result)['ambiguity'] and repairs == []
+    with pytest.raises(BindingServiceError) as caught:
+        review_bindings(original,catalog(),'问题',None,SimpleNamespace(invoke=fail),None,81,205)
+    assert caught.value.code == 'ASL_BINDING_TIMEOUT'
+    assert caught.value.stage == 'relationship_binding'
 
 
 def test_live_dictionary_lookup_is_parameterized_and_preserves_leading_zeros(monkeypatch):
