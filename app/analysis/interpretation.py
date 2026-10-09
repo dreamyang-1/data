@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.analysis.engine import AnalysisOutput
 from app.domain.models import CanonicalAnalysisRequest, PrimaryIntent
+from app.presentation.summary import result_introduction
 
 
 class InsightNature(StrEnum):
@@ -67,7 +68,7 @@ class AnswerPlan(BaseModel):
 
     def render_report(
         self, *, question: str, table: str = "", chart: str = "",
-        notes: list[str] | None = None,
+        notes: list[str] | None = None, analysis: bool = False,
     ) -> str:
         """Arrange the final answer only; keep insight/evidence rendering intact.
 
@@ -83,7 +84,7 @@ class AnswerPlan(BaseModel):
             + ("\n\n" + chart.strip() if chart.strip() else ""),
             "### 3、业务提示\n\n" + "\n\n".join(tips or ["以上仅反映本次查询范围内的结果，不据此推断业务原因。"]),
         ]
-        return "\n\n".join(sections)
+        return result_introduction(question, analysis=analysis) + "\n\n" + "\n\n".join(sections)
 
 
 class InsightInterpretationLayer:
