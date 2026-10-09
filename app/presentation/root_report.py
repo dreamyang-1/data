@@ -5,6 +5,8 @@ from typing import Any
 
 from app.analysis.interpretation import AnswerPlan
 from app.domain.models import AgentResponse, TaskExecutionResult, TaskPlan
+from app.analysis.visualization import requested_chart_specs
+from app.presentation.summary import brief_summary
 
 
 def preview_result_tables(text: str) -> str:
@@ -162,14 +164,40 @@ def render_root_report(
             charts.append(presentation["chart"])
     if requested and not valid_selection:
         notes.append("部分汇总信息未生成，以下保留已完成的结果。")
-    overview = final.get("overview") or (
-        str(selected[0].get("summary") or "以下为本次问题已获得的结果。")
-        if len(selected) == 1 and selected[0].get("facts", {}).get("computation")
-        else "以下为本次问题已获得的结果。" if available else "本次尚未获得可用于回答问题的数据。"
-    )
+    overview = brief_summary(final.get("overview")) or ' '.join(dict.fromkeys(
+        summary for item in selected[:2] if (summary := brief_summary(item.get('summary')))
+    )) or "以下为本次问题已获得的结果。"
     answer = AnswerPlan(
         headline=overview, key_facts=final.get("findings") or [],
         priorities=final.get("tips") or [], limitations=list(dict.fromkeys(notes)),
     ).render_report(question=question, table="\n\n".join(dict.fromkeys(tables)),
                     chart="\n\n".join(dict.fromkeys(charts)))
     return answer, [item["task_id"] for item in selected]
+
+
+def apply_requested_root_charts(question, materials, selected_ids, render):
+    """Draw only delivered datasets, including dependent computed outputs."""
+    specifications = None
+    for item in materials:
+        if item['task_id'] not in selected_ids:
+            continue
+        facts = item.get('facts') or {}
+        data = facts.get('query_data') or {}
+        requested, notes = requested_chart_specs(question, data.get('columns') or [],
+            data.get('rows') or [], facts)
+        if requested is None:
+            continue
+        if specifications is None:
+            specifications = []
+        room = max(0, 3 - len(specifications))
+        if len(requested) > room:
+            notes.append('本次已达到3张图的展示上限，其余结果仍保留在表格和附件中。')
+        requested = requested[:room]
+        specifications.extend(requested)
+        images = render(chart_specs=[spec.model_dump(mode='json') for spec in requested])
+        presentation = item.setdefault('presentation', {})
+        presentation['chart'] = ('\n\n#### 图表\n\n' + '\n\n'.join(images)) if images else ''
+        if requested and not images:
+            notes.append('所要求的图表暂未渲染成功，已保留查询结果，未提供虚构图片链接。')
+        presentation.setdefault('notes', []).extend(notes)
+    return specifications

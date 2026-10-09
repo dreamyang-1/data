@@ -24,6 +24,126 @@ _CHART_COLORS = (
 )
 
 
+_REQUESTED_CHARTS = {
+    '柱状图': 'BAR', '柱形图': 'BAR', '条形图': 'BAR', '折线图': 'LINE',
+    '饼图': 'PIE', '饼状图': 'PIE', '散点图': 'SCATTER',
+    '树状图': 'TREE', '树形图': 'TREE', '层级图': 'TREE',
+    'bar chart': 'BAR', 'line chart': 'LINE', 'pie chart': 'PIE',
+    'scatter plot': 'SCATTER', 'tree diagram': 'TREE',
+}
+
+
+def requested_chart_specs(
+    question: str, columns: list[str], rows: list[dict[str, Any]],
+    facts: dict[str, Any], *, output_requirement: str = '',
+) -> tuple[list[ChartSpec] | None, list[str]]:
+    """Honor explicit presentation only; never change SQL, grouping or metrics.
+
+    None preserves existing automatic charts. An empty list deliberately
+    suppresses them when the requested chart is disabled or cannot be grounded.
+    """
+    text = question + '\n' + output_requirement
+    tokens = '|'.join(re.escape(word) for word in _REQUESTED_CHARTS)
+    text, negated = re.subn(r'(?:不要|不用|无需|不需要|别)(?:生成|绘制|展示|使用|用|画|以)?\s*(?:' + tokens + ')', '', text, flags=re.I)
+    matches = list(re.finditer(tokens, text, flags=re.I))
+    kinds = list(dict.fromkeys(_REQUESTED_CHARTS[match.group().lower()] for match in matches))
+    unsupported = re.search(r'雷达图|热力图|桑基图|漏斗图|箱线图|地图|流程图|面积图|矩形树图|直方图', text)
+    unsupported_notes = [f'当前绘图暂不支持{unsupported.group()}，已保留查询结果，未用其他图型替代。'] if unsupported else []
+    if not kinds:
+        if unsupported:
+            return [], unsupported_notes
+        if negated or re.search(r'不要(?:生成)?图(?:表|像|片)?|不用图|无需图|仅(?:用|要)?表格', text):
+            return [], []
+        return None, []
+    if not rows:
+        return [], ['本次没有可绘制的结果数据，未生成所要求的图表。']
+    declared = [facts.get('metric_column'), *(facts.get('metric_columns') or [])]
+    for key in ('comparisons', 'metric_summaries'):
+        declared.extend(item.get('metric_column') for item in facts.get(key) or [] if isinstance(item, Mapping))
+    eligible = [column for column in columns if not is_identifier_column(column)
+                and not _looks_temporal(column, rows) and _column_is_numeric(column, rows)]
+    metrics = list(dict.fromkeys(column for column in declared if column in eligible))
+    if not any(declared):
+        metrics = [column for column in eligible if column in text]
+        if not metrics and len(eligible) == 1:
+            metrics = eligible
+    non_metrics = [column for column in columns if column not in metrics and not is_identifier_column(column)]
+    labels = [column for column in non_metrics
+              if not _column_is_numeric(column, rows) or _looks_temporal(column, rows)]
+    if not labels and len(non_metrics) == 1:
+        labels = non_metrics
+    temporal = next((column for column in labels if _looks_temporal(column, rows)), None)
+    categorical = next((column for column in labels if column != temporal), None)
+    label = facts.get('label_column') if facts.get('label_column') in labels else categorical or temporal
+    specs, notes = [], unsupported_notes
+    for kind in kinds:
+        if kind == 'TREE':
+            # A result grouping tree, not inferred real-world organizational
+            # relationships. Parent totals are intentionally not invented.
+            if not labels or len(labels) > 6:
+                notes.append('树状图需要1至6个可展示的分组或层级字段；当前结果不满足，已保留表格。')
+                continue
+            hierarchy = list(labels)
+            order = re.search(r'(?:按照|按|依次)([^。；\n]*?)(?:分层|层级|层次|构建|绘制|展示|生成|树状图|树形图)', text)
+            if order and all(column in order.group(1) for column in hierarchy):
+                hierarchy.sort(key=order.group(1).index)
+            paths = [[str(row.get(column) if row.get(column) is not None else '未提供') for column in hierarchy] for row in rows]
+            if len({tuple(path) for path in paths}) != len(paths):
+                notes.append('树状图的分组路径存在重复，无法唯一对应每条业务数值；未自行合并或累加结果。')
+                continue
+            for metric in metrics or ['']:
+                data = [dict(path=path, **({metric: row.get(metric)} if metric else {}))
+                        for path, row in zip(paths[:MAX_CHART_POINTS], rows[:MAX_CHART_POINTS])]
+                specs.append(ChartSpec(chart_type='TREE', title=(metric + '分组树状图')[:200],
+                    x_field='path', y_fields=[metric] if metric else [], data=data,
+                    point_count=len(data), data_truncated=len(rows) > MAX_CHART_POINTS,
+                    reason='依据用户指定图型和返回维度生成分组树；不推断组织隶属关系'))
+            notes.append('树状图按查询返回的维度分组展示，不代表已核实的组织隶属关系；父节点未累加指标。')
+            continue
+        if not metrics:
+            notes.append('所要求的图表缺少可唯一确认的业务数值字段；编码不能当作指标，已保留表格。')
+            continue
+        if kind == 'SCATTER':
+            if len(metrics) < 2:
+                notes.append('散点图需要两个可确认的业务数值字段，当前结果不足，未将编码或行号当作坐标。')
+                continue
+            for metric in metrics[1:]:
+                specs.extend(_one(kind, metrics[0], metric, rows, f'{metrics[0]}与{metric}散点图'))
+            continue
+        if not label:
+            notes.append('所要求的图表缺少类别或时间字段，未编造分组。')
+            continue
+        for metric in metrics:
+            if kind == 'PIE' and (len({str(row.get(label)) for row in rows}) > 8
+                    or any((_finite_number(row.get(metric)) or 0) < 0 for row in rows)
+                    or not any((_finite_number(row.get(metric)) or 0) > 0 for row in rows)):
+                notes.append(f'{metric}的数据含负值、无正值或超过8个类别，不适合当前饼图渲染；未替换成柱状图。')
+                continue
+            plotted = rows
+            axis = (temporal or label) if kind == 'LINE' else label
+            series = categorical if kind == 'LINE' and temporal else None
+            group_fields = ([field for field in labels if field != temporal]
+                            if kind == 'LINE' and temporal else labels)
+            if len(group_fields) > 1 and not facts.get('label_column'):
+                compound = ' / '.join(group_fields)
+                plotted = [{**row, compound: ' / '.join(str(row.get(field) if row.get(field) is not None else '未提供')
+                           for field in group_fields)} for row in rows]
+                if kind == 'LINE' and temporal:
+                    series = compound
+                else:
+                    axis = compound
+            if kind == 'LINE' and len({(str(row.get(axis)), str(row.get(series)) if series else '') for row in plotted}) != len(plotted):
+                notes.append(f'{metric}的时间/系列键重复，未把不同记录连接成一条折线。')
+                continue
+            specs.extend(_one(kind, axis, metric, plotted, f'{metric}{next(word for word, code in _REQUESTED_CHARTS.items() if code == kind)}',
+                horizontal=kind == 'BAR' and '条形图' in text, series_field=series))
+    if any(spec.data_truncated for spec in specs):
+        notes.append(f'图表仅绘制前{MAX_CHART_POINTS}条返回记录，校验与分析仍使用全部可用数据。')
+    if len(specs) > 3:
+        notes.append('本次按现有展示上限绘制前3张图，其他指标仍保留在结果表和附件中。')
+    return specs[:3], list(dict.fromkeys(notes))
+
+
 def build_chart_specs(
     intent: PrimaryIntent,
     columns: list[str],
@@ -166,6 +286,8 @@ def render_chart_svg(
     y_fields = [str(item) for item in raw.get("y_fields") or [] if str(item)]
     series_field = str(raw.get("series_field") or "")
     rows = [dict(item) for item in raw.get("data") or [] if isinstance(item, Mapping)]
+    if chart_type == 'TREE':
+        return _render_tree(raw, width=max(640, min(int(width), 1600)))
     if chart_type not in {"LINE", "BAR", "PIE", "SCATTER"}:
         return None
     if (not rows or not x_field or len(y_fields) != 1
@@ -215,6 +337,51 @@ def render_chart_svg(
         '</svg>'
     )
     return svg.encode("utf-8")
+
+
+def _render_tree(raw: dict[str, Any], *, width: int) -> bytes | None:
+    rows = raw.get('data') or []
+    field = raw.get('x_field')
+    metrics = raw.get('y_fields') or []
+    if not rows or len(metrics) > 1 or any(is_identifier_column(str(metric)) for metric in metrics):
+        return None
+    paths = [row.get(field) for row in rows[:MAX_CHART_POINTS] if isinstance(row, Mapping)]
+    if len(paths) != len(rows) or any(not isinstance(path, list) or not 1 <= len(path) <= 6 for path in paths):
+        return None
+    paths = [tuple(str(item) for item in path) for path in paths]
+    if len(set(paths)) != len(paths):
+        return None
+    nodes = {(): '查询结果'}
+    for path in paths:
+        for depth in range(1, len(path) + 1):
+            nodes.setdefault(path[:depth], path[depth - 1])
+    levels = max(map(len, paths)) + 1
+    width = max(width, levels * 170 + 60)
+    height = max(360, len(paths) * 64 + 110)
+    positions = {path: 94 + index * 64 for index, path in enumerate(paths)}
+    for path in sorted(nodes, key=len, reverse=True):
+        if path not in positions:
+            children = [child for child in nodes if len(child) == len(path) + 1 and child[:-1] == path]
+            positions[path] = sum(positions[child] for child in children) / len(children)
+    parts = []
+    for path in nodes:
+        x, y = 20 + len(path) * 170, positions[path]
+        if path:
+            parent_y = positions[path[:-1]]
+            parts.append(f'<path d="M {x - 25} {parent_y} H {x - 13} V {y} H {x}" fill="none" stroke="#94a3b8"/>')
+        label = escape(nodes[path])
+        parts.append(f'<rect x="{x}" y="{y - 23}" width="145" height="46" rx="6" fill="#eff6ff" stroke="#93c5fd"/>'
+                     f'<text x="{x + 8}" y="{y - 4}" font-size="12" fill="#1f2937"><title>{label}</title>{escape(_short_label(nodes[path], 12))}</text>')
+    if metrics:
+        metric = metrics[0]
+        for path, row in zip(paths, rows):
+            value = row.get(metric)
+            if _finite_number(value) is not None:
+                parts.append(f'<text x="{28 + len(path) * 170}" y="{positions[path] + 14}" font-size="12" fill="#1d4ed8">{escape(_value_label(value))}</text>')
+    title = escape(str(raw.get('title') or '结果分组树状图'))
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-labelledby="chart-title">'
+            f'<rect width="100%" height="100%" fill="white"/><title id="chart-title">{title}</title>'
+            f'<g font-family="Microsoft YaHei, PingFang SC, sans-serif"><text x="20" y="34" font-size="20" fill="#1f2937">{title}</text>{"".join(parts)}</g></svg>').encode('utf-8')
 
 
 def _finite_number(value: Any) -> float | None:
