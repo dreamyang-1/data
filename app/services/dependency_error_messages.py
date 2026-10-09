@@ -126,6 +126,21 @@ def render_dependency_error(exc: AdapterError) -> str | None:
     code = exc.upstream_code or exc.code
     details = _details(exc)
 
+    binding_failures = {
+        'ASL_BINDING_TIMEOUT': 'ASL 绑定服务调用超时，请稍后重试。',
+        'ASL_BINDING_UNAVAILABLE': 'ASL 绑定依赖服务暂时无法访问，请稍后重试。',
+        'ASL_BINDING_RATE_LIMITED': 'ASL 绑定模型暂时限流，请稍后重试。',
+        'ASL_UPSTREAM_RATE_LIMITED': 'ASL 绑定模型暂时限流，请稍后重试。',
+        'ASL_CAPACITY_EXHAUSTED': 'ASL 绑定服务繁忙，请稍后重试。',
+        'ASL_GENERATION_DEADLINE_EXCEEDED': 'ASL 绑定处理超时，请稍后重试。',
+        'ASL_BINDING_RESPONSE_INVALID': 'ASL 绑定模型返回的内容格式不符合要求，请服务维护人员检查模型输出。',
+        'ASL_BINDING_AUTH_FAILED': 'ASL 绑定依赖服务认证失败，请服务维护人员检查服务凭据和访问配置。',
+        'ASL_BINDING_FAILED': 'ASL 绑定服务内部处理异常，请服务维护人员检查本次错误记录。',
+    }
+    if code in binding_failures:
+        return (binding_failures[code] + ' 本次尚未生成或执行 SQL；'
+                '这是系统处理失败，不是用户参数缺失，已明确的查询条件无需补充或改写。')
+
     if code == "ASL_ENTITY_MENTION_UNRESOLVED":
         mentions = _diagnostic_subject(details, "unresolved_mentions", "mention")
         if mentions:
