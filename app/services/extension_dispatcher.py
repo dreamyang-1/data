@@ -17,7 +17,7 @@ from uuid import uuid4
 import httpx
 
 from app.config import Settings
-from app.analysis.visualization import _finite_number as chart_number, is_identifier_column
+from app.analysis.visualization import _finite_number as chart_number, is_identifier_column, requires_local_bar_format
 from app.domain.models import ChatRequest, ExtensionExecution, ToolConfig
 from app.skills.dynamic import DynamicSkillLoader, LoadedSkill
 from app.services.tool_selector import OptionalToolSelector
@@ -289,6 +289,8 @@ class ExtensionDispatcher:
             or (chart_type == "LINE" and spec.get("series_field"))
         ):
             return None
+        if requires_local_bar_format(spec):
+            return None  # Keep compact monetary labels and exact hover values together.
         y_field = y_fields[0]
         if chart_type == "PIE":
             values = [cls._finite_number(row.get(y_field)) for row in rows]
@@ -316,6 +318,12 @@ class ExtensionDispatcher:
                 projected.append({"category": category, "value": value})
         if not projected:
             return None
+        if chart_type in {'BAR', 'PIE'} and len({row['category'] for row in projected}) != len(projected):
+            return None
+        if chart_type == 'BAR' and spec.get('horizontal') and tool_name == 'generate_column_chart' and any(
+            len(row['category']) > 14 for row in projected
+        ):
+            return None  # A vertical-only MCP must not reintroduce unreadable long labels.
         arguments: dict[str, Any] = {
             "data": projected,
             "title": str(spec.get("title") or "数据图表")[:200],
