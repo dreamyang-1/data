@@ -292,6 +292,49 @@ def _dim_bound_field(code, catalog):
     return fields.pop() if len(fields) == 1 else None
 
 
+def _dimension_filter_field(code, original, catalog):
+    """Resolve a dimension predicate using its own governed fields and values.
+
+    A dimension's ID mappings may legitimately have a name predicate. Resolve
+    it before exact-label correction overwrites a valid physical field. Never
+    use unrelated entities' same-valued attributes or a model's rank as proof.
+    """
+    if not isinstance(original, dict) or str(original.get('op') or original.get('operator') or '').upper() not in {'=', '!=', 'IN', 'NOT IN'}:
+        return None
+    values = original.get('value')
+    values = values if isinstance(values, list) else [values]
+    if not values or any(value is None or isinstance(value, (dict, list, bool)) for value in values):
+        return None
+    definition = catalog['dimensions'].get(code) or {}
+    mapped = {_field(definition.get('field_mapping'))}
+    for item in _object(definition.get('bind_entities')) or []:
+        if isinstance(item, dict) and item.get('mappingTable') and item.get('mappingColumn'):
+            mapped.add(f"{item['mappingTable']}.{item['mappingColumn']}")
+    mapped &= catalog['fields'].keys()
+    candidates = set(mapped)
+    for field in mapped:
+        if not _field_is_identifier(field, catalog['fields'][field]):
+            continue
+        for name_field in _name_field_candidates(field, catalog):
+            # A common suffix alone is not an entity relationship. Names must
+            # be on the mapped table or share its registered logical owner.
+            if (name_field.split('.')[0] == field.split('.')[0]
+                    or field_owners(catalog['fields'][name_field]) & field_owners(catalog['fields'][field])):
+                candidates.add(name_field)
+    hits = []
+    for field in sorted(candidates):
+        matches = [_vector_matches(field, value, catalog) for value in values]
+        if matches and all(len(match) == 1 for match in matches):
+            hits.append(field)
+    # Exact canonical name evidence can beat an ID's display-label alias, but
+    # two owners/fields carrying the literal itself are still ambiguous.
+    exact = [field for field in hits if all(any(
+        value_allowed(record, catalog) and record['field'] == field and record['value'] == value
+        for record in catalog['values']) for value in values)]
+    unique = exact or hits
+    return unique[0] if len(unique) == 1 else None
+
+
 def _metric_subject_candidates(metric_keys, catalog):
     """Use published execution bindings, never the order of involved entities."""
     candidates = []
@@ -659,6 +702,11 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
         if not isinstance(rows, list): rows = []
         for index, original in enumerate(extraction[source]):
             slot_catalog = parameter_catalog(catalog, original, extraction, target)
+            owner_candidates = slot_catalog.get('_parameter_owner_candidates')
+            if owner_candidates:
+                ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
+                    '该名称或别名对应多个实体，尚未明确参数归属', owner_candidates))
+                continue
             label = (original.get('name') or original.get('field')) if isinstance(original,dict) else original
             if not isinstance(label,str) or not label.strip():
                 ast['ambiguity'].append(issue(f'{source}[{index+1}]',original,'上游未明确该参数的业务字段或指标名称'))
@@ -667,6 +715,20 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
             choice = found[0] if len(found) == 1 else {}
             key = choice.get('key')
             exact_keys = _exact_choice_keys(target, original, slot_catalog)
+            if target == 'filters' and all(
+                value in slot_catalog['fields'] or value in catalog['dimensions']
+                for value in exact_keys
+            ):
+                # An exact attribute is more specific than a homonymous
+                # dimension. Keep multiple attributes ambiguous; do not
+                # reinterpret metric thresholds as physical-field filters.
+                physical_exact = [value for value in exact_keys if value in slot_catalog['fields']]
+                if physical_exact:
+                    exact_keys = physical_exact
+            if target == 'filters' and len(exact_keys) == 1 and exact_keys[0] in catalog['dimensions']:
+                resolved = _dimension_filter_field(exact_keys[0], original, slot_catalog)
+                if resolved:
+                    exact_keys = [resolved]
             if len(exact_keys) == 1:
                 if key != exact_keys[0] or choice.get('error'):
                     repairs.append({'type': 'STRUCTURED_SLOT_KEY_CORRECTED',

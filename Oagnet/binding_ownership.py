@@ -87,6 +87,20 @@ def parameter_catalog(catalog, original, extraction, target):
         return catalog
     owners = parameter_owners(original, catalog)
     exact = matching_fields(original, catalog)
+    if not owners and not exact and target in {'filters', 'display_fields'} and isinstance(original, dict):
+        # A whole entity name/alias used as a slot label supplies its parent,
+        # not an arbitrary same-named attribute on another entity. Explicit
+        # attribute names and explicit slot owners retain their old priority.
+        label = normalized(original.get('field') or original.get('name') or '')
+        if label:
+            entities = catalog['entities']
+            canonical = {code for code, meta in entities.items()
+                         if label in {normalized(code), normalized(meta.get('entity_id'))}}
+            matches = canonical or {code for code, meta in entities.items()
+                if label in {normalized(term) for term in entity_terms(code, meta) if term}}
+            if len(matches) > 1:
+                return dict(catalog, _parameter_owner_candidates=sorted(matches))
+            owners = matches
     if not owners and len(exact) > 1:
         hinted = resolve_entities(extraction.get('实体') or [], catalog['entities'])
         matched_owners = {owner for field in exact for owner in field_owners(catalog['fields'][field])}
