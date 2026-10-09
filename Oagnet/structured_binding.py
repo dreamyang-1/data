@@ -6,6 +6,7 @@ from query_binding_review import _metadata, _object, _field
 from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields
 from binding_ownership import (entity_label_candidates, field_owners, matching_fields,
                                normalized, parameter_catalog, registered_terms, resolve_entities, value_allowed)
+from binding_errors import invoke_binding_object
 
 SECTIONS = {'指标': 'metrics', '维度': 'dimensions', '展示字段': 'display_fields', '过滤条件': 'filters', '排序': 'sort'}
 OPERATORS = {'=', '!=', '>', '>=', '<', '<=', 'IN', 'NOT IN', 'LIKE', 'BETWEEN'}
@@ -710,13 +711,10 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
         'with candidates instead of guessing.'
     )
     prompt += '\n同名属性必须结合参数entity和目录owner/owners区分；同名枚举必须使用该实体属性下的标准值。查询subject不是所有字段的归属。'
-    try:
-        result = model.invoke([{'role': 'system', 'content': prompt}, {'role': 'user', 'content': json.dumps(context, ensure_ascii=False, default=str)}])
-        plan = json.loads(re.sub(r'^```(?:json)?\s*|\s*```$', '', result.content.strip()))
-        if not isinstance(plan, dict): raise ValueError('binding response must be object')
-    except Exception:
-        ast['ambiguity'] = [issue('目录绑定', extraction, '绑定服务未返回可用结果，请稍后重试；不是用户参数缺失')]
-        return ast, repairs
+    plan = invoke_binding_object(model, [
+        {'role': 'system', 'content': prompt},
+        {'role': 'user', 'content': json.dumps(context, ensure_ascii=False, default=str)},
+    ], stage='catalog_binding')
     subject = plan.get('subject')
     # Accept the ordinary ASL object shape as well as the compact binding key.
     if isinstance(subject, dict): subject = subject.get('entity')
