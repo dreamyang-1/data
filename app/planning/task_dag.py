@@ -1277,7 +1277,7 @@ class MultiQuestionPlanner:
 
     @staticmethod
     def _normalize_grounding_numbers(text: str) -> str:
-        """口语日期写法与规范写法等价：25年≡2025年、09月≡9月，比对前统一。"""
+        """口语日期写法与规范写法等价"""
         text = re.sub(
             r"(?<!\d)(\d{2})(?=年)",
             lambda m: f"20{m.group(1)}" if int(m.group(1)) <= 49 else m.group(1),

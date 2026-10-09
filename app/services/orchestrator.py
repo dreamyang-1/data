@@ -9279,6 +9279,50 @@ class DataAnalysisOrchestrator:
             if planner_extraction is not None
             else None
         )
+        # Keep the planner's predicate owner at every existing execution entry
+        # point (including the fast path). This is not another NL extraction.
+        # Names/values are still grounded later by the authorized catalog.
+        if isinstance(extraction, dict):
+            declared = [item for item in extraction.get("过滤条件") or []
+                        if isinstance(item, dict) and item.get("entity")]
+            def literals(item):
+                raw = item.get("value")
+                return {str(v).strip() for v in (raw if isinstance(raw, list) else [raw])
+                        if v not in (None, "")}
+            def region(label):
+                return bool(re.search(r"省份|城市|地区|区域|province|city|region", str(label), re.I))
+            def operator(item):
+                op = str(item.get("op") or item.get("operator") or "=").upper().replace("_", " ")
+                return "=" if op == "EQ" else "!=" if op == "NE" else op
+            filters = []
+            for current in request.filters:
+                matching = [item for item in declared
+                    if literals(item) == literals(current) and literals(item)
+                    and operator(item) == operator(current)
+                    and (item.get("field") == current.get("field")
+                         or region(item.get("field")) and region(current.get("field")))]
+                if matching:
+                    for item in matching:
+                        owned = dict(current, entity=item["entity"])
+                        if region(item.get("field")) and region(current.get("field")):
+                            owned["field"] = item["field"]
+                        if owned not in filters:
+                            filters.append(owned)
+                else:
+                    filters.append(current)
+            # A legacy single-region rule can retain only Beijing from
+            # "Shanghai hospitals and Beijing dealers". Restore missing
+            # explicitly owned planner predicates, not guessed geography.
+            for item in declared:
+                if not literals(item) or any(literals(item) == literals(f) for f in filters):
+                    continue
+                op = operator(item)
+                values = item.get("value")
+                if isinstance(values, list) and len(values) == 1 and op in {"=", "!="}:
+                    values = values[0]
+                filters.append({"entity": item["entity"], "field": item.get("field"),
+                    "operator": {"=": "EQ", "!=": "NE"}.get(op, op), "value": values})
+            request.filters = filters
         projection_mode = explicit_projection_mode(extraction)
         if projection_mode == "DISTINCT":
             request.assumptions = list(dict.fromkeys([

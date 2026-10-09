@@ -514,7 +514,7 @@ def validate_intent_asl_contract_completeness(
         "NE", "!=", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
     }
 
-    def filter_signature(item: dict[str, Any]) -> tuple[str, bool, tuple[str, ...]]:
+    def filter_signature(item: dict[str, Any]) -> tuple[str, str, bool, tuple[str, ...]]:
         raw_value = item.get("value")
         values = raw_value if isinstance(raw_value, list) else [raw_value]
         normalized_values = tuple(sorted(
@@ -523,6 +523,7 @@ def validate_intent_asl_contract_completeness(
             if value not in (None, "")
         ))
         return (
+            str(item.get("entity") or "").strip(),
             str(item.get("field") or "").strip(),
             str(item.get("operator") or "").upper() in negative_operators,
             normalized_values,
@@ -584,9 +585,10 @@ def validate_intent_asl_contract_completeness(
                 if not canonical_fields:
                     continue
                 for actual in contract_filters:
-                    actual_field, actual_negative, actual_values = filter_signature(actual)
+                    actual_owner, actual_field, actual_negative, actual_values = filter_signature(actual)
                     if (
                         actual_field in canonical_fields
+                        and (not item.get("entity") or actual_owner == str(item["entity"]).strip())
                         and actual_negative == expected_negative
                         and canonical_value in set(actual_values)
                     ):

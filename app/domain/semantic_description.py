@@ -4,11 +4,14 @@
 拆分/提取与洞察综合注入上下文时优先取这份，拉取失败回退本地
 《语义描述文件.md》，与历史行为保持一致。
 """
+import logging
 import time
 from pathlib import Path
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 _LOCAL_DESCRIPTION_PATH = Path(__file__).resolve().parents[2] / "语义描述文件.md"
 _LOCAL_SOURCE = "语义描述文件.md"
@@ -50,6 +53,7 @@ async def load_semantic_description(
 
     url = f"{base_url}/files/semantic_model_{semantic_model_id}.md"
     content = ""
+    failure = ""
     try:
         async with httpx.AsyncClient(
             timeout=getattr(settings, "semantic_description_timeout_seconds", 3.0)
@@ -57,13 +61,21 @@ async def load_semantic_description(
             response = await client.get(url)
             response.raise_for_status()
             content = response.text.strip()
-    except httpx.HTTPError:
-        content = ""
+            if not content:
+                failure = "文件内容为空"
+    except httpx.HTTPStatusError as exc:
+        failure = f"HTTP {exc.response.status_code}"
+    except httpx.HTTPError as exc:
+        failure = f"{type(exc).__name__}: {exc}"
     _cache[semantic_model_id] = (now, content)
     if content:
         return _reference(
             content, _REMOTE_SOURCE_TEMPLATE.format(model_id=semantic_model_id)
         )
+    logger.warning(
+        "语义描述文件拉取失败，回退本地维护文档: model_id=%s url=%s 原因=%s",
+        semantic_model_id, url, failure,
+    )
     return _reference(local, _LOCAL_SOURCE)
 
 

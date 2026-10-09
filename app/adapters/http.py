@@ -3113,6 +3113,31 @@ class HttpDataRetrievalAdapter:
         for required_index, required in enumerate(request.filters):
             if not isinstance(required, dict):
                 continue
+            # A per-predicate, source-verified dictionary receipt is the only
+            # exception for a name becoming owner-specific foreign keys. Do
+            # not use it to normalize other entities sharing the same literal.
+            def value_set(item):
+                raw = item.get("value")
+                return {str(v).strip() for v in (raw if isinstance(raw, list) else [raw])
+                        if v not in (None, "")}
+            owner_preserved = False
+            for repair in repairs or []:
+                if (not isinstance(repair, dict)
+                        or repair.get("type") != "RESOLVE_FILTER_BUSINESS_OWNER"
+                        or repair.get("source") != "SCOPED_RELATION_AND_DICTIONARY"):
+                    continue
+                source, resolved = repair.get("source_filter") or {}, repair.get("resolved_filter") or {}
+                source_op = str(source.get("op") or "=").upper().replace("_", " ")
+                required_op = str(required.get("operator") or "EQ").upper().replace("_", " ")
+                if (required.get("entity") and required.get("entity") == source.get("entity")
+                        and required.get("field") == source.get("field")
+                        and value_set(required) in (value_set(source),value_set(repair.get("previous_filter") or {}))
+                        and (source_op == required_op or {source_op, required_op} <= {"=", "EQ"})
+                        and resolved in generated):
+                    owner_preserved = True
+                    break
+            if owner_preserved:
+                continue
             binding = bindings_by_index.get(required_index)
             required_operator = str(required.get("operator") or "EQ").upper()
             if required_operator in null_operators:
