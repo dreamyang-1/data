@@ -70,3 +70,52 @@ are recorded, not business rows or credentials.
 Current stage is the bounded result-presentation change. Catalog/Evaluation/
 Shadow gaps and V1 replacement readiness are unchanged; no V2 cutover or
 automatic PR merge is included.
+
+## Remove the redundant final analysis explanation
+
+The user requested removal of the paragraph below the result table reporting
+`排名对象为空或重复，SQL必须按唯一对象聚合`. PROVEN: the optional
+analysis engine rejects duplicate display names and the final renderer appends
+that diagnostic even though the original query table and chart remain useful.
+Suppress only this diagnostic in the final explanation; do not change query
+execution, analysis safeguards, progress, reliability/status or diagnostic
+evidence. Preserve the question introduction, table and chart.
+
+A new real-engine regression uses equal product names with different codes,
+requests TOP_N and a bar chart, and verifies the introduction, both code rows,
+SVG and reliability diagnostic. No existing assertions were weakened.
+The targeted presentation, critical, API and warning-preservation suite passes
+192 tests, including truncation, insufficient forecast data and unavailable
+profile-field warnings.
+
+The first broad-removal candidate introduced three regressions in those warning
+categories compared with the frozen baseline, so it was rejected before release.
+The implementation was narrowed to the screenshot's exact duplicate-ranking
+diagnostic. Corrected complete offline regression: baseline 4,727 passes / 19
+failures; final 4,728 passes / the identical 19 failures. No collection errors,
+removed cases, old-pass to new-fail or old-fail to new-pass transitions. One
+new regression passes. These retained baseline failures are not a full-suite
+pass. Two additional Windows integration runs encounter the existing 30 ms
+telemetry-delivery timeout (186 passes / one failure); the same case passes
+both isolated reruns, the 192-test functional run, complete offline regression
+and server run. No timing assertion or progress code was changed.
+
+The exact three-file follow-up manifest is `app/services/orchestrator.py`,
+`tests/test_final_output_preferences.py` and this report. Their development
+and integration SHA-256 values match. Code review confirms a single runtime
+conditional change, with no neighboring behavior or test expectations removed.
+
+The remote baseline matched the prior committed integration source. A checked
+one-hunk patch and exact-file backup were used; isolated tests against actual
+remote application code pass 187 cases. Only DataAnalysis was restarted and is
+active/READY with all readiness profiles true, no restarts and the same runtime
+mode. Protected configuration, service unit and adjacent presentation sources
+are unchanged. A real model-81/domain-205 native SSE request for highest-sales
+product analysis with a bar chart completes in 51.9 seconds with no stream
+errors, the expected question introduction, result table and chart, and no
+duplicate-ranking explanation. PARTIAL_SUCCESS is intentionally retained:
+display suppression does not claim the optional analysis succeeded. The first
+smoke harness incorrectly required COMPLETED; its status assertion was corrected
+to the unchanged partial-success contract, then the real request was rerun and
+passed. Query, planning, parsing, execution, reliability and insight event order
+remain intact. No business rows or credentials are included in this report.
