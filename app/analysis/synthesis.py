@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 async def _semantic_reference(
     settings: Any, semantic_model_id: int | None = None
 ) -> dict[str, Any]:
-    """与任务规划共用同一份语义描述：优先平台生成文件，本地文档兜底。"""
+    """与任务规划共用加载器，每次读取当前平台模型的描述，不使用本地兜底。"""
     from app.domain.semantic_description import load_semantic_description
 
     return await load_semantic_description(settings, semantic_model_id)

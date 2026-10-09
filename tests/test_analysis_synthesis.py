@@ -179,11 +179,11 @@ async def test_permission_http_failure_is_not_retried_or_hidden():
 @pytest.mark.asyncio
 async def test_dsl_is_live_user_reference_and_preserves_actual_query(monkeypatch, tmp_path):
     from app.domain import semantic_description as sd
-    path = tmp_path / "semantic.md"
     description = "指标：医院总数；单位：家；绑定维度：省份、城市。医院所在城市不同于经销商所在城市。"
-    path.write_text(description, encoding="utf-8-sig")
-    monkeypatch.setattr(sd, "_LOCAL_DESCRIPTION_PATH", path)
-    sd.clear_cache()
+    documents = [description]
+    async def load(settings, model_id):
+        return {"source": "semantic_model_121.md", "available": True, "content": documents[0]}
+    monkeypatch.setattr(sd, "load_semantic_description", load)
     actual = {"asl": {"metrics": [{"name": "hospital_count"}], "dimensions": [], "time_context": None},
               "sql": "SELECT COUNT(*) FROM hospital"}
     source = analysis()
@@ -192,7 +192,7 @@ async def test_dsl_is_live_user_reference_and_preserves_actual_query(monkeypatch
     model = QwenAnalysisSynthesizer(settings(), transport_for("按实际范围解释医院总数。", calls))
     await model.synthesize(request(), source, evidence())
     body = json.loads(calls[0]["messages"][1]["content"])
-    assert body["semantic_reference"] == {"source": "语义描述文件.md", "available": True, "content": description}
+    assert body["semantic_reference"] == {"source": "semantic_model_121.md", "available": True, "content": description}
     assert body["facts"]["executed_query"] == actual
     assert "semantic_reference" not in source.facts
     system = calls[0]["messages"][0]["content"]
@@ -200,7 +200,7 @@ async def test_dsl_is_live_user_reference_and_preserves_actual_query(monkeypatch
     assert "不表示本次已经按这些维度分组" in system
     assert "不自动证明业务口径正确" in system
     assert "如实说明差异" in system
-    path.write_text("更新后的业务说明", encoding="utf-8")
+    documents[0] = "更新后的业务说明"
     await model.synthesize(request(), source, evidence())
     assert json.loads(calls[1]["messages"][1]["content"])["semantic_reference"]["content"] == "更新后的业务说明"
 
@@ -209,11 +209,9 @@ async def test_dsl_is_live_user_reference_and_preserves_actual_query(monkeypatch
 @pytest.mark.parametrize("contents", [None, b"", b"\xff\xfe\x00"])
 async def test_missing_empty_or_unreadable_dsl_does_not_block_analysis(monkeypatch, tmp_path, contents):
     from app.domain import semantic_description as sd
-    path = tmp_path / "semantic.md"
-    if contents is not None:
-        path.write_bytes(contents)
-    monkeypatch.setattr(sd, "_LOCAL_DESCRIPTION_PATH", path)
-    sd.clear_cache()
+    async def load(settings, model_id):
+        return {"source": "semantic_model_121.md", "available": False, "content": ""}
+    monkeypatch.setattr(sd, "load_semantic_description", load)
     calls = []
     text, _ = await QwenAnalysisSynthesizer(settings(), transport_for("已有数据仍可分析。", calls)).synthesize(
         request(), analysis(), evidence())
@@ -223,9 +221,10 @@ async def test_missing_empty_or_unreadable_dsl_does_not_block_analysis(monkeypat
 
 
 def test_insight_and_planning_use_the_same_semantic_document():
-    # 拆分与洞察综合统一走 semantic_description 加载器，本地兜底文档路径唯一。
-    from app.domain.semantic_description import _LOCAL_DESCRIPTION_PATH
-    assert _LOCAL_DESCRIPTION_PATH.name == "语义描述文件.md"
+    # STALE_TEST: 共用平台加载器，不再保留本地语义文档路径。
+    from app.domain import semantic_description as sd
+    assert not hasattr(sd, "_LOCAL_DESCRIPTION_PATH")
+    assert callable(sd.load_semantic_description)
 
 
 @pytest.mark.asyncio

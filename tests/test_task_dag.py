@@ -1990,7 +1990,13 @@ async def test_model_plan_prefers_remote_description_and_user_keeps_plain_questi
         captured["user"] = payload["messages"][1]["content"]
         return httpx.Response(200, json={
             "choices": [{"message": {
-                "content": '{"task_structure":"SINGLE_TASK","tasks":[]}'
+                # Current planner requires structured extraction. An incomplete
+                # fixture triggers a separate retry and obscures this source test.
+                "content": json.dumps({"task_structure": "SINGLE_TASK", "tasks": [],
+                    "single_task_intent": "METRIC_QUERY", "single_task_extraction": {
+                        "意图": "统计查询", "实体": ["医院"],
+                        "指标": [{"name": "医院总数"}],
+                    }}, ensure_ascii=False)
             }}]
         })
 
@@ -2050,9 +2056,9 @@ async def test_model_plan_without_semantic_context_keeps_plain_prompt() -> None:
 
     await planner.plan("查询最近半年销售额；然后分析趋势")
 
-    # 平台语义上下文缺失时不注入智能体配置摘录，用提示词文件内置规范兜底。
+    # STALE_TEST: 用户已删除静态语义规范；缺失时不再注入旧模型业务域。
     assert "摘自智能体配置" not in captured["system"]
-    assert "医药销售域" in captured["system"]
+    assert "## 二、医药销售域" not in captured["system"]
 
 
 @pytest.mark.asyncio
