@@ -1,0 +1,39 @@
+{
+  "objective": "Remove Redis as a semantic configuration and data-source dependency",
+  "classification": "PROVEN",
+  "first_divergence": "SQL production loader required disposable Redis copies of authoritative MySQL entities, indicators and source configuration",
+  "resolution": "Read model-qualified active metadata and exact planned data sources from MySQL; keep a disposable five-second process cache; no Redis fallback",
+  "changed_files": [
+    "sql_translator_prod.py",
+    "semantic_scope.py",
+    "api_server_prod.py",
+    "README.md",
+    "test_single_domain_execution.py",
+    "test_split_api_contract.py",
+    "test_mysql_dsl_loader.py"
+  ],
+  "baseline": {"passed": 624, "failed": 1, "collection_errors": 0},
+  "final_offline": {"passed": 647, "failed": 0, "collection_errors": 0, "new_tests": 22},
+  "old_pass_to_new_fail": 0,
+  "old_fail_to_new_pass": 1,
+  "stale_test": {
+    "test": "test_split_api_contract.py large-result preview assertion",
+    "reason": "User-confirmed contract requires full rows plus attachment from SQL service; only final presentation limits preview to 20 rows",
+    "production_export_behavior_changed": false
+  },
+  "review": [
+    "Exact positive model IDs and current request scope remain mandatory",
+    "MySQL reads restrict model, deletion, active entity/relation status and explicit domain before returning records",
+    "Missing explicit source never falls back to another source; ambiguous model sources are rejected",
+    "Expired process cache does not conceal MySQL outages; public errors omit connection details",
+    "Same-code assets remain isolated across models; cache refresh does not affect another model",
+    "No Milvus rebuild, semantic database mutation, conversation-state change or V2 routing change"
+  ],
+  "deployment_status": "Awaiting guarded native read-only smoke and exact-file release",
+  "platform_stop_write": {
+    "status": "Prepared separately; not built or deployed",
+    "blocker": "Java platform deployment entry and compiler/Maven toolchain unavailable",
+    "impact": "Old platform can still write disposable Redis copies; SQL no longer consumes them after this release"
+  },
+  "v2_status": "Unchanged; no cutover authorized or performed"
+}

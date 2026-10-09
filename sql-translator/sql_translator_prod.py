@@ -4,11 +4,11 @@
 SQL翻译器（生产版）- 将AST结构化数据转换为SQL语句
 
 与原 sql_translator.py 的区别：
-1. DSL（实体/指标/维度）不再依赖 yml 文件，而是从 Redis 读取
+1. DSL（实体/指标/维度）直接从语义 MySQL 读取，不依赖 Redis
 2. 翻译生成的 SQL 通过模型id关联的数据源执行查询
 3. 数据源连接信息动态获取，支持多数据源
 
-Redis key 规则（参考 SemanticModelRedisUtil.java）：
+历史 RedisDSLLoader 的格式兼容规则（生产路径不再使用）：
 - 指标：semantic_model:metric:{indicatorCode}
 - 维度：semantic_model:dimension:{dimCode}
 - 实体：semantic_model:entity:{entityCode}
@@ -29,7 +29,7 @@ from pymysql.cursors import DictCursor
 from runtime_config import load_workspace_env
 from join_assembly import JoinAssembly, split_joins
 from sql_join_safety import SQLJoinError, validate_join_connectivity
-from threading import BoundedSemaphore
+from threading import BoundedSemaphore, RLock
 
 DEFAULT_EXECUTION_TIMEOUT_MS = 60_000
 _QUERY_SLOTS = BoundedSemaphore(8)
@@ -85,9 +85,9 @@ DATA_SOURCE_KEY_PREFIX = 'semantic_model:data_source:'  # 数据源也存储在 
 class SemanticCatalog:
     """Read-only metric definition and lineage catalog backed by semantic MySQL.
 
-    This catalog is deliberately separate from Redis translation caches. Redis is
-    optimized for ASL translation; MySQL remains the authoritative source for
-    definitions, aliases and lineage returned to callers.
+    MySQL is authoritative for translation assets, definitions, aliases, source
+    credentials and lineage. Disposable process-local caches never require a
+    Redis snapshot to exist.
     """
 
     def __init__(self, db_config: Optional[Dict] = None):
@@ -1537,16 +1537,160 @@ class RedisDSLLoader:
         }
 
 
+class MySQLDSLLoader(RedisDSLLoader):
+    """Read authoritative, model-qualified DSL; reuse only the legacy adapters.
+
+    RedisDSLLoader remains import-compatible for older integrations/tests, but
+    production construction, iteration, indexes and source lookup never use it
+    as storage. The short-lived process cache is disposable, not authoritative.
+    """
+
+    source = 'mysql'
+
+    def __init__(self, catalog=None):
+        super().__init__()
+        self.catalog = catalog or SemanticCatalog()
+        self._snapshots = {}
+        self._snapshot_lock = RLock()
+
+    @property
+    def redis(self):
+        raise RuntimeError('Semantic DSL is MySQL-backed; Redis is not a semantic store')
+
+    @staticmethod
+    def _json_value(value):
+        if not isinstance(value, str):
+            return value
+        if not value.strip():
+            return None
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            return value
+
+    def _snapshot(self, model_id):
+        model = _positive_int(model_id)
+        with self._snapshot_lock:
+            now = time_module.monotonic()
+            cached = self._snapshots.get(model)
+            if cached and now - cached[0] < self._cache_ttl_seconds:
+                return cached[1]
+            rows = {}
+            for kind, table in (
+                ('entity', 'entity_type'), ('metric', 'indicator'),
+                ('dimension', 'dimension'), ('attribute', 'attribute_config'),
+                ('relation', 'relation_config'), ('binding', 'entity_bind_indicator'),
+                ('sub_table', 'entity_sub_table_mapping'),
+            ):
+                active = ' AND status=1' if kind in ('entity', 'relation') else ''
+                rows[kind] = self.catalog._query(
+                    f'SELECT * FROM semantic_model_{table} '
+                    f'WHERE semantic_model_id=%s AND is_deleted=0{active}', (model,))
+            by_id = {str(e['id']): e['code'] for e in rows['entity']}
+            entities = {e['code'] for e in rows['entity']}
+            values = {'entity': {}, 'metric': {}, 'dimension': {}}
+            for kind, code_field in (('entity', 'code'), ('metric', 'indicator_code'), ('dimension', 'dim_code')):
+                for row in rows[kind]:
+                    data = dict(row)
+                    code = data.get(code_field)
+                    if not code or code in values[kind]:
+                        raise ValueError('语义目录存在空编码或重复编码，请检查当前模型配置')
+                    if not self._payload_matches_model(data, str(model)) and kind != 'dimension':
+                        continue
+                    values[kind][code] = data
+            for code, data in values['entity'].items():
+                identifier = str(data['id'])
+                data['semantic_model_attribute_config'] = [
+                    a for a in rows['attribute'] if str(a.get('entity_type_id')) == identifier]
+                data['semantic_model_relation_config'] = [r for r in rows['relation']
+                    if identifier in (str(r.get('source_entity_type_id')), str(r.get('target_entity_type_id')))]
+                data['semantic_model_entity_sub_table_mapping'] = [
+                    s for s in rows['sub_table'] if str(s.get('entity_type_id')) == identifier]
+            for code, data in values['metric'].items():
+                bindings = [b for b in rows['binding'] if b.get('indicator_code') == code]
+                owners = []
+                for binding in bindings:
+                    ref = str(binding.get('entity_id') or binding.get('entity_code') or '')
+                    owner = by_id.get(ref) or (ref if ref in entities else None)
+                    if owner and owner not in owners:
+                        owners.append(owner)
+                data.update(code=code, name=data.get('indicator_name'),
+                    metric_level={1:'原子指标',2:'衍生指标',3:'复合口径指标'}.get(data.get('indicator_level'), data.get('indicator_level') or '原子指标'),
+                    calc_formula=data.get('calculation_formula') or data.get('indicator_logic') or '',
+                    global_filters=self._json_value(data.get('global_filters')),
+                    depend_atom_metric=self._json_value(data.get('dependence_atomic_indicator')),
+                    bind_entity=owners)
+            for data in values['dimension'].values():
+                for field in ('synonyms', 'special_rules', 'enum_list', 'level_list', 'date_list', 'entity_attribute', 'indicator'):
+                    data[field] = self._json_value(data.get(field))
+            # Publish only a completely loaded bundle; database errors propagate
+            # instead of returning stale Redis or another model's metadata.
+            self._snapshots[model] = (now, values)
+            return values
+
+    def _build_table_index(self, model_id=None):
+        rows = self._snapshot(model_id)['entity']
+        self._table_to_entity = {}
+        self._entity_id_to_code = {}
+        for code, row in rows.items():
+            table = row.get('main_table_name') or row.get('mapping_table')
+            if table:
+                self._table_to_entity.setdefault(table, []).append(code)
+            self._entity_id_to_code[str(row['id'])] = code
+
+    def _find_entity_code_by_id(self, entity_id, model_id=None):
+        return next((code for code, row in self._snapshot(model_id)['entity'].items()
+                     if str(row['id']) == str(entity_id)), None)
+
+    def find_all_entity_codes_by_table(self, table_name, model_id=None):
+        return [code for code, row in self._snapshot(model_id)['entity'].items()
+                if (row.get('main_table_name') or row.get('mapping_table')) == table_name]
+
+    def _find_entity_code_by_table(self, table_name, model_id=None):
+        codes = self.find_all_entity_codes_by_table(table_name, model_id)
+        return codes[0] if codes else None
+
+    def _get(self, kind, code, model_id):
+        data = self._snapshot(model_id)[kind].get(code)
+        return getattr(self, '_adapt_' + kind)(data, str(_positive_int(model_id))) if data else None
+
+    def get_entity(self, code, model_id=None):
+        return self._get('entity', code, model_id)
+
+    def get_metric(self, code, model_id=None):
+        return self._get('metric', code, model_id)
+
+    def get_dimension(self, code, model_id=None):
+        return self._get('dimension', code, model_id)
+
+    def _iter_kind(self, kind, model_id=None):
+        for code in self._snapshot(model_id)[kind]:
+            yield self._get(kind, code, model_id)
+
+    def iter_scoped_dimensions(self, model_id):
+        return self.iter_dimensions(model_id)
+
+    def clear_cache(self, model_id=None):
+        with self._snapshot_lock:
+            if model_id is None:
+                self._snapshots.clear()
+            else:
+                self._snapshots.pop(_positive_int(model_id), None)
+            return super().clear_cache(model_id)
+
+
 class SQLTranslatorProd:
     """
     AST 到 SQL 的翻译器（生产版）
 
-    DSL 数据从 Redis 动态加载，SQL 生成逻辑参考原 sql_translator.py。
+    DSL 数据从权威 MySQL 动态加载，SQL 生成逻辑参考原 sql_translator.py。
     """
 
     def __init__(self, redis_config: Optional[Dict] = None):
-        self.loader = RedisDSLLoader(redis_config)
         self.catalog = SemanticCatalog()
+        # redis_config is accepted only for call compatibility; no Redis client
+        # is constructed or used by the production semantic path.
+        self.loader = MySQLDSLLoader(self.catalog)
         self._base_entity_relationship_graphs = {}
 
     # ======================== DSL 查询方法 ========================
@@ -1569,9 +1713,8 @@ class SQLTranslatorProd:
             return value
         if not current:
             return value
-        # Do not mutate RedisDSLLoader's cached object. Attribute and dimension
-        # payloads stay Redis-backed; only relationship topology is replaced by
-        # the current published MySQL snapshot.
+        # Do not mutate the loader's object; preserve the existing authoritative
+        # relationship overlay while all metadata is now MySQL-backed.
         enriched = dict(value)
         enriched['physical_table_join'] = dict(value.get('physical_table_join') or {})
         if current.get('base_table'):
@@ -3699,51 +3842,23 @@ class SQLTranslatorProd:
         return obj
 
     def fetch_data_source(self, model_id, data_source_id=None):
+        """Read credentials from MySQL for this model and exact planned source.
+
+        A missing explicit source never falls back to another source. Without an
+        explicit ID, only a single nondeleted source is unambiguous.
         """
-        从 Redis 查询数据源连接信息
-
-        数据源同步规则（参考 SemanticModelRedisUtil.storeDataSources）：
-        - key: semantic_model:data_source:{dataSourceId}
-        - value: 数据源记录 JSON，包含 id/semantic_model_id/db_type/db_name/host/port/username/password/db_schema 等
-
-        查询策略：
-        1. 优先按 data_source_id 精确查找（O(1)）
-        2. 否则按 model_id 扫描所有 data_source key，匹配 semantic_model_id 字段
-
-        :param model_id: 语义模型 id（对应数据源记录中的 semantic_model_id 字段）
-        :param data_source_id: 可选，直接指定数据源 id
-        :return: 数据源配置字典 或 None
-        """
-        r = self.loader.redis
-
-        # 策略1：按 data_source_id 精确查找
-        if data_source_id:
-            raw = r.get(f'{DATA_SOURCE_KEY_PREFIX}{data_source_id}')
-            if raw:
-                try:
-                    ds = json.loads(raw)
-                    if str(ds.get('semantic_model_id')) == str(model_id) if model_id else True:
-                        return ds
-                except (json.JSONDecodeError, TypeError):
-                    pass
-
-        # 策略2：按 model_id 扫描所有 data_source key
-        if not model_id:
-            return None
-        for key in r.scan_iter(match=f'{DATA_SOURCE_KEY_PREFIX}*', count=1000):
-            raw = r.get(key)
-            if not raw:
-                continue
-            try:
-                ds = json.loads(raw)
-            except (json.JSONDecodeError, TypeError):
-                continue
-            # 跳过已删除记录
-            if ds.get('is_deleted') in (1, True):
-                continue
-            if str(ds.get('semantic_model_id')) == str(model_id):
-                return ds
-        return None
+        model = _positive_int(model_id)
+        params = [model]
+        exact = ''
+        if data_source_id is not None:
+            exact = ' AND id=%s'
+            params.append(_positive_int(data_source_id, 'data_source_id'))
+        rows = self.catalog._query(
+            'SELECT * FROM semantic_model_data_source '
+            'WHERE semantic_model_id=%s AND is_deleted=0' + exact, tuple(params))
+        if len(rows) > 1:
+            raise ValueError('当前模型存在多个数据源，必须明确指定data_source_id')
+        return dict(rows[0]) if rows else None
 
     @staticmethod
     def _is_shared_region_hospital_denominator_subquery(sql: str) -> bool:
@@ -4271,23 +4386,22 @@ class SQLTranslatorProd:
         # 解析model_id
         resolved_model_id = model_id or ast_data.get('model_id') or ast_data.get('semantic_model_id')
 
-        # 如果未提供model_id，尝试从指标反查
-        if not resolved_model_id:
-            metrics_in_ast = ast_data.get('metrics', []) or []
-            resolved = self._resolve_model_id_from_metrics(metrics_in_ast, resolved_model_id)
-            if resolved is not None:
-                resolved_model_id = resolved
+        if resolved_model_id is None:
+            return {'success': False, 'sql': None, 'error': '必须提供semantic_model_id',
+                    'error_code': 'SEMANTIC_MODEL_REQUIRED', 'retryable': False}
 
         # Resolve the physical source together with the semantic plan.  A model
         # can legally contain multiple data sources, therefore the execution
         # service must never rediscover one later by Redis scan order.
         explicit_data_source_id = ast_data.get('data_source_id')
-        metric_data_source_id = self._resolve_data_source_id_from_metrics(
-            ast_data.get('metrics', []) or [], resolved_model_id
-        )
-        subject_data_source_id = self._resolve_data_source_id_from_subject(
-            ast_data.get('subject', {}) or {}, resolved_model_id
-        )
+        try:
+            resolved_model_id = str(_positive_int(resolved_model_id))
+            metric_data_source_id = self._resolve_data_source_id_from_metrics(
+                ast_data.get('metrics', []) or [], resolved_model_id)
+            subject_data_source_id = self._resolve_data_source_id_from_subject(
+                ast_data.get('subject', {}) or {}, resolved_model_id)
+        except Exception as exc:
+            return self._controlled_translation_failure(exc, is_execute=False)
         source_candidates = {
             str(item) for item in (
                 explicit_data_source_id,
@@ -4386,6 +4500,10 @@ class SQLTranslatorProd:
         The public message is assembled exclusively from the fixed wording of the
         mapped error class; arbitrary exception tail text is never echoed.
         """
+        if isinstance(exc, (pymysql.MySQLError, OSError, TimeoutError, ConnectionError)):
+            return {'success': False, 'sql': None, 'error': '语义目录数据库暂时不可用，请稍后重试或联系管理员检查连接',
+                    'error_code': 'SEMANTIC_CATALOG_UNAVAILABLE', 'retryable': True,
+                    'business_query_submitted': False}
         raw = str(exc)
         code = cls._semantic_validation_error_code(raw)
         identity: Optional[str] = None
@@ -4626,11 +4744,14 @@ class SQLTranslatorProd:
         try:
             ds_config = self.fetch_data_source(model_id, data_source_id)
         except Exception as e:
-            return {'success': False, 'sql': sql, 'error': f"数据源查询失败: {str(e)}"}
+            return {'success': False, 'sql': sql, 'error': '数据源目录查询失败，请管理员检查当前模型的数据源配置或目录连接',
+                    'error_code': 'SEMANTIC_CATALOG_UNAVAILABLE' if isinstance(e, pymysql.MySQLError) else 'DATA_SOURCE_UNAVAILABLE',
+                    'retryable': isinstance(e, (pymysql.MySQLError, OSError, TimeoutError, ConnectionError))}
 
         if not ds_config:
             return {'success': False, 'sql': sql, 
-                    'error': f"Redis中未找到对应的数据源配置(model_id={model_id}, data_source_id={data_source_id})"}
+                    'error': 'MySQL语义目录中未找到当前模型对应的数据源配置',
+                    'error_code': 'DATA_SOURCE_UNAVAILABLE', 'retryable': False}
 
         # 执行SQL
         watermark_model_id = model_id or ds_config.get('semantic_model_id')
@@ -4758,10 +4879,12 @@ class SQLTranslatorProd:
         try:
             ds_config = self.fetch_data_source(model_id, data_source_id)
         except Exception as e:
-            return {'sql': sql, 'success': False, 'error': f"数据源查询失败: {str(e)}"}
+            return {'sql': sql, 'success': False, 'error': '数据源目录查询失败，请管理员检查当前模型的数据源配置或目录连接',
+                    'error_code': 'SEMANTIC_CATALOG_UNAVAILABLE' if isinstance(e, pymysql.MySQLError) else 'DATA_SOURCE_UNAVAILABLE',
+                    'retryable': isinstance(e, (pymysql.MySQLError, OSError, TimeoutError, ConnectionError))}
 
         if not ds_config:
-            return {'sql': sql, 'success': False, 'error': f"Redis中未找到对应的数据源配置(model_id={model_id}, data_source_id={data_source_id})"}
+            return {'sql': sql, 'success': False, 'error': f"MySQL语义目录中未找到对应的数据源配置(model_id={model_id}, data_source_id={data_source_id})"}
 
         # 执行 SQL
         watermark_model_id = model_id or ds_config.get('semantic_model_id')
