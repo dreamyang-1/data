@@ -104,6 +104,14 @@ independent business totals or complete-year coverage. The ownerless legacy
 extraction also passes against the deployed Oagnet with one catalog-model call
 and no relationship-model call, retaining both predicates and the year.
 
+Post-native read-only audit confirms all six repaired runtime files match the
+canonical committed hashes, protected configuration is unchanged and all three
+services are healthy. The unrelated server planner continued changing during
+this task and its post-native hash differs from the deployment-time snapshot.
+It was not overwritten or committed here. The native results do not establish
+full-regression equivalence for that independently evolving planner; its current
+colloquial-filter behavior is OPEN / NOT VERIFIED. Draft PR #91 is unmerged.
+
 Existing reproduced failures are retained under the user's explicit
 no-new-failure waiver; this repair does not claim a full-suite pass. The bounded
 PR port's affected tests pass separately (Agent 34, Oagnet 206); the canonical
