@@ -30,7 +30,7 @@ from app.analysis import (
     build_query_result_insight,
 )
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
-from app.analysis.visualization import render_chart_svg
+from app.analysis.visualization import render_chart_svg, requested_chart_specs
 from app.services.chat_responder import QwenChatResponder
 from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.memory_manager import MemoryManager
@@ -104,7 +104,8 @@ from app.presentation import (
     render_intent_recognition_display_v2,
     render_reliability_validation,
 )
-from app.presentation.root_report import collect_root_materials, render_root_report, preview_result_tables
+from app.presentation.root_report import collect_root_materials, render_root_report, preview_result_tables, apply_requested_root_charts
+from app.presentation.summary import brief_summary
 from app.skills import DynamicSkillLoader, skill_for_intent
 from minio_followup_store import (
     DatasetScope,
@@ -3124,6 +3125,10 @@ class DataAnalysisOrchestrator:
                 message_limit=8192, chart_image_count=0, chart_source="NONE",
             )
         combined_answer, selected_task_ids = render_root_report(completed_question, materials, final_plan)
+        requested_root_charts = apply_requested_root_charts(
+            completed_question, materials, selected_task_ids, self._render_inline_charts)
+        if requested_root_charts is not None:
+            combined_answer, selected_task_ids = render_root_report(completed_question, materials, final_plan)
         # Keep real links available, but never repeat child answer bodies.
         merged_links = list(dict.fromkeys(
             link for result in task_results
@@ -3131,6 +3136,8 @@ class DataAnalysisOrchestrator:
             for link in self._split_child_attachment_lines(result.answer)[1]
         ))
         chart_specs = [spec for result in task_results if result.task_id in selected_task_ids for spec in result.chart_specs]
+        if requested_root_charts is not None:
+            chart_specs = requested_root_charts
         if shared_clarification is not None:
             # A clarification is not a completed report. Keep the shared
             # question as the response instead of wrapping it in an empty
@@ -7032,6 +7039,7 @@ class DataAnalysisOrchestrator:
         answer_plan = None
         insight_output = None
         synthesized_answer: str | None = None
+        final_summary = ''
         if _requires_deterministic_analysis(request, executed_asl=query_result.asl) and not analysis_warning:
             await emit_progress(
                 "DETERMINISTIC_ANALYSIS", "RUNNING", "正在使用确定性算法计算分析结果。"
@@ -7208,6 +7216,7 @@ class DataAnalysisOrchestrator:
                             agent_prompt=await self._agent_prompt_text(chat),
                         )
                     )
+                    final_summary = brief_summary((getattr(synthesis, 'final_answer', None) or {}).get('overview'))
                     timing.mark_first_result()
                 evidence.append(
                     EvidenceItem(
@@ -7292,6 +7301,15 @@ class DataAnalysisOrchestrator:
                 if analysis_output is not None
                 else []
             )
+            explicit_charts, chart_notes = requested_chart_specs(
+                request.rewritten_question or request.original_question,
+                query_result.dataset.columns, query_result.dataset.rows,
+                analysis_output.facts if analysis_output is not None else {},
+                output_requirement=str((request._planner_extraction.structured or {}).get('输出要求') or '')
+                    if request._planner_extraction else '',
+            )
+            if explicit_charts is not None:
+                chart_specs = [spec.model_dump(mode='json') for spec in explicit_charts]
             timing.set_attribute("chart_count", len(chart_specs))
             timing.mark_first_result()
         visualization_executions: list[ExtensionExecution] = []
@@ -7347,6 +7365,25 @@ class DataAnalysisOrchestrator:
             chart_display = "\n\n#### 图表\n\n" + "\n\n".join(remote_images)
         elif chart_images:
             chart_display = "\n\n#### 图表\n\n" + "\n\n".join(chart_images)
+        if explicit_charts is not None and reliability.level != 'FAIL':
+            # One successful MCP image must not hide a requested tree or a
+            # different chart for which that server has no renderer.
+            rendered, remaining = [], list(visualization_executions)
+            for index, spec in enumerate(chart_specs[:3]):
+                execution = next((item for item in remaining
+                    if item.result_metadata.get('chart_spec_index') == index or (
+                        'chart_spec_index' not in item.result_metadata
+                        and sum(ExtensionDispatcher._visualization_call(candidate,
+                            {item.name.removeprefix('mcp:')}) is not None for candidate in chart_specs[:3]) == 1
+                        and ExtensionDispatcher._visualization_call(spec,
+                            {item.name.removeprefix('mcp:')}) is not None)), None)
+                if execution is not None:
+                    remaining.remove(execution)
+                    title = self._markdown_image_alt(str(spec.get('title') or '数据图表'))
+                    rendered.append(f'![{title}]({self.extension_dispatcher.visualization_url(execution)})')
+                else:
+                    rendered.extend(self._render_inline_charts(chart_specs=[spec]))
+            chart_display = ('\n\n#### 图表\n\n' + '\n\n'.join(rendered)) if rendered else ''
         insight_text = (
             synthesized_answer
             or (
@@ -7468,6 +7505,9 @@ class DataAnalysisOrchestrator:
             )
             answer += "\n\n" + result_table
         final_notes: list[str] = []
+        final_notes.extend(chart_notes)
+        if explicit_charts and not chart_display:
+            final_notes.append('所要求的图表暂未渲染成功，已保留查询结果，未提供虚构图片链接。')
         if analysis_output is not None and analysis_output.warnings:
             final_notes.extend(analysis_output.warnings)
         if analysis_warning:
@@ -7491,11 +7531,16 @@ class DataAnalysisOrchestrator:
         if activity_definition_note:
             final_notes.append(activity_definition_note)
         if answer_plan is not None:
+            if final_summary:
+                answer_plan = answer_plan.model_copy(update={'headline': final_summary})
             answer = answer_plan.render_report(
                 question=request.rewritten_question or request.original_question,
                 table=result_table, chart=chart_display, notes=final_notes,
             )
         else:
+            summary = final_summary or brief_summary(insight_output.answer if insight_output is not None else '')
+            if summary:
+                answer = summary + '\n\n' + answer
             if final_notes:
                 answer += "\n\n" + "\n\n".join(final_notes)
             if chart_display and chart_display not in answer:

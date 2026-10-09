@@ -240,8 +240,8 @@ class ExtensionDispatcher:
             if item.name.startswith("mcp:")
         }
         tool_schemas = {item.name.removeprefix("mcp:"): item.input_schema or {} for item in discovered}
-        prepared_calls: list[tuple[str, dict[str, Any]]] = []
-        for spec in chart_specs[:3]:
+        prepared_calls: list[tuple[int, str, dict[str, Any]]] = []
+        for index, spec in enumerate(chart_specs[:3]):
             prepared = self._visualization_call(spec, available)
             if prepared is None:
                 continue
@@ -252,17 +252,17 @@ class ExtensionDispatcher:
             for name in ("showDataLabels", "showLabels", "showValues", "show_data_labels"):
                 if isinstance(properties.get(name), dict) and properties[name].get("type") == "boolean":
                     arguments[name] = True
-            prepared_calls.append((tool_name, arguments))
+            prepared_calls.append((index, tool_name, arguments))
         if not prepared_calls:
             return []
         results: list[ExtensionExecution] = []
         # The platform SSE chart service binds one logical request to each SSE
         # session. Sequential calls avoid cross-session contention observed when
         # several chart connections are opened at the same instant.
-        for tool_name, arguments in prepared_calls:
-            results.append(
-                await self._call_mcp_servers(tool_name, chat, arguments)
-            )
+        for index, tool_name, arguments in prepared_calls:
+            execution = await self._call_mcp_servers(tool_name, chat, arguments)
+            results.append(execution.model_copy(update={'result_metadata': {
+                **execution.result_metadata, 'chart_spec_index': index}}))
         return results
 
     @classmethod
