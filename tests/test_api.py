@@ -1638,6 +1638,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     assert {data["step"] for data in think_chunks} <= {
         "step1", "execute_plan", "execute_exe", "response_result"
     }
+    # "output" 是思考区切换到回答面板的状态事件，属于合法状态值。
     assert all(
         data.get("data") in {
             "accepted", "heartbeat", "step1", "execute_plan",

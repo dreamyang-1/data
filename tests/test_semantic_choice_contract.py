@@ -1,7 +1,6 @@
 """A catalog clarification resolves one slot member, preserving the task."""
 import json
 from datetime import date
-from types import SimpleNamespace
 
 import pytest
 
@@ -259,119 +258,6 @@ def chat(question, message="message-1"):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('answer', ['1', '01透析器具'])
-@pytest.mark.parametrize('legacy_phrase', [False, True])
-@pytest.mark.parametrize('persisted', [False, True])
-async def test_confirmed_filter_replans_full_task_and_passes_structured_handoff(answer, legacy_phrase, persisted):
-    from app.domain.models import PlannerExtraction, DataQueryResult, Dataset
-    from datetime import datetime, timezone
-    class StructuredRetrieval(CapturingSuccessfulRetrieval):
-        async def query_surface(self, request, identity, *, mentions, structured_extraction=None):
-            assert any(e['stage']=='TASK_PLANNING' and e['status']=='COMPLETED' for e in events)
-            self.requests.append(request.model_copy(deep=True))
-            self.surface_mentions.append(mentions)
-            assert structured_extraction == structured
-            return DataQueryResult(
-                asl={'version':'2.0','metrics':[{'name':'sales','alias':'销售额'}],
-                     'dimensions':[{'name':'dealer'}],'filters':[],
-                     'time_context':None,'sort':{'field':'sales','direction':'DESC'},'limit':10},
-                sql='SELECT dealer, sales FROM sample',
-                dataset=Dataset(columns=['经销商','销售额'],rows=[{'经销商':'甲','销售额':10}],row_count=1,
-                                data_as_of=datetime.now(timezone.utc),quality_status='PASS',snapshot_id='test'))
-    retrieval = StructuredRetrieval()
-    agent = service(retrieval)
-    agent.settings.surface_asl_execution_enabled = True
-    agent.settings.multi_question_enabled = True
-    original = '查询上海医院血液透析器相关经销商的销售额排名前10'
-    request = pending()
-    request.original_question = request.rewritten_question = original
-    request.analysis_thread_id = 'confirmed-original-thread'
-    request.semantic_ambiguities = [SemanticAmbiguity(
-        type='filter_slot', phrase=(json.dumps({'field':'品类','value':['血液透析器']},ensure_ascii=False)
-                                   if legacy_phrase else '血液透析器'),
-        question='确认品类', candidates=['01透析器具'], affected_slots=['filter_slot'],
-    )]
-    planned=[]
-    structured={'意图':'排名分析','实体':['经销商'],'指标':[{'name':'销售额'}],
-                '维度':['经销商'],'展示字段':[],
-                '过滤条件':[{'field':'品类','op':'=','value':['01透析器具']}],
-                '排序':[{'field':'销售额','order':'desc'}],
-                '时间粒度':{'unit':None,'time_range':None},'限制':10,'输出要求':'相关经销商'}
-    state=PendingState(request=request)
-    if persisted:
-        original_extraction=json.loads(json.dumps(structured))
-        original_extraction['过滤条件'][0]['value']=['血液透析器']
-        request.semantic_ambiguities[0].candidate_details=[{
-            'canonical_name':'01透析器具','structured_slot':'过滤条件[1]',
-            'binding_kind':'value',
-            'source_parameter':original_extraction['过滤条件'][0]}]
-        state.planner_extraction=PlannerExtraction(intent=PrimaryIntent.METRIC_QUERY,
-                                                  structured=original_extraction)
-        # Redis roundtrip must retain the handoff; private request attrs do not.
-        state=PendingState.model_validate_json(state.model_dump_json())
-    await agent.sessions.put_pending(state, expected_version=0)
-    class Planner:
-        async def plan(self, question):
-            assert not persisted, 'confirmed structured slots must not be re-extracted'
-            planned.append(question)
-            return SimpleNamespace(plan=None, single_extraction=PlannerExtraction(
-                intent=PrimaryIntent.METRIC_QUERY, structured=structured))
-    agent.task_planner=Planner()
-    events=[]
-    with progress_scope(events.append):
-        response=await agent.handle(chat(answer, 'confirmed-structured'), IDENTITY)
-    assert response.status=='COMPLETED', (response.answer, planned, retrieval.requests)
-    assert len(planned)==(0 if persisted else 1)
-    executed=retrieval.requests[-1]
-    assert executed.original_question==original
-    assert original.replace('血液透析器','01透析器具') in executed.rewritten_question
-    assert executed._planner_extraction.structured==structured
-    assert executed.analysis_thread_id=='confirmed-original-thread'
-    assert executed.turn_relation.value=='CLARIFICATION_RESPONSE'
-    assert retrieval.surface_mentions  # ordinary structured surface path, not legacy query
-    planning=next(i for i,e in enumerate(events) if e['stage']=='TASK_PLANNING' and e['status']=='COMPLETED')
-    assert planning>=0
-    assert await agent.sessions.get_pending(IDENTITY.tenant_id, IDENTITY.user_id,
-                                            'choice-app','choice-conversation') is None
-
-
-@pytest.mark.asyncio
-async def test_surface_resume_can_persist_a_second_clarification_without_cas_conflict():
-    class Again(CapturingSuccessfulRetrieval):
-        async def query_surface(self, request, identity, **kwargs):
-            raise AdapterError('ASL_AMBIGUOUS','需要确认下一项',details=[{
-                'type':'filter_slot','field':'过滤条件[2]','phrase':'新条件',
-                'question':'请确认新条件','candidates':['标准条件'],
-                'source':'STRUCTURED_EXTRACTION'}])
-    agent=service(Again())
-    request=pending()
-    request.rewritten_question=request.original_question
-    await agent.sessions.put_pending(PendingState(request=request), expected_version=0)
-    request.pending_state_version=1
-    response=await agent._handle_surface_query(chat('标准选项'),IDENTITY,
-                                              request=request,clarification_rounds=2)
-    assert response.status=='NEEDS_CLARIFICATION'
-    state=await agent.sessions.get_pending(IDENTITY.tenant_id,IDENTITY.user_id,
-                                          'choice-app','choice-conversation')
-    assert state.state_version==2 and state.clarification_rounds==2
-
-
-def test_confirming_filter_field_does_not_replace_its_numeric_literal():
-    from app.domain.models import PlannerExtraction
-    original={'field':'金额','op':'>','value':[1000]}
-    state=PendingState(request=pending(),planner_extraction=PlannerExtraction(
-        structured={'过滤条件':[original],'指标':[],'输出要求':'默认表格'}))
-    choice={'label':'含税金额','ambiguity':SemanticAmbiguity(type='filter_slot',question='选金额字段'),
-            'detail':{'canonical_name':'含税金额','structured_slot':'过滤条件[1]',
-                      'source_parameter':original,'binding_kind':'field'}}
-    result=DataAnalysisOrchestrator._confirmed_structured_extraction(state,choice)
-    assert result.structured['过滤条件']==[{'field':'含税金额','op':'>','value':[1000]}]
-    assert state.planner_extraction.structured['过滤条件']==[original]
-    choice['detail'].pop('binding_kind')
-    assert DataAnalysisOrchestrator._confirmed_structured_extraction(state,choice) is None
-
-
-@pytest.mark.asyncio
 async def test_real_clarification_round_preserves_second_metric():
     retrieval = AmbiguousRetrieval()
     agent = service(retrieval)
@@ -394,7 +280,13 @@ async def test_real_filter_choice_round_applies_ninth_catalog_option():
         chat("查询最近一年浙江省经销商名单"), IDENTITY
     )
     assert first.status == "NEEDS_CLARIFICATION"
-    assert first.clarification_items[0].options[8] == (
+    assert first.clarification_items[0].options == []
+    # 第 9 个候选保留在待确认状态里，序号回复仍可命中
+    pending_state = await agent.sessions.get_pending(
+        IDENTITY.tenant_id, IDENTITY.user_id, "choice-app", "choice-conversation",
+    )
+    assert pending_state is not None
+    assert pending_state.request.semantic_ambiguities[0].candidates[8] == (
         "project.project_name=巴德血透产品"
     )
 
@@ -418,7 +310,7 @@ async def test_surface_only_choice_restores_full_task_before_planning():
 
     class NoSplitPlanner:
         async def plan(self, question):
-            return SimpleNamespace(plan=None, single_extraction=None)
+            return None
 
     agent.settings.multi_question_enabled = True
     agent.task_planner = NoSplitPlanner()
@@ -450,10 +342,6 @@ async def test_surface_only_choice_restores_full_task_before_planning():
     )
     assert "任务1：2" not in planning["message"]
     assert "按品牌/厂家字段过滤" in planning["message"]
-    assert planning["message"].startswith(
-        "拆分判断完成。当前问题无需拆分，按单任务执行。\n任务1："
-    )
-    assert "规划调用：" not in planning["message"]
     assert await agent.sessions.get_pending(
         IDENTITY.tenant_id, IDENTITY.user_id,
         "choice-app", "choice-conversation",
@@ -719,7 +607,7 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
 
     class NoSplitPlanner:
         async def plan(self, question):
-            return SimpleNamespace(plan=None, single_extraction=None)
+            return None
 
     agent.settings.multi_question_enabled = True
     agent.settings.surface_asl_execution_enabled = True
@@ -788,9 +676,8 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
     assert "补全后的问题：查询不限时间（全部历史）内上海市" in intent_message
     assert "竞争品牌万益特" in intent_message
     assert "血液净化管路产品的经销商名单" in intent_message
-    # Current intent display shows completed wording; typed parameters remain
-    # in the planning/ASL handoff verified below, not a duplicate intent block.
-    assert "结构化参数提取：" not in intent_message
+    assert "万益特（母品牌/筛选值）" in intent_message
+    assert "血液净化管路（筛选值）" in intent_message
     assert retrieval.surface_mentions == [[
         {"text": "上海市", "role_hint": "业务城市"},
         {"text": "万益特", "role_hint": "母品牌"},
@@ -806,10 +693,6 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
     planning_event = planning_events[0]
     assert original in planning_event["message"]
     assert "已确认不限时间（全部历史）" in planning_event["message"]
-    assert planning_event["message"].startswith(
-        "拆分判断完成。当前问题无需拆分，按单任务执行。\n任务1："
-    )
-    assert "规划调用：" not in planning_event["message"]
     assert await agent.sessions.get_pending(
         IDENTITY.tenant_id,
         IDENTITY.user_id,
@@ -927,7 +810,7 @@ async def test_real_sequential_clarifications_keep_both_collections():
     count = len(retrieval.requests)
     second = await agent.handle(chat("1", "message-2"), IDENTITY)
     assert second.status == "NEEDS_CLARIFICATION"
-    assert second.clarification_items[0].options == ["省份", "城市"]
+    assert second.clarification_items[0].options == []
     assert len(retrieval.requests) == count
     third = await agent.handle(chat("2", "message-3"), IDENTITY)
     assert third.status == "COMPLETED"

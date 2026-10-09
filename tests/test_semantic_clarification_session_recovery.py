@@ -153,7 +153,8 @@ async def test_user_choice_recovers_pending_report_request(include_history: bool
     first = await advance_to_subject_clarification(agent)
     item = first.clarification_items[0]
     assert item.slot == "semantic_ambiguity"
-    assert item.options == [SUBJECT_REPLY, SUBJECT_ALTERNATIVE]
+    # 追问不再展示候选选项，候选只留在待确认状态里供回复匹配
+    assert item.options == []
 
     pending = await sessions.get_pending(
         "tenant-1", "user-1", "app-1", "subject-session"

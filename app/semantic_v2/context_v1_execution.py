@@ -30,6 +30,7 @@ from app.domain.models import (
     TrustedIdentity,
 )
 from app.services.progress import emit_progress
+from app.services.orchestrator import danger_keyword_hits
 from app.observability.call_timing import track_operation
 from app.presentation import render_resolved_intent_context_v2
 from app.stores import MessageIdReuseConflictError
@@ -1481,7 +1482,20 @@ class V2ContextV1ExecutionBridge:
             # 不再展示用户原始问题与补全后的问题；off_topic 标记随事件
             # 带给 SSE 层，规划节点对这类轮次不再点亮
             off_topic_parse = resolved.standalone_parse or resolved.semantic_parse
-            if off_topic_parse is not None and off_topic_parse.off_topic:
+            # 危险词问题与业务无关问题同样只保留判定思考句，不展示用户
+            # 原始问题与补全后的问题；off_topic 标记随事件带给 SSE 层，
+            # 规划节点对这类轮次不再点亮，拦截话术由编排器入口统一返回
+            danger_keyword_intercept = bool(danger_keyword_hits(chat.question))
+            if danger_keyword_intercept:
+                await emit_progress(
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    "判定思考：用户问题为「" + chat.question.strip() + "」，"
+                    "涉及删除、新增、修改等危险操作，我按安全策略直接拦截这个问题。",
+                    progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+                    off_topic=True,
+                )
+            elif off_topic_parse is not None and off_topic_parse.off_topic:
                 await emit_progress(
                     "INTENT_RECOGNITION",
                     "RUNNING",
@@ -1522,6 +1536,10 @@ class V2ContextV1ExecutionBridge:
             if off_topic_parse is not None and off_topic_parse.off_topic:
                 # 执行层据此跳过拆分器与意图分类模型，直接受控聊天回复
                 execution_chat._v2_off_topic = True
+            if danger_keyword_intercept:
+                # 危险词问题由编排器入口统一拦截，标记仅作兜底
+                execution_chat._v2_off_topic = True
+                execution_chat._danger_keyword_intercept = True
             execution_chat._context_verified_filter_bindings = (
                 _verified_context_filter_bindings(resolved)
             )

@@ -369,47 +369,15 @@ def test_vector_ambiguity_clarification_returns_all_canonical_candidate_details(
 
     items = DataAnalysisOrchestrator._clarification_items(request)
 
-    assert items[0]["options"] == request.semantic_ambiguities[0].candidates
-    assert items[0]["option_details"] == request.semantic_ambiguities[0].candidate_details
+    # 候选不下发展示，仅保留在待确认状态里供回复匹配
+    assert items[0]["options"] == []
+    assert items[0]["option_details"] == []
     assert items[0]["multi_select"] is False
-
-
-@pytest.mark.asyncio
-async def test_unmapped_derived_metric_explains_required_definition_without_candidate_options():
-    request = CanonicalAnalysisRequest(
-        conversation_id="unmapped-derived-metric",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="统计各经销商近12月的平均月度销量增长率",
-        primary_intent=PrimaryIntent.METRIC_QUERY,
-        missing_slots=["semantic_ambiguity"],
-        semantic_ambiguities=[SemanticAmbiguity(
-            type="metric",
-            phrase="平均月度销量增长率",
-            question=(
-                "目录中未找到名为“平均月度销量增长率”的指标，无法由现有原子指标直接映射，"
-                "需要计算衍生指标。"
-            ),
-            candidates=["sales_total_quantity"],
-            candidate_details=[{"canonical_code": "sales_total_quantity"}],
-        )],
-    )
-
-    response = await service()._request_clarification(
-        request, rounds=1, source_stage="STRUCTURED_ASL_BINDING"
-    )
-
-    assert response.status == "NEEDS_CLARIFICATION"
-    assert "计算公式或业务定义" in response.answer
-    assert "基础指标" in response.answer
-    assert "环比或同比" in response.answer
-    assert "没有可直接执行的对应衍生指标" in response.answer
-    assert "sales_total_quantity" not in response.answer
-    assert "可选业务含义" not in response.answer
-    assert response.clarification_decision_traces[0].expected_answer_type == "FREE_TEXT"
-    assert response.clarification_items[0].options == []
-    assert response.clarification_items[0].option_details == []
-    assert request.semantic_ambiguities[0].candidates == []
+    assert request.semantic_ambiguities[0].candidates == [
+        "含税销售总额（annual_total_sales）",
+        "不含税销售额（net_sales_amount）",
+    ]
+    assert request.semantic_ambiguities[0].candidate_details
 
 
 def test_semantic_clarification_names_the_ambiguous_phrase() -> None:
@@ -479,23 +447,18 @@ def _shanghai_region_ambiguity_request() -> CanonicalAnalysisRequest:
     )
 
 
-def test_semantic_ambiguity_is_rendered_as_numbered_business_choices():
+def test_semantic_ambiguity_clarification_has_no_candidate_options():
     request = _shanghai_region_ambiguity_request()
     item = DataAnalysisOrchestrator._clarification_items(request)[0]
 
-    rendered = DataAnalysisOrchestrator._visible_clarification_prompt(
-        request.semantic_ambiguities[0].question,
-        item,
-    )
-
-    assert "可选业务含义：" in rendered
-    assert "1. 省份名称：省份（取值：上海市）" in rendered
-    assert "2. 城市名称：市（取值：上海市）" in rendered
-    assert "请回复序号或完整的候选名称" in rendered
+    assert item["options"] == []
+    assert item["option_details"] == []
+    assert item["allow_free_text"] is True
+    assert "上海市" in item["question"]
 
 
 @pytest.mark.asyncio
-async def test_semantic_ambiguity_choices_are_visible_in_clarification_answer():
+async def test_semantic_ambiguity_clarification_answer_lists_no_candidates():
     agent = service()
 
     response = await agent._request_clarification(
@@ -504,13 +467,12 @@ async def test_semantic_ambiguity_choices_are_visible_in_clarification_answer():
     )
 
     assert response.status == "NEEDS_CLARIFICATION"
-    assert "可选业务含义：" in response.answer
-    assert "1. 省份名称：省份（取值：上海市）" in response.answer
-    assert "2. 城市名称：市（取值：上海市）" in response.answer
-    assert response.clarification_items[0].options == [
-        "省份名称：省份",
-        "城市名称：市",
-    ]
+    assert "可选业务含义：" not in response.answer
+    assert "请回复序号" not in response.answer
+    assert "省份名称：省份" not in response.answer
+    assert "城市名称：市" not in response.answer
+    assert response.clarification_questions
+    assert response.clarification_items[0].options == []
 
 
 @pytest.mark.asyncio

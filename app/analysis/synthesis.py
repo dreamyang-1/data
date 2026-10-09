@@ -4,7 +4,6 @@ import asyncio
 import json
 import re
 from enum import StrEnum
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -19,16 +18,13 @@ if TYPE_CHECKING:
     from app.services.context_builder import ContextEnvelope
 
 
-_SEMANTIC_DESCRIPTION_PATH = Path(__file__).resolve().parents[2] / "语义描述文件.md"
+async def _semantic_reference(
+    settings: Any, semantic_model_id: int | None = None
+) -> dict[str, Any]:
+    """与任务规划共用同一份语义描述：优先平台生成文件，本地文档兜底。"""
+    from app.domain.semantic_description import load_semantic_description
 
-
-def _semantic_reference() -> dict[str, Any]:
-    """Read the same maintained DSL document as planning, without caching it."""
-    try:
-        content = _SEMANTIC_DESCRIPTION_PATH.read_text(encoding="utf-8-sig").strip()
-    except (OSError, UnicodeError):
-        content = ""
-    return {"source": "语义描述文件.md", "available": bool(content), "content": content}
+    return await load_semantic_description(settings, semantic_model_id)
 
 
 class ClaimCertainty(StrEnum):
@@ -115,7 +111,7 @@ class QwenAnalysisSynthesizer:
     async def synthesize(
         self, request: CanonicalAnalysisRequest, analysis: AnalysisOutput,
         evidence: list[EvidenceItem], *, context: "ContextEnvelope | None" = None,
-        agent_prompt: str = "",
+        agent_prompt: str = "", semantic_model_id: int | None = None,
     ) -> tuple[str, SynthesisOutput]:
         if not self.settings.intent_model_api_key:
             raise RuntimeError("analysis synthesis API key is not configured")
@@ -140,7 +136,7 @@ class QwenAnalysisSynthesizer:
             "facts": {k: v for k, v in analysis.facts.items() if k != "matched_knowledge"},
             "warnings": analysis.warnings,
             "evidence": sources,
-            "semantic_reference": _semantic_reference(),
+            "semantic_reference": await _semantic_reference(self.settings, semantic_model_id),
         }
         if context is not None:
             # Preserve callers' existing bounded, row-free context contract.
@@ -157,6 +153,7 @@ class QwenAnalysisSynthesizer:
     async def synthesize_combined(
         self, question: str, tasks: list[dict[str, Any]], *, agent_prompt: str = "",
         planning_context: dict[str, Any] | None = None,
+        semantic_model_id: int | None = None,
     ) -> tuple[str, SynthesisOutput]:
         """多任务拆分的整体汇总：一次调用合并分析全部子任务的查询结果。"""
         if not self.settings.intent_model_api_key:
@@ -166,7 +163,9 @@ class QwenAnalysisSynthesizer:
             "completed_question": question,
             "planning_context": planning_context or {"completed_question": question},
             "tasks": tasks,
-            "semantic_reference": _semantic_reference(),
+            "semantic_reference": await _semantic_reference(
+                self.settings, semantic_model_id
+            ),
         }
         agent_section = (
             "\n智能体用户设定（平台配置，仅用于表达风格，分析事实仍以本轮问题和数据为准）：\n" + agent_prompt.strip()

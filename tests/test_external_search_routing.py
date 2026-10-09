@@ -13,7 +13,6 @@ from app.domain.models import (
     ChatRequest,
     ExtensionExecution,
     McpConfig,
-    MetricRef,
     PrimaryIntent,
     SkillConfig,
     ToolConfig,
@@ -606,7 +605,6 @@ class MixedProfileClassifier:
             primary_intent=PrimaryIntent.DETAIL_QUERY,
             entity="经销商",
             fields=["经销商名称", "业务规模"],
-            metrics=[MetricRef(input="业务规模")],
             dimensions=["经销商"],
             operators=[AnalysisOperator.TOP_N],
             ranking_limit=3,
@@ -625,7 +623,6 @@ class FailingProfileClassifier:
             primary_intent=PrimaryIntent.DETAIL_QUERY,
             entity="经销商",
             fields=["经销商名称"],
-            metrics=[MetricRef(input="业务规模")],
             dimensions=["经销商"],
             operators=[AnalysisOperator.TOP_N],
             ranking_limit=3,
@@ -723,7 +720,7 @@ async def test_mixed_dealer_profile_keeps_internal_query_then_adds_web_supplemen
 
 
 @pytest.mark.asyncio
-async def test_web_enrichment_is_not_called_when_profile_ranking_unavailable_but_rows_remain():
+async def test_web_enrichment_is_not_called_when_profile_analysis_stops_safely():
     call_count = 0
 
     async def handler(_: httpx.Request) -> httpx.Response:
@@ -752,15 +749,12 @@ async def test_web_enrichment_is_not_called_when_profile_ranking_unavailable_but
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
 
-    assert response.status == "PARTIAL_SUCCESS"
+    assert response.status == "SAFE_FALLBACK"
     assert call_count == 0
     assert any(item.kind == "QUERY_RESULT" for item in response.evidence)
     assert not any(item.kind == "WEB_SEARCH_RESULT" for item in response.evidence)
     assert response.extension_executions == []
-    assert response.reliability.level == "LIMITED"
-    assert "画像标签存在歧义" in response.answer
-    assert "128000" in response.answer
-    assert not response.requirements
+    assert response.reliability.level == "FAIL"
 
 
 @pytest.mark.asyncio

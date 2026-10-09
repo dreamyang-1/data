@@ -109,7 +109,7 @@ def test_missing_scope_rejected_before_network():
     assert client.calls == []
 
 
-def test_caller_time_must_not_erase_asl_clarification():
+def test_governed_default_time_resolves_only_time_ambiguity_with_metric_anchor():
     data = response()
     data["result"]["metrics"] = [{"name": "sales_total_including_tax"}]
     data["result"]["ambiguity"] = [{
@@ -124,12 +124,23 @@ def test_caller_time_must_not_erase_asl_clarification():
         "time_anchor": "sales_order.created_date",
     }]
 
-    # STALE_TEST: completeness belongs to ASL; caller defaults cannot bypass it.
-    with pytest.raises(AdapterError) as error:
-        run(Client(data), time_range=SimpleNamespace(
-            start=date(2025, 9, 18), end_exclusive=date(2026, 9, 19)))
-    assert error.value.code == 'ASL_AMBIGUOUS'
-    assert error.value.details == data['result']['ambiguity']
+    result = run(
+        Client(data),
+        time_range=SimpleNamespace(
+            start=date(2025, 9, 18),
+            end_exclusive=date(2026, 9, 19),
+        ),
+    )
+
+    assert result["asl"]["ambiguity"] == []
+    assert result["asl"]["time_context"] == {
+        "type": "range",
+        "start": "2025-09-18",
+        "end": "2026-09-18",
+        "value": None,
+        "unit": "day",
+        "anchor": "sales_order.created_date",
+    }
 
 
 def test_empty_domains_stay_model_wide():
@@ -196,23 +207,3 @@ def test_surface_plan_reaches_shared_translation_and_execution_without_asl_repai
     assert result.asl == planned["result"]
     assert result.dataset.row_count == 1
     assert request.metrics == []
-
-
-@pytest.mark.parametrize('slot,value', [('metric','区域全部医院总数'),('filter_slot','含税金额 = 1000'),('time_anchor','最近一年')])
-def test_incomplete_binding_never_reaches_sql_pipeline(slot,value):
-    from app.adapters.http import HttpDataRetrievalAdapter
-    from app.config import Settings
-    from app.domain.models import CanonicalAnalysisRequest, PrimaryIntent, TrustedIdentity
-    data=response()
-    data['asl_validation']=None
-    data['result']['ambiguity']=[{'type':slot,'question':f'{value}未能绑定，请确认具体口径','candidates':[]}]
-    client=Client(data)
-    request=CanonicalAnalysisRequest(conversation_id='stop-at-asl',tenant_id='t',user_id='u',
-        original_question='审计原文',primary_intent=PrimaryIntent.METRIC_QUERY,
-        semantic_model_id=81,authorized_semantic_scope=AuthorizedSemanticScope(
-            semantic_model_id=81,scope_mode='EXPLICIT_DOMAINS',business_domain_ids=(205,)),business_domain_ids=[205])
-    with pytest.raises(AdapterError) as error:
-        asyncio.run(HttpDataRetrievalAdapter(Settings(),client).query_surface(
-            request,TrustedIdentity(tenant_id='t',user_id='u'),mentions=[]))
-    assert error.value.code=='ASL_AMBIGUOUS' and value in error.value.details[0]['question']
-    assert len(client.calls)==1

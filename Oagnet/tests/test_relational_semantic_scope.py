@@ -1094,8 +1094,8 @@ def test_geographic_slot_uses_source_verified_admin_field_on_result_entity():
     def resolver(_model, _domain, candidates, value):
         candidate_sets.append({item["field"] for item in candidates})
         if value == "海州市":
-            # Same canonical place across levels defaults to the finest grain,
-            # not vector ordering or the old broad-region provincial default.
+            # Both columns contain the same canonical value.  泛指“地区”按
+            # documented level precedence chooses province, never list order.
             return ["dealer.city", "dealer.province", "market_area.province"]
         return ["dealer_result.address", "dealer_result.dealer_name"]
 
@@ -1110,7 +1110,7 @@ def test_geographic_slot_uses_source_verified_admin_field_on_result_entity():
     result = json.loads(normalized)
 
     assert result["filters"] == [{
-        "field": "dealer.city",
+        "field": "dealer.province",
         "operator": "=",
         "value": "海州市",
     }]
@@ -1164,10 +1164,9 @@ def test_result_dimension_geography_wins_over_fact_subject_geography():
         "product.product_code", "dealer.dealer_code",
     ))
     ast = _asl("dealer.dealer_name")
-    ast["subject"] = {"entity": "sales_order"}
+    ast["subject"] = {"entity": "product"}
     ast["dimensions"] = [{
-        # Structured ASL commonly emits the logical grouping entity here.
-        "name": "dealer", "attr": None,
+        "name": "dealer.dealer_name", "attr": None,
         "level": None, "granularity": None,
     }]
     ast["filters"] = [{

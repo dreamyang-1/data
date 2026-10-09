@@ -246,6 +246,35 @@ class ExplicitDatasetUnavailableError(RuntimeError):
 class DependencyConstraintError(RuntimeError):
     """A predecessor result cannot be safely compiled into a downstream filter."""
 
+
+_DANGER_KEYWORDS_ZH = (
+    "删除", "删掉", "移除", "清空", "清除", "新增", "添加", "插入", "写入",
+    "导入", "修改", "更新", "变更", "替换", "覆盖", "创建", "新建",
+    "建表", "改表", "删表",
+)
+_DANGER_KEYWORDS_EN_RE = re.compile(
+    r"\b(drop|delete|truncate|insert|update|alter|create"
+    r"|replace|merge|upsert|grant|revoke)\b",
+    re.IGNORECASE,
+)
+# 已上线的业务表述里带词表字眼（如医院覆盖率），先剔除再匹配，
+# 避免正常业务问题被当成危险操作
+_DANGER_BUSINESS_PHRASES = ("医院覆盖", "新增经销商", "修改过")
+
+
+def danger_keyword_hits(question: str) -> list[str]:
+    """对原始问题做纯关键词匹配，中文包含即命中，英文按词边界且不区分大小写。"""
+    compact = "".join(question.split())
+    for phrase in _DANGER_BUSINESS_PHRASES:
+        compact = compact.replace(phrase, "")
+    hits = [word for word in _DANGER_KEYWORDS_ZH if word in compact]
+    hits.extend(
+        match.group(0).lower()
+        for match in _DANGER_KEYWORDS_EN_RE.finditer(question)
+    )
+    return hits
+
+
 class DataAnalysisOrchestrator:
     def __init__(
         self,
@@ -404,6 +433,11 @@ class DataAnalysisOrchestrator:
             return self._cancel_command_response(
                 chat, cancelled_count, cancelled_intent
             )
+
+        # 危险操作拦截在所有模型调用之前：纯关键词匹配原始问题，命中直接拦截
+        danger_intercept = self._danger_entry_intercept(chat)
+        if danger_intercept is not None:
+            return danger_intercept
 
         # Resolve the platform's data_ask_agent_version prompt once per turn.
         # The same immutable request snapshot is then consumed by both model
@@ -1103,6 +1137,8 @@ class DataAnalysisOrchestrator:
                                 if "semantic_context" in planner_parameters
                                 else {}
                             )
+                            if "semantic_model_id" in planner_parameters:
+                                planner_kwargs["semantic_model_id"] = chat.semantic_model_id
                             with track_operation(
                                 "V1_ORCHESTRATION",
                                 "v1.task_decomposition",
@@ -1242,14 +1278,19 @@ class DataAnalysisOrchestrator:
                                 if intent is not None
                                 else ""
                             )
-                        is_data_task = (
-                            intent not in NO_DATA_INTENTS | METADATA_INTENTS
-                        )
+                        is_data_task = intent not in NO_DATA_INTENTS
                         if structured is not None and is_data_task:
-                            # 结构化提取按国药语义解析规范原样输出JSON。
+                            # 意图、业务域已单独成行展示，JSON里去掉避免重复，
+                            # 也避免中文枚举（统计查询）与任务意图行（指标查询）对不上；
+                            # 内部提取结构保持完整，下游去重、绑定仍读全量键。
+                            display_payload = {
+                                key: value
+                                for key, value in structured.items()
+                                if key not in ("意图", "业务域")
+                            }
                             parameters_line = (
                                 "参数提取："
-                                + json.dumps(structured, ensure_ascii=False)
+                                + json.dumps(display_payload, ensure_ascii=False)
                                 + "\n"
                             )
                         elif parameters and is_data_task:
@@ -1594,6 +1635,45 @@ class DataAnalysisOrchestrator:
                 gates={
                     "running_request_cancelled": cancelled_count > 0,
                 },
+            ),
+        )
+
+    @staticmethod
+    def _danger_entry_intercept(chat: ChatRequest) -> AgentResponse | None:
+        # 所有包含危险词的问题一律拦截，统一回固定话术；
+        # _danger_keyword_intercept 标记来自 V2 语义识别段，兜底同一条链
+        if not danger_keyword_hits(chat.question) and not getattr(
+            chat, "_danger_keyword_intercept", False
+        ):
+            return None
+        logger.info(
+            "dangerous request blocked: question=%s", chat.question.strip()
+        )
+        return DataAnalysisOrchestrator._danger_intercept_response(chat)
+
+    @staticmethod
+    def _danger_intercept_response(chat: ChatRequest) -> AgentResponse:
+        return AgentResponse(
+            request_id=uuid4(),
+            conversation_id=chat.conversation_id,
+            status="COMPLETED",
+            intent=PrimaryIntent.OUT_OF_SCOPE,
+            intent_source="SAFETY_GUARD",
+            intent_confidence=1.0,
+            answer=(
+                "该问题涉及删除、新增、修改等危险操作，已被安全策略拦截。"
+                "请改为查询、统计、分析类问题。"
+            ),
+            semantic_model_id=chat.semantic_model_id,
+            database_id=chat.database_id,
+            requested_business_domain_ids=list(chat.business_domain_ids),
+            business_domain_selection_mode=(
+                "EXPLICIT" if chat.business_domain_ids else "AUTO"
+            ),
+            reliability=ReliabilityReport(
+                level="HIGH",
+                score=1.0,
+                gates={"dangerous_request_blocked": True},
             ),
         )
 
@@ -3114,6 +3194,7 @@ class DataAnalysisOrchestrator:
                         [{k: v for k, v in item.items() if k != "presentation"} for item in materials],
                         planning_context=root_context,
                         agent_prompt=await self._agent_prompt_text(chat),
+                        semantic_model_id=chat.semantic_model_id,
                     )
                     final_plan = getattr(synthesis, "final_answer", {}) or {}
                 except (httpx.HTTPError, KeyError, RuntimeError, ValueError, SynthesisValidationError, AttributeError) as exc:
@@ -6452,6 +6533,39 @@ class DataAnalysisOrchestrator:
             dataset_id=dataset_id, external_search_mode=external_search_mode,
         )
 
+    def _dedup_detail_result(self, request, query_result):
+        """结构化提取标记“是否去重=是”的明细查询，按整行去重并同步行数。"""
+        extraction = getattr(request, "_planner_extraction", None)
+        structured = extraction.structured if extraction is not None else None
+        if not isinstance(structured, dict):
+            return query_result
+        if structured.get("意图") != "明细查询" or structured.get("是否去重") != "是":
+            return query_result
+        dataset = query_result.dataset
+        rows = dataset.rows
+        if not rows:
+            return query_result
+        seen = set()
+        deduped = []
+        for row in rows:
+            key = (
+                tuple(sorted(row.items()))
+                if isinstance(row, dict)
+                else tuple(row)
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(row)
+        if len(deduped) == len(rows):
+            return query_result
+        dataset.rows = deduped
+        dataset.row_count = len(deduped)
+        if dataset.total_row_count is not None and not dataset.truncated:
+            # 全量结果已在本行数内，去重后总数同步收敛
+            dataset.total_row_count = len(deduped)
+        return query_result
+
     async def _complete_query_result(
         self, chat, identity, request, query_result, *,
         dataset_id=None, external_search_mode=None,
@@ -6463,6 +6577,7 @@ class DataAnalysisOrchestrator:
             # A cached/imported raw dataset must not masquerade as the cleaned list.
             dataset_id = None
         query_result = cleaned_result
+        query_result = self._dedup_detail_result(request, query_result)
         list_cleanup_note = cleanup_message(query_result)
         list_was_cleaned = any(
             item.get("type") == "NAME_LIST_CLEANUP"
@@ -6806,11 +6921,6 @@ class DataAnalysisOrchestrator:
                         "请使用更完整的业务名称或表述重新查询。"
                     )
             if scope:
-                # Rebuild the empty-result explanation from the verified
-                # execution state.  The legacy branch above treated an empty
-                # binding list as proof that a name was unmatched, which is
-                # false for follow-up requests and for adapters that do not
-                # return binding evidence in their response.
                 bindings_complete, unbound_fields = self._filter_binding_coverage(request)
                 message = "查询执行成功，但指定条件下没有匹配到有效业务数据。"
                 if request.time_range is not None and watermark is not None:
@@ -7206,6 +7316,7 @@ class DataAnalysisOrchestrator:
                         await self.analysis_synthesizer.synthesize(
                             request, synthesis_input, evidence,
                             agent_prompt=await self._agent_prompt_text(chat),
+                            semantic_model_id=chat.semantic_model_id,
                         )
                     )
                     timing.mark_first_result()
@@ -9089,6 +9200,18 @@ class DataAnalysisOrchestrator:
                 if planner_extraction.intent is not None:
                     result.primary_intent = planner_extraction.intent
                     result.intent_source = "TASK_PLANNER"
+                if (
+                    planner_extraction.intent in METADATA_INTENTS
+                    and not result.metrics
+                ):
+                    # 口径/血缘解释保留用户原文指标名去语义服务解析：解析不到
+                    # 会走“未定义”兜底话术。名称丢失时追问门禁反而会引导用户
+                    # 换成规范里的指标，违背规则10的替代禁令。
+                    for value in planner_extraction.parameters:
+                        match = re.fullmatch(r"(.+?)（指标）", str(value).strip())
+                        if match and match.group(1).strip():
+                            result.metrics = [MetricRef(input=match.group(1).strip())]
+                            break
                 self._apply_explicit_projection_mode(result, planner_extraction)
             self._apply_platform_metric_vocabulary(result, agent_prompt)
             timing.mark_first_result()
@@ -10334,14 +10457,7 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _filter_binding_coverage(request: CanonicalAnalysisRequest) -> tuple[bool, list[str]]:
-        """Check binding evidence against the filters that will actually run.
-
-        An empty result must not be explained as an unmatched entity merely
-        because the binding list is empty.  Follow-up turns can replace one
-        filter while retaining another, and a stale binding must not be used
-        as proof for the new value.  This helper is deliberately value-based;
-        field identity is checked by the ASL/SQL gates upstream.
-        """
+        """Check binding evidence against the filters that will actually run."""
         filters = [item for item in request.filters if isinstance(item, dict)]
         if not filters:
             return True, []
@@ -11137,14 +11253,8 @@ class DataAnalysisOrchestrator:
         )
         questions = all_questions[:question_limit]
         clarification_items = self._clarification_items(display_request)[:question_limit]
-        visible_questions = [
-            self._visible_clarification_prompt(
-                question,
-                clarification_items[index]
-                if index < len(clarification_items) else None,
-            )
-            for index, question in enumerate(questions)
-        ]
+        # 追问正文只保留问题描述本身，不再把候选拼成编号选项
+        visible_questions = questions
         remaining_questions = all_questions[question_limit:]
         visible_slots = {item['slot'] for item in clarification_items}
         for trace in traces:
@@ -11546,6 +11656,17 @@ class DataAnalysisOrchestrator:
                 )
                 timing.mark_first_result()
             if len(resolved) != 1:
+                if (
+                    request.primary_intent == PrimaryIntent.METRIC_DEFINITION
+                    and request.metrics
+                ):
+                    # 规范里查不到该指标时明确回“未定义”，不做相近指标的解释，
+                    # 也不引导用户换指标。
+                    return self._fallback(
+                        request,
+                        f"「{request.metrics[0].input}」未在当前业务语义规范中定义，"
+                        "无法提供该指标的口径解释。",
+                    )
                 return self._fallback(request, "没有找到唯一、已发布的指标定义。")
             scoped_metadata = getattr(self.adapters.semantic, 'scoped_metadata', None)
             if callable(scoped_metadata):
@@ -12560,12 +12681,14 @@ class DataAnalysisOrchestrator:
         items: list[dict[str, Any]] = []
         for slot in request.missing_slots:
             if slot == "semantic_ambiguity" and request.semantic_ambiguities:
+                # 澄清只描述缺什么和原因，不再下发候选选项；
+                # 候选仍保留在待确认状态里供回复匹配，只是不展示
                 items.extend({
                     "slot": slot,
                     "title": semantic_titles[ambiguity.type],
                     "question": cls._semantic_ambiguity_question(ambiguity),
-                    "options": [] if cls._is_unmapped_derived_metric(ambiguity) else ambiguity.candidates,
-                    "option_details": [] if cls._is_unmapped_derived_metric(ambiguity) else ambiguity.candidate_details,
+                    "options": [],
+                    "option_details": [],
                     "multi_select": False,
                     "allow_free_text": True,
                 } for ambiguity in request.semantic_ambiguities if ambiguity.blocking)
@@ -12582,53 +12705,6 @@ class DataAnalysisOrchestrator:
                 "allow_free_text": True,
             })
         return items
-
-    @staticmethod
-    def _visible_clarification_prompt(
-        question: str,
-        item: ClarificationItem | dict[str, Any] | None,
-    ) -> str:
-        """Render semantic choices for clients that only display answer text."""
-
-        if item is None:
-            return question
-        payload = item.model_dump() if isinstance(item, ClarificationItem) else item
-        if payload.get("slot") != "semantic_ambiguity":
-            return question
-        options = [
-            str(value).strip() for value in payload.get("options") or []
-            if str(value).strip()
-        ]
-        if not options:
-            return question
-        details = [
-            value if isinstance(value, dict) else {}
-            for value in payload.get("option_details") or []
-        ]
-        rendered: list[str] = []
-        for index, option in enumerate(options, 1):
-            detail = details[index - 1] if index <= len(details) else {}
-            value = str(detail.get("value") or "").strip()
-            description = str(
-                detail.get("attribute_description")
-                or detail.get("entity_description")
-                or detail.get("description")
-                or detail.get("business_desc")
-                or ""
-            ).strip()
-            suffixes: list[str] = []
-            if value and value not in option:
-                suffixes.append(f"取值：{value}")
-            if description and description not in option:
-                suffixes.append(description)
-            suffix = f"（{'；'.join(suffixes)}）" if suffixes else ""
-            rendered.append(f"{index}. {option}{suffix}")
-        return (
-            question.rstrip()
-            + "\n可选业务含义：\n"
-            + "\n".join(rendered)
-            + "\n请回复序号或完整的候选名称。"
-        )
 
     @staticmethod
     def _understood_slots(request: CanonicalAnalysisRequest) -> dict[str, Any]:

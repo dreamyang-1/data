@@ -1,45 +1,21 @@
+# 密钥与环境配置，不进库
 .env
-.venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.ruff_cache/
-coverage.xml
-htmlcov/
-dist/
-build/
-*.egg-info/
-
-# Local runtime, exports, credentials, backups, and temporary tooling.
 .env.*
 !.env.example
-*.log
-*.out
-*.err
+.langfuse.env
+
+# 日志
 logs/
-/.runtime/
-_backups/
-*.bak
-.tmp*/
-/_tmp_*
-/.inspect_*
-/.live_verify*
-实际业务问题.md
+*.log
+nohup.out
 
-# Local instruction inputs and uncurated evaluation output.
-/4(1).txt
-/9.1指令.md
-/思考输出格式(1).docx
-/测试问题
-/evals/results/business-*.json
-/evals/results/model81-q20-manufacturer-recall.json
-/evals/results/model81-strict-targets-20260901.json
-/evals/results/model81-user-*.json
-/docs/phase25_1/batch*_gate.json
-/docs/phase25_1/batch*files.json
-/docs/phase25_1/closure_test_gate.json
-/docs/phase25_1/contract_gate.json
-/docs/phase25_1/final_test_gate.json
+# Python 缓存与打包产物
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
 
-# Private evaluation conversations, model captures and source observations.
-/.eval_private/
+# 系统文件
+.DS_Store

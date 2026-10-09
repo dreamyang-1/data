@@ -243,7 +243,7 @@ async def test_filled_slot_can_transition_to_asl_clarification_then_complete():
     assert second.clarification_round == 2
     assert second.clarification_questions == ["销售额请选择含税或不含税口径。"]
     assert second.clarification_items[0].title == "指标口径"
-    assert second.clarification_items[0].options == ["含税销售额", "不含税销售额"]
+    assert second.clarification_items[0].options == []
     assert second.clarification_items[0].multi_select is False
     pending = await sessions.get_pending(
         "tenant-1", "user-1", "app-1", "multi-stage"
@@ -278,8 +278,7 @@ async def test_filled_slot_can_transition_to_asl_clarification_then_complete():
     assert final_request.primary_intent == PrimaryIntent.METRIC_QUERY
     assert [metric.input for metric in final_request.metrics] == ["含税销售额"]
     assert "补充：本月" in final_request.original_question
-    # Confirmed choices enrich the completed question, not the source wording.
-    assert final_request.original_question == pending.request.original_question
+    assert "含税销售额" in final_request.original_question
     assert "补充：" not in final_request.rewritten_question
     assert "指标：含税销售额" in final_request.rewritten_question
     assert (

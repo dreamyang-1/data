@@ -17,7 +17,8 @@ from app.domain.models import AtomicTask, PlannerExtraction, PrimaryIntent, Task
 from app.planning.calculation_targets import declared_calculation_targets
 
 
-# 不查业务库的意图：参数提取强制为空，与编排器展示守卫保持一致。
+# 不查业务库的闲聊类意图：参数提取强制为空，与编排器展示守卫保持一致；
+# 口径/血缘解释意图保留完整提取，只是不走查询执行链路。
 _NO_DATA_INTENTS = {
     PrimaryIntent.CHAT,
     PrimaryIntent.CAPABILITY_HELP,
@@ -73,7 +74,6 @@ _CHINESE_INTENT_LABELS = frozenset(_CHINESE_INTENT_TO_PRIMARY)
 
 _EXTRACTION_PROMPT_PATH = Path(__file__).with_name("structured_extraction_prompt.txt")
 _EXTRACTION_PROMPT_MARKER = "【用户提示词（业务场景上下文）】"
-_USER_SEMANTIC_DESCRIPTION_PATH = Path(__file__).resolve().parents[2] / "语义描述文件.md"
 _EXTRACTION_ROLE_GUIDANCE = """
 结构化提取的角色边界：
 实体表示本次查询涉及或需要关联的逻辑业务对象/表，不是具体筛选值。
@@ -84,22 +84,6 @@ _EXTRACTION_ROLE_GUIDANCE = """
 用户消息中的业务语义说明仅用于理解角色与业务含义；不是授权清单，也不是物理 JOIN 指令。
 说明有重复、矛盾或关联描述不一致时，不据此编造字段或关系，最终由当前授权语义目录绑定。
 """
-
-
-def extraction_user_prompt(question: str) -> str:
-    """Keep the maintained business description in the extraction user message."""
-    try:
-        description = _USER_SEMANTIC_DESCRIPTION_PATH.read_text(encoding="utf-8-sig").strip()
-    except OSError:
-        description = ""
-    if not description:
-        return question
-    return (
-        "【结构化提取业务语义参考：不是新的查询任务】\n"
-        + description
-        + "\n【业务语义参考结束】\n\n【本次补全后的问题】\n"
-        + question
-    )
 
 
 @lru_cache(maxsize=1)
@@ -223,15 +207,19 @@ def extract_semantic_spec_section(agent_prompt: str) -> str:
     return text[min(positions):].strip()[:_SEMANTIC_SPEC_MAX_CHARS]
 
 
-def _semantic_context_section(semantic_context: str) -> str:
+def _semantic_context_section(semantic_context: str, *, origin: str = "智能体配置") -> str:
     return (
-        "\n平台业务语义规范（摘自智能体配置，是参数角色与业务口径的判定依据）：\n"
+        "\n平台业务语义规范（摘自" + origin + "，是参数角色与业务口径的判定依据）：\n"
         + semantic_context.strip()
         + "\n注意：规范只用于对齐参数角色和口径，不作为业务范围的判断依据。"
-        "规范清单未收录的业务词仍按原文提取、任务意图正常判定，"
+        "规范清单未收录的实体、维度等业务词仍按原文提取、任务意图正常判定，"
         "能否绑定与是否存在歧义由下游语义查询器处理。"
-        "例如规范指标表中没有“利润”时，“查一下今年利润”仍判 METRIC_QUERY，"
-        "parameters 输出“利润（指标）”“今年（时间范围）”；"
+        "指标与规范指标层级比对后分两种情况：指标名含规范内指标、属于其派生口径"
+        "（如对规范内“销量”求增长率、均值、占比等）的，按正常任务意图处理并完整"
+        "提取参数，指标名保留用户原文，不得拿其他指标的结果顶替；指标与规范内任何"
+        "指标都无关、也无法由规范内指标派生的，才按规则10输出 METRIC_DEFINITION"
+        "（指标口径解释），指标名保留用户原文，不得用语义相近的指标替代，也不得拆成"
+        "其他指标的计算任务。"
         "OUT_OF_SCOPE 只用于与业务数据分析无关的请求（如天气、订餐）。\n"
     )
 
@@ -286,6 +274,77 @@ _BUSINESS_IDENTIFIER_PATTERN = re.compile(
     r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+"
 )
 
+# 指标顶替兜底用的问句切分模式：只服务于从用户原话里抠指标短语，
+# 抠不出来就返回空串走通用未定义话术，不参与意图判定。
+_USER_METRIC_ACTION = re.compile(
+    r"^(?:请|麻烦|帮我|请帮我|再|给我)?\s*"
+    r"(?:查询|查看|查一下|看一下|看看|统计|分析|列出|找出|筛选|计算|算一下|算)"
+)
+_USER_METRIC_FILLER = re.compile(
+    r"^(?:今年|去年|本月|上月|上个月|本季度|本年|最近一年|近一年|"
+    r"全部|所有|每个|各|分别|目前|当前)"
+)
+_USER_METRIC_OBJECT = re.compile(
+    r"^(?:[一-龥]{1,3}(?:省|市|自治区))?"
+    r"(?:各)?(?:经销商|医院|产品|商品|客户|供应商|门店|渠道|厂家|品牌|地区|区域)"
+)
+_METRIC_SUFFIX = re.compile(
+    r"(?:匹配度|满意度|占比|度|率|比|值|额|总数|笔数|次数|天数|人数|家数|数量|数|量|时长|周期)$"
+)
+# 计算任务问题里“计算……的×××”的指标名，供顶替检查把计算目标也算进
+# 计划声明的口径；“作为×××”等用户指标别名尾巴要先截掉。
+_CALC_METRIC_PATTERN = re.compile(
+    r"(?:计算|算出|汇总|求得)[^，。;；]{0,20}的"
+    r"([^，。;；]{2,16}?(?:匹配度|满意度|占比|率|度|比|值|额|总数|笔数|次数|天数|人数|家数|数量|数|量|时长|周期))"
+)
+
+
+def _calc_metric_names(question: str) -> list[str]:
+    """从计算任务问题里抠出被计算的指标名，用户别名尾巴（作为×××）截掉。"""
+    names: list[str] = declared_calculation_targets(question)
+    for match in _CALC_METRIC_PATTERN.finditer(question or ""):
+        name = match.group(1).strip()
+        # “计算A作为B”句式里A才是计划实际计算的规范指标
+        name = re.split(r"作为|记作|写作|即", name)[0].strip(" 的，,、")
+        if 2 <= len(name) <= 16:
+            names.append(name)
+    return names
+
+
+def user_metric_phrase(question: str) -> str:
+    """从用户原话里截取指标短语，供顶替兜底时保留原文指标名。
+
+    去掉开头动词、时间范围和业务对象后，取以指标后缀结尾的片段；
+    拿不到就返回空串，由调用方退回不带指标名的通用话术。
+    """
+    text = question.strip(" 。，,？?：:、！!").strip()
+    action = _USER_METRIC_ACTION.match(text)
+    if action:
+        text = text[action.end():].strip(" 的，,、")
+    for _ in range(8):
+        before = text
+        for pattern in (_USER_METRIC_FILLER, _USER_METRIC_OBJECT):
+            match = pattern.match(text)
+            if match:
+                text = text[match.end():].strip(" 的，,、")
+        if text == before:
+            break
+    segments = re.split(r"[的按在从与和及各每]", text)
+    for part in reversed(segments):
+        part = part.strip(" ，,、")
+        if not part:
+            continue
+        # 片段以业务对象开头且剥掉后仍是指标短语时才剥，避免把
+        # “医院覆盖率”这类指标本身的前缀误删。
+        object_match = _USER_METRIC_OBJECT.match(part)
+        if object_match:
+            remainder = part[object_match.end():].strip(" 的，,、")
+            if len(remainder) >= 4 and _METRIC_SUFFIX.search(remainder):
+                part = remainder
+        if 2 <= len(part) <= 16 and _METRIC_SUFFIX.search(part):
+            return part
+    return ""
+
 
 class TaskPlanningError(RuntimeError):
     pass
@@ -293,9 +352,11 @@ class TaskPlanningError(RuntimeError):
 
 _EXTRACTION_SCHEMA_DESCRIPTION = (
     "该任务的结构化提取JSON，严格按系统提示词中的结构化提取规范输出，"
-    "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求；"
+    "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重；"
     "意图取值限定为 统计查询、趋势分析、对比分析、占比分析、排名分析、明细查询 之一。"
-    "不需要查询业务数据的任务（闲聊、能力咨询、指标口径或血缘解释、超出业务范围）输出null"
+    "不需要查询业务数据的任务（闲聊、能力咨询、超出业务范围）输出null；"
+    "指标口径或血缘解释任务按规范完整提取参数，指标名保留用户原文，"
+    "意图键与任务意图一致：口径解释任务固定输出“解释口径”，血缘解释任务固定输出“数据血缘”"
 )
 
 
@@ -367,9 +428,12 @@ Additional output contract:
    defined by the 结构化提取规范 in the system prompt (keys: 意图/业务域/实体/
    指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求), extracted only
    from the user's wording plus the injected business semantic specification;
-   use null when nothing is extractable. Tasks that do not query business
-   data (chitchat, capability help, metric or lineage explanation,
-   out-of-scope requests) must always use null.
+   use null when nothing is extractable. Chitchat, capability help, and
+   out-of-scope tasks must always use null. Metric or lineage explanation
+   tasks (METRIC_DEFINITION, DATA_LINEAGE) still provide the full extraction;
+   keep the metric name(s) as the user's original wording, and the 意图 key
+   must match the task intent: “解释口径” for METRIC_DEFINITION, “数据血缘”
+   for DATA_LINEAGE.
 6. Every task should provide primary_intent chosen from the intent enum given
    in the system prompt. For SINGLE_TASK, fill single_task_intent and
    single_task_extraction instead (same rules as task extraction).
@@ -402,9 +466,12 @@ _SYSTEM_PROMPT = """你是数据智能体的业务任务理解与拆分器。只
 6. 两个完整查询即使只用句号、逗号或口语连接，也要按真实目标拆分，不能依赖“另外、同时、以及”等固定连接词。
 7. 排名后再查询入选对象的关系或明细，后一步消费前一步名单，属于DEPENDENT_TASKS。例如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”。普通的“查询并分析”不自动建立依赖。
 8. “对比今年和去年销售额”是一个比较目标，可作为SINGLE_TASK；“分别查询今年和去年销售额，并比较同比变化”明确要求两份查询结果和后续比较，应拆为两个并行查询加一个依赖二者的比较任务。
-9. 业务语义规范中指标层级为“复合口径指标”的指标（依赖多个原子指标计算，如区域医院覆盖率依赖已合作医院数和区域全部医院总数），不能作为一个查询任务直接执行，应拆为DEPENDENT_TASKS：每个依赖指标各一个并行查询任务（分母类指标按其口径只带区域条件、不带经销商等分组条件），最后增加一个依赖全部前序任务的计算任务；计算任务的问题写明“根据上述任务的查询结果计算×××，不再查询数据库”，primary_intent输出COMPARISON_ANALYSIS，extraction输出null。分析内容等文字描述中任务编号一律从任务1开始，depends_on字段仍按从0开始的下标输出。
-10. 用户需要订单平均金额/客单价而目录仅有含税销售总额和订单笔数时，拆成统计加纯计算：统计任务在同一份数据中按目标对象唯一编号查询含税销售总额、订单笔数，并完整保留用户要求的所属公司/厂家等展示字段及时间筛选，不提前按某个原子指标排序或截断；计算任务明确写出“含税销售总额除以订单笔数得到订单平均金额，按订单平均金额降序取前五名，不再查询数据库”（数量和方向按用户要求）。不能把订单行金额的平均值当作订单平均金额，不能只用文字完成计算。对于其他同粒度可计算指标同样保留完整输入和最终限制。
-11. “前N名销售人员以及所属公司”等同一对象的唯一关联属性，不是额外的分组目标，也不必拆成新的关系查询；把关联属性保留在统计任务的展示字段中，由授权目录验证N:1/1:1关系。只有多值关系或不同粒度的明细才另设依赖查询任务；任何用户要求返回的属性不得遗漏。
+9. 规范指标层级中业务语义由其他指标运算合成的指标（如业务语义写作“A / B”“A − B”，且涉及的原子指标都在指标层级里），不能作为一个查询任务直接执行，应拆为DEPENDENT_TASKS：该指标业务语义和“依赖指标”列登记的每个原子指标各一个并行查询任务（依赖原子指标以规范中该指标条目“依赖指标”列的登记原名为准，不得自造、不得改写名称、不得改用其他指标；分母类指标按其口径只带区域条件、不带经销商等分组条件），最后增加一个依赖全部前序任务的计算任务；计算任务的问题写明“根据上述任务的查询结果计算×××，不再查询数据库”，primary_intent输出COMPARISON_ANALYSIS，extraction输出null。
+10. 指标与规范指标层级比对后分两种情况：指标由规范内指标派生（指标名里含规范内指标，如对"销量"求增长率、均值、占比等），按正常任务意图处理并完整提取参数，指标名保留用户原文，不得拿其他指标的结果顶替；指标与规范内任何指标都无关、也无法由规范内指标派生时，才按指标口径解释处理：任务意图输出METRIC_DEFINITION，参数仍照常完整提取，指标名保留用户原文，不得用语义相近的指标替代，也不得自行编造计算口径或拆成别的指标的计算任务。分析内容等文字描述中任务编号一律从任务1开始，depends_on字段仍按从0开始的下标输出。
+11. 明细查询（名单/明细/清单类返回）里出现指标阈值条件（如“订单笔数大于5笔”“合作时长大于3个月”“销售额大于100万”），阈值不能作用在明细行上，应拆为DEPENDENT_TASKS：任务1按该指标做分组统计（写明分组维度和指标，保留原问题的地区、产品、时间等其他筛选条件），任务2依赖任务1，问题写明“根据上述任务的查询结果筛选×××的名单，不再查询数据库”，primary_intent输出COMPARISON_ANALYSIS，extraction输出null；任务1的primary_intent按实际统计意图输出。
+
+12. 用户需要订单平均金额/客单价而目录仅有含税销售总额和订单笔数时，拆成统计加纯计算：统计任务在同一份数据中按目标对象唯一编号查询含税销售总额、订单笔数，并完整保留用户要求的所属公司/厂家等展示字段及时间筛选，不提前按某个原子指标排序或截断；计算任务明确写出“含税销售总额除以订单笔数得到订单平均金额，按订单平均金额降序取前五名，不再查询数据库”（数量和方向按用户要求）。不能把订单行金额的平均值当作订单平均金额，不能只用文字完成计算。对于其他同粒度可计算指标同样保留完整输入和最终限制。
+13. “前N名销售人员以及所属公司”等同一对象的唯一关联属性，不是额外的分组目标，也不必拆成新的关系查询；把关联属性保留在统计任务的展示字段中，由授权目录验证N:1/1:1关系。只有多值关系或不同粒度的明细才另设依赖查询任务；任何用户要求返回的属性不得遗漏。
 
 子任务生成规则：
 1. 每个子任务必须是自然、完整、可独立理解和执行的业务问题。补全原句中对该任务生效的产品、地区、指标、时间、筛选、排序及排除条件，不保留只有“另一个、上述条件”等内容的空泛指代。依赖任务应写成“根据上一步返回的某对象名单/范围……”并同时写明业务对象和后续动作。
@@ -412,7 +479,7 @@ _SYSTEM_PROMPT = """你是数据智能体的业务任务理解与拆分器。只
 3. 并行任务不互相依赖。依赖只表示后续任务确实需要前序结果，不表示语句先后顺序。depends_on使用从0开始的前序任务下标，可引用多个前序任务。
 4. 每个任务都必须显式输出depends_on；没有依赖时也必须输出空数组，禁止省略字段。
 5. 保持用户目标的原始顺序，不重复、不遗漏，任务总数为2到5。若无需拆分，task_structure输出SINGLE_TASK且tasks输出空数组。
-6. 每个数据查询任务输出extraction字段：按本提示词末尾的“结构化提取规范”产出该任务的结构化提取JSON（固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求），只提取用户原文和注入的业务语义规范中出现的内容，识别不到的键按规范置[]或null。不需要查询业务数据的任务（闲聊、能力咨询、指标口径或血缘解释、超出业务范围）extraction输出null。
+6. 每个数据查询任务输出extraction字段：按本提示词末尾的“结构化提取规范”产出该任务的结构化提取JSON（固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求），只提取用户原文和注入的业务语义规范中出现的内容，识别不到的键按规范置[]或null。不需要查询业务数据的任务（闲聊、能力咨询、超出业务范围）extraction输出null；指标口径或血缘解释任务（METRIC_DEFINITION、DATA_LINEAGE）的extraction按规范完整提取参数并保留用户原文指标名，“意图”键与任务意图一致：口径解释任务固定输出“解释口径”，血缘解释任务固定输出“数据血缘”。
 7. 每个任务输出primary_intent：从下列意图枚举中选一个最贴合该任务目标的取值，只输出枚举名本身。不需要查询业务数据的任务按实际选CHAT、CAPABILITY_HELP、METRIC_DEFINITION、DATA_LINEAGE或OUT_OF_SCOPE。若判定为SINGLE_TASK，则改为输出single_task_intent和single_task_extraction，规则与任务的primary_intent、extraction相同。
 
 任务意图枚举：
@@ -424,7 +491,11 @@ _SYSTEM_PROMPT = """你是数据智能体的业务任务理解与拆分器。只
 - “查询空心纤维血液透析器合作的经销商和医院名单。” → PARALLEL_TASKS，因为返回对象和关系结果不同。
 - “找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院。” → DEPENDENT_TASKS，第二个任务依赖第一个任务。
 - “分别查询今年和去年上海市销售额，并比较同比变化。” → DEPENDENT_TASKS，前两个任务无依赖，比较任务同时依赖前两个任务。
-- “统计上海市各经销商的区域医院覆盖率。” → DEPENDENT_TASKS：任务1“查询上海市各经销商的已合作医院数”，任务2“查询上海市的区域全部医院总数”，任务3“根据上述任务的查询结果计算各经销商的区域医院覆盖率，不再查询数据库”（任务3的depends_on=[0,1]）。
+- 业务语义由其他指标运算合成的指标（如规范中的“区域医院覆盖率”），其原子指标一律照抄注入规范中该指标条目“依赖指标”列登记的原名，不得使用自己记忆或改写的指标名：设规范登记的依赖指标为“指标A, 指标B”，则“统计上海市各经销商的区域医院覆盖率。”拆为DEPENDENT_TASKS：任务1“查询上海市各经销商的指标A”，任务2“查询上海市的指标B”，任务3“根据上述任务的查询结果计算各经销商的区域医院覆盖率，不再查询数据库”（任务3的depends_on=[0,1]）；其他合成指标同样按规范登记拆分，不限于本例。
+- “查看上海各经销商科室业务匹配度。” → SINGLE_TASK，single_task_intent=METRIC_DEFINITION：科室业务匹配度与规范内任何指标都无关，按指标口径解释处理并保留原文指标名，参数照常完整提取（地区、经销商等照常输出）；不得改用区域医院覆盖率等规范内指标替代，也不得拆成统计加计算的任务。
+- “统计各经销商近12月的平均月度销量增长率。” → 正常统计查询任务：平均月度销量增长率由规范内指标“销量”派生，按正常任务意图处理并完整提取参数（时间范围、维度等），不得改判口径解释，也不得拿其他指标的结果顶替。
+- “查询订单笔数大于5笔的经销商名单。” → DEPENDENT_TASKS：任务1“统计各经销商的订单笔数”，任务2“根据上述任务的查询结果筛选订单笔数大于5笔的经销商名单，不再查询数据库”（任务2的depends_on=[0]）。
+- “合作时长大于3个月的经销商名单。” → DEPENDENT_TASKS：任务1“统计各经销商的合作时长”，任务2“根据上述任务的查询结果筛选合作时长大于3个月的经销商名单，不再查询数据库”（任务2的depends_on=[0]）。
 - “分析费森尤斯产品在上海市和江苏省最近一年的销售趋势。” → SINGLE_TASK。
 """
 
@@ -457,25 +528,108 @@ class MultiQuestionPlanner:
         self.settings = settings
         self._transport = transport
 
-    async def plan(self, question: str, semantic_context: str = "") -> PlannerOutcome:
+    @staticmethod
+    def _needs_plan_retry(outcome: "PlannerOutcome") -> bool:
+        """数据查询任务的提取整段为空时值得整体重试；计算任务的空提取是合法输出。"""
+        if outcome.plan is None:
+            return False
+        for task in outcome.plan.tasks:
+            if task.extraction is not None:
+                continue
+            if "不再查询数据库" in (task.question or ""):
+                continue
+            if task.primary_intent not in _NO_DATA_INTENTS | _METADATA_INTENTS:
+                return True
+        return False
+
+    @staticmethod
+    def _plan_metric_names(plan: "TaskPlan") -> list[str]:
+        """计划里各数据查询任务声明的指标名，作为顶替检查的比对基准。"""
+        names: list[str] = []
+        for task in plan.tasks:
+            extraction = task.extraction
+            if not isinstance(extraction, dict):
+                if "不再查询数据库" in (task.question or ""):
+                    names.extend(_calc_metric_names(task.question))
+                continue
+            for item in extraction.get("指标") or []:
+                name = item.get("name") if isinstance(item, dict) else item
+                if isinstance(name, str) and name.strip():
+                    names.append(name.strip())
+            if "不再查询数据库" in (task.question or ""):
+                names.extend(_calc_metric_names(task.question))
+        return names
+
+    @staticmethod
+    def _question_covers_metric(question: str, name: str) -> bool:
+        """用户原话逐字提到该指标，或命中指标名里任一不少于3字的连续片段，视为覆盖。
+
+        片段匹配是放宽方向：白话叫法（如“覆盖率”指“区域医院覆盖率”）不误判，
+        而完全不相干的指标名在原话里不会留下任何片段。
+        """
+        if name in question:
+            return True
+        for size in range(len(name) - 1, 2, -1):
+            for start in range(len(name) - size + 1):
+                if name[start:start + size] in question:
+                    return True
+        return False
+
+    def _metric_substitution_outcome(
+        self, question: str, outcome: "PlannerOutcome"
+    ) -> "PlannerOutcome | None":
+        """计算任务的指标在用户原话里毫无踪影时判定为相近指标顶替。
+
+        规则10要求规范里没有的指标按口径解释处理；提示词约束不住模型时
+        在这里确定性兜底，强制转成 METRIC_DEFINITION 单任务并保留原文
+        指标名。只拦带计算任务的计划，普通查询计划不动，避免误伤白话问法。
+        """
+        plan = outcome.plan
+        if plan is None:
+            return None
+        if not any("不再查询数据库" in (task.question or "") for task in plan.tasks):
+            return None
+        names = self._plan_metric_names(plan)
+        if not names:
+            return None
+        if any(self._question_covers_metric(question, name) for name in names):
+            return None
+        phrase = user_metric_phrase(question)
+        return PlannerOutcome(
+            plan=None,
+            single_intent=PrimaryIntent.METRIC_DEFINITION,
+            single_parameters=(f"{phrase}（指标）",) if phrase else (),
+        )
+
+    async def plan(
+        self, question: str, semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> PlannerOutcome:
         model_outcome: PlannerOutcome | None = None
         if (
             self.settings.intent_model_enabled
             and self.settings.multi_question_model_enabled
             and self.settings.intent_model_api_key
         ):
-            try:
-                outcome = await self._model_plan(
-                    question, semantic_context=semantic_context
-                )
-                if outcome.plan is not None:
-                    self.validate(outcome.plan, source_question=question)
-                    return outcome
-                model_outcome = outcome
-            except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError):
-                # A transport, schema or grounding failure falls back to the
-                # bounded deterministic planner.
-                pass
+            for attempt in range(2):
+                try:
+                    outcome = await self._model_plan(
+                        question, semantic_context=semantic_context,
+                        semantic_model_id=semantic_model_id,
+                    )
+                    if outcome.plan is not None:
+                        self.validate(outcome.plan, source_question=question)
+                        # 数据任务的提取整段为空说明模型这次输出不可信，整体重试一次
+                        if attempt == 0 and self._needs_plan_retry(outcome):
+                            continue
+                        guarded = self._metric_substitution_outcome(question, outcome)
+                        return guarded if guarded is not None else outcome
+                    model_outcome = outcome
+                    break
+                except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError):
+                    # 传输、Schema 或校验失败先整体重试一次，仍失败才落规则拆分
+                    if attempt == 1:
+                        break
         ranked_relation_plan = self._ranked_relation_plan(question)
         if ranked_relation_plan is not None:
             self.validate(ranked_relation_plan, source_question=question)
@@ -524,16 +678,26 @@ class MultiQuestionPlanner:
         *,
         intent: PrimaryIntent | None,
     ) -> dict[str, Any] | None:
-        """清洗模型输出的结构化提取：不查库意图强制为空，键与取值做形态归一。"""
+        """清洗模型输出的结构化提取：纯闲聊类意图强制为空，键与取值做形态归一。
+
+        口径/血缘解释任务保留完整提取：参数照常进mentions通道供下游解析，
+        展示层单独决定是否输出，指标不存在时回复“未定义”仍依赖这些参数。
+        """
         if not isinstance(value, dict):
             return None
-        if intent is not None and intent in _NO_DATA_INTENTS | _METADATA_INTENTS:
+        if intent is not None and intent in _NO_DATA_INTENTS:
             return None
         structured: dict[str, Any] = {}
         intent_label = _clean_extraction_text(value.get(_EXTRACTION_INTENT_KEY) or "")
-        structured[_EXTRACTION_INTENT_KEY] = (
-            intent_label if intent_label in _CHINESE_INTENT_LABELS else None
-        )
+        if intent == PrimaryIntent.METRIC_DEFINITION:
+            # 口径解释不在六类查询枚举里，意图键固定与任务意图显示一致
+            structured[_EXTRACTION_INTENT_KEY] = "解释口径"
+        elif intent == PrimaryIntent.DATA_LINEAGE:
+            structured[_EXTRACTION_INTENT_KEY] = "数据血缘"
+        else:
+            structured[_EXTRACTION_INTENT_KEY] = (
+                intent_label if intent_label in _CHINESE_INTENT_LABELS else None
+            )
         for key in _EXTRACTION_LIST_KEYS:
             raw = value.get(key)
             items: list[Any] = []
@@ -559,6 +723,8 @@ class MultiQuestionPlanner:
             if isinstance(output_requirement, str) and output_requirement.strip()
             else None
         )
+        dedup = _clean_extraction_text(value.get("是否去重") or "")
+        structured["是否去重"] = dedup if dedup in ("是", "否") else None
         return structured
 
     @staticmethod
@@ -726,14 +892,28 @@ class MultiQuestionPlanner:
         )
 
     async def _model_plan(
-        self, question: str, *, semantic_context: str = ""
+        self, question: str, *, semantic_context: str = "",
+        semantic_model_id: int | None = None,
     ) -> PlannerOutcome:
+        from app.domain.semantic_description import load_semantic_description
+
         schema = _ModelPlan.model_json_schema()
         system_content = _SYSTEM_PROMPT
-        if semantic_context.strip():
+        # 规范只注入一次：远程按模型生成的描述文件优先，
+        # 平台提示词粘贴段兼容存量，提示词文件内置规范最后兜底。
+        reference = await load_semantic_description(self.settings, semantic_model_id)
+        remote_spec = (
+            reference["content"]
+            if reference["source"].startswith("semantic_model_")
+            else ""
+        )
+        if remote_spec:
+            system_content += _semantic_context_section(
+                remote_spec, origin="语义模型描述文件"
+            )
+        elif semantic_context.strip():
             system_content += _semantic_context_section(semantic_context)
         else:
-            # 平台未注入语义规范时，用提示词文件内置的规范兜底。
             embedded_spec = extraction_embedded_spec()
             if embedded_spec:
                 system_content += (
@@ -749,7 +929,7 @@ class MultiQuestionPlanner:
                         schema, ensure_ascii=False, separators=(",", ":")
                     ),
                 },
-                {"role": "user", "content": extraction_user_prompt(question)},
+                {"role": "user", "content": question},
             ],
             "temperature": 0,
             # json_object 与 enable_thinking=false 同开时模型会丢过滤条件的
@@ -794,10 +974,26 @@ class MultiQuestionPlanner:
                 single_intent = _CHINESE_INTENT_TO_PRIMARY.get(
                     str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip(), single_intent
                 )
+            # 口径/血缘解释任务保留完整参数；若模型仍输出null提取，则至少把
+            # 原文指标名带进参数通道，否则下游解析不到指标，追问门禁会引导
+            # 用户换成规范里的指标，违背规则10“不得用语义相近指标替代”。
+            metadata_parameters: tuple[str, ...] = ()
+            if single_intent in _METADATA_INTENTS:
+                raw_metrics = (
+                    result.single_task_extraction.get("指标")
+                    if isinstance(result.single_task_extraction, dict)
+                    else None
+                ) or []
+                metadata_parameters = tuple(
+                    extraction_to_parameters({"指标": raw_metrics})
+                )
             return PlannerOutcome(
                 plan=None,
                 single_intent=single_intent,
-                single_parameters=tuple(extraction_to_parameters(structured)),
+                single_parameters=(
+                    tuple(extraction_to_parameters(structured))
+                    or metadata_parameters
+                ),
                 single_structured=structured,
             )
         if len(result.tasks) < 2:
@@ -822,8 +1018,8 @@ class MultiQuestionPlanner:
                 expected_output=(
                     item.expected_output.strip()
                     if item.expected_output and item.expected_output.strip()
-                    else (('、'.join(declared_calculation_targets(item.question)) or None)
-                          if '不再查询数据库' in item.question else None)
+                    else (("、".join(declared_calculation_targets(item.question)) or None)
+                          if "不再查询数据库" in item.question else None)
                 ),
                 parameters=extraction_to_parameters(structured),
                 extraction=structured,
@@ -1080,6 +1276,16 @@ class MultiQuestionPlanner:
         return list(dict.fromkeys(_BUSINESS_IDENTIFIER_PATTERN.findall(normalized)))
 
     @staticmethod
+    def _normalize_grounding_numbers(text: str) -> str:
+        """口语日期写法与规范写法等价：25年≡2025年、09月≡9月，比对前统一。"""
+        text = re.sub(
+            r"(?<!\d)(\d{2})(?=年)",
+            lambda m: f"20{m.group(1)}" if int(m.group(1)) <= 49 else m.group(1),
+            text,
+        )
+        return re.sub(r"(?<!\d)0(\d)(?=[月日号])", r"\1", text)
+
+    @staticmethod
     def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
         """Reject model-created dates, numbers, metrics and quoted filters."""
         source_for_grounding = re.sub(
@@ -1087,9 +1293,11 @@ class MultiQuestionPlanner:
             " ",
             source_question,
         )
-        source_compact = re.sub(r"\s+", "", source_for_grounding).casefold()
-        planned_compact = "".join(
-            re.sub(r"\s+", "", task.question).casefold() for task in plan.tasks
+        source_compact = MultiQuestionPlanner._normalize_grounding_numbers(
+            re.sub(r"\s+", "", source_for_grounding).casefold()
+        )
+        planned_compact = MultiQuestionPlanner._normalize_grounding_numbers(
+            "".join(re.sub(r"\s+", "", task.question) for task in plan.tasks).casefold()
         )
         source_numbers = set(re.findall(r"\d+(?:\.\d+)?", source_compact))
         metric_terms = (
@@ -1108,7 +1316,9 @@ class MultiQuestionPlanner:
             MultiQuestionPlanner._business_identifiers(source_question)
         )
         for task in plan.tasks:
-            compact = re.sub(r"\s+", "", task.question).casefold()
+            compact = MultiQuestionPlanner._normalize_grounding_numbers(
+                re.sub(r"\s+", "", task.question).casefold()
+            )
             if not set(re.findall(r"\d+(?:\.\d+)?", compact)).issubset(source_numbers):
                 raise TaskPlanningError("子任务包含原问题中不存在的数字或日期")
             if not {value for value in metric_terms if value in compact}.issubset(source_metrics):

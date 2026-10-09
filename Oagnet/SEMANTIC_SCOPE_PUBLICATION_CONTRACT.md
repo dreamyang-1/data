@@ -55,36 +55,3 @@ It emits only counts and a hash; it exports no record IDs, names, values or
 conversation text. A local Chroma audit is not deployed Milvus/MySQL evidence.
 Deployment, credentials and index publication require the existing controlled
 operations process. Runtime models, prompts and V2 routing are unchanged.
-
-## Physical catalog and field enums in the existing publication (2026-10-08)
-
-`POST /vector/rebuild` retains its request and response schema. In addition to
-semantic records, it now publishes registered physical tables/fields for the
-current model and optional exact domain, grouped by the authoritative data
-source IDs. `total` and `by_type` include these additional `table`/`field` records.
-The platform's existing publish operation invokes this route; copying a model
-alone still creates an unpublished configuration, not a usable vector index.
-
-An explicit domain's physical capture includes owned main tables and declared
-sub-table mappings. It never uses an unowned NULL-model registration as authority
-or deletes other domains' tables. Physical IDs retain their existing data-source
-format. A foreign-model ID collision fails instead of overwriting another model.
-The model-wide route can refresh and remove the model's complete physical family.
-Obsolete whole tables cannot be safely attributed to a single former domain;
-their cleanup belongs to a model-wide maintenance publication.
-
-Within one read-only catalog snapshot, field enums are attached to the semantic
-attribute proven to map to that exact domain/entity/data-source/table/column.
-They participate in the attribute embedding and remain available in entity and
-attribute metadata to the existing ASL binder. Ordinary lists and JSON enum
-objects/mappings are supported; stored values/codes are never guessed. Enums do
-not create an authorized field or broaden retrieval scope. Business-value sync's
-existing vectorization policy remains unchanged.
-
-Physical embedding preparation precedes semantic writes. Physical upsert is
-followed by complete strongly consistent Milvus read-back (IDs, text, metadata
-and valid embedding shape) before deleting stale physical rows. An incomplete
-write/read-back cannot return publication success. The legacy two-collection
-publication is not an atomic transaction: if a later physical write fails,
-semantic upserts may already have occurred; retry the same existing publish
-operation, not a query-time rebuild. No new release route or V2 cutover is added.

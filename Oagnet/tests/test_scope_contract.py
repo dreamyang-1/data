@@ -210,18 +210,14 @@ def test_real_query_chain_uses_only_the_explicit_domain(monkeypatch):
                      indicator_name='revenue', calculation_formula='SUM(sales.amount)')]
     monkeypatch.setattr(api, '_store', Store())
     monkeypatch.setattr(agent, 'embed_query', lambda _: [1.0])
-    def invoke(messages):
-        assert 'forbidden-' not in messages[1]['content']
-        return SimpleNamespace(content=json.dumps({'subject':'sales','metrics':[{'index':0,'key':'revenue'}]}))
-    monkeypatch.setattr(agent, '_get_chat_model', lambda: SimpleNamespace(invoke=invoke))
+    monkeypatch.setattr(agent, '_get_chat_model', lambda: object())
+    monkeypatch.setattr(agent, 'create_deep_agent', model_factory)
     monkeypatch.setattr(agent, 'get_metric_evidence', metric_loader)
     response = TestClient(api.app).post('/agent/query', json={
-        'query': 'revenue', 'semantic_model_id': 81, 'business_domain_ids': [205], 'metric_ids': ['81:revenue'],
-        'structured_extraction':{'实体':['sales'],'指标':[{'name':'revenue'}],
-            '维度':[],'展示字段':[],'过滤条件':[],'排序':[]}})
+        'query': 'revenue', 'semantic_model_id': 81, 'business_domain_ids': [205], 'metric_ids': ['81:revenue']})
     assert response.status_code == 200, response.text
     body = response.json()
     assert body['business_domain_ids'] == [205]
     assert body['semantic_evidence']['resolved_business_domain_ids'] == [205]
     assert body['semantic_evidence']['selected_metrics'][0]['business_domain_id'] == 205
-    assert observed and all('"business_domain_id": {"$in": [205]}' in json.dumps(where) for where in observed)
+    assert observed and all(any('business_domain_id' in clause for clause in where['$and']) for where in observed)

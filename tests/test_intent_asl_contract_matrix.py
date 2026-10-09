@@ -26,8 +26,7 @@ MATRIX = (
     (2, "查询紫杉醇释放冠脉球囊导管产品合作医院", PrimaryIntent.DETAIL_QUERY, "医院", False, None, "医院名称", "商品名称", None, False),
     (3, "查询振德医疗厂家产品", PrimaryIntent.DETAIL_QUERY, "商品", False, None, "商品名称", "厂家名称", None, False),
     (4, "查询紫杉醇释放冠脉球囊导管产品厂家", PrimaryIntent.DETAIL_QUERY, "厂家", False, None, "厂家名称", "商品名称", None, False),
-    # STALE_TEST: the user explicitly requires dealer location for 上海经销商.
-    (5, "查询上海经销商", PrimaryIntent.DETAIL_QUERY, "经销商", False, None, "经销商名称", "经销商城市", None, False),
+    (5, "查询上海经销商", PrimaryIntent.DETAIL_QUERY, "经销商", False, None, "经销商名称", "业务城市", None, False),
     (6, "查询紫杉醇释放冠脉球囊导管产品规格", PrimaryIntent.DETAIL_QUERY, "商品", False, None, "商品规格", "商品名称", None, False),
     (7, "查询紫杉醇释放冠脉球囊导管产品销售额", PrimaryIntent.METRIC_QUERY, "产品", True, "销售额", None, "商品名称", None, False),
     (8, "查询紫杉醇释放冠脉球囊导管产品销售量", PrimaryIntent.METRIC_QUERY, "产品", True, "销售量", None, "商品名称", None, False),
@@ -43,7 +42,7 @@ EXPECTED_FILTERS = {
     2: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     3: ([{"field": "厂家名称", "operator": "EQ", "value": "振德医疗"}], []),
     4: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
-    5: ([{"field": "经销商城市", "operator": "EQ", "value": "上海市"}], []),
+    5: ([{"field": "业务城市", "operator": "EQ", "value": "上海市"}], []),
     6: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     7: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     8: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),

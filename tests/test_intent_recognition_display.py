@@ -576,8 +576,11 @@ def test_validated_asl_is_rendered_as_direct_json_without_field_reformatting():
     expected["dimensions / display_fields"] = expected.pop("dimensions")
     assert json.loads(json_text) == expected
     assert "dimensions" in asl and "dimensions / display_fields" not in asl
-    assert "`filters` 仅记录本次查询显式提出的筛选" in rendered
-    assert "指标定义自带的固定口径由 SQL 翻译服务合并" in rendered
+    assert rendered.endswith(
+        "校验结论：ASL 已通过结构化参数校验，指标、维度与筛选绑定均与语义目录一致。"
+    )
+    assert "说明：以上 JSON 为页面展示视图" not in rendered
+    assert "执行说明：`limit: null`" not in rendered
     assert "指标：" not in rendered
     assert "筛选条件：" not in rendered
     assert "字段说明：" not in rendered
@@ -585,41 +588,37 @@ def test_validated_asl_is_rendered_as_direct_json_without_field_reformatting():
 
 
 @pytest.mark.parametrize(
-    ("metrics", "dimensions", "usage"),
+    ("metrics", "dimensions"),
     [
-        ([], [{"name": "sales_order.amount_with_tax"}], "display_fields（展示字段）"),
-        ([], [{"name": "hospital.hospital_name"}], "display_fields（展示字段）"),
-        ([{"name": "sales_total"}], [{"name": "city"}], "dimensions（分组维度）"),
-        ([{"name": "sales_total"}], [{"name": "business_date", "granularity": "month"}], "dimensions（分组维度）"),
-        ([], [], "本次未使用分组维度或展示字段"),
-        ([{"name": "sales_total"}], [], "本次未使用分组维度或展示字段"),
-        (None, None, "本次未使用分组维度或展示字段"),
+        ([], [{"name": "sales_order.amount_with_tax"}]),
+        ([], [{"name": "hospital.hospital_name"}]),
+        ([{"name": "sales_total"}], [{"name": "city"}]),
+        ([{"name": "sales_total"}], [{"name": "business_date", "granularity": "month"}]),
+        ([], []),
+        ([{"name": "sales_total"}], []),
+        (None, None),
     ],
 )
-def test_asl_dimension_usage_label_is_display_only(metrics, dimensions, usage):
+def test_asl_display_projects_dimensions_and_closes_with_validation_conclusion(metrics, dimensions):
     asl = {"metrics": metrics, "dimensions": dimensions, "filters": []}
     before = deepcopy(asl)
 
     rendered = render_asl_extraction_json(asl)
-    json_text = rendered.split("```json\n", 1)[1].split("\n```", 1)[0]
-    explanation = rendered.split("\n```", 1)[1]
+    _, after_json = rendered.split("```json\n", 1)
+    json_text, trailing = after_json.split("\n```", 1)
 
     expected = deepcopy(before)
     expected["dimensions / display_fields"] = expected.pop("dimensions")
     assert json.loads(json_text) == expected
     assert asl == before
-    assert "`dimensions / display_fields`" in explanation
-    assert "对应实际接口字段 `dimensions`" in explanation
-    assert usage in explanation
-    if dimensions and not metrics:
-        assert "不表示分组汇总" in explanation
-    assert "`filters` 仅记录本次查询显式提出的筛选" in explanation
+    assert "`dimensions / display_fields`" not in trailing
+    assert trailing.strip() == "校验结论：ASL 已通过结构化参数校验，指标、维度与筛选绑定均与语义目录一致。"
 
 
-def test_asl_dimension_usage_label_handles_missing_slots_without_inventing_fields():
+def test_asl_display_handles_missing_slots_without_inventing_fields():
     asl = {"version": "2.0"}
     rendered = render_asl_extraction_json(asl)
-    assert "本次未使用分组维度或展示字段" in rendered
+    assert "校验结论：ASL 已通过结构化参数校验" in rendered
     assert asl == {"version": "2.0"}
 
 

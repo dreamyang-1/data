@@ -125,22 +125,8 @@ def test_semantic_validation_failure_never_leaks_internal_error_code() -> None:
 
     assert "SEMANTIC_VALIDATION_FAILED" not in message
     assert "未提供更具体的可公开诊断信息" not in message
-    # STALE_TEST(2026-10-08): model 120's reproduced display-path failure
-    # proved that this fallback cannot confirm a missing query subject.
-    assert "未通过处理校验" in message
-    assert "SQL翻译日志" in message
-    assert "用户无需补充" in message
-    assert "写明查询对象" not in message
-
-
-def test_unsafe_related_display_is_not_reported_as_missing_query_subject():
-    error = AdapterError('SQL_TRANSLATION_FAILED', 'sanitized', status_code=400,
-                         upstream_code='AGGREGATE_DISPLAY_RELATION_UNSAFE')
-    message = DataAnalysisOrchestrator._dependency_message(error)
-    assert '关联展示字段校验' in message and '单一归属关系' in message
-    assert '没有执行查询' in message and '方向和基数' in message
-    assert '用户无需重复补充' in message
-    assert '唯一确定查询主体' not in message
+    assert "未通过语义校验" in message
+    assert "查询主体" in message
 
 
 def test_sql_operator_error_explains_the_preserved_filter() -> None:

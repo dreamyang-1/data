@@ -202,24 +202,17 @@ def test_real_asl_route_admits_only_the_published_dimension_binding(attribute, m
         return SimpleNamespace(invoke=lambda _: dict(messages=[SimpleNamespace(content=generated)]))
     monkeypatch.setattr(api, '_store', store)
     monkeypatch.setattr(agent, 'embed_query', lambda _: [1.0])
-    def invoke(messages):
-        assert 'stale_table' not in messages[1]['content']
-        return SimpleNamespace(content=json.dumps({'subject':'sales',
-            'dimensions':[{'index':0,'key':'transaction_date','attr':attribute}]}))
-    monkeypatch.setattr(agent, '_get_chat_model', lambda: SimpleNamespace(invoke=invoke))
+    monkeypatch.setattr(agent, '_get_chat_model', lambda: object())
+    monkeypatch.setattr(agent, 'create_deep_agent', factory)
     response = TestClient(api.app).post('/agent/query', json={
         'query':'List Transaction date', 'semantic_model_id':900,
-        'business_domain_ids':[901], 'metricless_projection': True,
-        'structured_extraction':{'实体':['sales'],'指标':[],'维度':['Transaction date'],
-            '展示字段':[],'过滤条件':[],'排序':[],'限制':5}})
+        'business_domain_ids':[901], 'metricless_projection': True})
     if attribute == '12':
         assert response.status_code == 200, response.text
         assert response.json()['semantic_evidence']['requested_business_domain_ids'] == [901]
         assert json.loads(response.json()['result'])['dimensions'][0]['attr'] == '12'
     else:
-        assert response.status_code == 200, response.text
-        assert json.loads(response.json()['result'])['ambiguity']
-        assert response.json()['asl_validation'] is None
+        assert response.status_code == 502, response.text
 
 
 def test_old_snapshot_without_owned_projection_remains_unavailable():

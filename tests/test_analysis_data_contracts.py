@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 import pytest
 
@@ -10,7 +11,16 @@ from app.analysis.contracts import (
     validate_contract,
 )
 from app.config import Settings
-from app.domain.models import CanonicalAnalysisRequest, PrimaryIntent, TrustedIdentity
+from app.domain.models import (
+    CanonicalAnalysisRequest,
+    ChatRequest,
+    DataQueryResult,
+    Dataset,
+    PlannerExtraction,
+    PrimaryIntent,
+    TrustedIdentity,
+)
+from app.services import orchestrator as orchestrator_module
 from app.services.orchestrator import DataAnalysisOrchestrator
 
 
@@ -112,9 +122,7 @@ def test_period_comparison_does_not_create_an_object_scope_from_in_filters():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("parse_proof", [True, False])
-@pytest.mark.parametrize("execute_proof", [True, False])
-async def test_http_adapter_injects_contract_and_preserves_rows_with_analysis_warning(parse_proof, execute_proof):
+async def test_http_adapter_injects_contract_and_rejects_wrong_result_shape():
     request = analysis_request(PrimaryIntent.ROOT_CAUSE_ANALYSIS, "分析销售额量价因素")
     contract = contract_for_request(request)
     assert contract is not None
@@ -144,24 +152,15 @@ async def test_http_adapter_injects_contract_and_preserves_rows_with_analysis_wa
         },
     ])
 
-    responses = list(client.responses)
-    if not parse_proof:
-        asl.pop("analysis_contract")
-        responses[0]["result"] = json.dumps(asl)
-    if not execute_proof:
-        responses[2].pop("analysis_contract")
-    client.responses = iter(responses)
-    result = await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
-        request, IDENTITY, semantic_model_id=6, business_domain_id=None
-    )
-    assert result.dataset.rows == [{"period": "base", "sales": 100}]
-    assert result.execution_transforms[0]['type'] == 'ANALYSIS_RESULT_CONTRACT_WARNING'
-    if execute_proof:
-        assert set(result.execution_transforms[0]['details']["violations"]["missing_roles"]) == {
-            "period_role", "price", "quantity"
-        }
-    if not parse_proof:
-        assert any("解析结果未确认" in warning for notice in result.execution_transforms for warning in notice["warnings"])
+    with pytest.raises(AdapterError) as captured:
+        await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
+            request, IDENTITY, semantic_model_id=6, business_domain_id=None
+        )
+
+    assert captured.value.code == "ANALYSIS_RESULT_CONTRACT_INVALID"
+    assert set(captured.value.details["violations"]["missing_roles"]) == {
+        "period_role", "price", "quantity"
+    }
     assert client.calls[0][2]["query"] == request.original_question
     assert client.calls[0][2]["analysis_operator"] == "price_volume_decomposition"
     assert client.calls[1][2]["analysis_contract"]["operator"] == "price_volume_decomposition"
@@ -239,3 +238,108 @@ async def test_open_report_sends_and_verifies_exploration_requirements():
     )
     assert client.calls[0][2]["exploration_requirements"] == requirements
     assert result.dataset.rows[0]["sales"] == 10
+
+
+def detail_result():
+    dataset = Dataset(
+        columns=["科室名称"],
+        rows=[{"科室名称": "内科"}, {"科室名称": "内科"}, {"科室名称": "外科"}],
+        snapshot_id="s1",
+        data_as_of=datetime(2026, 9, 29, tzinfo=timezone.utc),
+        row_count=3,
+    )
+    return DataQueryResult(asl={}, sql="SELECT 1", dataset=dataset)
+
+
+def detail_request(structured):
+    request = analysis_request(PrimaryIntent.DETAIL_QUERY, "查询商品使用科室")
+    request._planner_extraction = PlannerExtraction(
+        intent=PrimaryIntent.DETAIL_QUERY, structured=structured,
+    )
+    return request
+
+
+def test_detail_dedup_applies_when_marked_yes():
+    result = detail_result()
+    request = detail_request({"意图": "明细查询", "是否去重": "是"})
+    out = DataAnalysisOrchestrator._dedup_detail_result(None, request, result)
+    assert out.dataset.rows == [{"科室名称": "内科"}, {"科室名称": "外科"}]
+    assert out.dataset.row_count == 2
+    assert out.dataset.total_row_count == 2
+
+
+def test_detail_dedup_skipped_without_mark_or_intent():
+    result = detail_result()
+    request = detail_request({"意图": "明细查询", "是否去重": "否"})
+    out = DataAnalysisOrchestrator._dedup_detail_result(None, request, result)
+    assert out.dataset.row_count == 3
+
+    result2 = detail_result()
+    request2 = detail_request({"意图": "统计查询", "是否去重": "是"})
+    out2 = DataAnalysisOrchestrator._dedup_detail_result(None, request2, result2)
+    assert out2.dataset.row_count == 3
+
+
+def test_danger_keyword_hits():
+    hits = orchestrator_module.danger_keyword_hits("帮我删除这条记录")
+    assert "删除" in hits
+    assert orchestrator_module.danger_keyword_hits("DROP TABLE users") == [
+        "drop"
+    ]
+    assert orchestrator_module.danger_keyword_hits("统计上个月的订单数量") == []
+    # 英文词边界：recreated 不包含独立的 create
+    assert orchestrator_module.danger_keyword_hits("recreated report") == []
+    # 英文不区分大小写
+    assert orchestrator_module.danger_keyword_hits("Delete it") == ["delete"]
+    # 已知业务词里的字眼不拦
+    assert orchestrator_module.danger_keyword_hits("查一下区域医院覆盖率") == []
+    assert orchestrator_module.danger_keyword_hits("新增经销商有多少家") == []
+    assert orchestrator_module.danger_keyword_hits("统计被修改过的订单数") == []
+    # 非业务词组合的正常拦截
+    assert orchestrator_module.danger_keyword_hits("把现有报表覆盖掉") == [
+        "覆盖"
+    ]
+
+
+def _danger_chat(question: str) -> ChatRequest:
+    return ChatRequest(
+        conversation_id="c1",
+        message_id="m1",
+        question=question,
+        application_id="app",
+        semantic_model_id=81,
+    )
+
+
+def test_danger_entry_intercepts_any_keyword_question():
+    # 只要原始问题命中词表就拦截，与是否进入分析流程无关
+    chat = _danger_chat("把销售订单表里的数据删掉")
+    response = DataAnalysisOrchestrator._danger_entry_intercept(chat)
+    assert response is not None
+    assert response.status == "COMPLETED"
+    assert response.intent_source == "SAFETY_GUARD"
+    assert response.answer == (
+        "该问题涉及删除、新增、修改等危险操作，已被安全策略拦截。"
+        "请改为查询、统计、分析类问题。"
+    )
+    # 英文关键词同样拦截
+    assert (
+        DataAnalysisOrchestrator._danger_entry_intercept(
+            _danger_chat("DROP TABLE users")
+        )
+        is not None
+    )
+    # 未命中词表放行
+    assert (
+        DataAnalysisOrchestrator._danger_entry_intercept(
+            _danger_chat("统计上个月的订单数量")
+        )
+        is None
+    )
+
+
+def test_danger_entry_intercept_flag_from_v2_off_topic():
+    # V2 语义识别段已对原始问题做过词表匹配，凭标记兜底拦截
+    chat = _danger_chat("统计上个月的订单数量")
+    chat._danger_keyword_intercept = True
+    assert DataAnalysisOrchestrator._danger_entry_intercept(chat) is not None

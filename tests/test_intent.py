@@ -26,7 +26,7 @@ def test_metric_internal_noun_does_not_replace_explicit_grouped_query_object():
 
     assert request.entity == "经销商"
     assert request.dimensions == ["经销商"]
-    assert {"field": "经销商城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
     assert "医院" not in request.dimensions
     assert "EXPLICIT_RESULT_OBJECT_FROM_GROUPING=经销商" in request.assumptions
 
@@ -516,7 +516,7 @@ def test_grouping_phrase_is_not_invented_as_a_product_filter():
 
     assert request.dimensions == ["经销商"]
     assert request.filters == [
-        {"field": "经销商城市", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
     ]
     assert request.entity != "产品"
 
@@ -674,7 +674,7 @@ def test_dealer_recommendation_uses_verified_profile_default():
     assert request.assumptions == [
         "GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY",
         "DEALER_RECOMMENDATION_DEFAULT_RANKING=经销商近一年销售额",
-        "TIME_SCOPE=ALL_TIME",
+        "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR",
     ]
 
 
@@ -1113,7 +1113,7 @@ def test_period_free_grouped_relationship_count_uses_all_available_history():
     assert request.primary_intent == PrimaryIntent.METRIC_QUERY
     assert [item.input for item in request.metrics] == ["已合作医院数"]
     assert request.dimensions == ["经销商"]
-    assert {"field": "经销商城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
     assert not any(
         item.get("field") == "商品名称" for item in request.filters
     )
@@ -1464,7 +1464,7 @@ def test_multi_dealer_comparison_rejects_wrong_object_count():
     assert merged.filters == []
 
 
-def test_named_dealer_comparison_without_period_does_not_add_time():
+def test_named_dealer_comparison_without_period_defaults_to_latest_year():
     request = RuleBasedIntentClassifier().classify(
         "对比甲经销商、乙经销商和丙经销商业绩增长率与合作时长",
         IDENTITY,
@@ -1475,7 +1475,7 @@ def test_named_dealer_comparison_without_period_does_not_add_time():
     assert request.comparison_type == "对象间比较"
     assert request.dimensions == ["经销商"]
     assert request.missing_slots == []
-    assert request.time_range is None
+    assert request.time_range is not None
 
 
 def test_cumulative_dealer_ranking_uses_all_history_and_keeps_all_metrics():
@@ -1514,7 +1514,7 @@ def test_explicit_total_metrics_do_not_require_an_arbitrary_period(question):
     assert "TIME_SCOPE=ALL_TIME" in request.assumptions
 
 
-def test_plain_sales_amount_ranking_has_no_default_period():
+def test_plain_sales_amount_ranking_defaults_to_latest_year():
     request = RuleBasedIntentClassifier().classify(
         "查询销售额排名前5的经销商",
         IDENTITY,
@@ -1524,8 +1524,8 @@ def test_plain_sales_amount_ranking_has_no_default_period():
     assert request.dimensions == ["经销商"]
     assert request.ranking_limit == 5
     assert request.missing_slots == []
-    assert request.time_range is None
-    assert "TIME_SCOPE=ALL_TIME" in request.assumptions
+    assert request.time_range is not None
+    assert "TIME_SCOPE=ALL_TIME" not in request.assumptions
 
 
 def test_cumulative_ranking_detail_wording_also_uses_all_history():
@@ -1554,7 +1554,7 @@ def test_hospital_address_is_master_data_detail_without_metric_or_time(question)
     assert request.missing_slots == []
 
 
-def test_report_without_time_preserves_scope_without_default_year():
+def test_report_without_time_defaults_to_latest_year_and_preserves_scope():
     classifier = RuleBasedIntentClassifier()
     request = classifier.classify(
         "我在上海卖外周插管中心静脉导管，给我生成分析报告",
@@ -1573,8 +1573,9 @@ def test_report_without_time_preserves_scope_without_default_year():
         },
     ]
     assert request.missing_slots == []
-    assert request.time_range is None
-    assert "TIME_SCOPE=ALL_TIME" in request.assumptions
+    assert request.time_range is not None
+    assert (request.time_range.end_exclusive - request.time_range.start).days in {365, 366}
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
 
 
 def test_department_led_dealer_recommendation_uses_department_names():
@@ -1609,8 +1610,8 @@ def test_product_sales_overview_uses_auditable_defaults():
     assert request.primary_intent == PrimaryIntent.TREND_ANALYSIS
     assert [metric.input for metric in request.metrics] == ["含税销售总额"]
     assert request.missing_slots == []
-    assert request.time_range is None
-    assert "TIME_SCOPE=ALL_TIME" in request.assumptions
+    assert request.time_range is not None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
     assert "DEFAULT_TIME_GRANULARITY=month" in request.assumptions
 
 
@@ -1659,12 +1660,12 @@ def test_report_coverage_facets_infer_concrete_row_entities_and_fields():
     assert hospital.entity == "医院"
     assert hospital.fields == ["医院名称"]
     assert hospital.missing_slots == []
-    assert hospital.time_range is None
+    assert hospital.time_range is not None
     assert dealer.primary_intent == PrimaryIntent.DETAIL_QUERY
     assert dealer.entity == "经销商"
     assert dealer.fields == ["经销商名称"]
     assert dealer.missing_slots == []
-    assert dealer.time_range is None
+    assert dealer.time_range is not None
     assert hospital.filters == [
         {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {
@@ -1742,7 +1743,7 @@ def test_sales_trend_facet_uses_auditable_sales_amount_metric():
     assert request.primary_intent == PrimaryIntent.TREND_ANALYSIS
     assert [metric.input for metric in request.metrics] == ["销售额"]
     assert request.missing_slots == []
-    assert request.time_range is None
+    assert request.time_range is not None
     assert "SALES_TREND_METRIC=销售额" in request.assumptions
 
 
@@ -2185,7 +2186,7 @@ def test_metric_subject_boundary_preserves_company_role():
     assert request.semantic_entity_mentions == ["杭州琅骏医疗科技有限公司"]
 
 
-def test_partner_activity_filter_does_not_invent_a_year_for_current_sales():
+def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
     request = RuleBasedIntentClassifier().classify(
         "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的"
         "经销商名单，并按他们现有的整体业务规模排序。",
@@ -2197,10 +2198,10 @@ def test_partner_activity_filter_does_not_invent_a_year_for_current_sales():
     assert [metric.input for metric in request.metrics] == ["整体业务规模"]
     assert AnalysisOperator.SORT in request.operators
     assert request.missing_slots == []
-    assert request.time_range is None
+    assert request.time_range is not None
     assert (
         "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE"
-        not in request.assumptions
+        in request.assumptions
     )
     assert (
         "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
@@ -2230,8 +2231,8 @@ def test_competitor_brand_ranked_partner_list_is_not_comparison_analysis():
     assert AnalysisOperator.GROUP_BY in request.operators
     assert AnalysisOperator.SORT in request.operators
     assert AnalysisOperator.COMPARE not in request.operators
-    assert request.time_range is None
-    assert "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE" not in request.assumptions
+    assert request.time_range is not None
+    assert "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE" in request.assumptions
     assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
     assert {"field": "母品牌", "operator": "EQ", "value": "万益特"} in request.filters
     assert {
@@ -2278,7 +2279,7 @@ def test_named_dealer_product_lookup_is_relationship_detail_without_metric():
         "operator": "EQ",
         "value": "上海东松医疗科技股份有限公司",
     }]
-    assert request.time_range is None
+    assert request.time_range is not None
     assert request.missing_slots == []
 
 
@@ -2383,7 +2384,7 @@ def test_cancel_phrase_with_replacement_task_is_a_new_request():
     assert request.fields == ["医院名称", "医院等级"]
 
 
-def test_plain_active_partner_status_does_not_add_default_period():
+def test_plain_active_partner_status_still_requires_an_explicit_activity_period():
     request = RuleBasedIntentClassifier().classify(
         "查询活跃经销商名单",
         IDENTITY,
@@ -2391,7 +2392,7 @@ def test_plain_active_partner_status_does_not_add_default_period():
     )
 
     assert request.fields == ["经销商名称", "合作状态"]
-    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in request.assumptions
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
     assert "REQUIRED_NAME_NON_NULL=经销商名称" not in request.assumptions
     assert request.missing_slots == []
 

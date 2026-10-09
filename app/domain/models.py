@@ -785,6 +785,9 @@ class ChatRequest(StrictModel):
     _planner_extraction: PlannerExtraction | None = PrivateAttr(default=None)
     # 语义识别判成业务无关的问题时置位，编排器据此跳过拆分与分类模型直接聊天回复。
     _v2_off_topic: bool = PrivateAttr(default=False)
+    # 业务无关且原始问题命中危险词表时置位，编排器直答分支据此返回拦截
+    # 话术，不再走聊天回复。
+    _danger_keyword_intercept: bool = PrivateAttr(default=False)
     # 桥接段精确挂起匹配时读到的挂起快照，供紧随其后的自由文本分诊复用，
     # 省一次 Redis 往返；两次读取之间没有任何写操作，结果一致。
     _v1_pending_snapshot: Any = PrivateAttr(default=None)
