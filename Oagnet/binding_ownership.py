@@ -108,7 +108,8 @@ def parameter_catalog(catalog, original, extraction, target):
     exact = (matching_fields(original, catalog, aliases=False)
              or matching_fields(original, catalog))
     if (isinstance(original, dict) and original.get('entity') and not owners
-            and entity_label_candidates(original.get('field') or original.get('name'), catalog['entities'])):
+            and (target == 'filters' or entity_label_candidates(
+                original.get('field') or original.get('name'), catalog['entities']))):
         # Do not silently substitute the label's entity for a contradictory,
         # unresolved explicit owner. Legacy field-only grounding is unchanged.
         candidates = entity_label_candidates(original['entity'], catalog['entities'])
@@ -144,7 +145,10 @@ def parameter_catalog(catalog, original, extraction, target):
     identifiers = all(key.rsplit('.', 1)[-1].casefold().endswith(('_id', '_code', '_key')) for key in direct)
     if target == 'filters' and (not direct or identifiers):
         fields.update({key: catalog['fields'][key] for key, candidates in catalog.get('_dictionary_owners', {}).items()
-                       if candidates & owners and key in catalog['fields']})
+                       if candidates & owners and key in catalog['fields']
+                       and (not direct or '_dictionary_choices' not in catalog or any(
+                           choice['field'] in direct and choice['owner_entity'] in owners
+                           for choice in catalog['_dictionary_choices'].get(key, [])))})
     result = dict(catalog, fields=fields, _parameter_owners=owners)
     return result
 
