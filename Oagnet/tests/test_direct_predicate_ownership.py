@@ -61,6 +61,41 @@ def test_published_attribute_alias_is_also_a_unique_direct_binding():
     assert review(ast,k,e) == (ast, [])
 
 
+@pytest.mark.parametrize('label', ['渠道业态','业务渠道'])
+@pytest.mark.parametrize('op,value', [('=', '样本'), ('!=', '样本'), ('IN',['样本','其他']),
+                                     ('NOT IN',['样本','其他'])])
+def test_dimension_names_and_aliases_keep_their_unique_governed_field(label,op,value):
+    ast,k,e=fixture('orders','销售订单','business_type','业态编码')
+    k['dimensions']=[Doc(metadata={'dim_code':'channel_type','dim_name':'渠道业态',
+        'synonyms':['业务渠道'],'field_mapping':'orders.business_type'})]
+    e['过滤条件'][0].update(field=label,op=op,value=value if isinstance(value,list) else [value])
+    ast['filters'][0].update(operator=op,value=value)
+    assert review(ast,k,e) == (ast, [])
+
+
+def test_same_named_dimensions_on_different_owners_remain_ambiguous():
+    ast,k,e=fixture('orders','销售订单','business_type','业态编码')
+    k['entities'][1].metadata['attributes'].append({'attr_name':'类型编码','field_mapping':'ledger.type'})
+    k['_vector_authorized_fields'].append('ledger.type')
+    k['dimensions']=[Doc(metadata={'dim_code':code,'dim_name':'渠道业态','field_mapping':field})
+                     for code,field in [('order_type','orders.business_type'),('ledger_type','ledger.type')]]
+    e['过滤条件'][0]['field']='渠道业态'
+    result,repairs=review(ast,k,e)
+    assert result['ambiguity'] and result['filters']==ast['filters'] and not repairs
+
+
+def test_unresolved_dimension_mapping_cannot_supply_a_unique_owner():
+    ast,k,e=fixture('orders','销售订单','business_type','业态编码')
+    k['entities'][0].metadata['attributes'].append({'attr_name':'另一编码','field_mapping':'orders.other_type'})
+    k['_vector_authorized_fields'].append('orders.other_type')
+    k['dimensions']=[Doc(metadata={'dim_code':'channel_type','dim_name':'渠道业态',
+        'bind_entities':[{'mappingTable':'orders','mappingColumn':column}
+                         for column in ['business_type','other_type']]})]
+    e['过滤条件'][0]['field']='渠道业态'
+    result,repairs=review(ast,k,e)
+    assert result['ambiguity'] and result['filters']==ast['filters'] and not repairs
+
+
 def test_two_same_named_attributes_do_not_infer_owner_from_model_selection():
     ast,k,e = fixture(field_label='名称')
     k['entities'][1].metadata['attributes'].append({'attr_name':'名称','field_mapping':'ledger.name'})

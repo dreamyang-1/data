@@ -123,7 +123,8 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     required_owners, directly_owned, source_filters = {}, set(), {}
     # Reuse the authorized attribute/alias catalog, not subject/grouping.
     # A table's consumers do not make every ordinary attribute shared.
-    from structured_binding import catalog_candidates
+    from structured_binding import (catalog_candidates, _exact_choice_keys,
+                                    _dimension_filter_field, _dim_bound_field)
     from binding_ownership import matching_fields, field_owners
     attribute_catalog = catalog_candidates(knowledge)
     for option in options:
@@ -147,6 +148,17 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                 required = aliases
             if not required and not shared_location:
                 matches = matching_fields(original, attribute_catalog)
+                if not matches:
+                    # A structured filter may name a governed dimension rather
+                    # than an attribute (e.g. an enum dimension). Reuse the
+                    # binder's exact mapping rules; unresolved alternatives
+                    # must not be discarded to manufacture a unique owner.
+                    keys = _exact_choice_keys('filters', original, attribute_catalog)
+                    mapped = [(_dimension_filter_field(key, original, attribute_catalog)
+                               or _dim_bound_field(key, attribute_catalog))
+                              if key in attribute_catalog['dimensions'] else None for key in keys]
+                    if mapped and all(field in attribute_catalog['fields'] for field in mapped):
+                        matches = mapped
                 matched_owners = set().union(*(
                     field_owners(attribute_catalog['fields'][field]) for field in matches))
                 bound_owners = fields.get(option['predicate']['field'], set())
