@@ -83,7 +83,42 @@ _EXTRACTION_ROLE_GUIDANCE = """
 同一字段的多个可选值保留 IN，排除多个值保留 NOT IN，不能拆成同时满足的多个等号。
 用户消息中的业务语义说明仅用于理解角色与业务含义；不是授权清单，也不是物理 JOIN 指令。
 说明有重复、矛盾或关联描述不一致时，不据此编造字段或关系，最终由当前授权语义目录绑定。
+条件归属必须逐项依据当前问题，而非目录属性排列或默认主表：上海市各经销商→entity=经销商；
+上海地区哪个医院→entity=医院；上海医院按经销商汇总→entity=医院。不同实体的所在地条件分开保留。
+名称条件保留业务名称字段和用户原值；不能因为目录只在医院/经销商下列出“关联省份ID”就把上海填进ID。
+地区名称用field=省份名称或城市名称并单独标明所属业务entity，名称到外键编码的转换交给ASL按已发布关系完成。
+同理，公司名称、商品名称等不能填到关联编码字段；只有用户明确给出编码时才提取编码条件，不猜测编码。
 """
+
+
+def _ground_location_owners(extraction: dict[str, Any] | None, question: str) -> None:
+    """Correct explicit location modifiers without guessing from grouping."""
+    if not extraction or not question:
+        return
+    candidates = {item for section in ('实体', '维度') for item in extraction.get(section) or []
+                  if isinstance(item, str) and len(item) >= 2}
+    candidates.update(item.get('entity') for section in ('过滤条件', '展示字段')
+                      for item in extraction.get(section) or []
+                      if isinstance(item, dict) and isinstance(item.get('entity'), str))
+    for item in extraction.get('过滤条件') or []:
+        if not isinstance(item, dict) or not re.search(
+                r'省份|城市|地区|区域|所在地|province|city|region', str(item.get('field') or ''), re.I):
+            continue
+        raw = item.get('value')
+        values = raw if isinstance(raw, list) else [raw]
+        owners = set()
+        for owner in candidates:
+            for value in values:
+                if not isinstance(value, str) or len(value.strip()) < 2:
+                    continue
+                place, entity = re.escape(value.strip()), re.escape(owner)
+                if re.search(entity + r'(?:的)?(?:所在地|所在省份|所在城市|所在地区|省份|城市)'
+                             + r'(?:为|是|在|等于|=|：|:)?\s*' + place, question) or re.search(
+                                 place + r'(?:市|省)?(?:的)?(?:各个|各家|所有|每个|每家|各)?' + entity,
+                                 question):
+                    owners.add(owner)
+        if len(owners) == 1:
+            item['entity'] = next(iter(owners))
 
 
 def extraction_user_prompt(question: str) -> str:
@@ -789,6 +824,7 @@ class MultiQuestionPlanner:
             structured = self._sanitize_extraction(
                 result.single_task_extraction, intent=single_intent
             )
+            _ground_location_owners(structured, question)
             if structured is not None and single_intent in {None, *_CHINESE_INTENT_TO_PRIMARY.values()}:
                 # The displayed extraction is the single execution contract.
                 single_intent = _CHINESE_INTENT_TO_PRIMARY.get(
@@ -811,6 +847,7 @@ class MultiQuestionPlanner:
         for index, item in enumerate(result.tasks):
             intent = self._sanitize_intent(item.primary_intent)
             structured = self._sanitize_extraction(item.extraction, intent=intent)
+            _ground_location_owners(structured, item.question)
             if structured is not None and intent in {None, *_CHINESE_INTENT_TO_PRIMARY.values()}:
                 intent = _CHINESE_INTENT_TO_PRIMARY.get(
                     str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip(), intent

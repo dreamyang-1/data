@@ -447,11 +447,39 @@ def validate_intent_asl_contract_completeness(
         "商品": "产品",
         "制造商": "厂家",
         "供应商": "经销商",
+        "生产厂家": "厂家",
+        "生产厂商": "厂家",
+    }
+
+    # 意图节点吐中文实体名，语义绑定产出英文实体编码，比对前统一到同一形态
+    entity_code_map = {
+        "医院": "hospital",
+        "经销商": "dealer",
+        "厂家": "manufacturer",
+        "产品": "product",
+        "商品": "product",
+        "科室": "department",
+        "省份": "province",
+        "市": "city",
+        "销售订单": "sales_order",
+        "订单": "sales_order",
+        "业务员": "salesperson",
+        "销售公司": "sales_company",
+        "销售项目": "project",
+        "产品分类": "product_category",
+        "产品线": "product_line",
     }
 
     def entity_key(value: Any) -> str:
         text = str(value or "").strip()
-        return entity_aliases.get(text, text)
+        text = entity_aliases.get(text, text)
+        if text in entity_code_map:
+            return entity_code_map[text]
+        folded = text.casefold()
+        # 生产厂家实体在语义目录里带主数据前缀，剥掉后再与中文映射值比对
+        if folded.startswith("main_data_domain_ent_"):
+            folded = folded[len("main_data_domain_ent_"):]
+        return entity_code_map.get(folded, folded)
 
     expected_object = explicit.get("query_object")
     if (
@@ -486,7 +514,7 @@ def validate_intent_asl_contract_completeness(
         "NE", "!=", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
     }
 
-    def filter_signature(item: dict[str, Any]) -> tuple[str, bool, tuple[str, ...]]:
+    def filter_signature(item: dict[str, Any]) -> tuple[str, str, bool, tuple[str, ...]]:
         raw_value = item.get("value")
         values = raw_value if isinstance(raw_value, list) else [raw_value]
         normalized_values = tuple(sorted(
@@ -495,6 +523,7 @@ def validate_intent_asl_contract_completeness(
             if value not in (None, "")
         ))
         return (
+            str(item.get("entity") or "").strip(),
             str(item.get("field") or "").strip(),
             str(item.get("operator") or "").upper() in negative_operators,
             normalized_values,
@@ -556,9 +585,10 @@ def validate_intent_asl_contract_completeness(
                 if not canonical_fields:
                     continue
                 for actual in contract_filters:
-                    actual_field, actual_negative, actual_values = filter_signature(actual)
+                    actual_owner, actual_field, actual_negative, actual_values = filter_signature(actual)
                     if (
                         actual_field in canonical_fields
+                        and (not item.get("entity") or actual_owner == str(item["entity"]).strip())
                         and actual_negative == expected_negative
                         and canonical_value in set(actual_values)
                     ):

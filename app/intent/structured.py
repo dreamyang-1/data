@@ -51,6 +51,7 @@ class StructuredFilter(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    entity: str | None = Field(default=None, min_length=1, max_length=100)
     field: str = Field(min_length=1, max_length=100)
     operator: Literal[
         "EQ", "NE", "GT", "GTE", "LT", "LTE", "IN", "NOT_IN",
@@ -132,6 +133,8 @@ Extract business wording at semantic phrase granularity. Keep these elements sep
 44. filters 只表达业务筛选条件；时间范围继续放在 completed_question 的时间语义中，不要重复生成年/月/日期筛选。dimensions 表达结果展开粒度，entity/fields 表达返回对象，三者不得混入 filters。
 45. 示例：“查一下空心纤维血液透析器产品合作的经销商名单”应识别 entity=经销商、fields=[经销商名称]、filters=[{field:商品名称,operator:EQ,value:空心纤维血液透析器,evidence_span:空心纤维血液透析器产品}]；“查一下”不是筛选值的一部分。
 46. “竞争品牌、竞品品牌”描述品牌的业务角色，本身不表示用户要求执行比较分析；“经销商名单按销售额排序”是按经销商分组并排序的指标查询。只有用户明确要求比较两个对象、两个时期或差异时才使用 COMPARISON_ANALYSIS。
+47. 每个filter的entity表示该条件修饰的业务实体，不是查询主表或返回对象，也不是共享字典实体。根据原文语义分别判断；例如“上海地区哪个医院”中上海约束医院所在地，entity=医院；“上海市各经销商”约束经销商所在地，entity=经销商；“各经销商在上海医院的销售”仍约束医院。订单业务地区按已登记的业务地区口径提取，不能擅自改成医院或经销商所在地。
+48. entity与field共同表达条件归属，evidence_span应覆盖归属依据；同名属性或同名枚举不能只按值合并。多个实体的条件分别保留。无法确定条件属于哪个实体时entity=null，不按返回对象、实体数组顺序或指标主表猜测；数据库字段、标准值和连接路径交给授权目录绑定，不生成SQL。
 """
 
 
@@ -1044,7 +1047,7 @@ class HybridIntentClassifier:
         compact_current = re.sub(r"\s+", "", current).casefold()
         grounded: list[dict[str, Any]] = []
         issues: list[str] = []
-        seen: set[tuple[str, str, str]] = set()
+        seen: set[tuple[str, str, str, str]] = set()
         null_operators = {"IS_NULL", "IS_NOT_NULL"}
 
         for index, item in enumerate(filters):
@@ -1096,11 +1099,13 @@ class HybridIntentClassifier:
                 value = list(dict.fromkeys(normalized_values))
             else:
                 value = normalized_values[0]
-            key = (field.casefold(), item.operator, repr(value))
+            owner = (item.entity or "").strip()
+            key = (owner.casefold(), field.casefold(), item.operator, repr(value))
             if key in seen:
                 continue
             seen.add(key)
             grounded.append({
+                **({"entity": owner} if owner else {}),
                 "field": field,
                 "operator": item.operator,
                 "value": value,
