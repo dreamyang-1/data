@@ -82,6 +82,17 @@ ENTITY_KEY_PREFIX = 'semantic_model:entity:'
 DATA_SOURCE_KEY_PREFIX = 'semantic_model:data_source:'  # 数据源也存储在 Redis 中
 
 
+def _mapping_backed_code(value, mapped_identifier):
+    """Match the catalog reader's absent-code projection, without DB writes."""
+    if value is not None and (not isinstance(value, str) or value.strip()):
+        return value
+    if isinstance(mapped_identifier, str):
+        mapped_identifier = mapped_identifier.strip()
+        if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', mapped_identifier):
+            return mapped_identifier
+    return value
+
+
 class SemanticCatalog:
     """Read-only metric definition and lineage catalog backed by semantic MySQL.
 
@@ -323,6 +334,8 @@ class SemanticCatalog:
             "WHERE semantic_model_id=%s AND status=1 AND is_deleted=0",
             (model_id,),
         )
+        entities = [{**row, 'code': _mapping_backed_code(row.get('code'), row.get('main_table_name'))}
+                    for row in entities]
         by_id = {
             str(row.get('id')): str(row.get('code'))
             for row in entities
@@ -502,7 +515,7 @@ class SemanticCatalog:
         last_missing_column: Exception | None = None
         for reference_column in ("entity_id", "entity_code"):
             try:
-                return self._query(
+                rows = self._query(
                     f"SELECT b.{reference_column} AS entity_reference, "
                     f"COALESCE(e.code, CAST(b.{reference_column} AS CHAR)) AS entity_code, "
                     "e.code AS resolved_entity_code, e.id AS resolved_entity_id, "
@@ -518,6 +531,12 @@ class SemanticCatalog:
                     "AND b.indicator_code=%s AND b.is_deleted=0",
                     (model_id, metric_code),
                 )
+                for row in rows:
+                    if row.get('resolved_entity_id') is not None:
+                        row['resolved_entity_code'] = _mapping_backed_code(
+                            row.get('resolved_entity_code'), row.get('main_table_name'))
+                        row['entity_code'] = row['resolved_entity_code']
+                return rows
             except Exception as exc:
                 if not self._missing_binding_column(exc, reference_column):
                     raise
@@ -1586,6 +1605,10 @@ class MySQLDSLLoader(RedisDSLLoader):
                 rows[kind] = self.catalog._query(
                     f'SELECT * FROM semantic_model_{table} '
                     f'WHERE semantic_model_id=%s AND is_deleted=0{active}', (model,))
+            rows['entity'] = [{**row, 'code': _mapping_backed_code(row.get('code'), row.get('main_table_name'))}
+                              for row in rows['entity']]
+            rows['attribute'] = [{**row, 'code': _mapping_backed_code(row.get('code'), row.get('mapping_column'))}
+                                 for row in rows['attribute']]
             by_id = {str(e['id']): e['code'] for e in rows['entity']}
             entities = {e['code'] for e in rows['entity']}
             values = {'entity': {}, 'metric': {}, 'dimension': {}}
