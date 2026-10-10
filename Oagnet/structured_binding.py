@@ -439,13 +439,13 @@ def _exact_choice_keys(target, original, catalog):
                if isinstance(term, str))) and key not in exact:
             exact.append(key)
     if exact:
-        return exact
+        return _equivalent_slot_keys(exact, catalog)
     field_aliases = set(matching_fields(original, catalog))
     aliases = [key for key, metadata in pool.items()
                if key in field_aliases or normalized(label) in {
                    normalized(term) for term in registered_terms(metadata.get('synonyms'))}]
     if aliases:
-        return aliases
+        return _equivalent_slot_keys(aliases, catalog)
     # A whole entity alias denotes its published identity dimension (grouping)
     # or main display attribute (projection/sort), not a neighbor's homonym.
     owners = entity_label_candidates(label, catalog['entities'])
@@ -459,6 +459,45 @@ def _exact_choice_keys(target, original, catalog):
     return [key for key, metadata in catalog['fields'].items()
             if any(attr.get('is_main_attribute') is True and owner in field_owners(attr)
                    for attr in metadata.get('attribute_bindings') or [metadata])]
+
+def _equivalent_slot_keys(keys, catalog):
+    """Coalesce a plain dimension and its own attribute, not genuine homonyms.
+
+    Published physical mapping, owner and attribute identity must agree. A
+    hierarchy or derived grouping is not interchangeable with a column.
+    """
+    result = list(keys)
+    for key in keys:
+        dimension = catalog['dimensions'].get(key)
+        if not dimension or key in catalog['metrics']:
+            continue
+        if any(dimension.get(name) for name in ('dim_hierarchy', 'special_rules', 'granularity_support')):
+            continue
+        field = _dim_bound_field(key, catalog)
+        if not field or field not in keys:
+            continue
+        metadata = catalog['fields'][field]
+        attributes = metadata.get('attribute_bindings') or [metadata]
+        valid = True
+        for mapping in _object(dimension.get('bind_entities')) or []:
+            if not isinstance(mapping, dict):
+                valid = False
+                break
+            mapped = f"{mapping.get('mappingTable')}.{mapping.get('mappingColumn')}"
+            owners = resolve_entities(mapping.get('entity'), catalog['entities'])
+            if mapped != field or not owners or not owners & field_owners(metadata):
+                valid = False
+                break
+            if mapping.get('attr') is not None and not any(
+                str(attr.get('attribute_id')) == str(mapping['attr'])
+                and owners & field_owners(attr) for attr in attributes
+            ):
+                valid = False
+                break
+        if valid:
+            result.remove(key)
+    return result
+
 
 def _field_is_identifier(field, metadata):
     column = str(field or '').rsplit('.', 1)[-1].casefold()

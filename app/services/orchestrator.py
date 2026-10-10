@@ -37,7 +37,8 @@ from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
 from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
-from app.planning import MultiQuestionPlanner, TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
+from app.planning import TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
+from app.planning.compat import plan_question, prepare_execution
 from app.planning.task_dependencies import TaskDependencySkipped, dependency_skip
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
@@ -292,7 +293,7 @@ class DataAnalysisOrchestrator:
         analysis_synthesizer: QwenAnalysisSynthesizer | None = None,
         dataset_store: MinioFollowupStore | HybridMinioFollowupStore | None = None,
         question_rewriter: QuestionRewriter | None = None,
-        task_planner: MultiQuestionPlanner | None = None,
+        task_planner: Any | None = None,
         report_exporter: Any | None = None,
         file_importer: Any | None = None,
         extension_dispatcher: ExtensionDispatcher | None = None,
@@ -1134,23 +1135,15 @@ class DataAnalysisOrchestrator:
                             planner_semantic_context = extract_semantic_spec_section(
                                 await self._agent_prompt_text(chat)
                             )
-                            planner_parameters = inspect.signature(
-                                self.task_planner.plan
-                            ).parameters
-                            planner_kwargs = (
-                                {"semantic_context": planner_semantic_context}
-                                if "semantic_context" in planner_parameters
-                                else {}
-                            )
-                            if "semantic_model_id" in planner_parameters:
-                                planner_kwargs["semantic_model_id"] = chat.semantic_model_id
                             with track_operation(
                                 "V1_ORCHESTRATION",
                                 "v1.task_decomposition",
                             ) as timing:
-                                outcome = await self.task_planner.plan(
-                                    planning_question,
-                                    **planner_kwargs,
+                                outcome = await plan_question(
+                                    self.task_planner, planning_question,
+                                    semantic_context=planner_semantic_context,
+                                    semantic_model_id=chat.semantic_model_id,
+                                    prior_judgment=getattr(chat, '_compound_judgment', None),
                                 )
                                 timing.mark_first_result()
                                 timing.set_attribute(
@@ -1160,6 +1153,8 @@ class DataAnalysisOrchestrator:
                                     else 1,
                                 )
                             plan = outcome.plan
+                            if outcome.judgment is not None and hasattr(chat, '_compound_judgment'):
+                                chat._compound_judgment = outcome.judgment
                             if plan is None and outcome.single_extraction is not None:
                                 chat._planner_extraction = outcome.single_extraction
                         except TaskPlanningError as exc:
@@ -2671,8 +2666,7 @@ class DataAnalysisOrchestrator:
         """Execute validated DAG layers; independent tasks run concurrently."""
         if self.task_planner is None:
             raise RuntimeError("task planner is not configured")
-        execution_plan, aliases = self.task_planner.deduplicate(plan)
-        layers = self.task_planner.execution_layers(execution_plan)
+        execution_plan, aliases, layers = prepare_execution(self.task_planner, plan)
         responses: dict[str, AgentResponse | Exception] = {}
         # 多任务拆分时各子任务暂存的洞察模型输入，父级在全部任务完成后合并成一次整体分析。
         deferred_insights: dict[str, dict[str, Any]] = {}
