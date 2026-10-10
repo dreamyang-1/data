@@ -75,7 +75,7 @@ class AnswerPlan(BaseModel):
         Tables and charts are already rendered from the executed result. Do not
         regenerate numbers, sum non-additive metrics or rewrite model analysis.
         """
-        overview = [f"本次分析：{' '.join(question.split())}", self.headline, table]
+        overview = [self.headline, table]
         findings = list(dict.fromkeys([*self.key_facts, *self.interpretations]))
         tips = list(dict.fromkeys([*self.priorities, *self.limitations, *(notes or [])]))
         sections = [

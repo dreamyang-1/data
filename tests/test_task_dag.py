@@ -2217,7 +2217,7 @@ async def test_multi_task_insight_is_combined_once_at_root() -> None:
     ]
     assert [len(tasks) for tasks in synthesizer.combined_tasks] == [2]
     assert response.answer.startswith("查询结果如下：\n\n### 1、概况总结")
-    assert "本次分析：查询 TDC-3 产品的主要适用科室、次要适用科室" in response.answer
+    assert "本次分析：" not in response.answer
     assert "两个任务的整体分析结论。" not in response.answer
     assert "针对用户目标的简短回答。" in response.answer
     child_insights = [

@@ -39,7 +39,8 @@ def test_root_lead_keeps_completed_question_summary_table_and_chart():
                 'presentation': {'table': table, 'chart': chart}}
     report, selected = render_root_report(question, [material], {'overview': summary})
     assert report.startswith('分析结果如下：\n\n')
-    assert '本次分析：' + question in report
+    assert '本次分析：' not in report
+    assert question not in report
     assert summary in report and table in report and chart in report
     assert report.count('结果如下：') == 1
     assert selected == ['channels']

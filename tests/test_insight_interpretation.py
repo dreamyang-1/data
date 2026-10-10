@@ -118,7 +118,8 @@ def test_final_report_places_table_and_chart_in_requested_sections(chart):
         assert report.index("2、关键发现") < report.index(chart) < report.index("3、业务提示")
     else:
         assert "#### 图表" not in report
-    assert "分析上海产品最近一年销售趋势" in report
+    assert "本次分析：" not in report
+    assert "分析上海产品最近一年销售趋势" not in report
     assert plan.render() == legacy  # insight/evidence format is unaffected
 
 

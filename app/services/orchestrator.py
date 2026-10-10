@@ -2598,7 +2598,7 @@ class DataAnalysisOrchestrator:
             status="FAILED",
             intent=PrimaryIntent.CHAT,
             intent_source="TASK_PLANNER",
-            answer="本次尚未生成可复核的计算结果，计算、排序或筛选未完成。请核对前序数据是否完整、计算要求是否明确；本次不以模型文字替代计算结果。已完成的查询结果仍会保留。",
+            answer="计算未完成，暂未获得可用的计算结果。",
             reliability=ReliabilityReport(
                 level="FAIL",
                 score=0,
