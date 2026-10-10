@@ -76,6 +76,9 @@ from app.services.clarification_policy import (
     semantic_ambiguity_has_safe_time_default,
 )
 from app.services.dependency_error_messages import render_dependency_error
+from app.planning.dependency_contract import (
+    key_kind, projection, structured_query_changed, sql_column_bindings, missing_display_fields,
+)
 from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
 from app.services.semantic_decision import (
     canonical_request_from_semantic_decision,
@@ -1931,8 +1934,8 @@ class DataAnalysisOrchestrator:
         Reusing the predecessor conversation or dataset would silently repeat the
         first result and could incorrectly mark it HIGH reliability.
         """
-        entity_markers = ("供应商", "经销商", "商品", "门店", "客户", "订单",
-                          "销售公司", "所属公司", "业务员", "销售人员", "生产厂家")
+        entity_markers = ("供应商", "经销商", "商品", "产品", "货品", "医院", "科室", "门店", "客户", "订单",
+                          "销售公司", "所属公司", "业务员", "销售员", "销售人员", "生产厂家")
         requested = {marker for marker in entity_markers if marker in question}
         if not requested:
             return False
@@ -1954,6 +1957,12 @@ class DataAnalysisOrchestrator:
             compact,
         )) or any(marker in compact for marker in (
             "从上述结果", "从上一步结果", "在这些结果中", "再从其中", "用上一步",
+            "上述任务返回", "上一步返回", "前一任务返回", "前序任务返回", "该销售员", "该业务员",
+        )) or bool(re.search(
+            r"(?:上述|上一步|前述|前序)(?:任务)?(?:返回|筛选|选出|查询到)?"
+            r"(?:的)?(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户|对象|结果)"
+            r"|(?:该|这些|其|他|她)(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户)",
+            compact,
         ))
 
     @staticmethod
@@ -1978,6 +1987,9 @@ class DataAnalysisOrchestrator:
             "customer": ("客户", "会员", "customer", "member"),
             "store": ("门店", "店铺", "store", "shop"),
             "brand": ("品牌", "brand"),
+            "salesperson": ("业务员", "销售员", "销售人员", "salesperson", "sales_person"),
+            "company": ("公司", "company"),
+            "manufacturer": ("厂家", "制造商", "manufacturer"),
         }
         matches = [
             family for family, aliases in families.items()
@@ -1993,8 +2005,7 @@ class DataAnalysisOrchestrator:
         DAG branch that feeds another entity therefore prefers an explicitly
         projected ``id``/``code`` column from the same semantic family.
         """
-        field = column.strip().lower().rsplit(".", 1)[-1]
-        return bool(re.search(r"(?:^|_)(?:id|code)$", field))
+        return key_kind(column) != "display"
 
     @classmethod
     def _dependency_key_families(
@@ -2049,9 +2060,18 @@ class DataAnalysisOrchestrator:
         question: str,
         columns: tuple[str, ...],
         rows: tuple[dict[str, Any], ...],
+        source_extraction: dict[str, Any] | None = None,
     ) -> str:
         anchor = cls._dependency_anchor_text(question)
         anchor_family = cls._dependency_column_family(anchor)
+        if anchor_family is None and source_extraction:
+            grouped = source_extraction.get("维度") or source_extraction.get("展示字段") or []
+            families = {cls._dependency_column_family(
+                str(item.get("entity") or item.get("field") or item.get("name") or "")
+                if isinstance(item, dict) else str(item)) for item in grouped}
+            families.discard(None)
+            if len(families) == 1:
+                anchor_family = next(iter(families))
         if anchor_family:
             family_matches = [
                 column for column in columns
@@ -2069,6 +2089,10 @@ class DataAnalysisOrchestrator:
         direct_matches = [column for column in columns if column.lower() in anchor]
         if len(direct_matches) == 1:
             return direct_matches[0]
+
+        stable = [column for column in columns if cls._is_stable_dependency_key(column)]
+        if len(stable) == 1 and source_extraction:
+            return stable[0]
 
         eligible: list[str] = []
         for column in columns:
@@ -2111,6 +2135,7 @@ class DataAnalysisOrchestrator:
         identity: TrustedIdentity,
         responses: dict[str, AgentResponse | Exception],
         conversation_by_task: dict[str, str],
+        source_extractions: dict[str, dict | None] | None = None,
     ) -> list[DependencyConstraint]:
         if self.dataset_store is None:
             raise DependencyConstraintError("DEPENDENCY_DATASET_STORE_UNAVAILABLE")
@@ -2151,7 +2176,14 @@ class DataAnalysisOrchestrator:
             rows = tuple(dict(row) for row in loaded.rows)
             if reference.row_count != len(rows) or not rows or len(rows) > 1000:
                 raise DependencyConstraintError("DEPENDENCY_SOURCE_DATASET_INCOMPLETE_OR_TOO_LARGE")
-            column = self._select_dependency_column(task.question, reference.columns, rows)
+            column = self._select_dependency_column(
+                task.question, reference.columns, rows,
+                (source_extractions or {}).get(dependency_id),
+            )
+            bindings = next((item.get("column_bindings", {})
+                             for item in reference.transformation_log
+                             if item.get("type") == "query_provenance"), {})
+            bound_field = bindings.get(column, column)
             values: list[str | int | float | bool] = []
             seen: set[str] = set()
             for row in rows:
@@ -2173,7 +2205,7 @@ class DataAnalysisOrchestrator:
             constraints.append(DependencyConstraint(
                 source_task_id=dependency_id,
                 source_dataset_id=dependency.dataset_id,
-                source_column=column,
+                source_column=bound_field,
                 values=values,
                 value_fingerprint=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
             ))
@@ -2239,6 +2271,34 @@ class DataAnalysisOrchestrator:
                 "gates": {**reliability.gates, "dependency_constraint_enforced": True},
             })
         return response.model_copy(update={"evidence": evidence, "reliability": reliability})
+
+    @staticmethod
+    def _task_missing_output(task: AtomicTask, response: AgentResponse) -> list[str]:
+        if not task.depends_on or response.status not in {"COMPLETED", "PARTIAL_SUCCESS"}:
+            return []
+        query_items = [item for item in response.evidence if item.kind == "QUERY_RESULT"]
+        columns = [str(column) for item in query_items for column in item.payload.get("columns", [])]
+        return missing_display_fields(task.extraction, columns) if query_items else []
+
+    @classmethod
+    def _validate_task_output(cls, task: AtomicTask, response: AgentResponse) -> AgentResponse:
+        missing = cls._task_missing_output(task, response)
+        if not missing:
+            return response
+        return response.model_copy(update={
+            "status": "SAFE_FALLBACK",
+            "answer": "本子任务返回的数据缺少所需字段：" + "、".join(missing)
+                + "。未将前序结果当作本任务结果；这是执行结果不完整，不需要重复补充已明确的条件。",
+            "dataset_id": None, "result_file_url": None, "chart_specs": [],
+            "evidence": [*response.evidence, EvidenceItem(
+                evidence_id=f"missing-task-output:{task.task_id}",
+                kind="DEPENDENCY_OUTPUT_MISSING", source_ref="task-dag",
+                payload={"task_id": task.task_id, "missing_fields": missing},
+            )],
+            "reliability": ReliabilityReport(level="FAIL", score=0,
+                gates={"requested_output_present": False},
+                warnings=["未返回本子任务要求的展示字段。"]),
+        })
 
     async def _latest_task_dataset_reference(
         self,
@@ -2702,7 +2762,10 @@ class DataAnalysisOrchestrator:
                 return task.task_id, blocked
             restored = responses.get(task.task_id)
             if isinstance(restored, AgentResponse):
-                return task.task_id, restored
+                if not self._task_missing_output(task, restored):
+                    return task.task_id, restored
+                responses.pop(task.task_id, None)
+                deferred_insights.pop(task.task_id, None)
             dependency_responses = [
                 responses.get(task_id) for task_id in task.depends_on
             ]
@@ -2714,8 +2777,11 @@ class DataAnalysisOrchestrator:
             # A declared local computation consumes data, not a database
             # entity query. Display aliases in predecessor prose cannot turn
             # it into an enrichment branch before its operation is validated.
-            requires_new_entity = not pure_computation and self._dag_requires_new_entity(
-                task.question, dependency_responses
+            source_tasks = [item for item in plan.tasks if item.task_id in task.depends_on]
+            requires_new_entity = bool(task.depends_on) and not pure_computation and (
+                structured_query_changed(task.extraction, [item.extraction for item in source_tasks])
+                if projection(task.extraction)
+                else self._dag_requires_new_entity(task.question, dependency_responses)
             )
             dependency_constraints: list[DependencyConstraint] = []
             if (
@@ -2725,7 +2791,8 @@ class DataAnalysisOrchestrator:
             ):
                 try:
                     dependency_constraints = await self._compile_dependency_constraints(
-                        task, chat, identity, responses, conversation_by_task
+                        task, chat, identity, responses, conversation_by_task,
+                        {item.task_id: item.extraction for item in source_tasks},
                     )
                 except DependencyConstraintError as exc:
                     value = self._dependency_constraint_fallback(chat, task, str(exc))
@@ -2743,6 +2810,10 @@ class DataAnalysisOrchestrator:
                 else f"dag-{root_token}-{task.task_id}"
             )
             conversation_by_task[task.task_id] = conversation_id
+            bound_structured_query = bool(
+                dependency_constraints and projection(task.extraction)
+                and task.task_id not in task_answers
+            )
             # Internal task history is contextual evidence, not a source of
             # ordering timestamps. Remove timestamps consistently so ChatRequest
             # cannot receive a mixed timestamped/untimestamped history.
@@ -2759,7 +2830,11 @@ class DataAnalysisOrchestrator:
                         HistoryMessage(role="user", content=dependency_task.question),
                         HistoryMessage(role="assistant", content=dependency.answer),
                     ])
-            history = compact_history(history)
+            # The typed child already carries its year/hospital/output and exact
+            # predecessor values. Prose history is not an execution input: the
+            # legacy history-recovery fallback can otherwise rebuild the parent
+            # ranking even when the completed-question boundary is set.
+            history = [] if bound_structured_query else compact_history(history)
             child = ChatRequest(
                 conversation_id=conversation_id,
                 message_id=(
@@ -2810,10 +2885,9 @@ class DataAnalysisOrchestrator:
             # boundary. A reply to Pending or a dependent/contextual task must
             # still resolve its own execution envelope through the legacy path.
             child._completed_question_execution = bool(
-                chat._completed_question_execution
+                (bool(dependency_constraints) and bool(projection(task.extraction))
+                 or chat._completed_question_execution and not task.depends_on and not contextual_root_task)
                 and task.task_id not in task_answers
-                and not task.depends_on
-                and not contextual_root_task
                 and not (
                     chat._semantic_decision is not None
                     and str(chat._semantic_decision.source) == "V2_AUTHORIZED_PLAN"
@@ -2834,6 +2908,8 @@ class DataAnalysisOrchestrator:
                 child._dag_pure_computation = True
             if task.task_id in pure_computation_dependency_ids:
                 # 纯计算任务的依赖任务：单值结果也要落盘，供计算任务取分母
+                child._dag_keep_result_dataset = True
+            if any(task.task_id in item.depends_on for item in plan.tasks):
                 child._dag_keep_result_dataset = True
             if (
                 not getattr(child, "_dag_pure_computation", False)
@@ -2860,7 +2936,9 @@ class DataAnalysisOrchestrator:
                         )
                     else:
                         assumptions_token = _INTERNAL_ASSUMPTIONS.set(
-                            self._report_task_internal_assumptions(plan, task)
+                            (*self._report_task_internal_assumptions(plan, task),
+                             *(("DAG_INHERITED_SOURCE_DATASET",) if child.dataset_id else ()),
+                             *(("DAG_BOUND_STRUCTURED_QUERY",) if bound_structured_query else ()))
                         )
                         try:
                             value = await self._handle(child, identity)
@@ -2875,6 +2953,9 @@ class DataAnalysisOrchestrator:
                                 value = self._attach_dependency_constraint_evidence(
                                     value, dependency_constraints
                                 )
+                        value = self._validate_task_output(task, value)
+                        if value.status == "SAFE_FALLBACK":
+                            child._dag_deferred_insight = None
                 if child._dag_deferred_insight is not None and isinstance(value, AgentResponse):
                     deferred_insights[task.task_id] = child._dag_deferred_insight
                     if task.task_id in task_answers and value.status in {"COMPLETED", "PARTIAL_SUCCESS"}:
@@ -4213,6 +4294,7 @@ class DataAnalysisOrchestrator:
             raw_rule_request = self._classify_with_rules(
                 admission_question, identity, chat.conversation_id
             )
+        self._apply_dag_structured_query_shape(raw_rule_request, chat._planner_extraction)
         bind_authorized_scope(
             raw_rule_request,
             chat.authorized_semantic_scope,
@@ -5985,7 +6067,11 @@ class DataAnalysisOrchestrator:
 
         request.application_id = chat.application_id
         if chat.dataset_id is not None:
-            request.assumptions.append("EXPLICIT_SOURCE_DATASET_SELECTION")
+            request.assumptions.append(
+                "INHERITED_CONVERSATION_DATASET"
+                if "DAG_INHERITED_SOURCE_DATASET" in _INTERNAL_ASSUMPTIONS.get()
+                else "EXPLICIT_SOURCE_DATASET_SELECTION"
+            )
         elif request.source_dataset_id is not None:
             request.assumptions.append("INHERITED_CONVERSATION_DATASET")
         request.source_dataset_id = (
@@ -9144,6 +9230,7 @@ class DataAnalysisOrchestrator:
                 "ordered_by": metric_names if ranked else [],
                 "descending": AnalysisOperator.BOTTOM_N not in request.operators,
                 "ranking_limit": request.ranking_limit,
+                "column_bindings": sql_column_bindings(query_result.sql, query_result.dataset.columns),
             }
             reference = await asyncio.to_thread(
                 self.dataset_store.save_dataset,
@@ -9270,10 +9357,55 @@ class DataAnalysisOrchestrator:
                             result.metrics = [MetricRef(input=match.group(1).strip())]
                             break
                 self._apply_explicit_projection_mode(result, planner_extraction)
+                self._apply_dag_structured_query_shape(result, planner_extraction)
             self._apply_platform_metric_vocabulary(result, agent_prompt)
             timing.mark_first_result()
             timing.set_attribute("intent_source", result.intent_source)
             return result
+
+    @staticmethod
+    def _apply_dag_structured_query_shape(request, extraction) -> None:
+        """A bound child is a complete new query, not a rewrite of its parent.
+
+        Apply only planner-owned slots on this proved-broken dependent path.
+        Catalog grounding still owns identifiers and values; ordinary followups,
+        pending answers, independent children and computation remain unchanged.
+        """
+        if "DAG_BOUND_STRUCTURED_QUERY" not in _INTERNAL_ASSUMPTIONS.get() or extraction is None:
+            return
+        structured = extraction.structured
+        if not structured:
+            return
+        if extraction.intent is not None:
+            request.primary_intent = extraction.intent
+        request.metrics = [MetricRef(input=str(item.get("name") or ""))
+            if isinstance(item, dict) else MetricRef(input=str(item))
+            for item in structured.get("指标") or []]
+        request.fields = [str(item.get("field") or item.get("name") or "")
+            if isinstance(item, dict) else str(item) for item in structured.get("展示字段") or []]
+        request.dimensions = [str(item.get("name") or item.get("field") or "")
+            if isinstance(item, dict) else str(item) for item in structured.get("维度") or []]
+        owners = list(dict.fromkeys(str(item["entity"]) for item in structured.get("展示字段") or []
+                                   if isinstance(item, dict) and item.get("entity")))
+        entities = structured.get("实体") or []
+        request.entity = owners[0] if owners else str(entities[0]) if entities else request.entity
+        request.filters = []
+        for item in structured.get("过滤条件") or []:
+            op = str(item.get("op") or item.get("operator") or "=").upper()
+            value = item.get("value")
+            if op in {"=", "EQ", "!=", "NE"} and isinstance(value, list) and len(value) == 1:
+                value = value[0]
+            request.filters.append({"field": item["field"], "operator": op, "value": value,
+                                   **({"entity": item["entity"]} if item.get("entity") else {})})
+        request.ranking_limit = structured.get("限制")
+        request.operators = []
+        request.assumptions = [item for item in request.assumptions if not item.startswith("SORT_DIRECTION=")]
+        if structured.get("排序"):
+            request.operators = [AnalysisOperator.SORT]
+            direction = str(structured["排序"][0].get("order") or "desc").upper()
+            request.assumptions.append("SORT_DIRECTION=" + direction)
+        request.asl_template = None
+        request.source_dataset_id = None
 
     @staticmethod
     def _apply_explicit_projection_mode(

@@ -1240,6 +1240,8 @@ class HttpDataRetrievalAdapter:
             ("hospital", ("医院", "hospital")),
             ("customer", ("客户", "会员", "customer", "member")),
             ("store", ("门店", "店铺", "store", "shop")),
+            ("salesperson", ("业务员", "销售员", "销售人员", "salesperson", "sales_person")),
+            ("company", ("公司", "company")),
             ("product", ("商品", "产品", "货品", "product", "goods", "sku")),
         )
         return next(
@@ -1304,7 +1306,8 @@ class HttpDataRetrievalAdapter:
         actual_normalized = actual.strip().lower()
         if expected_normalized == actual_normalized:
             return True
-        if actual_normalized.rsplit(".", 1)[-1] == expected_normalized.rsplit(".", 1)[-1]:
+        if (not ("." in expected_normalized and "." in actual_normalized)
+                and actual_normalized.rsplit(".", 1)[-1] == expected_normalized.rsplit(".", 1)[-1]):
             return True
         expected_family = cls._constraint_field_family(expected_normalized)
         if (
@@ -1313,15 +1316,33 @@ class HttpDataRetrievalAdapter:
         ):
             return False
 
-        def stable_key_kind(value: str) -> str:
-            field = value.rsplit(".", 1)[-1]
-            match = re.search(r"(?:^|_)(id|code)$", field)
-            return match.group(1) if match else "display"
+        from app.planning.dependency_contract import key_kind
 
         # A same-family name field is not equivalent to a code/id join key.
         # Keeping the key kind aligned prevents a valid predecessor code set
         # from being copied into a display-name filter (or vice versa).
-        return stable_key_kind(expected_normalized) == stable_key_kind(actual_normalized)
+        return key_kind(expected_normalized) == key_kind(actual_normalized)
+
+    @staticmethod
+    def _merge_dependency_filters(request: CanonicalAnalysisRequest) -> None:
+        """Put immutable upstream values in structured input, not just prose."""
+        if not request.dependency_constraints:
+            return
+        extraction = request._planner_extraction
+        structured = extraction.structured if extraction is not None else None
+        for constraint in request.dependency_constraints:
+            item = {"field": constraint.source_column, "operator": "IN",
+                    "value": list(constraint.values)}
+            if item not in request.filters:
+                request.filters.append(item)
+            if structured is not None:
+                condition = {"field": constraint.source_column, "op": "in",
+                             "value": list(constraint.values)}
+                if "." in constraint.source_column:
+                    condition["entity"] = constraint.source_column.rsplit(".", 1)[0]
+                filters = structured.setdefault("过滤条件", [])
+                if condition not in filters:
+                    filters.append(condition)
 
     @classmethod
     def _validate_dependency_constraints(
@@ -1404,6 +1425,7 @@ class HttpDataRetrievalAdapter:
         # 商品品牌).  Work on a local copy so provenance stored by the caller is
         # unchanged.
         request = request.model_copy(deep=True)
+        self._merge_dependency_filters(request)
         request.semantic_entity_mentions = self._untyped_semantic_mentions(
             request
         )
@@ -2178,6 +2200,7 @@ class HttpDataRetrievalAdapter:
                 "ASL generator returned business ambiguities",
                 details=ambiguities,
             )
+        self._validate_dependency_constraints(asl, request)
         self._validate_request_filters(
             asl,
             request,
