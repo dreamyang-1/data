@@ -271,6 +271,8 @@ def render_reliability_validation(
     reliability: ReliabilityReport,
     evidence: list[EvidenceItem],
     quality_status: str,
+    *,
+    completed_question: str | None = None,
 ) -> str:
     """Render the complete public validation block in Chinese."""
 
@@ -279,6 +281,8 @@ def render_reliability_validation(
         f"数据质量：{quality_status_label_zh(quality_status)}。",
         f"证据（{len(evidence)}项）：",
     ]
+    if completed_question:
+        lines.insert(0, f"校验依据：补全后的问题“{completed_question.strip()}”及本轮实际查询、计算结果。")
     if evidence:
         lines.extend(
             f"{index}. {_evidence_line(item)}"
@@ -304,3 +308,14 @@ def render_reliability_validation(
         else "结果未通过可靠性门禁，不输出未经验证的数值。"
     )
     return "\n".join(lines)
+
+
+def root_quality_status(evidence: list[EvidenceItem]) -> str:
+    """Combine actual query quality, never infer PASS from task completion."""
+    statuses = [str(item.payload.get("quality_status") or "").upper()
+                for item in evidence if item.kind == "QUERY_RESULT"]
+    if any(status in {"FAIL", "FAILED", "INVALID", "ERROR"} for status in statuses):
+        return "FAIL"
+    if any(status in {"WARNING", "WARN", "DEGRADED", "LIMITED"} for status in statuses):
+        return "WARNING"
+    return "PASS" if statuses and all(status == "PASS" for status in statuses) else ""

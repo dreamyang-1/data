@@ -167,6 +167,10 @@ class QwenAnalysisSynthesizer:
         """多任务拆分的整体汇总：一次调用合并分析全部子任务的查询结果。"""
         if not self.settings.intent_model_api_key:
             raise RuntimeError("analysis synthesis API key is not configured")
+        # A resumed goal may include confirmed scope absent from the saved
+        # planning context. The completed root question is the sole authority;
+        # keep child plans as evidence and never mutate the caller's state.
+        planning_context = {**(planning_context or {}), "completed_question": question}
         prompt_input = {
             "untrusted_user_question": (planning_context or {}).get("original_question", question),
             "completed_question": question,
