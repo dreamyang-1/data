@@ -58,6 +58,16 @@ def collect_root_materials(
                         depends_on=list(task.depends_on), expected_output=task.expected_output,
                         structured_parameters=material.get("structured_parameters") or task.extraction)
         material.setdefault("summary", result.answer)
+        material["calculation_incomplete"] = bool(
+            result.status == "FAILED" and result.reliability
+            and result.reliability.gates.get("deterministic_computation") is False
+        )
+        # Old checkpoints may retain the former generic calculation paragraph.
+        # Only shorten that known boilerplate, never a specific failure reason.
+        if material["calculation_incomplete"] and str(material["summary"]).startswith(
+            "本次尚未生成可复核的计算结果，计算、排序或筛选未完成。"
+        ):
+            material["summary"] = "计算未完成，暂未获得可用的计算结果。"
         material.setdefault("facts", {})
         material["warnings"] = list(dict.fromkeys([
             *material.get("warnings", []),
@@ -145,9 +155,14 @@ def render_root_report(
             notes.extend(item.get("presentation", {}).get("notes") or [])
         if item["status"] not in {"COMPLETED", "PARTIAL_SUCCESS"}:
             reason = "；".join(item.get("missing_information") or []) or str(item.get("summary") or "该部分未完成")
-            label = ("未执行的后续任务" if item["status"] == "SKIPPED" and item.get("depends_on")
-                     else "尚未完成的内容")
-            notes.append(f"{label}：{item['question']}。{reason}")
+            if item.get("calculation_incomplete"):
+                # A short real failure status is sufficient; do not repeat the
+                # planner's entire calculation instruction in business tips.
+                notes.append(reason)
+            else:
+                label = ("未执行的后续任务" if item["status"] == "SKIPPED" and item.get("depends_on")
+                         else "尚未完成的内容")
+                notes.append(f"{label}：{item['question']}。{reason}")
         for query in (item.get("query_results") or []) if item["task_id"] in selected_ids else []:
             if query.get("truncated"):
                 notes.append(f"“{item['question']}”仅提供{query.get('returned_row_count', '部分')}条预览，不能作为全量统计。")
