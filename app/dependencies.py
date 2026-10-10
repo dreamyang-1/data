@@ -20,7 +20,7 @@ from app.services.report_export import DatasetReportExporter
 from app.services.question_rewriter import HttpEntityAttributeSearcher, QuestionRewriter
 from app.services.business_question_collector import BusinessQuestionCollector
 from app.services.entity_extraction import build_gliner_extractor_from_environment
-from app.planning import MultiQuestionPlanner
+from app.planning import CompoundQuestionRouter
 from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
 from app.stores import InMemorySessionStore, RedisSessionStore, SessionStore
 from app.stores.events import (
@@ -274,7 +274,7 @@ def build_container(settings: Settings) -> Container:
                 candidate_mode=entity_candidate_mode,
             )
         ),
-        task_planner=MultiQuestionPlanner(settings),
+        task_planner=CompoundQuestionRouter(settings),
         report_exporter=report_exporter,
         file_importer=file_importer,
         agent_prompt_store=agent_prompt_store,

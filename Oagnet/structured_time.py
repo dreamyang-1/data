@@ -98,6 +98,9 @@ def _period(text, today):
     half = re.fullmatch(r'(\d{4})年?([上下])半年', text)
     if half:
         return _month_bounds(int(half[1]), 1 if half[2] == '上' else 7, 6)
+    full_year = re.fullmatch(r'(\d{4})年(?:全年|度|全年度)', text)
+    if full_year:
+        return _month_bounds(int(full_year[1]), 1, 12)
     absolute = re.fullmatch(r'(\d{4})(?:年|[-/])(?:(\d{1,2})(?:月|[-/])?(?:(\d{1,2})日?)?)?', text)
     if re.fullmatch(r'\d{4}', text):
         return _month_bounds(int(text), 1, 12)

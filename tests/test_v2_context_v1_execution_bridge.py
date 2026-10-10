@@ -22,7 +22,9 @@ from app.domain.models import (
 )
 from app.intent import RuleBasedIntentClassifier
 from app.main import create_app
-from app.planning import MultiQuestionPlanner
+from app.planning import (
+    CompoundJudgment, CompoundJudgmentEntry, CompoundQuestionRouter,
+)
 from app.semantic_v2.authorized_contract import (
     ScopedArtifact,
     contract_digest,
@@ -394,6 +396,78 @@ async def test_bridge_streams_context_progress_before_resolution(provider):
     assert "补全后的问题：" in resolved_context["message"]
     assert "结构化参数提取：" not in resolved_context["message"]
     assert "业务域：" not in resolved_context["message"]
+
+
+@pytest.mark.asyncio
+async def test_compound_judgment_is_shown_in_resolved_context_and_stashed(provider):
+    """走拆分器的新问：判断结论与各子问题意图、业务域拼进补全问题展示，结论暂存透传。
+
+    平台在补全问题展示后即关闭意图节点并点亮规划节点，判断段只有随
+    V2_RESOLVED 事件发出才会落在「问题理解与补全」节点；结论暂存供编排器
+    直接分发规划，同一轮不再二次判断。
+    """
+    redis = DeploymentRedis()
+    seen = {}
+
+    async def v1(chat, _identity):
+        seen["judgment"] = getattr(chat, "_compound_judgment", None)
+        return query_response(chat)
+
+    bridge = handler(provider, redis, v1)
+    install_resolution(bridge, provider)
+    judgment = CompoundJudgment(
+        is_compound=True,
+        entries=(
+            CompoundJudgmentEntry(
+                question="统计各经销商的订单笔数",
+                intent="指标查询",
+                business_domain="医药销售域",
+                expected_output="各经销商订单笔数",
+            ),
+            CompoundJudgmentEntry(
+                question="筛选订单笔数大于5笔的经销商名单",
+                intent="明细查询",
+                business_domain="医药销售域",
+                expected_output="经销商名单",
+            ),
+        ),
+        analyze_summary="问题1统计，问题2筛选。",
+    )
+    judge_calls = []
+
+    async def judge_stub(question, **kwargs):
+        judge_calls.append((question, kwargs))
+        return judgment
+
+    bridge.compound_judge = judge_stub
+    events = []
+
+    with progress_scope(events.append):
+        result = await bridge.handle(
+            request(
+                question="查询订单笔数大于5笔的经销商名单",
+                message_id="compound-judgment-display",
+            ),
+            IDENTITY,
+        )
+
+    assert result.status == "COMPLETED"
+    assert len(judge_calls) == 1
+    resolved_context = next(
+        event for event in events
+        if event.get("progress_phase") == "V2_RESOLVED_INTENT_CONTEXT_READY"
+    )
+    assert "问题类型：复合问题，拆分为2个子问题：" in resolved_context["message"]
+    assert (
+        "问题1：统计各经销商的订单笔数"
+        "（意图：指标查询；业务域：医药销售域）"
+    ) in resolved_context["message"]
+    assert (
+        "问题2：筛选订单笔数大于5笔的经销商名单"
+        "（意图：明细查询；业务域：医药销售域）"
+    ) in resolved_context["message"]
+    # 执行层 chat 由 model_copy(deep=True) 派生，判断结论深拷贝透传，内容一致
+    assert seen["judgment"] == judgment
 
 
 @pytest.mark.parametrize(
@@ -4325,14 +4399,14 @@ class _CountingClassifier(RuleBasedIntentClassifier):
         return super().classify(question, identity, conversation_id)
 
 
-class _CountingPlanner(MultiQuestionPlanner):
+class _CountingPlanner(CompoundQuestionRouter):
     def __init__(self, settings):
         super().__init__(settings)
         self.calls = 0
 
-    async def plan(self, question):
+    async def route_and_plan(self, question, **kwargs):
         self.calls += 1
-        return await super().plan(question)
+        return await super().route_and_plan(question, **kwargs)
 
 
 def _parity_orchestrator():
@@ -4364,26 +4438,31 @@ def _parity_orchestrator():
 @pytest.mark.asyncio
 async def test_pure_v1_and_bridge_passthrough_have_execution_contract_parity():
     question = "查询空心纤维血液透析器产品合作的经销商名单。"
-    chat = ChatRequest(
-        application_id="app-parity",
-        conversation_id="conversation-parity",
-        message_id="message-parity",
-        question=question,
-        semantic_model_id=81,
-        business_domain_ids=[205],
-        database_id=58,
-        knowledge_base_names=["business-kb"],
-        department="ORG_ADMIN",
-        history=[],
-    )
+
+    def parity_chat():
+        # 每条传输请求都是独立对象：私有暂存（如拆分判断结论）不允许
+        # 跨请求泄漏，两条路径各持一份才能对等比较。
+        return ChatRequest(
+            application_id="app-parity",
+            conversation_id="conversation-parity",
+            message_id="message-parity",
+            question=question,
+            semantic_model_id=81,
+            business_domain_ids=[205],
+            database_id=58,
+            knowledge_base_names=["business-kb"],
+            department="ORG_ADMIN",
+            history=[],
+        )
+
     pure, pure_query, pure_classifier, pure_planner = _parity_orchestrator()
     bridged, bridged_query, bridged_classifier, bridged_planner = (
         _parity_orchestrator()
     )
 
-    pure_response = await pure.handle(chat, IDENTITY)
+    pure_response = await pure.handle(parity_chat(), IDENTITY)
     bridge_response = await bridged.execute_v1_from_completed_question(
-        chat, IDENTITY
+        parity_chat(), IDENTITY
     )
 
     assert pure_response.status == bridge_response.status == "COMPLETED"

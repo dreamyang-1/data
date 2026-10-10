@@ -38,7 +38,7 @@ from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
 from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
-from app.planning.compat import plan_question, prepare_execution
+from app.planning.compat import PlanningResult, plan_question, prepare_execution
 from app.planning.task_dependencies import TaskDependencySkipped, dependency_skip
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
@@ -745,6 +745,13 @@ class DataAnalysisOrchestrator:
             for slot in (pending_request.missing_slots or [])
             if slot != "semantic_ambiguity"
         ]
+        # ASL绑定阶段的自由文本澄清没有候选选项，待确认项就是歧义问题文本本身；
+        # 不带上的话prompt里待确认项显示为"无"，分诊模型会把澄清回答误判成新话题。
+        asked.extend(
+            item.question
+            for item in (pending_request.semantic_ambiguities or [])
+            if item.blocking and not item.candidates and item.question
+        )
         ambiguity = next(
             (
                 item
@@ -1130,7 +1137,7 @@ class DataAnalysisOrchestrator:
                             and (confirmed_pending_choice is None or self.settings.surface_asl_execution_enabled)
                             and not semantic_decision_ready):
                         try:
-                            # 核心指令里的业务语义规范段随请求传给拆分模型，
+                            # 核心指令里的业务语义规范段随请求传给拆分判断与提取模型，
                             # 参数角色按规范分类对齐（指标/实体/维度）。
                             planner_semantic_context = extract_semantic_spec_section(
                                 await self._agent_prompt_text(chat)
@@ -1139,6 +1146,10 @@ class DataAnalysisOrchestrator:
                                 "V1_ORCHESTRATION",
                                 "v1.task_decomposition",
                             ) as timing:
+                                # 桥内已前置完成复合/单一判断的轮次直接复用
+                                # 结论分发规划，不再二次判断；无暂存结论时
+                                # （V1 直达、桥内判断失败等）走完整链路。
+                                # 规划层对每个问题做任务拆解与参数提取。
                                 outcome = await plan_question(
                                     self.task_planner, planning_question,
                                     semantic_context=planner_semantic_context,
@@ -1153,7 +1164,9 @@ class DataAnalysisOrchestrator:
                                     else 1,
                                 )
                             plan = outcome.plan
-                            if outcome.judgment is not None and hasattr(chat, '_compound_judgment'):
+                            # 规划护栏可能改写桥内暂存的判断结论（如顶替拦截
+                            # 整拆分作废转单一），以规划后的最终结论为准
+                            if outcome.judgment is not None:
                                 chat._compound_judgment = outcome.judgment
                             if plan is None and outcome.single_extraction is not None:
                                 chat._planner_extraction = outcome.single_extraction
@@ -1249,19 +1262,6 @@ class DataAnalysisOrchestrator:
                             is_composite=True,
                             task_count=len(plan.tasks),
                         )
-                    planning_domain_labels = (
-                        chat._business_domain_labels
-                        or tuple(
-                            f"ID {domain_id}"
-                            for domain_id in chat.business_domain_ids
-                        )
-                    )
-                    planning_domain_line = (
-                        f"业务域：{'、'.join(planning_domain_labels)}\n"
-                        if planning_domain_labels
-                        else ""
-                    )
-
                     def _planning_task_block(
                         index: int,
                         question: str,
@@ -1269,19 +1269,11 @@ class DataAnalysisOrchestrator:
                         parameters: list[str],
                         structured: dict | None = None,
                     ) -> str:
-                        if "不再查询数据库" in question:
-                            # 复合指标拆出的计算任务，意图展示为指标计算
-                            intent_line = "任务意图：指标计算\n"
-                        else:
-                            intent_line = (
-                                f"任务意图：{self._intent_label(intent)}\n"
-                                if intent is not None
-                                else ""
-                            )
+                        # 意图与业务域在意图识别节点按问题展示，
+                        # 规划节点只保留参数提取。
                         is_data_task = intent not in NO_DATA_INTENTS
                         if structured is not None and is_data_task:
-                            # 意图、业务域已单独成行展示，JSON里去掉避免重复，
-                            # 也避免中文枚举（统计查询）与任务意图行（指标查询）对不上；
+                            # 意图、业务域不在JSON里重复展示；
                             # 内部提取结构保持完整，下游去重、绑定仍读全量键。
                             display_payload = {
                                 key: value
@@ -1299,13 +1291,11 @@ class DataAnalysisOrchestrator:
                             parameters_line = ""
                         return (
                             f"任务{index}：{question}\n"
-                            + intent_line
-                            + planning_domain_line
                             + parameters_line
                         ).rstrip()
 
                     if plan is not None:
-                        # 依赖说明由拆分模型写在分析内容里，不再单独输出依赖行
+                        # 依赖说明由拆分判断模型写在分析内容里，不再单独输出依赖行
                         task_order = {
                             task.task_id: index
                             for index, task in enumerate(plan.tasks, 1)
@@ -1332,13 +1322,13 @@ class DataAnalysisOrchestrator:
                             # 保证并行场景用户也能看出执行方式。
                             if dependency_pairs:
                                 summary = (
-                                    f"用户问题拆分为{len(plan.tasks)}项子任务，"
+                                    f"拆分为{len(plan.tasks)}个任务，"
                                     + "、".join(dependency_pairs)
                                     + "，需按依赖顺序执行。"
                                 )
                             else:
                                 summary = (
-                                    f"用户问题拆分为{len(plan.tasks)}项子任务，"
+                                    f"拆分为{len(plan.tasks)}个任务，"
                                     + "各任务相互独立，可并行执行。"
                                 )
                         if summary[-1] not in "。！？?!":
@@ -1349,7 +1339,7 @@ class DataAnalysisOrchestrator:
                     else:
                         single_extraction = chat._planner_extraction
                         planning_detail = (
-                            "当前问题无需拆分，按单任务执行。\n"
+                            "按单任务执行。\n"
                             + _planning_task_block(
                                 1,
                                 planning_question,
@@ -10470,6 +10460,11 @@ class DataAnalysisOrchestrator:
                 "如何", "哪里", "哪些", "多少", "是否",
             )
             if any(marker in compact for marker in new_task_markers):
+                return False
+            # 挂起请求本身缺指标（指标只在ASL层提取、V1请求为空）时，裸值回答
+            # 合并后仍缺指标，V1恢复只会再次追问；改走分诊通道把原问题与本次
+            # 输入合并成完整问题重新执行。
+            if not pending.metrics:
                 return False
             # A compact noun/code with no task verb is a normal free-form answer
             # to a subject/filter ambiguity. The 100-character safety ceiling is

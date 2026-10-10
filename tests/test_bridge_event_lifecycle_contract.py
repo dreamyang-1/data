@@ -25,7 +25,7 @@ from app.adapters import build_mock_adapters
 from app.adapters.base import AdapterError
 from app.config import Settings
 from app.intent import RuleBasedIntentClassifier
-from app.planning import MultiQuestionPlanner
+from app.planning import CompoundQuestionRouter
 from app.semantic_v2.context_state_store import RedisContextStateStore
 from app.semantic_v2.context_v1_execution import V2ContextV1ExecutionBridge
 from app.services.orchestrator import DataAnalysisOrchestrator
@@ -94,7 +94,7 @@ def _bridge_event_orchestrator(events: InMemorySessionEventStore, **query_kwargs
         classifier=RuleBasedIntentClassifier(),
         adapters=adapters,
         sessions=InMemorySessionStore(),
-        task_planner=MultiQuestionPlanner(settings),
+        task_planner=CompoundQuestionRouter(settings),
         question_rewriter=QuestionRewriter(None),
         event_store=events,
     )

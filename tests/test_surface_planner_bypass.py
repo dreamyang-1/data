@@ -21,7 +21,7 @@ from app.domain.semantic_decision import (
 )
 from app.intent import RuleBasedIntentClassifier
 from app.observability.call_timing import RequestTimingTracker, timing_scope
-from app.planning import MultiQuestionPlanner
+from app.planning import CompoundJudgment, CompoundQuestionRouter, CompoundRouteResult, PlannerOutcome
 from app.planning.task_dag import PlannerOutcome
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.progress import progress_scope
@@ -49,14 +49,14 @@ class _CountingClassifier(RuleBasedIntentClassifier):
         return super().classify(question, identity, conversation_id, **kwargs)
 
 
-class _CountingPlanner(MultiQuestionPlanner):
+class _CountingPlanner(CompoundQuestionRouter):
     def __init__(self, settings):
         super().__init__(settings)
         self.calls = 0
 
-    async def plan(self, question):
+    async def route_and_plan(self, question, **kwargs):
         self.calls += 1
-        return await super().plan(question)
+        return await super().route_and_plan(question, **kwargs)
 
 
 def _orchestrator():
@@ -199,9 +199,12 @@ async def test_multi_task_surface_evidence_never_skips_planning():
 async def test_nondata_single_task_skips_planning_display_and_replies_via_chat_model():
     """闲聊/超范围单任务不亮规划节点，直接由受控聊天模型回复。"""
 
-    class _WeatherPlanner(MultiQuestionPlanner):
-        async def plan(self, question, **kwargs):
-            return PlannerOutcome(plan=None, single_intent=PrimaryIntent.OUT_OF_SCOPE)
+    class _WeatherPlanner(CompoundQuestionRouter):
+        async def route_and_plan(self, question, **kwargs):
+            return CompoundRouteResult(
+                judgment=CompoundJudgment(is_compound=False),
+                single=PlannerOutcome(single_intent=PrimaryIntent.OUT_OF_SCOPE),
+            )
 
     class _StubChatResponder:
         def __init__(self):
@@ -255,14 +258,14 @@ async def test_nondata_single_task_skips_planning_display_and_replies_via_chat_m
 async def test_off_topic_question_skips_planner_and_classifier_replies_via_chat_model():
     """语义识别判成业务无关的问题时，拆分器和分类模型都不调度，直接聊天回复。"""
 
-    class _CountingPlanner(MultiQuestionPlanner):
+    class _CountingPlanner(CompoundQuestionRouter):
         def __init__(self, settings):
             super().__init__(settings)
             self.calls = 0
 
-        async def plan(self, question, **kwargs):
+        async def route_and_plan(self, question, **kwargs):
             self.calls += 1
-            return await super().plan(question)
+            return await super().route_and_plan(question, **kwargs)
 
     class _CountingClassifier(RuleBasedIntentClassifier):
         def __init__(self):

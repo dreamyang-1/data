@@ -11,7 +11,8 @@ import json
 import re
 import pymysql
 
-from sql_translator_prod import SemanticCatalog, MySQLDSLLoader, SQLTranslatorProd, _positive_int, _normalize_asl_compatibility, _mapping_backed_code
+from sql_translator_prod import SemanticCatalog, MySQLDSLLoader, SQLTranslatorProd, _positive_int, _normalize_asl_compatibility
+from sql_translator_prod import _mapping_backed_code
 
 CONTRACT_VERSION = 'single-domain-v1'
 

@@ -1,0 +1,53 @@
+# Dependencies (installed in build stage)
+node_modules/
+
+# Source (copied explicitly in Dockerfile)
+# Exclude test and integration files
+src/__integration__/
+
+# Build output (rebuilt in build stage)
+dist/
+
+# Reports and coverage
+reports/
+coverage/
+*.lcov
+
+# Documentation and metadata
+docs/
+*.md
+!README.md
+LICENSE
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
+CHANGELOG.md
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+
+# Config files not needed in image
+lefthook.yml
+cog.toml
+biome.json
+eslint.config.mjs
+vitest.config.ts
+vitest.config.integration.ts
+smithery.yaml
+glama.json
+server.json
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+.env*
+*.tgz
+.mcpregistry_*

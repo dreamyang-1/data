@@ -401,7 +401,7 @@ def test_report_artifact_cannot_combine_datasets_from_other_scope():
 async def test_completed_dag_checkpoint_cannot_supply_cross_scope_answer(matching):
     from test_task_dag import _StubOrchestrator, _Classifier
     from app.domain.models import AtomicTask, TaskPlan
-    from app.planning import MultiQuestionPlanner
+    from app.planning import CompoundQuestionRouter
     settings = Settings(env='test', multi_question_model_enabled=False, analysis_synthesis_enabled=False)
     calls = []
     class Counting(_StubOrchestrator):
@@ -409,7 +409,7 @@ async def test_completed_dag_checkpoint_cannot_supply_cross_scope_answer(matchin
             calls.append(current.question)
             return await super()._handle(current, identity)
     agent = Counting(settings=settings, classifier=_Classifier(), adapters=build_mock_adapters(),
-        sessions=InMemorySessionStore(), task_planner=MultiQuestionPlanner(settings))
+        sessions=InMemorySessionStore(), task_planner=CompoundQuestionRouter(settings))
     plan = TaskPlan(planner='DETERMINISTIC_RULE',tasks=[AtomicTask(task_id='task-1',question='查询销售额'),AtomicTask(task_id='task-2',question='查询库存')])
     current = chat()
     old = await agent._handle(current, IDENTITY)
