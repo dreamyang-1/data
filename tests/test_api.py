@@ -1893,10 +1893,13 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     ):
         assert internal_label not in completed_retrieval_text
     completed_validation_text = "".join(
-        event["content"] for event in child_public_progress
-        if event["meta"]["stage"] == "RELIABILITY_CHECK"
+        event["content"] for event in events
+        if event["type"] == "message_chunk"
+        and event.get("meta", {}).get("stage") == "RELIABILITY_CHECK"
         and event["meta"]["status"] == "COMPLETED"
     )
+    assert "补全后的问题“查询 TDC-3 产品的主要适用科室、次要适用科室”" in completed_validation_text
+    assert completed_validation_text.count("校验依据：") == 1
     assert "校验结论：高可信" in completed_validation_text
     assert "数据质量：通过" in completed_validation_text
     assert "证据（" in completed_validation_text
@@ -1915,8 +1918,7 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         )
         for task_id in ("task-1", "task-2")
     }
-    assert "任务1：查询 TDC-3 产品的主要适用科室" in validation_by_task["task-1"]
-    assert "任务2：查询 TDC-3 产品的次要适用科室" in validation_by_task["task-2"]
+    assert validation_by_task == {"task-1": "", "task-2": ""}
     insight_by_task = {
         task_id: "".join(
             event["content"]

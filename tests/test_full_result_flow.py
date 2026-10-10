@@ -70,8 +70,13 @@ async def test_full_rows_reach_analysis_storage_and_only_twenty_reach_table(defe
     if delivery=='local' and not deferred:
         assert exporter.exported_dataset_id==response.dataset_id and response.files
     stages=[event['stage'] for event in events]
-    assert stages.index('DATA_RETRIEVAL') < stages.index('RELIABILITY_CHECK')
-    if not deferred: assert stages.index('RELIABILITY_CHECK') < stages.index('INSIGHT_ANALYSIS')
+    if deferred:
+        # Root-goal validation is emitted by the parent after gathering all
+        # child outputs. The data/internal-check contracts stay unchanged.
+        assert 'RELIABILITY_CHECK' not in stages and 'INSIGHT_ANALYSIS' not in stages
+        assert response.reliability is not None
+    else:
+        assert stages.index('DATA_RETRIEVAL') < stages.index('RELIABILITY_CHECK') < stages.index('INSIGHT_ANALYSIS')
 
 
 def test_rendered_table_cap_leaves_non_table_prose_and_separate_tables_intact():

@@ -99,6 +99,7 @@ from app.services.progress import emit_progress, task_progress_scope
 from app.observability import TraceSummary
 from app.observability.call_timing import track_operation
 from app.observability.langfuse_client import trace_generation
+from app.presentation.reliability import root_quality_status
 from app.presentation import (
     QUERY_EXECUTION_CHAIN,
     build_composite_intent_recognition_display_v2,
@@ -3207,11 +3208,16 @@ class DataAnalysisOrchestrator:
         reliability = ReliabilityReport(
             level=("HIGH" if status == "COMPLETED" and all_high else "LIMITED" if completed_count else "FAIL"),
             score=score,
-            gates={result.task_id: result.status == "COMPLETED" for result in task_results},
-            warnings=(
-                [] if status == "COMPLETED" and all_high
-                else ["多任务中存在未完成、降级或需要补充信息的子任务"]
-            ),
+            gates={**{result.task_id: result.status == "COMPLETED" for result in task_results},
+                   "root_result_complete": status == "COMPLETED"},
+            warnings=list(dict.fromkeys([
+                *([] if status == "COMPLETED" and all_high else [
+                    "本次问题尚未取得可用的查询或计算结果。" if not completed_count
+                    else "本次问题仍有未完成或受限的部分，只能校验已有结果。"
+                ]),
+                *(warning for result in task_results if result.reliability
+                  for warning in result.reliability.warnings),
+            ])),
         )
         awaiting_task_ids = [
             task.task_id
@@ -3265,6 +3271,28 @@ class DataAnalysisOrchestrator:
         if resolved_answers:
             completed_question += "\n补充确认后的任务范围：" + "；".join(resolved_answers.values())
         root_context["effective_completed_question"] = completed_question
+        # Include limits discovered while loading cached/full result data,
+        # not just the child status captured before materialization.
+        root_warnings = list(dict.fromkeys([
+            *reliability.warnings,
+            *(warning for item in materials for warning in item.get("warnings", [])),
+        ]))
+        reliability = reliability.model_copy(update={
+            "warnings": root_warnings,
+            "level": "LIMITED" if root_warnings and reliability.level == "HIGH" else reliability.level,
+        })
+        # Child checks stay internal. Validate all available evidence against
+        # the completed root goal once, before root insight (also on resume).
+        await emit_progress(
+            "RELIABILITY_CHECK",
+            "COMPLETED" if reliability.level != "FAIL" else "FAILED",
+            render_reliability_validation(
+                reliability, evidence, root_quality_status(evidence),
+                completed_question=completed_question,
+            ),
+            reliability_level=reliability.level,
+            reliability_score=round(float(reliability.score), 4),
+        )
         merged_insight: str | None = None
         final_plan: dict[str, Any] = {}
         if completed_count:
@@ -3274,7 +3302,8 @@ class DataAnalysisOrchestrator:
                     merged_insight, synthesis = await self.analysis_synthesizer.synthesize_combined(
                         completed_question,
                         [{k: v for k, v in item.items() if k != "presentation"} for item in materials],
-                        planning_context=root_context,
+                        planning_context={**root_context, "completed_question": completed_question,
+                                          "result_validation": reliability.model_dump(mode="json")},
                         agent_prompt=await self._agent_prompt_text(chat),
                         semantic_model_id=chat.semantic_model_id,
                     )
@@ -6822,18 +6851,20 @@ class DataAnalysisOrchestrator:
                        "preview_disclosed": True},
                 warnings=[note, "以下仅为结果预览，不代表完整清单，未据此计算全量统计。"],
             )
-            await emit_progress(
-                "RELIABILITY_CHECK", "COMPLETED",
-                render_reliability_validation(
-                    reliability, evidence, query_result.dataset.quality_status,
-                ),
-                reliability_level=reliability.level,
-                reliability_score=reliability.score,
-            )
-            await emit_progress(
-                "INSIGHT_ANALYSIS", "COMPLETED",
-                "查询已成功，但当前仅提供预览；未使用预览推算全量合计、排名或趋势。",
-            )
+            if not chat._dag_defer_insight:
+                await emit_progress(
+                    "RELIABILITY_CHECK", "COMPLETED",
+                    render_reliability_validation(
+                        reliability, evidence, query_result.dataset.quality_status,
+                        completed_question=request.rewritten_question or request.original_question,
+                    ),
+                    reliability_level=reliability.level,
+                    reliability_score=reliability.score,
+                )
+                await emit_progress(
+                    "INSIGHT_ANALYSIS", "COMPLETED",
+                    "查询已成功，但当前仅提供预览；未使用预览推算全量合计、排名或趋势。",
+                )
             answer = (
                 (f"查询成功，共 {total_row_count} 条结果。" if total_row_count_confirmed
                  else "查询成功，但上游未确认完整结果条数。")
@@ -7128,21 +7159,23 @@ class DataAnalysisOrchestrator:
                 },
                 warnings=[insufficiency],
             )
-            await emit_progress(
-                "RELIABILITY_CHECK",
-                "COMPLETED",
-                render_reliability_validation(
-                    reliability,
-                    evidence,
-                    query_result.dataset.quality_status,
-                ),
-                reliability_level=reliability.level,
-                reliability_score=reliability.score,
-            )
-            await emit_progress(
-                "INSIGHT_ANALYSIS", "COMPLETED",
-                "已保留本次查询数据。" + insufficiency,
-            )
+            if not chat._dag_defer_insight:
+                await emit_progress(
+                    "RELIABILITY_CHECK",
+                    "COMPLETED",
+                    render_reliability_validation(
+                        reliability,
+                        evidence,
+                        query_result.dataset.quality_status,
+                        completed_question=request.rewritten_question or request.original_question,
+                    ),
+                    reliability_level=reliability.level,
+                    reliability_score=reliability.score,
+                )
+                await emit_progress(
+                    "INSIGHT_ANALYSIS", "COMPLETED",
+                    "已保留本次查询数据。" + insufficiency,
+                )
             response = AgentResponse(
                 request_id=request.request_id,
                 conversation_id=request.conversation_id,
@@ -7485,17 +7518,19 @@ class DataAnalysisOrchestrator:
                 request, evidence, query_result.dataset.quality_status
             )
             timing.mark_first_result()
-        await emit_progress(
-            "RELIABILITY_CHECK",
-            "COMPLETED" if reliability.level != "FAIL" else "FAILED",
-            render_reliability_validation(
-                reliability,
-                evidence,
-                query_result.dataset.quality_status,
-            ),
-            reliability_level=reliability.level,
-            reliability_score=round(float(reliability.score), 4),
-        )
+        if not chat._dag_defer_insight:
+            await emit_progress(
+                "RELIABILITY_CHECK",
+                "COMPLETED" if reliability.level != "FAIL" else "FAILED",
+                render_reliability_validation(
+                    reliability,
+                    evidence,
+                    query_result.dataset.quality_status,
+                    completed_question=request.rewritten_question or request.original_question,
+                ),
+                reliability_level=reliability.level,
+                reliability_score=round(float(reliability.score), 4),
+            )
         with track_operation(
             "ANALYSIS",
             "chart.specification",

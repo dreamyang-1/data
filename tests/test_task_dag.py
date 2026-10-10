@@ -2225,6 +2225,10 @@ async def test_multi_task_insight_is_combined_once_at_root() -> None:
         if event["stage"] == "INSIGHT_ANALYSIS" and event.get("is_child_task")
     ]
     assert child_insights == []
+    validations = [event for event in events if event["stage"] == "RELIABILITY_CHECK"]
+    assert len(validations) == 1 and not validations[0].get("is_child_task")
+    assert synthesizer.combined_questions[0] in validations[0]["message"]
+    assert all(result.reliability for result in response.task_results)
     root_completed = [
         event for event in events
         if event["stage"] == "INSIGHT_ANALYSIS"
@@ -2233,6 +2237,7 @@ async def test_multi_task_insight_is_combined_once_at_root() -> None:
     ]
     assert len(root_completed) == 1
     assert "整体分析结论" in root_completed[0]["message"]
+    assert events.index(validations[0]) < events.index(root_completed[0])
 
 
 @pytest.mark.asyncio
