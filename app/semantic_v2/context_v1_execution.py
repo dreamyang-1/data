@@ -33,6 +33,7 @@ from app.services.progress import emit_progress
 from app.services.orchestrator import danger_keyword_hits
 from app.observability.call_timing import track_operation
 from app.presentation import render_resolved_intent_context_v2
+from app.presentation.catalog_diagnostics import catalog_configuration_answer
 from app.stores import MessageIdReuseConflictError
 
 from .authorized_contract import (
@@ -1312,9 +1313,10 @@ class V2ContextV1ExecutionBridge:
                     chat,
                     status="SAFE_FALLBACK",
                     error_code="SEMANTIC_CATALOG_INVALID",
-                    answer=(
-                        "当前语义模型目录配置不完整，无法安全执行查询。"
-                        "请检查实体编码、字段映射，以及指标与维度的绑定后重试。"
+                    answer=catalog_configuration_answer(
+                        exc,
+                        semantic_model_id=chat.semantic_model_id,
+                        business_domain_ids=chat.business_domain_ids,
                     ),
                 )
                 return await self._finalize_turn(
