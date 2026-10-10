@@ -68,7 +68,7 @@ async def test_duplicate_ranking_note_is_omitted_but_rows_chart_and_diagnostic_s
     assert '| A |' in response.answer and '| B |' in response.answer
     assert response.chart_specs and '<svg' in response.answer
     assert any('排名对象为空或重复' in warning for warning in response.reliability.warnings)
-    assert response.answer.startswith('订单笔数最高的商品，用柱状图展示分析结果如下：')
+    assert response.answer.startswith('分析结果如下：')
 
 
 @pytest.mark.asyncio
@@ -80,7 +80,7 @@ async def test_single_final_uses_short_summary_of_completed_question_and_data():
     assert response.chart_specs[0].chart_type == 'BAR'
     assert response.chart_specs[0].y_fields == ['订单笔数']
     assert '<svg' in response.answer
-    assert response.answer.startswith('比较上海和江苏的订单笔数，用柱状图展示分析结果如下：')
+    assert response.answer.startswith('分析结果如下：')
 
 
 @pytest.mark.asyncio
@@ -88,7 +88,9 @@ async def test_metric_table_starts_with_completed_question_description():
     response = await complete('总数量是多少？',
         rewritten='2025年上海市所有医院的销售订单总数量是多少？',
         rows=[{'销售总数量': 16397267}])
-    assert response.answer.startswith('2025年上海市所有医院的销售订单总数量查询结果如下：\n\n')
+    # STALE_TEST: user requested fluent leads, not a question fragment plus suffix.
+    # Keep the completed-question/data summary and table contracts above/below.
+    assert response.answer.startswith('查询结果如下：\n\n')
     assert '| 销售总数量 |' in response.answer and '16,397,267' in response.answer
     assert response.answer.count('结果如下：') == 1
 
@@ -98,7 +100,7 @@ async def test_product_ranking_description_precedes_analysis_and_table():
     response = await complete('销售额最高的商品是什么？',
         rows=[{'商品名称': '商品甲', '销售额': 100}, {'商品名称': '商品乙', '销售额': 80}],
         intent=PrimaryIntent.COMPARISON_ANALYSIS)
-    assert response.answer.startswith('销售额最高的商品分析结果如下：\n\n')
+    assert response.answer.startswith('分析结果如下：\n\n')
     assert '商品甲' in response.answer and '商品乙' in response.answer
     assert response.answer.count('结果如下：') == 1
 
@@ -120,7 +122,7 @@ def test_root_summary_fallback_is_not_empty_template_when_model_omits_metadata()
         'presentation': {'table': '| 订单笔数 |\n| --- |\n| 35206 |'},
     }], None)
     assert '上海订单笔数为35,206。' in answer
-    assert answer.startswith('上海订单笔数查询结果如下：\n\n')
+    assert answer.startswith('查询结果如下：\n\n')
 
 
 @pytest.mark.parametrize('word', ['柱状图', '柱形图', '条形图', '折线图', '饼图',
@@ -238,7 +240,7 @@ async def test_chart_override_and_multiple_requested_types_work_for_analysis():
 @pytest.mark.asyncio
 async def test_empty_results_do_not_invent_summary_or_chart():
     response = await complete('用柱状图展示订单笔数', rows=[])
-    assert response.answer.startswith('用柱状图展示订单笔数查询结果如下：\n\n')
+    assert response.answer.startswith('查询结果如下：\n\n')
     assert response.chart_specs == []
     assert '没有' in response.answer or '0 条' in response.answer
     assert '<svg' not in response.answer
