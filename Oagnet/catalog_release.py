@@ -23,7 +23,11 @@ STAMP_FIELDS = {"catalog_version", "catalog_publish_id", "catalog_scope_fingerpr
 
 
 class CatalogEvidenceError(ValueError):
-    """Stable bounded code only; do not expose raw catalog content in errors."""
+    """Keep str(error) a stable code; optional issues contain metadata, never SQL/routes."""
+
+    def __init__(self, code, *, issues=()):
+        super().__init__(code)
+        self.issues = tuple(issues)
 
 
 def digest(value) -> str:

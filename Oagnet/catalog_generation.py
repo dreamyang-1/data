@@ -25,7 +25,12 @@ def configured_embedding_contract():
 def _code(value, key):
     result = value.get(key)
     if not isinstance(result, str) or not result.strip():
-        raise CatalogEvidenceError("CATALOG_STABLE_ID_REQUIRED")
+        context = {k: value.get(k) for k in (
+            "entity_id", "entity_name", "entity_code", "attribute_id", "attr_name", "attr_code",
+            "field_mapping", "relation_code", "relation_name", "target_entity",
+            "metric_code", "metric_name", "dim_code", "dim_name", "table_id", "table_name", "field_id", "field_name")}
+        raise CatalogEvidenceError("CATALOG_STABLE_ID_REQUIRED", issues=[
+            {**context, "key": key, "reason": "MISSING"}])
     return result
 
 
@@ -58,9 +63,9 @@ def _dsl_inventory(document):
         for attribute in entity.get("attributes") or []:
             if normalize_governed_id(attribute.get("attribute_id")) is None:
                 raise CatalogEvidenceError("CATALOG_GOVERNED_ID_REQUIRED")
-            add(f"{prefix}:attr:{code}.{_code(attribute, 'attr_code')}")
+            add(f"{prefix}:attr:{code}.{_code({**attribute, 'entity_code': code, 'entity_id': entity.get('entity_id')}, 'attr_code')}")
         for relation in entity.get("relations") or []:
-            add(f"{prefix}:relation:{code}.{_code(relation, 'relation_code')}")
+            add(f"{prefix}:relation:{code}.{_code({**relation, 'entity_code': code, 'entity_id': entity.get('entity_id')}, 'relation_code')}")
     for metric in document["metrics"]:
         add(f"{prefix}:metric:{_code(metric, 'metric_code')}")
         if metric.get("business_domain") != domain and not (domain == -1 and metric.get("business_domain") is None):

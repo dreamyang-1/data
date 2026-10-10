@@ -22,10 +22,18 @@ def _positive(value):
     return value
 
 
-def _text(value):
+def _text(value, *, row=None, key=None):
     if not isinstance(value, str) or not value.strip():
-        raise CatalogEvidenceError('CATALOG_SQL_SOURCE_METADATA_INVALID')
+        raise CatalogEvidenceError('CATALOG_SQL_SOURCE_METADATA_INVALID',
+            issues=[_issue(row, key, 'MISSING')] if row is not None else [])
     return value
+
+
+def _issue(row, key, reason):
+    # No SQL expressions, routes or credentials are included in diagnostics.
+    return {**{k: row.get(k) for k in ('entity_id', 'entity_code', 'business_domain_id',
+        'sub_table_name', 'main_join_column', 'sub_join_column', 'metric_code', 'indicator_code')},
+        'key': key, 'reason': reason}
 
 
 def capture_sql_sources(scope):
@@ -44,14 +52,16 @@ def capture_sql_sources(scope):
     entities = {}
     for row in rows:
         identifier = _id(row.get('entity_id'))
-        table = _text(row.get('main_table_name'))
+        table = _text(row.get('main_table_name'), row=row, key='main_table_name')
         code = row.get('entity_code') or table
         if not mysql._SAFE_IDENTIFIER.fullmatch(table) or not isinstance(code, str) or not code.strip():
-            raise CatalogEvidenceError('CATALOG_SQL_SOURCE_METADATA_INVALID')
+            raise CatalogEvidenceError('CATALOG_SQL_SOURCE_METADATA_INVALID',
+                issues=[_issue(row, 'main_table_name', 'INVALID')])
         value = dict(entity_id=identifier,entity_code=code,business_domain_id=_positive(row.get('business_domain_id')),
             data_source_id=_positive(row.get('data_source_id')),main_table_name=table,sub_table_mappings=[])
         if identifier in entities:
-            raise CatalogEvidenceError('CATALOG_SQL_SOURCE_ENTITY_AMBIGUOUS')
+            raise CatalogEvidenceError('CATALOG_SQL_SOURCE_ENTITY_AMBIGUOUS',
+                issues=[_issue(row, 'entity_id', 'AMBIGUOUS')])
         entities[identifier] = value
     rows = mysql._query('''SELECT s.entity_type_id,s.sub_table_name,s.main_join_column,s.sub_join_column
         FROM semantic_model_business_domain b
@@ -66,9 +76,11 @@ def capture_sql_sources(scope):
         identifier = _id(row.get('entity_type_id'))
         if identifier not in entities:
             raise CatalogEvidenceError('CATALOG_SQL_SOURCE_OWNER_MISSING')
-        value = {k:_text(row.get(k)) for k in ('sub_table_name','main_join_column','sub_join_column')}
+        context = {**row, 'entity_id': identifier, 'entity_code': entities[identifier]['entity_code']}
+        value = {k:_text(row.get(k), row=context, key=k) for k in ('sub_table_name','main_join_column','sub_join_column')}
         if value in entities[identifier]['sub_table_mappings']:
-            raise CatalogEvidenceError('CATALOG_SQL_SOURCE_SUBTABLE_AMBIGUOUS')
+            raise CatalogEvidenceError('CATALOG_SQL_SOURCE_SUBTABLE_AMBIGUOUS',
+                issues=[_issue(context, 'sub_table_name', 'AMBIGUOUS')])
         entities[identifier]['sub_table_mappings'].append(value)
     rows = mysql._query('''SELECT indicator_code,business_domain_id,dependence_atomic_indicator
         FROM semantic_model_indicator WHERE semantic_model_id=%s AND COALESCE(is_deleted,0)=0''' +
@@ -76,9 +88,10 @@ def capture_sql_sources(scope):
         ' ORDER BY business_domain_id,indicator_code', params)
     metrics = []; seen = set()
     for row in rows:
-        code = _text(row.get('indicator_code')); key = (row.get('business_domain_id'), code)
+        code = _text(row.get('indicator_code'), row=row, key='indicator_code'); key = (row.get('business_domain_id'), code)
         if key in seen:
-            raise CatalogEvidenceError('CATALOG_SQL_SOURCE_METRIC_AMBIGUOUS')
+            raise CatalogEvidenceError('CATALOG_SQL_SOURCE_METRIC_AMBIGUOUS',
+                issues=[_issue(row, 'indicator_code', 'AMBIGUOUS')])
         seen.add(key)
         raw = row.get('dependence_atomic_indicator')
         if raw in (None, ''):
@@ -87,7 +100,8 @@ def capture_sql_sources(scope):
             raw = mysql._parse_json(raw)
             dependencies = [v.strip() for v in raw.split(',') if v.strip()] if isinstance(raw, str) else raw
             if not isinstance(dependencies, list) or any(not isinstance(v, str) or not v.strip() for v in dependencies):
-                raise CatalogEvidenceError('CATALOG_SQL_SOURCE_DEPENDENCY_INVALID')
+                raise CatalogEvidenceError('CATALOG_SQL_SOURCE_DEPENDENCY_INVALID',
+                    issues=[_issue(row, 'dependence_atomic_indicator', 'INVALID')])
         metrics.append(dict(metric_code=code,business_domain_id=row.get('business_domain_id'),dependency_codes=dependencies))
     # The legacy physical endpoint projects entity base tables only. Capture
     # explicitly governed sub-table registrations privately, using the same
