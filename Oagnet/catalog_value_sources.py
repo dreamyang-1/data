@@ -62,7 +62,7 @@ def _definition_rows(scope, *, credentials=False, attribute_id=None):
     """
     import mysql_tool as mysql
     sql = """SELECT DISTINCT b.semantic_model_id, e.business_domain_id,
-        e.id AS entity_id, e.code AS entity_code,
+        e.id AS entity_id, e.code AS entity_code, e.name AS entity_name,
         a.id AS attribute_id, a.code AS attr_code, a.attr_name, a.data_type,
         a.mapping_table, a.mapping_column, a.vectorization, a.is_main_attribute,
         t.id AS table_id, f.id AS field_id, ds.id AS data_source_id,
@@ -120,17 +120,65 @@ def field_identity(row, scope):
 def capture_value_sources(scope):
     """Called inside capture_catalog's single read-only metadata transaction."""
     scope = catalog_scope(scope["semantic_model_id"], scope["business_domain_ids"])
-    fields, seen = [], set()
+    fields, seen, issues = [], set(), []
+    failure_code = None
     for row in _definition_rows(scope):
-        field = field_identity(row, scope)
+        try:
+            field = field_identity(row, scope)
+        except CatalogEvidenceError as exc:
+            failure_code = failure_code or str(exc)
+            issues.extend(_mapping_issues(row, scope))
+            continue
         key = field["business_domain_id"], field["entity_id"], field["attribute_id"]
         if key in seen:
             # Duplicated physical registrations are not first-wins authority.
-            raise CatalogEvidenceError("CATALOG_VALUE_SOURCE_MAPPING_AMBIGUOUS")
+            failure_code = failure_code or "CATALOG_VALUE_SOURCE_MAPPING_AMBIGUOUS"
+            issues.append(_mapping_issue(row, "field_mapping", "AMBIGUOUS"))
+            continue
         seen.add(key)
         fields.append(field)
+    if failure_code:
+        # Report all distinct configuration defects in this captured scope, not
+        # 59 copies of one missing entity code. No business/source query is run.
+        unique = {digest(issue): issue for issue in issues}
+        raise CatalogEvidenceError(failure_code, issues=unique.values())
     fields.sort(key=lambda f: (f["business_domain_id"], f["entity_id"], f["attribute_id"]))
     return {"contract": CONTRACT, "scope": deepcopy(scope), "fields": fields}
+
+
+def _mapping_issue(row, key, reason):
+    issue = {"key": key, "reason": reason}
+    for name in ("business_domain_id", "entity_id", "entity_name", "entity_code"):
+        issue[name] = row.get(name)
+    if key != "entity_code":
+        for name in ("attribute_id", "attr_name", "attr_code", "mapping_table", "mapping_column"):
+            issue[name] = row.get(name)
+    # Connection locators and credentials must never enter the issue contract.
+    if key in {"db_type", "host", "db_name", "port", "data_source_id"}:
+        issue["data_source_id"] = row.get("data_source_id")
+    return issue
+
+
+def _mapping_issues(row, scope):
+    if (row.get("semantic_model_id") != scope["semantic_model_id"] or
+            (scope["business_domain_ids"] and row.get("business_domain_id") not in scope["business_domain_ids"])):
+        # A bad upstream scope must not disclose the foreign object's metadata.
+        return [{"key": "scope", "reason": "OWNER_MISMATCH"}]
+    issues = []
+    for key in ("entity_code", "attr_code", "mapping_table", "mapping_column", "db_type", "host", "db_name"):
+        if not isinstance(row.get(key), str) or not row[key].strip():
+            issues.append(_mapping_issue(row, key, "MISSING"))
+    for key in ("semantic_model_id", "business_domain_id", "table_id", "field_id", "data_source_id"):
+        if type(row.get(key)) is not int or row[key] <= 0:
+            issues.append(_mapping_issue(row, key, "INVALID"))
+    for key in ("entity_id", "attribute_id"):
+        if normalize_governed_id(row.get(key)) is None:
+            issues.append(_mapping_issue(row, key, "INVALID"))
+    try:
+        _port(row.get("port"))
+    except CatalogEvidenceError:
+        issues.append(_mapping_issue(row, "port", "INVALID"))
+    return issues or [_mapping_issue(row, "field_mapping", "INVALID")]
 
 
 def bound_field(snapshot, attribute, *, data_source_id=None):
