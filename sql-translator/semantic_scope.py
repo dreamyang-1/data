@@ -11,7 +11,7 @@ import json
 import re
 import pymysql
 
-from sql_translator_prod import SemanticCatalog, MySQLDSLLoader, SQLTranslatorProd, _positive_int, _normalize_asl_compatibility
+from sql_translator_prod import SemanticCatalog, MySQLDSLLoader, SQLTranslatorProd, _positive_int, _normalize_asl_compatibility, _mapping_backed_code
 
 CONTRACT_VERSION = 'single-domain-v1'
 
@@ -208,10 +208,11 @@ class ScopedCatalog(SemanticCatalog):
     def entity_relationship_metadata(self, model_id):
         self.scope.check_model(model_id)
         graph = super().entity_relationship_metadata(model_id)
-        rows = self._query('SELECT code,data_source_id FROM semantic_model_entity_type WHERE semantic_model_id=%s', (int(model_id),))
+        rows = self._query('SELECT code,main_table_name,data_source_id FROM semantic_model_entity_type WHERE semantic_model_id=%s', (int(model_id),))
         for row in rows:
-            if row['code'] in graph:
-                graph[row['code']]['data_source_id'] = row['data_source_id']
+            code = _mapping_backed_code(row.get('code'), row.get('main_table_name'))
+            if code in graph:
+                graph[code]['data_source_id'] = row['data_source_id']
         return graph
 
 
