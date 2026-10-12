@@ -1077,6 +1077,10 @@ class CompoundQuestionJudge:
     ) -> CompoundJudgment:
         from app.domain.semantic_description import load_semantic_description
 
+        from app.services.general_rules import rule_section, without_rule_section
+        general_rules = rule_section(semantic_context)
+        semantic_context = without_rule_section(semantic_context)
+
         schema = _JudgeResult.model_json_schema()
         system_content = _JUDGE_SYSTEM_PROMPT
         # 语义规范只用于识别复合指标、业务对象这类需要按规范拆分的形态；
@@ -1097,6 +1101,7 @@ class CompoundQuestionJudge:
                 "\n业务语义规范（仅用于识别需要按规范拆分的复合指标与业务对象）：\n"
                 + semantic_context + "\n"
             )
+        system_content += general_rules
         body = {
             "model": self.settings.intent_model_name,
             "messages": [

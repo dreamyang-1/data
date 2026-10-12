@@ -131,6 +131,62 @@ class AgentPromptStore:
             "concise_instruct": "",
         }
 
+    async def resolve_general_rules(self, semantic_model_id, business_domain_ids=()):
+        """No TTL cache: an add/edit/delete/disable applies on the next turn."""
+        if type(semantic_model_id) is not int or semantic_model_id <= 0:
+            return []
+        domains = tuple(business_domain_ids)
+        if (len(set(domains)) > 1 or any(type(d) is not int or d <= 0 for d in domains)):
+            return []
+        return await asyncio.to_thread(self._lookup_general_rules, semantic_model_id, domains)
+
+    def _lookup_general_rules(self, model, domains):
+        import json
+        connection = self._connection_factory()
+        try:
+            with connection.cursor() as cursor:
+                # Membership is exact, not LIKE (domain 20 cannot match 205).
+                sql = (
+                    "SELECT r.id,r.semantic_model_id,r.business_domain_ids,r.start_status,r.description "
+                    "FROM semantic_model_general_rule r "
+                    "JOIN semantic_model m ON m.id=r.semantic_model_id AND COALESCE(m.is_deleted,0)=0 "
+                    "WHERE r.semantic_model_id=%s AND COALESCE(r.is_deleted,0)=0 AND r.start_status=1 "
+                    "AND EXISTS (SELECT 1 FROM semantic_model_business_domain b "
+                    "WHERE b.semantic_model_id=r.semantic_model_id AND COALESCE(b.is_deleted,0)=0 "
+                    "AND FIND_IN_SET(CAST(b.id AS CHAR),REPLACE(REPLACE(REPLACE("
+                    "r.business_domain_ids,'[',''),']',''),' ',''))>0"
+                )
+                params = [model]
+                if domains:
+                    sql += " AND b.id=%s"
+                    params.append(domains[0])
+                sql += ") ORDER BY r.id"
+                cursor.execute(sql, tuple(params))
+                rows = cursor.fetchall() or []
+            result = []
+            for row in rows:
+                if row.get("semantic_model_id") != model or row.get("start_status") != 1:
+                    continue
+                raw = row.get("business_domain_ids")
+                try:
+                    ids = json.loads(raw) if isinstance(raw, str) and raw.strip().startswith("[") else str(raw).split(",")
+                    if not isinstance(ids, list) or not ids:
+                        continue
+                    if any(type(i) not in (str, int) or not str(i).strip().isascii()
+                           or not str(i).strip().isdecimal() or int(i) <= 0 for i in ids):
+                        continue
+                    owners = {int(i) for i in ids}
+                except (TypeError, ValueError):
+                    continue
+                if domains and not owners.intersection(domains):
+                    continue
+                text = row.get("description")
+                if isinstance(text, str) and text.strip():
+                    result.append({"id": str(row["id"]), "description": text.strip()})
+            return result
+        finally:
+            connection.close()
+
     def _lookup_latest(
         self, code: str, semantic_model_id: int | None
     ) -> dict[str, str] | None:

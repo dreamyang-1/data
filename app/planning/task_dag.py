@@ -259,16 +259,18 @@ def extract_semantic_spec_section(agent_prompt: str) -> str:
     核心指令开头通常是角色设定，只取“业务语义规范”标题起的内容；
     没有该标题时返回空，避免把整段角色设定塞进提示词。
     """
-    text = (agent_prompt or "").strip()
+    from app.services.general_rules import rule_section, without_rule_section
+    rules = rule_section(agent_prompt or "")
+    text = without_rule_section(agent_prompt or "").strip()
     if not text:
-        return ""
+        return rules
     positions = [
         pos for marker in _SEMANTIC_SPEC_MARKERS
         if (pos := text.find(marker)) >= 0
     ]
     if not positions:
-        return ""
-    return text[min(positions):].strip()[:_SEMANTIC_SPEC_MAX_CHARS]
+        return rules
+    return text[min(positions):].strip()[:_SEMANTIC_SPEC_MAX_CHARS] + rules
 
 
 def _semantic_context_section(semantic_context: str, *, origin: str = "智能体配置") -> str:
@@ -820,6 +822,10 @@ class SingleQuestionPlanner:
     ) -> QuestionDecomposition:
         from app.domain.semantic_description import load_semantic_description
 
+        from app.services.general_rules import rule_section, without_rule_section
+        general_rules = rule_section(semantic_context)
+        semantic_context = without_rule_section(semantic_context)
+
         schema = _SinglePlan.model_json_schema()
         system_content = _SINGLE_SYSTEM_PROMPT
         # 规范只注入一次：远程按模型生成的描述文件优先，
@@ -850,6 +856,7 @@ class SingleQuestionPlanner:
                 )
         else:
             spec_for_catalog = ""
+        system_content += general_rules
         metric_catalog = _parse_metric_catalog(spec_for_catalog)
         body = {
             "model": self.settings.intent_model_name,
