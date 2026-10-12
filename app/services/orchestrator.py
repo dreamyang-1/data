@@ -4258,7 +4258,11 @@ class DataAnalysisOrchestrator:
         return await self._complete_query_result(chat, identity, request, result)
 
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
-        if getattr(self.settings, "surface_asl_execution_enabled", False) and chat._completed_question_execution:
+        if (
+            getattr(self.settings, "surface_asl_execution_enabled", False)
+            and chat._completed_question_execution
+            and not chat.dependency_constraints
+        ):
             surface_response = await self._handle_surface_query(chat, identity)
             if surface_response is not None:
                 return surface_response
@@ -6031,6 +6035,38 @@ class DataAnalysisOrchestrator:
             )
         request.rewritten_question = execution_question
         request.assumptions.append(f"EXECUTION_QUERY_SOURCE={execution_source}")
+        dag_bound_query = (
+            "DAG_BOUND_STRUCTURED_QUERY" in _INTERNAL_ASSUMPTIONS.get()
+            and chat._planner_extraction is not None
+        )
+        if dag_bound_query:
+            request.turn_admission = turn_decision
+            # Context restoration may reintroduce the predecessor's ranking
+            # shape after the child was initially classified. Re-apply the
+            # child's typed contract before diagnostics, metric recovery, or
+            # completeness checks can observe that stale shape.
+            self._apply_dag_structured_query_shape(
+                request, chat._planner_extraction
+            )
+            rules = getattr(self.classifier, "rules", self.classifier)
+            required_missing_slots = getattr(rules, "required_missing_slots", None)
+            if not callable(required_missing_slots):
+                required_missing_slots = RuleBasedIntentClassifier().required_missing_slots
+            preserved_blockers = {
+                slot for slot in request.missing_slots
+                if slot in {"semantic_ambiguity", "turn_relation"}
+            }
+            request.missing_slots = required_missing_slots(request)
+            request.missing_slots = list(dict.fromkeys([
+                *request.missing_slots,
+                *preserved_blockers,
+                *(
+                    ["semantic_ambiguity"]
+                    if any(item.blocking for item in request.semantic_ambiguities)
+                    else []
+                ),
+            ]))
+            canonical_question = request.rewritten_question or canonical_question
         turn_decision.context_after = self.turn_admission_gate.context_snapshot(request)
         turn_decision.context_conflicts = (
             self.turn_admission_gate.validate_context_consistency(
@@ -9395,6 +9431,14 @@ class DataAnalysisOrchestrator:
         structured = extraction.structured
         if not structured:
             return
+        current_facts = (
+            request.turn_admission.current_turn_facts
+            if request.turn_admission is not None else None
+        )
+        if current_facts is not None and current_facts.raw_query.strip():
+            # The root question is retained by the DAG report context; this
+            # child request uses its own text for validation and retrieval.
+            request.original_question = current_facts.raw_query
         if extraction.intent is not None:
             request.primary_intent = extraction.intent
         request.metrics = [MetricRef(input=str(item.get("name") or ""))
@@ -9407,7 +9451,27 @@ class DataAnalysisOrchestrator:
         owners = list(dict.fromkeys(str(item["entity"]) for item in structured.get("展示字段") or []
                                    if isinstance(item, dict) and item.get("entity")))
         entities = structured.get("实体") or []
-        request.entity = owners[0] if owners else str(entities[0]) if entities else request.entity
+        explicit_object = (
+            current_facts.explicit_slots.get("query_object")
+            if current_facts is not None else None
+        )
+        explicit_object_source = getattr(
+            getattr(explicit_object, "source", None), "value",
+            getattr(explicit_object, "source", None),
+        )
+        if (
+            explicit_object is not None
+            and explicit_object_source == "CURRENT_EXPLICIT"
+            and isinstance(explicit_object.value, str)
+            and explicit_object.value.strip()
+        ):
+            # Query object and projected-field owner are different slots.
+            request.entity = explicit_object.value.strip()
+        else:
+            request.entity = (
+                owners[0] if owners else str(entities[0]) if entities
+                else request.entity
+            )
         request.filters = []
         for item in structured.get("过滤条件") or []:
             op = str(item.get("op") or item.get("operator") or "=").upper()
@@ -9423,8 +9487,24 @@ class DataAnalysisOrchestrator:
             request.operators = [AnalysisOperator.SORT]
             direction = str(structured["排序"][0].get("order") or "desc").upper()
             request.assumptions.append("SORT_DIRECTION=" + direction)
+        time_spec = structured.get("\u65f6\u95f4\u7c92\u5ea6") or {}
+        extracted_period = (
+            time_spec.get("time_range")
+            if isinstance(time_spec, dict) else None
+        )
+        if extracted_period:
+            try:
+                parsed_period = RuleBasedIntentClassifier._time_range(
+                    str(extracted_period), whole_expression=True
+                )
+            except (TypeError, ValueError):
+                parsed_period = None
+            if parsed_period is not None:
+                request.time_range = parsed_period
         request.asl_template = None
         request.source_dataset_id = None
+        # Ensure semantic/ASL receives this child's shape, not parent wording.
+        request.rewritten_question = render_execution_question(request)
 
     @staticmethod
     def _apply_explicit_projection_mode(
