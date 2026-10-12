@@ -53,6 +53,23 @@ _DEFAULT_EXTRACT_PAYLOAD = (
 )
 
 
+@pytest.mark.parametrize(("raw", "expected"), [
+    ("是", "是"),
+    ("否（基于前序任务结果计算）", "否"),
+    (False, "否"),
+    ("不确定", None),
+])
+def test_extraction_normalizes_database_query_route(raw, expected):
+    from app.planning.task_dag import SingleQuestionPlanner, extraction_parser_prompt
+
+    result = SingleQuestionPlanner._sanitize_extraction(
+        {"是否查询数据库": raw}, intent=PrimaryIntent.METRIC_QUERY
+    )
+
+    assert result["是否查询数据库"] == expected
+    assert "是否查询数据库" in extraction_parser_prompt()
+
+
 def _split_handler(
     judge_payload: str,
     extract_payload: "str | dict[str, str] | None" = None,

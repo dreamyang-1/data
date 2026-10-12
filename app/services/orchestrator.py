@@ -1047,6 +1047,15 @@ class DataAnalysisOrchestrator:
                         )
                         if confirmed_extraction is not None:
                             chat._planner_extraction = confirmed_extraction
+                            if (
+                                confirmed_extraction.structured is not None
+                                and self._structured_database_query_choice(
+                                    confirmed_extraction
+                                ) is None
+                            ):
+                                confirmed_extraction.structured[
+                                    "是否查询数据库"
+                                ] = "是"
             independent_chat = (
                 raw_request.primary_intent == PrimaryIntent.CHAT
                 and confirmed_pending_choice is None
@@ -1164,12 +1173,29 @@ class DataAnalysisOrchestrator:
                                     else 1,
                                 )
                             plan = outcome.plan
+                            if plan is not None:
+                                for planned_task in plan.tasks:
+                                    if planned_task.extraction is None:
+                                        continue
+                                    self._ensure_database_query_choice(
+                                        planned_task.extraction,
+                                        question=planned_task.question,
+                                    )
                             # 规划护栏可能改写桥内暂存的判断结论（如顶替拦截
                             # 整拆分作废转单一），以规划后的最终结论为准
                             if outcome.judgment is not None:
                                 chat._compound_judgment = outcome.judgment
                             if plan is None and outcome.single_extraction is not None:
                                 chat._planner_extraction = outcome.single_extraction
+                                if (
+                                    outcome.single_extraction.structured is not None
+                                    and self._structured_database_query_choice(
+                                        outcome.single_extraction
+                                    ) is None
+                                ):
+                                    outcome.single_extraction.structured[
+                                        "是否查询数据库"
+                                    ] = "是"
                         except TaskPlanningError as exc:
                             logger.warning("multi-question plan rejected: %s", exc)
                     # 拆分模型判成闲聊/超范围的单任务不亮规划节点，
@@ -6287,13 +6313,29 @@ class DataAnalysisOrchestrator:
             response.analysis_process = self._build_analysis_process(request, response)
             return response
 
+        database_query_choice = self._structured_database_query_choice(
+            chat._planner_extraction
+        )
+        structured_reuse_only = (
+            request.primary_intent not in (NO_DATA_INTENTS | METADATA_INTENTS)
+            and database_query_choice is False
+        )
+        if request.primary_intent not in (NO_DATA_INTENTS | METADATA_INTENTS):
+            if structured_reuse_only:
+                request.execution_mode = "REUSE_PREVIOUS_RESULT"
+                request.assumptions.append("STRUCTURED_NO_DATABASE_QUERY")
+            elif database_query_choice is True:
+                request.execution_mode = "QUERY_DATABASE"
+                request.query_resolution_type = "DIRECT_DATA_QUERY"
+
         # A local dataset follow-up (for example “刚才销售额前1名”) does not
         # need a new time range or group dimension. Try the whitelisted MinIO
         # operation before applying fresh-query completeness requirements.
         query_result: DataQueryResult | None = None
         dataset_id: str | None = None
         if (
-            request.conversation_control == ConversationControl.FOLLOW_UP
+            structured_reuse_only
+            or request.conversation_control == ConversationControl.FOLLOW_UP
             or request.source_dataset_id is not None
             or is_dataset_operation_followup(request.original_question)
         ):
@@ -6310,6 +6352,14 @@ class DataAnalysisOrchestrator:
                 return await self._finish_terminal(
                     request,
                     self._fallback(request, str(exc)),
+                )
+            if structured_reuse_only and (query_result is None or dataset_id is None):
+                return await self._finish_terminal(
+                    request,
+                    self._fallback(
+                        request,
+                        "本轮结构化参数要求使用已有查询结果，不重新查询数据库；但当前会话没有可安全复用的完整结果，因此本次未执行新查询。请先完成原始查询，或在结构化参数中明确要求查询数据库。",
+                    ),
                 )
 
         derived_comparison = (
@@ -8581,10 +8631,46 @@ class DataAnalysisOrchestrator:
         return next((dict(item) for item in ancestors if item['row_count'] >= target_count),
                     dict(ancestors[-1]) if ancestors else None)
 
+    @staticmethod
+    def _structured_database_query_choice(
+        extraction: PlannerExtraction | dict[str, Any] | None,
+    ) -> bool | None:
+        """Read only an explicit, normalized database-routing value from extraction."""
+        if isinstance(extraction, dict):
+            structured = extraction
+        else:
+            structured = getattr(extraction, "structured", None)
+        if not isinstance(structured, dict):
+            return None
+        value = structured.get("是否查询数据库")
+        if isinstance(value, bool):
+            return value
+        if not isinstance(value, str):
+            return None
+        normalized = re.sub(r"\s+", "", value).casefold()
+        if normalized in {"是", "yes", "true"} or re.match(r"^是[（(]", normalized):
+            return True
+        if normalized in {"否", "no", "false"} or re.match(r"^否[（(]", normalized):
+            return False
+        return None
+
+    @classmethod
+    def _ensure_database_query_choice(
+        cls, extraction: dict[str, Any], *, question: str
+    ) -> None:
+        """Fill only missing/invalid legacy route flags; preserve explicit choices."""
+        if cls._structured_database_query_choice(extraction) is not None:
+            return
+        # A deterministic textual fallback keeps old DAG payloads compatible.
+        # Dependency alone does not determine the route: some dependent tasks
+        # are calculations over prior rows, others need a fresh related query.
+        extraction["是否查询数据库"] = "否" if "不再查询数据库" in question else "是"
+
     async def _try_dataset_followup(
         self, request: CanonicalAnalysisRequest
     ) -> tuple[DataQueryResult | None, str | None]:
-        if request.query_resolution_type in {
+        reuse_only = "STRUCTURED_NO_DATABASE_QUERY" in request.assumptions
+        if not reuse_only and request.query_resolution_type in {
             "FOLLOWUP_ANALYSIS",
             "DIRECT_DATA_QUERY",
         }:
@@ -8596,6 +8682,10 @@ class DataAnalysisOrchestrator:
             request.execution_mode = "QUERY_DATABASE"
             return None, None
         if self.dataset_store is None:
+            if reuse_only:
+                raise ExplicitDatasetUnavailableError(
+                    "本轮要求只使用上一轮查询结果，但当前没有可用的结果数据集；未重新查询数据库。"
+                )
             if request.source_dataset_id is not None:
                 raise ExplicitDatasetUnavailableError(
                     "指定的数据集当前不可用，请重新选择文件或重新执行原始查询。"
@@ -8605,6 +8695,7 @@ class DataAnalysisOrchestrator:
             request.conversation_control != ConversationControl.FOLLOW_UP
             and request.source_dataset_id is None
             and not is_dataset_operation_followup(request.original_question)
+            and not reuse_only
         ):
             return None, None
         if (
@@ -8616,6 +8707,10 @@ class DataAnalysisOrchestrator:
             # are not valid substitutes for pronouns such as “刚才结果” or
             # “展示前20条”.  Skip historical dataset reuse so the inherited
             # semantic request is executed again with the new limit/filter.
+            if reuse_only:
+                raise ExplicitDatasetUnavailableError(
+                    "上一轮查询结果未保存为可复用数据集；本轮按结构化参数未重新查询数据库。"
+                )
             return None, None
         references = await self.sessions.get_recent_dataset_references(
             request.tenant_id,
@@ -8625,6 +8720,10 @@ class DataAnalysisOrchestrator:
             limit=self.settings.dataset_recent_limit,
         )
         if not references:
+            if reuse_only:
+                raise ExplicitDatasetUnavailableError(
+                    "当前会话没有可复用的上一轮查询结果；本轮未重新查询数据库。"
+                )
             if request.source_dataset_id is not None:
                 raise ExplicitDatasetUnavailableError(
                     "指定的数据集不存在、已过期或不属于当前会话，请重新选择。"
@@ -8651,12 +8750,20 @@ class DataAnalysisOrchestrator:
             )
             if selected is None:
                 logger.warning("requested dataset is not available in the current scope")
+                if reuse_only:
+                    raise ExplicitDatasetUnavailableError(
+                        "没有找到当前授权范围内可复用的上一轮结果；本轮未重新查询数据库。"
+                    )
                 if request.source_dataset_id is not None:
                     raise ExplicitDatasetUnavailableError(
                         "指定的数据集不存在、已过期或不属于当前会话，请重新选择。"
                     )
                 return None, None
             if not self._dataset_reference_matches_scope(selected, request):
+                if reuse_only:
+                    raise ExplicitDatasetUnavailableError(
+                        "上一轮结果与本轮授权范围不匹配，不能安全复用；本轮未重新查询数据库。"
+                    )
                 if request.source_dataset_id:
                     raise ExplicitDatasetUnavailableError('DATASET_SCOPE_MISMATCH: 指定数据集不属于本轮授权范围。')
                 return None, None
@@ -8713,6 +8820,10 @@ class DataAnalysisOrchestrator:
                     except Exception:
                         # Automatic recovery is optional; an expired/unreadable
                         # ancestor cannot turn a partial view into global evidence.
+                        if reuse_only:
+                            raise ExplicitDatasetUnavailableError(
+                                "上一轮完整结果无法安全读取；本轮未重新查询数据库。"
+                            )
                         request.source_dataset_id = None
                         request.execution_mode = 'QUERY_DATABASE'
                         return None, None
@@ -8731,6 +8842,10 @@ class DataAnalysisOrchestrator:
                     )
             if operation is None:
                 if not source_complete:
+                    if reuse_only:
+                        raise ExplicitDatasetUnavailableError(
+                            "上一轮结果不完整，无法据此可靠回答；本轮未重新查询数据库。"
+                        )
                     if 'EXPLICIT_SOURCE_DATASET_SELECTION' in request.assumptions:
                         raise ExplicitDatasetUnavailableError('当前数据集不完整，无法据此计算全局排名或汇总。需要完整数据集。')
                     request.source_dataset_id = None
@@ -8752,6 +8867,7 @@ class DataAnalysisOrchestrator:
                     not explicit_dataset_selection
                     and request.primary_intent != PrimaryIntent.REPORT_GENERATION
                     and request.resolved_comparison is None
+                    and not reuse_only
                 ):
                     # An automatically inherited result is an optimization,
                     # never the authority for a semantically changed request.
@@ -8768,6 +8884,7 @@ class DataAnalysisOrchestrator:
                 if (
                     request.source_dataset_id is None
                     and request.primary_intent != PrimaryIntent.REPORT_GENERATION
+                    and not reuse_only
                 ):
                     return None, None
                 visible_columns = [
@@ -8874,6 +8991,11 @@ class DataAnalysisOrchestrator:
         except ExplicitDatasetUnavailableError:
             raise
         except Exception as exc:
+            if reuse_only:
+                logger.warning("required previous-result reuse failed closed: %s", exc)
+                raise ExplicitDatasetUnavailableError(
+                    "上一轮结果无法安全读取或计算；本轮按结构化参数未重新查询数据库。"
+                ) from exc
             if request.source_dataset_id is not None:
                 logger.warning("explicit dataset follow-up failed closed: %s", exc)
                 raise ExplicitDatasetUnavailableError(

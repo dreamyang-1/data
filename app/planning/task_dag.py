@@ -160,6 +160,20 @@ def _clean_extraction_text(value: Any) -> str:
     return text[:_EXTRACTION_TEXT_MAX]
 
 
+def _normalize_database_query_flag(value: Any) -> str | None:
+    """Normalize the extraction's database-routing choice to a strict yes/no."""
+    if isinstance(value, bool):
+        return "是" if value else "否"
+    if not isinstance(value, str):
+        return None
+    text = re.sub(r"\s+", "", value).casefold()
+    if text in {"是", "yes", "true"} or re.match(r"^是[（(]", text):
+        return "是"
+    if text in {"否", "no", "false"} or re.match(r"^否[（(]", text):
+        return "否"
+    return None
+
+
 def _strip_json_fences(text: str) -> str:
     """剥离模型输出外层的 markdown 代码围栏。"""
     stripped = text.strip()
@@ -435,7 +449,7 @@ class TaskPlanningError(RuntimeError):
 
 _EXTRACTION_SCHEMA_DESCRIPTION = (
     "结构化提取JSON，严格按系统提示词中的结构化提取规范输出，"
-    "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重；"
+    "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重/是否查询数据库；"
     "意图取值限定为 统计查询、趋势分析、对比分析、占比分析、排名分析、明细查询 之一。"
     "数据查询任务的指标名只能输出注入规范指标层级表中登记的原名"
     "（用户说法是同义词或派生口径时归一为登记原名，派生口径写入“输出要求”），不得自造指标名；"
@@ -504,7 +518,7 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 2. 指标说法与规范指标层级比对后分两种情况：说法由规范内指标派生（对规范内指标求增长率、均值、占比、排名、最高最低等派生口径），按正常任务意图处理并完整提取参数，extraction的指标名输出派生来源的规范指标登记原名（按规范中各指标的登记名、同义词和业务语义选择最贴合的一个，不得自造指标名），派生口径（如"按环比增长率降序取排名"）写入"输出要求"键；说法与规范内任何指标都无关、也无法由规范内指标派生时，才按指标口径解释处理：任务意图输出METRIC_DEFINITION，参数仍照常完整提取，指标名保留用户原文，不得用语义相近的指标替代，也不得自行编造计算口径。判断是否"无法派生"按业务语义判断，不要求字面上包含指标名：围绕规范内实体或业务对象的度量（数量、金额、快慢、高低、升降、排名）提出的说法，都可由该业务对象在规范内的指标派生，按正常任务意图处理；只有规范中连对应业务对象的度量都不存在的纯概念词，才按指标口径解释处理。
 3. 任务问题含"不再查询数据库"时，这是基于前序任务结果的计算/筛选任务，不是闲聊：该任务照常输出extraction，指标取被计算的指标名（保留原文叫法），"意图"键固定输出"指标计算"，过滤条件、时间粒度、维度按任务问题文本提取，识别不到的键置[]或null。
 
-数据查询问题的extraction字段：按本提示词末尾的"结构化提取规范"产出结构化提取JSON（固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求），只提取用户原文和注入的业务语义规范中出现的内容，识别不到的键按规范置[]或null。数据查询问题的指标名只输出规范指标层级表中的登记原名（用户说法是同义词或派生口径时归一为登记原名，派生口径写入"输出要求"），不得自造指标名。排序的field同样只输出规范登记的指标名或维度名：增长率、占比、排名等派生口径不作为排序字段，按哪个指标排就把该指标的登记原名放进field，派生口径写入"输出要求"。指标口径解释问题（METRIC_DEFINITION）的extraction按规范完整提取参数并保留用户原文指标名，"意图"键固定输出"解释口径"。
+数据查询问题的extraction字段：按本提示词末尾的"结构化提取规范"产出结构化提取JSON（固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重/是否查询数据库），只提取用户原文和注入的业务语义规范中出现的内容，识别不到的键按规范置[]或null。数据查询问题的指标名只输出规范指标层级表中的登记原名（用户说法是同义词或派生口径时归一为登记原名，派生口径写入"输出要求"），不得自造指标名。排序的field同样只输出规范登记的指标名或维度名：增长率、占比、排名等派生口径不作为排序字段，按哪个指标排就把该指标的登记原名放进field，派生口径写入"输出要求"。指标口径解释问题（METRIC_DEFINITION）的extraction按规范完整提取参数并保留用户原文指标名，"意图"键固定输出"解释口径"。
 
 任务意图枚举：
 """ + _INTENT_PROMPT_OPTIONS + """
@@ -915,4 +929,7 @@ class SingleQuestionPlanner:
         )
         dedup = _clean_extraction_text(value.get("是否去重") or "")
         structured["是否去重"] = dedup if dedup in ("是", "否") else None
+        structured["是否查询数据库"] = _normalize_database_query_flag(
+            value.get("是否查询数据库")
+        )
         return structured
