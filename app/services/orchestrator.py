@@ -32,6 +32,7 @@ from app.analysis import (
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
 from app.analysis.visualization import render_chart_svg, requested_chart_specs
 from app.services.chat_responder import QwenChatResponder
+from app.services.general_rules import attach_general_rules
 from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
@@ -497,7 +498,7 @@ class DataAnalysisOrchestrator:
         """Attach the latest platform user prompt to one request snapshot."""
 
         if chat.prompt is not None:
-            return chat
+            return await attach_general_rules(chat, getattr(self, "agent_prompt_store", None))
         store = getattr(self, "agent_prompt_store", None)
         if store is None:
             return chat
@@ -510,13 +511,10 @@ class DataAnalysisOrchestrator:
             logger.warning(
                 "agent prompt lookup failed before model nodes: %s", exc
             )
-            return chat
-        if not latest:
-            return chat
-        return chat.model_copy(
-            deep=True,
-            update={"prompt": AgentPromptConfig(**latest)},
-        )
+            return await attach_general_rules(chat, store)
+        if latest:
+            chat = chat.model_copy(deep=True, update={"prompt": AgentPromptConfig(**latest)})
+        return await attach_general_rules(chat, store)
 
     async def _record_turn_lifecycle_events(
         self,

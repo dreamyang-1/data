@@ -30,6 +30,7 @@ from app.domain.models import (
     TrustedIdentity,
 )
 from app.services.progress import emit_progress
+from app.services.general_rules import attach_general_rules
 from app.services.orchestrator import danger_keyword_hits
 from app.observability.call_timing import track_operation
 from app.planning import (
@@ -1088,6 +1089,7 @@ class V2ContextV1ExecutionBridge:
                     deep=True,
                     update={"prompt": AgentPromptConfig(**latest)},
                 )
+        chat = await attach_general_rules(chat, self.agent_prompt_store)
         lock_key = self.store.key(chat, identity)
         lock = self._locks.setdefault(lock_key, asyncio.Lock())
         async with lock:
