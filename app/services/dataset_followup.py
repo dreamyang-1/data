@@ -72,6 +72,10 @@ def plan_dataset_followup(
     the wrong historical snapshot.
     """
     compact = re.sub(r"\s+", "", question)
+    compact = re.sub(
+        r"^(?:根据|基于)(?:上述|前序|之前|刚才|已有|上轮|上一轮)(?:任务的)?(?:查询)?结果[，,、:：]*",
+        "", compact,
+    )
     # Explicit display limits preserve row order even for numeric datasets.
     display = re.fullmatch(r"(?:只看|只显示|只展示|只返回|只保留|显示|展示|返回)前(\d{1,5}|[一二三四五六七八九十]{1,3})条[。？！?!]?", compact)
     if display:

@@ -808,6 +808,8 @@ async def chat_stream(
         titled_think_sections: set[str] = set()
         composite_mode = False
         off_topic_flag = False
+        dialogue_state_label = ""
+        planning_data_verdict = ""
         composite_child_orderer = _CompositeChildProgressOrderer()
         latest_progress_stage = "INTENT_RECOGNITION"
         settings = request.app.state.container.settings
@@ -868,12 +870,50 @@ async def chat_stream(
             last_visible_at = now
             return heartbeat_events
 
+        def _with_planning_verdict(
+            planning_event: dict[str, Any],
+        ) -> dict[str, Any]:
+            # 追问的数据来源结论替换规划完成消息的判定首行（识别模型的
+            # 初判或"拆分判断完成"），让结论与任务、参数出现在同一个规划块里
+            if not planning_data_verdict:
+                return planning_event
+            message = str(planning_event.get("message") or "")
+            tail = None
+            for prefix in ("拆分判断完成。", "追问判断完成："):
+                if message.startswith(prefix):
+                    remainder = message[len(prefix):]
+                    pieces = remainder.split("\n", 1)
+                    # 整个判定首行（含识别模型的初判结论体）都让位给执行层
+                    # 结论：两者不一致时以实际执行为准，只保留一行判定话术
+                    tail = pieces[1] if len(pieces) > 1 else ""
+                    break
+            if tail is None:
+                return planning_event
+            rest = tail.lstrip("\n")
+            if "不再发起新查询" in planning_data_verdict:
+                # 快照复用成立时，规划阶段注入的"是否查询数据库：是"
+                # 已被实际路由推翻，展示的参数提取同步纠正
+                rest = rest.replace(
+                    '"是否查询数据库": "是"',
+                    '"是否查询数据库": "否（基于上一轮查询结果数据集直接分析）"',
+                )
+            merged = dict(planning_event)
+            merged["message"] = (
+                planning_data_verdict + "\n" + rest
+            ).rstrip() if rest else planning_data_verdict
+            return merged
+
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
             nonlocal question_completion_displayed
             nonlocal planning_released, presentation_scenario, composite_mode
             nonlocal latest_progress_stage, off_topic_flag
+            nonlocal dialogue_state_label, planning_data_verdict
             stage = str(event.get("stage") or "").upper()
+            message_text = str(event.get("message") or "")
+            if message_text.startswith("对话状态识别："):
+                # 最近的对话状态结论，规划 RUNNING 按追问/新问题区分话术
+                dialogue_state_label = message_text
             if bool(event.get("off_topic")):
                 # 语义识别判成业务无关的问题，规划节点对这轮不再点亮
                 off_topic_flag = True
@@ -922,9 +962,19 @@ async def chat_stream(
                     {
                         "stage": "TASK_PLANNING",
                         "status": "RUNNING",
-                        "message": "正在进行任务拆分、任务意图分析与参数提取。",
+                        "message": (
+                            "本轮为追问，正在判断是基于上一轮查询结果直接分析，"
+                            "还是需要新数据查询，并进行任务拆分与参数提取。"
+                            if "追问" in dialogue_state_label
+                            else "正在进行任务拆分、任务意图分析与参数提取。"
+                        ),
                     },
                 ]
+            if stage == "TASK_PLANNING" and event.get("data_source_verdict"):
+                # 执行层的追问数据来源结论：不单独成行，释放规划块时
+                # 替换"拆分判断完成"首行
+                planning_data_verdict = message_text
+                return []
             if stage == "TASK_PLANNING" and not planning_released:
                 # The document format presents one stable planning block. Keep
                 # the latest completed planner message and release it only once
@@ -957,7 +1007,13 @@ async def chat_stream(
                 ).upper()
                 if bool(event.get("is_composite")):
                     composite_mode = True
-                    ordered = [event, *deferred_planning]
+                    ordered = [
+                        event,
+                        *(
+                            _with_planning_verdict(item)
+                            for item in deferred_planning
+                        ),
+                    ]
                     deferred_planning.clear()
                     planning_released = True
                     return ordered
@@ -1014,16 +1070,22 @@ async def chat_stream(
                         # Keep the same task / intent / domain / parameters
                         # layout when asking for missing input. Only replace
                         # the decision line; no executable plan is promised.
+                        base = _with_planning_verdict(deferred_planning[-1])
                         _, _, task_details = str(
-                            planning.get("message") or ""
+                            base.get("message") or ""
                         ).partition("\n")
-                        planning["message"] = (
-                            "当前任务参数不完整，暂停子任务拆分。\n"
-                            + task_details
-                        ).rstrip()
+                        decision_parts = ["当前任务参数不完整，暂停子任务拆分。"]
+                        if planning_data_verdict:
+                            # 追问结论保留在判定行，参数不完整紧随其后
+                            decision_parts.insert(0, planning_data_verdict)
+                        if task_details:
+                            decision_parts.append(task_details)
+                        planning["message"] = "\n".join(decision_parts).rstrip()
                         ordered.append(planning)
                     else:
-                        ordered.append(deferred_planning[-1])
+                        ordered.append(
+                            _with_planning_verdict(deferred_planning[-1])
+                        )
                     deferred_planning.clear()
                     planning_released = True
                 # Completeness is expressed inside the document-defined intent
@@ -1034,7 +1096,7 @@ async def chat_stream(
                 # adapters emit ASL/SQL milestones before DATA_RETRIEVAL; release
                 # the completed planning block before the first such milestone
                 # instead of appending planning after tool output.
-                ordered = [deferred_planning[-1], event]
+                ordered = [_with_planning_verdict(deferred_planning[-1]), event]
                 deferred_planning.clear()
                 planning_released = True
                 return ordered

@@ -19,7 +19,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import Settings
-from app.domain.models import AtomicTask, TaskPlan
+from app.domain.models import AtomicTask, QuestionTaskGroup, TaskPlan
 from app.observability.langfuse_client import trace_generation
 from app.planning.calculation_targets import declared_calculation_targets
 from app.planning.task_dag import (
@@ -28,7 +28,9 @@ from app.planning.task_dag import (
     QuestionDecomposition,
     SingleQuestionPlanner,
     TaskPlanningError,
+    _normalize_metric_name,
     _strip_json_fences,
+    database_query_choice,
 )
 
 
@@ -451,13 +453,13 @@ def query_fingerprint(question: str) -> str:
 
 def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
     """合并完全相同的原子查询，被合并任务保留别名供最终输出引用。"""
-    canonical_by_key: dict[tuple[str, tuple[str, ...]], str] = {}
+    canonical_by_key: dict[tuple[str, tuple[str, ...], bool | None], str] = {}
     aliases: dict[str, str] = {}
     unique: list[AtomicTask] = []
     resolved: dict[str, str] = {}
     for task in plan.tasks:
         dependencies = tuple(dict.fromkeys(resolved.get(dep, dep) for dep in task.depends_on))
-        key = (query_fingerprint(task.question), dependencies)
+        key = (query_fingerprint(task.question), dependencies, database_query_choice(task.extraction))
         existing = canonical_by_key.get(key)
         if existing is not None:
             aliases[task.task_id] = existing
@@ -857,6 +859,14 @@ def _plan_from_judgment(judgment: CompoundJudgment) -> TaskPlan:
         shared_conditions=list(dict.fromkeys(judgment.shared_conditions)),
         analyze_summary=judgment.analyze_summary,
         final_deliverable=judgment.final_deliverable,
+        question_groups=[
+            QuestionTaskGroup(
+                question=entry.question.strip(),
+                task_offset=index,
+                task_count=1,
+            )
+            for index, entry in enumerate(judgment.entries)
+        ],
     )
 
 
@@ -1196,6 +1206,7 @@ class CompoundTaskPlanner:
             for entry in judgment.entries
         ))
         tasks: list[AtomicTask] = []
+        question_groups: list[QuestionTaskGroup] = []
         for entry, decomposition in zip(judgment.entries, decompositions):
             offset = len(tasks)
             entry_tasks = decomposition.tasks
@@ -1230,6 +1241,11 @@ class CompoundTaskPlanner:
                     extraction=task.structured,
                     primary_intent=task.intent or decomposition.intent,
                 ))
+            question_groups.append(QuestionTaskGroup(
+                question=entry.question.strip(),
+                task_offset=offset,
+                task_count=len(entry_tasks),
+            ))
         plan = TaskPlan(
             tasks=tasks,
             planner=(
@@ -1241,6 +1257,7 @@ class CompoundTaskPlanner:
             shared_conditions=list(dict.fromkeys(judgment.shared_conditions)),
             analyze_summary=judgment.analyze_summary,
             final_deliverable=judgment.final_deliverable,
+            question_groups=question_groups,
         )
         validate_plan(plan, source_question=source_question)
         self._reject_metric_substitution(plan, source_question)
@@ -1288,7 +1305,7 @@ def _question_annotation(intent: str | None, business_domain: str | None) -> str
         parts.append(f"业务域：{business_domain}")
     if not parts:
         return ""
-    return "（" + "；".join(parts) + "）"
+    return "，" + "，".join(parts)
 
 
 def judgment_display_section(judgment: CompoundJudgment | None) -> str:
@@ -1443,6 +1460,38 @@ class CompoundQuestionRouter:
             tasks=tasks,
             planner="STRUCTURED_MODEL",
             split_reason_code="TASK_DECOMPOSITION",
+            compound_metrics=self._compound_metrics_in_split(decomposition),
         )
         validate_plan(plan, source_question=question)
         return CompoundRouteResult(judgment=judgment, plan=plan)
+
+    @staticmethod
+    def _compound_metrics_in_split(
+        decomposition: QuestionDecomposition,
+    ) -> list[str]:
+        """拆分结果里出现的复合指标名：指标命中规范依赖指标映射时登记。
+
+        计算任务的指标名保留用户原文叫法，归一到登记名后再比对；
+        结果去重并保持首次出现顺序。
+        """
+        dependencies = decomposition.metric_dependencies
+        catalog = decomposition.metric_catalog
+        if not dependencies or catalog is None:
+            return []
+        registered, aliases = catalog
+        compound: list[str] = []
+        for task in decomposition.tasks:
+            structured = task.structured
+            if not isinstance(structured, dict):
+                continue
+            metrics = structured.get("指标")
+            if not isinstance(metrics, list):
+                continue
+            for item in metrics:
+                name = item.get("name") if isinstance(item, dict) else item
+                if not isinstance(name, str) or not name.strip():
+                    continue
+                normalized = _normalize_metric_name(name.strip(), registered, aliases)
+                if normalized in dependencies and normalized not in compound:
+                    compound.append(normalized)
+        return compound

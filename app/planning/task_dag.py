@@ -4,12 +4,13 @@
 - 本模块只处理“一个可独立验收的业务目标”：意图识别、参数提取、
   指标名归一与带反馈重试；
 - “是否拆分、拆成什么子问题”的前置判断与多任务规划在
-  compound_question.py，两个链路互不调用对方的判断逻辑；
+  compound_question.py
 - 本模块同时承载两条链路共用的基础件：提取规范加载、extraction 清洗、
   指标目录解析、语义规范注入。
 """
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from functools import lru_cache
@@ -22,6 +23,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.config import Settings
 from app.observability.langfuse_client import trace_generation
 from app.domain.models import PlannerExtraction, PrimaryIntent
+
+logger = logging.getLogger(__name__)
 
 
 # 不查业务库的闲聊类意图：参数提取强制为空，与编排器展示守卫保持一致；
@@ -160,17 +163,19 @@ def _clean_extraction_text(value: Any) -> str:
     return text[:_EXTRACTION_TEXT_MAX]
 
 
-def _normalize_database_query_flag(value: Any) -> str | None:
-    """Normalize the extraction's database-routing choice to a strict yes/no."""
+def database_query_choice(extraction: dict[str, Any] | None) -> bool | None:
+    if not isinstance(extraction, dict):
+        return None
+    value = extraction.get("是否查询数据库")
     if isinstance(value, bool):
-        return "是" if value else "否"
+        return value
     if not isinstance(value, str):
         return None
-    text = re.sub(r"\s+", "", value).casefold()
-    if text in {"是", "yes", "true"} or re.match(r"^是[（(]", text):
-        return "是"
-    if text in {"否", "no", "false"} or re.match(r"^否[（(]", text):
-        return "否"
+    normalized = re.sub(r"\s+", "", value).casefold()
+    if normalized in {"是", "yes", "true"} or normalized.startswith(("是（", "是(")):
+        return True
+    if normalized in {"否", "no", "false"} or normalized.startswith(("否（", "否(")):
+        return False
     return None
 
 
@@ -329,6 +334,8 @@ class QuestionDecomposition:
     intent: PrimaryIntent | None = None
     tasks: tuple[DecomposedTask, ...] = ()
     metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None
+    # 规范指标表里依赖指标列非空的复合指标：登记名 -> 成分指标
+    metric_dependencies: dict[str, tuple[str, ...]] | None = None
 
 
 # 指标目录解析要识别的表头词：命中其一视为表头行，防止把下一张表的表头当指标
@@ -379,6 +386,44 @@ def _parse_metric_catalog(spec_text: str) -> tuple[frozenset[str], dict[str, str
             for alias in _split_aliases(cells[0]):
                 aliases.setdefault(alias, cells[1])
     return frozenset(registered), aliases
+
+
+def _parse_metric_dependencies(spec_text: str) -> dict[str, tuple[str, ...]]:
+    """从注入规范的指标表解析依赖指标列：复合口径指标登记名 -> 成分指标元组。
+
+    只认表头同时含"指标"与"依赖指标"的表；成分按逗号分隔，
+    "无"/空等占位不算成分。指标表没有依赖指标列时返回空映射。
+    """
+    dependencies: dict[str, tuple[str, ...]] = {}
+    in_metric_table = False
+    dep_index = -1
+    for raw_line in spec_text.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("|"):
+            in_metric_table = False
+            dep_index = -1
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 2 or set("".join(cells)) <= {"-", ":", " "}:
+            continue
+        if cells[0] in _TABLE_HEADER_WORDS:
+            in_metric_table = (
+                cells[0] in {"指标", "指标名称"}
+                and any("依赖指标" in cell for cell in cells)
+            )
+            dep_index = next(
+                (i for i, cell in enumerate(cells) if "依赖指标" in cell), -1
+            )
+            continue
+        if in_metric_table and cells[0] and 0 < dep_index < len(cells):
+            components = [
+                dep.strip()
+                for dep in re.split(r"[,，、/]", cells[dep_index])
+                if dep.strip() not in _METRIC_ALIAS_PLACEHOLDERS
+            ]
+            if components:
+                dependencies[cells[0]] = tuple(components)
+    return dependencies
 
 
 def _normalize_metric_name(
@@ -508,9 +553,9 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 任务拆解规则：
 1. 默认输出1个任务，任务问题即用户问题本身。
 2. 明细查询（名单/明细/清单类返回）带指标阈值条件（如“订单笔数大于5笔”“合作时长大于3个月”“销售额大于100万”）时，阈值不能作用在明细行上，拆为2个任务：任务1按该指标做分组统计（写明分组维度和指标，保留原问题的地区、产品、时间等其他筛选条件），任务2依赖任务1，任务问题写明“根据上述任务的查询结果筛选×××，不再查询数据库”。
-3. 先排名或筛选出对象、再查询这些对象的其他关系或明细时（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”），拆为2个任务：任务1排名或筛选，任务2依赖任务1并写明“根据上述任务的查询结果……”。
+3. 先排名或筛选出对象、再查询这些对象的其他关系或明细时（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”），拆为2个任务：任务1排名或筛选，任务2依赖任务1并写明“根据上述任务的查询结果……”。任务2要执行新的数据库查询，问题里不要写“不再查询数据库”——该句只允许出现在基于前序结果直接计算或筛选、不再发任何新查询的任务里。
 4. 用户明确要求分别查询多个结果再比较或合并计算时（如“分别查询今年和去年销售额，并比较同比变化”），按查询数拆任务，再加一个依赖全部前序任务的计算任务，任务问题写明“根据上述任务的查询结果……不再查询数据库”。
-5. 其余情况不拆：普通指标查询、规范已登记业务语义的复合口径指标（如覆盖率、平均每单金额）、趋势/占比/对比分析、围绕同一份数据的分析都保持1个任务。
+5. 业务语义规范指标表中某指标的依赖指标列登记了成分指标（取值不是"无"或空）时，该指标必须按公式成分拆分：依赖指标列里的每个成分指标各一个查询任务（指标名用该成分的规范登记原名，筛选条件按规范中该成分的口径与公式规则归属，分组维度只放在需要按维度分组的成分任务上），最后再加一个计算任务，依赖全部成分任务，问题写明"根据上述任务的查询结果计算×××，不再查询数据库"。对复合指标做趋势、占比、对比等分析时同样先按成分拆分，分析口径写进成分任务与计算任务的问题文本。依赖指标列为无、或成分指标不在规范指标表内时不拆；依赖指标列为无的普通指标的趋势、占比、对比分析，以及围绕同一份数据的分析都保持1个任务。
 6. 不要把ASL、SQL、取数、校验、洞察这些内部步骤拆成任务。
 
 意图判断规则（问题级intent字段）：
@@ -518,7 +563,7 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 2. 指标说法与规范指标层级比对后分两种情况：说法由规范内指标派生（对规范内指标求增长率、均值、占比、排名、最高最低等派生口径），按正常任务意图处理并完整提取参数，extraction的指标名输出派生来源的规范指标登记原名（按规范中各指标的登记名、同义词和业务语义选择最贴合的一个，不得自造指标名），派生口径（如"按环比增长率降序取排名"）写入"输出要求"键；说法与规范内任何指标都无关、也无法由规范内指标派生时，才按指标口径解释处理：任务意图输出METRIC_DEFINITION，参数仍照常完整提取，指标名保留用户原文，不得用语义相近的指标替代，也不得自行编造计算口径。判断是否"无法派生"按业务语义判断，不要求字面上包含指标名：围绕规范内实体或业务对象的度量（数量、金额、快慢、高低、升降、排名）提出的说法，都可由该业务对象在规范内的指标派生，按正常任务意图处理；只有规范中连对应业务对象的度量都不存在的纯概念词，才按指标口径解释处理。
 3. 任务问题含"不再查询数据库"时，这是基于前序任务结果的计算/筛选任务，不是闲聊：该任务照常输出extraction，指标取被计算的指标名（保留原文叫法），"意图"键固定输出"指标计算"，过滤条件、时间粒度、维度按任务问题文本提取，识别不到的键置[]或null。
 
-数据查询问题的extraction字段：按本提示词末尾的"结构化提取规范"产出结构化提取JSON（固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重/是否查询数据库），只提取用户原文和注入的业务语义规范中出现的内容，识别不到的键按规范置[]或null。数据查询问题的指标名只输出规范指标层级表中的登记原名（用户说法是同义词或派生口径时归一为登记原名，派生口径写入"输出要求"），不得自造指标名。排序的field同样只输出规范登记的指标名或维度名：增长率、占比、排名等派生口径不作为排序字段，按哪个指标排就把该指标的登记原名放进field，派生口径写入"输出要求"。指标口径解释问题（METRIC_DEFINITION）的extraction按规范完整提取参数并保留用户原文指标名，"意图"键固定输出"解释口径"。
+数据查询问题的extraction字段：按本提示词末尾的"结构化提取规范"产出结构化提取JSON（固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求），只提取用户原文和注入的业务语义规范中出现的内容，识别不到的键按规范置[]或null。数据查询问题的指标名只输出规范指标层级表中的登记原名（用户说法是同义词或派生口径时归一为登记原名，派生口径写入"输出要求"），不得自造指标名。排序的field同样只输出规范登记的指标名或维度名：增长率、占比、排名等派生口径不作为排序字段，按哪个指标排就把该指标的登记原名放进field，派生口径写入"输出要求"。指标口径解释问题（METRIC_DEFINITION）的extraction按规范完整提取参数并保留用户原文指标名，"意图"键固定输出"解释口径"。
 
 任务意图枚举：
 """ + _INTENT_PROMPT_OPTIONS + """
@@ -573,26 +618,68 @@ class SingleQuestionPlanner:
                     semantic_model_id=semantic_model_id,
                     retry_feedback=retry_feedback,
                 )
-            except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError):
+            except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
                 # 传输、Schema 或解析失败先整体重试一次，仍失败返回空结果
+                logger.warning(
+                    "single planner decompose failed attempt=%s error=%r",
+                    attempt, exc,
+                )
                 if attempt == attempts - 1:
                     return last_result
                 continue
             last_result = decomposition
             off_data, off_meta = self._normalize_decomposition_metrics(decomposition)
+            unsplit_compound = self._unsplit_compound_metrics(decomposition)
             empty_extraction = (
                 not any(task.structured is not None for task in decomposition.tasks)
                 and decomposition.intent not in _NO_DATA_INTENTS
             )
-            if attempt == 0 and (empty_extraction or off_data or off_meta):
-                # 全部任务提取为空或指标名目录外说明这次输出不可信，
-                # 带纠错说明重试一次
+            if attempt == 0 and (empty_extraction or off_data or off_meta or unsplit_compound):
+                # 全部任务提取为空、指标名目录外或复合指标未按公式拆分，
+                # 说明这次输出不可信，带纠错说明重试一次
                 retry_feedback = self._retry_feedback(
-                    off_data, off_meta, empty_extraction=empty_extraction
+                    off_data, off_meta, empty_extraction=empty_extraction,
+                    unsplit_compound=unsplit_compound,
                 )
                 continue
             return last_result
         return last_result
+
+    @staticmethod
+    def _unsplit_compound_metrics(
+        decomposition: QuestionDecomposition,
+    ) -> list[tuple[str, tuple[str, ...]]]:
+        """找出数据查询任务里未按公式拆分的复合指标：返回（指标, 成分）列表。
+
+        计算任务（问题含"不再查询数据库"）本来就携带复合指标名，
+        口径解释任务保留用户原文，二者都不算未拆分。
+        """
+        dependencies = decomposition.metric_dependencies
+        if not dependencies:
+            return []
+        catalog = decomposition.metric_catalog
+        if catalog is None:
+            return []
+        registered, aliases = catalog
+        findings: list[tuple[str, tuple[str, ...]]] = []
+        for task in decomposition.tasks:
+            if "不再查询数据库" in task.question or task.intent in _METADATA_INTENTS:
+                continue
+            structured = task.structured
+            if not isinstance(structured, dict):
+                continue
+            metrics = structured.get("指标")
+            if not isinstance(metrics, list):
+                continue
+            for item in metrics:
+                name = item.get("name") if isinstance(item, dict) else item
+                if not isinstance(name, str) or not name.strip():
+                    continue
+                normalized = _normalize_metric_name(name.strip(), registered, aliases)
+                components = dependencies.get(normalized)
+                if components and all(dep in registered for dep in components):
+                    findings.append((normalized, components))
+        return findings
 
     async def plan_single(
         self,
@@ -684,6 +771,7 @@ class SingleQuestionPlanner:
         off_meta: list[str],
         *,
         empty_extraction: bool,
+        unsplit_compound: list[tuple[str, tuple[str, ...]]] | None = None,
     ) -> str | None:
         """重试时附带的纠错说明：指出问题，给两条合法出路，不点名该选哪个指标。"""
         parts: list[str] = []
@@ -692,6 +780,17 @@ class SingleQuestionPlanner:
                 "上一轮没有输出任何结构化提取参数。该问题属于业务问题，"
                 "必须按结构化提取规范完整输出参数；仅当问题确与业务无关时才允许输出null。"
             )
+        if unsplit_compound:
+            for metric, components in unsplit_compound:
+                parts.append(
+                    "指标“" + metric + "”在规范指标表的依赖指标列登记了成分指标（"
+                    + "、".join(components)
+                    + "），上一轮把它当成了单个查询任务。必须按任务拆解规则5拆分："
+                    "每个成分指标一个查询任务（指标名用该成分的登记原名，"
+                    "筛选条件按规范中该成分的口径归属），最后再加一个依赖全部成分任务的"
+                    "计算任务，问题写明“根据上述任务的查询结果计算" + metric
+                    + "，不再查询数据库”。"
+                )
         if off_data:
             parts.append(
                 "指标名“"
@@ -827,6 +926,9 @@ class SingleQuestionPlanner:
             ):
                 # 计算/筛选任务的意图键固定为指标计算，模型漏填时补上
                 structured[_EXTRACTION_INTENT_KEY] = "指标计算"
+            if "不再查询数据库" in task_question:
+                # 计算/筛选任务基于前序任务结果，意图固定为对比分析
+                task_intent = PrimaryIntent.COMPARISON_ANALYSIS
             # 口径/血缘解释问题保留完整参数；若模型仍输出null提取，则至少把
             # 原文指标名带进参数通道，否则下游解析不到指标，追问门禁会引导
             # 用户换成规范里的指标，违背“不得用语义相近指标替代”的约束。
@@ -862,6 +964,7 @@ class SingleQuestionPlanner:
             intent=question_intent,
             tasks=tuple(tasks),
             metric_catalog=metric_catalog,
+            metric_dependencies=_parse_metric_dependencies(spec_for_catalog),
         )
 
     @staticmethod
@@ -929,7 +1032,8 @@ class SingleQuestionPlanner:
         )
         dedup = _clean_extraction_text(value.get("是否去重") or "")
         structured["是否去重"] = dedup if dedup in ("是", "否") else None
-        structured["是否查询数据库"] = _normalize_database_query_flag(
-            value.get("是否查询数据库")
+        query_choice = database_query_choice(value)
+        structured["是否查询数据库"] = (
+            "是" if query_choice is True else "否" if query_choice is False else None
         )
         return structured
