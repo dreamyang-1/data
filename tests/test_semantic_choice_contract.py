@@ -13,6 +13,9 @@ from app.domain.models import (
     SemanticAmbiguity, TimeRange, TrustedIdentity,
 )
 from app.intent import RuleBasedIntentClassifier
+from app.planning import (
+    CompoundJudgment, CompoundRouteResult, PlannerOutcome,
+)
 from app.services import DataAnalysisOrchestrator
 from app.services.legacy_guards import (
     extract_quoted_choice_candidate,
@@ -309,8 +312,8 @@ async def test_surface_only_choice_restores_full_task_before_planning():
     agent = service(retrieval)
 
     class NoSplitPlanner:
-        async def plan(self, question):
-            return None
+        async def route_and_plan(self, question, **kwargs):
+            return CompoundRouteResult(judgment=CompoundJudgment(is_compound=False))
 
     agent.settings.multi_question_enabled = True
     agent.task_planner = NoSplitPlanner()
@@ -606,8 +609,29 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
     agent = service(retrieval)
 
     class NoSplitPlanner:
-        async def plan(self, question):
-            return None
+        # 单一问题链路：判断为单一并给出本问的结构化提取，
+        # 确认后的追问据此走 surface 续问执行路径。
+        async def route_and_plan(self, question, **kwargs):
+            return CompoundRouteResult(
+                judgment=CompoundJudgment(is_compound=False),
+                single=PlannerOutcome(
+                    single_intent=PrimaryIntent.DETAIL_QUERY,
+                    single_structured={
+                        "意图": "明细查询",
+                        "业务域": [],
+                        "实体": ["经销商"],
+                        "指标": [],
+                        "维度": ["经销商"],
+                        "展示字段": [],
+                        "过滤条件": [],
+                        "时间粒度": None,
+                        "排序": [],
+                        "限制": None,
+                        "输出要求": None,
+                        "是否去重": None,
+                    },
+                ),
+            )
 
     agent.settings.multi_question_enabled = True
     agent.settings.surface_asl_execution_enabled = True
@@ -676,8 +700,7 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
     assert "补全后的问题：查询不限时间（全部历史）内上海市" in intent_message
     assert "竞争品牌万益特" in intent_message
     assert "血液净化管路产品的经销商名单" in intent_message
-    assert "万益特（母品牌/筛选值）" in intent_message
-    assert "血液净化管路（筛选值）" in intent_message
+    # mention 角色提示不再铺在意图节点文案里，随查询请求透传给下游绑定
     assert retrieval.surface_mentions == [[
         {"text": "上海市", "role_hint": "业务城市"},
         {"text": "万益特", "role_hint": "母品牌"},

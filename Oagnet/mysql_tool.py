@@ -1145,11 +1145,26 @@ def get_business_domains(semantic_model_id: int):
 
 # ==================== 实体相关查询 ====================
 
+def _catalog_code(value, mapped_identifier):
+    """Project absent codes from governed mappings without changing metadata.
+
+    Declared codes are preserved. Malformed nonempty values and missing/unsafe
+    mappings remain invalid; this is not a guessed business record identity.
+    """
+    if value is not None and (not isinstance(value, str) or value.strip()):
+        return value
+    if isinstance(mapped_identifier, str):
+        mapped_identifier = mapped_identifier.strip()
+        if _SAFE_IDENTIFIER.fullmatch(mapped_identifier):
+            return mapped_identifier
+    return value
+
+
 def _row_to_entity_dict(row):
     """将单行 semantic_model_entity_type 记录转换为目标 JSON 结构。"""
     return {
         "entity_id": row.get("id"),
-        "entity_code": row.get("code"),
+        "entity_code": _catalog_code(row.get("code"), row.get("main_table_name")),
         "entity_name": row.get("name"),
         "entity_alias": _parse_json(row.get("alias")) or [],
         "business_domain": row.get("business_domain_id"),
@@ -1181,7 +1196,7 @@ def _row_to_attr_dict(row):
 
     return {
         "attribute_id": row.get("id"),
-        "attr_code": row.get("code"),
+        "attr_code": _catalog_code(row.get("code"), mapping_column),
         "attr_name": row.get("attr_name"),
         "data_type": row.get("data_type"),
         "field_mapping": field_mapping,
@@ -1206,8 +1221,16 @@ def _row_to_relation_dict(row):
             return value
         return row.get(f"{side}_field") or row.get(f"{side}_field_name")
 
+    code = row.get("code")
+    if code is None or (isinstance(code, str) and not code.strip()):
+        from dimension_scope import normalize_governed_id
+        identifier = normalize_governed_id(row.get("id"))
+        if identifier is not None:
+            # Name only the existing relation; never invent endpoints or keys.
+            code = "relation_" + identifier.replace("-", "_")
+
     return {
-        "relation_code": row.get("code"),
+        "relation_code": code,
         "relation_name": row.get("name"),
         "relation_type": row.get("type"),
         "target_entity": row.get("target_entity_code") or row.get("target_entity_type_id"),
@@ -1335,7 +1358,7 @@ def get_entity(business_domain_id: int):
           )
     """
     sql_bind_metric = """
-        SELECT e.code AS entity_code, bi.indicator_code, bi.indicator_name,
+        SELECT e.code AS entity_code, e.main_table_name, bi.indicator_code, bi.indicator_name,
                i.indicator_name AS canonical_indicator_name,
                bi.indicator_logic, bi.update_time, bi.create_time
         FROM semantic_model_entity_bind_indicator bi
@@ -1390,11 +1413,19 @@ def get_entity(business_domain_id: int):
             existing = entity_map.get(entity_id)
             if existing is None or _is_newer(row, existing):
                 entity_map[entity_id] = row
+        derived_entities = {}
         for row in entity_map.values():
-            if not str(row.get("code") or "").strip():
-                table_code = str(row.get("main_table_name") or "").strip()
-                if _SAFE_IDENTIFIER.fullmatch(table_code):
-                    row["code"] = table_code
+            raw_code = row.get("code")
+            row["code"] = _catalog_code(raw_code, row.get("main_table_name"))
+            code = row.get("code")
+            if code:
+                previous = derived_entities.get(code)
+                if previous and previous[0] != row.get("id") and (previous[1] or raw_code != code):
+                    from catalog_release import CatalogEvidenceError
+                    raise CatalogEvidenceError("CATALOG_SOURCE_ID_COLLISION", issues=[{
+                        "key": "entity_code", "reason": "AMBIGUOUS", "entity_id": row.get("id"),
+                        "entity_name": row.get("name"), "entity_code": code}])
+                derived_entities[code] = (row.get("id"), raw_code != code)
         entity_code_by_id = {
             entity_id: str(row.get("code") or "").strip()
             for entity_id, row in entity_map.items()
@@ -1402,8 +1433,22 @@ def get_entity(business_domain_id: int):
         }
 
         attr_map = {}
-        for row in attr_rows:
+        derived_attributes = {}
+        for raw_row in attr_rows:
+            row = dict(raw_row)
+            raw_code = row.get("code")
+            row["code"] = _catalog_code(raw_code, row.get("mapping_column"))
             entity_type_id = row.get("entity_type_id")
+            derived_key = (entity_type_id, row.get("code"))
+            previous = derived_attributes.get(derived_key)
+            if previous and previous[0] != row.get("id") and (previous[1] or raw_code != row.get("code")):
+                from catalog_release import CatalogEvidenceError
+                raise CatalogEvidenceError("CATALOG_SOURCE_ID_COLLISION", issues=[{
+                    "key": "attr_code", "reason": "AMBIGUOUS", "entity_id": entity_type_id,
+                    "attribute_id": row.get("id"), "attr_name": row.get("attr_name"),
+                    "attr_code": row.get("code"), "mapping_table": row.get("mapping_table"),
+                    "mapping_column": row.get("mapping_column")}])
+            derived_attributes[derived_key] = (row.get("id"), raw_code != row.get("code"))
             attr_map.setdefault(entity_type_id, {})
             code = row.get("code") or row.get("id")
             existing = attr_map[entity_type_id].get(code)
@@ -1435,7 +1480,7 @@ def get_entity(business_domain_id: int):
 
         bind_metric_map = {}
         for row in bind_metric_rows:
-            entity_code = row.get("entity_code")
+            entity_code = _catalog_code(row.get("entity_code"), row.get("main_table_name"))
             bind_metric_map.setdefault(entity_code, {})
             ind_code = row.get("indicator_code") or row.get("id")
             existing = bind_metric_map[entity_code].get(ind_code)
@@ -1504,7 +1549,7 @@ def get_registered_entity_attributes(
         params.extend(domain_ids)
     rows = _query(
         """
-        SELECT e.code AS entity_code, e.name AS entity_name,
+        SELECT e.code AS entity_code, e.main_table_name, e.name AS entity_name,
                e.alias AS entity_alias, e.business_domain_id,
                e.data_source_id, a.code AS attr_code,
                a.attr_name, a.description, a.mapping_table,
@@ -1527,12 +1572,12 @@ def get_registered_entity_attributes(
         if not table or not column:
             continue
         result.append({
-            "entity_code": row.get("entity_code"),
+            "entity_code": _catalog_code(row.get("entity_code"), row.get("main_table_name")),
             "entity_name": row.get("entity_name"),
             "entity_alias": _parse_json(row.get("entity_alias")) or [],
             "business_domain_id": row.get("business_domain_id"),
             "data_source_id": row.get("data_source_id"),
-            "attr_code": row.get("attr_code"),
+            "attr_code": _catalog_code(row.get("attr_code"), column),
             "attr_name": row.get("attr_name"),
             "description": row.get("description"),
             "field_mapping": f"{table}.{column}",
@@ -1622,7 +1667,7 @@ def get_metric(semantic_model_id: int, business_domain_id: int = None):
             WHERE b.semantic_model_id=%s
               AND COALESCE(e.is_deleted,0)=0
               AND e.status=1
-              AND e.code IS NOT NULL AND e.code<>''
+              AND (e.semantic_model_id=b.semantic_model_id OR e.semantic_model_id IS NULL)
               AND e.main_table_name IS NOT NULL AND e.main_table_name<>''
             """,
             (semantic_model_id,),
@@ -1630,7 +1675,9 @@ def get_metric(semantic_model_id: int, business_domain_id: int = None):
         table_entities: dict[str, list[str]] = {}
         valid_entity_codes: set[str] = set()
         for entity in entity_rows:
-            code = str(entity["code"])
+            code = _catalog_code(entity.get("code"), entity.get("main_table_name"))
+            if not isinstance(code, str) or not code.strip():
+                continue
             table = str(entity["main_table_name"])
             valid_entity_codes.add(code)
             table_entities.setdefault(table, [])
@@ -1639,7 +1686,7 @@ def get_metric(semantic_model_id: int, business_domain_id: int = None):
 
         binding_rows = _query_metric_binding_rows(
             """
-            SELECT bi.indicator_code, e.code AS entity_code,
+            SELECT bi.indicator_code, e.code AS entity_code, e.main_table_name,
                    e.business_domain_id
             FROM semantic_model_entity_bind_indicator bi
             JOIN semantic_model_business_domain b
@@ -1652,6 +1699,7 @@ def get_metric(semantic_model_id: int, business_domain_id: int = None):
              AND COALESCE(i.is_deleted,0)=0
             JOIN semantic_model_entity_type e
               ON e.business_domain_id=b.id
+             AND (e.semantic_model_id=b.semantic_model_id OR e.semantic_model_id IS NULL)
              AND COALESCE(e.is_deleted,0)=0
              AND e.status=1
              AND (
@@ -1666,7 +1714,7 @@ def get_metric(semantic_model_id: int, business_domain_id: int = None):
         metric_entities: dict[tuple[int, str], list[str]] = {}
         for binding in binding_rows:
             metric_code = str(binding.get("indicator_code") or "")
-            entity_code = str(binding.get("entity_code") or "")
+            entity_code = _catalog_code(binding.get("entity_code"), binding.get("main_table_name")) or ""
             binding_domain_id = int(binding.get("business_domain_id") or 0)
             if (
                 not metric_code

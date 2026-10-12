@@ -23,7 +23,7 @@ from app.domain.semantic_decision import (
 )
 from app.intent import RuleBasedIntentClassifier
 from app.observability.call_timing import RequestTimingTracker, timing_scope
-from app.planning import PlannerOutcome
+from app.planning import CompoundJudgment, CompoundRouteResult
 from app.services import DataAnalysisOrchestrator
 from app.services.question_rewriter import QuestionRewriter
 from app.services.semantic_decision import (
@@ -252,7 +252,7 @@ async def test_orchestrator_skips_v1_intent_model_and_rewriter_for_accepted_cont
             )
 
     class PlannerTrap:
-        async def plan(self, *_args, **_kwargs):
+        async def route_and_plan(self, *_args, **_kwargs):
             raise AssertionError(
                 "accepted single-task contract must skip V1 task decomposition"
             )
@@ -352,9 +352,11 @@ async def test_pre_resolution_contract_cannot_skip_v1_task_decomposition():
         def __init__(self):
             self.calls = 0
 
-        async def plan(self, *_args, **_kwargs):
+        async def route_and_plan(self, *_args, **_kwargs):
             self.calls += 1
-            return PlannerOutcome(plan=None)
+            return CompoundRouteResult(
+                judgment=CompoundJudgment(is_compound=False)
+            )
 
     chat = _chat()
     chat._semantic_decision = _accepted_decision(chat)

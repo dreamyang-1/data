@@ -783,6 +783,9 @@ class ChatRequest(StrictModel):
     )
     # 任务规划产出的提取结果，由编排器在进程内透传到本轮分类请求。
     _planner_extraction: PlannerExtraction | None = PrivateAttr(default=None)
+    # 桥内前置判断产出的复合/单一结论（含各子问题的意图与业务域），
+    # 编排器据此直接规划，避免二次判断。
+    _compound_judgment: Any = PrivateAttr(default=None)
     # 语义识别判成业务无关的问题时置位，编排器据此跳过拆分与分类模型直接聊天回复。
     _v2_off_topic: bool = PrivateAttr(default=False)
     # 业务无关且原始问题命中危险词表时置位，编排器直答分支据此返回拦截

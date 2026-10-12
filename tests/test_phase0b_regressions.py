@@ -264,13 +264,13 @@ async def test_root_dag_pending_does_not_capture_complete_new_business_task():
 @pytest.mark.asyncio
 async def test_root_dag_mapping_question_is_not_repeated():
     from uuid import uuid4
-    from test_task_dag import _StubOrchestrator, _Classifier, MultiQuestionPlanner
+    from test_task_dag import _StubOrchestrator, _Classifier, CompoundQuestionRouter
     from app.domain.models import AgentResponse
     class Clarifying(_StubOrchestrator):
         async def _handle(self,chat,identity):
             return AgentResponse(request_id=uuid4(),conversation_id=chat.conversation_id,status='NEEDS_CLARIFICATION',intent=PrimaryIntent.METRIC_QUERY,answer='请选择时间范围',clarification_questions=['请选择时间范围'],missing_slots=['time_range'])
     settings=Settings(env='test',adapter_mode='mock',multi_question_model_enabled=False)
-    agent=Clarifying(settings=settings,classifier=_Classifier(),adapters=build_mock_adapters(),sessions=InMemorySessionStore(),task_planner=MultiQuestionPlanner(settings))
+    agent=Clarifying(settings=settings,classifier=_Classifier(),adapters=build_mock_adapters(),sessions=InMemorySessionStore(),task_planner=CompoundQuestionRouter(settings))
     async def send(mid,text):
         return await agent.handle(ChatRequest(semantic_model_id=81, application_id='fixture-app',conversation_id='dag-repeat',message_id=mid,question=text),IDENTITY)
     first=await send('m1','查询销售额；另外查询库存')

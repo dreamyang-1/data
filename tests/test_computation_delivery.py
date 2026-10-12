@@ -98,14 +98,19 @@ async def test_unavailable_input_is_not_completed_by_prose():
 
 @pytest.mark.asyncio
 async def test_dag_routes_declared_calculation_before_entity_alias_enrichment():
-    from test_task_dag import _StubOrchestrator, _Classifier
     from app.adapters import build_mock_adapters
     from app.stores import InMemorySessionStore
-    from app.planning import MultiQuestionPlanner
     from app.domain.models import AgentResponse, PrimaryIntent, TaskPlan
     settings=Settings(_env_file=None,env='test',analysis_synthesis_enabled=False,multi_question_model_enabled=False)
-    service=_StubOrchestrator(settings=settings,task_planner=MultiQuestionPlanner(settings),
-        classifier=_Classifier(),adapters=build_mock_adapters(),sessions=InMemorySessionStore(7200,7200))
+    # This test starts with an already validated plan. Do not import another
+    # test module's legacy extraction planner (removed by the 49 migration).
+    planner=SimpleNamespace(deduplicate=lambda plan: (plan, {}),
+        execution_layers=lambda plan: [[plan.tasks[0]], [plan.tasks[1]]])
+    def unexpected_classification(*args):
+        raise AssertionError('the query handler is replaced by this routing test')
+    service=DataAnalysisOrchestrator(settings=settings,task_planner=planner,
+        classifier=SimpleNamespace(classify=unexpected_classification),
+        adapters=build_mock_adapters(),sessions=InMemorySessionStore(7200,7200))
     async def query(child,identity):
         return AgentResponse(request_id=uuid4(),conversation_id=child.conversation_id,status='COMPLETED',
             intent=PrimaryIntent.METRIC_QUERY,answer='销售员姓名、国药公司名称、订单笔数、含税销售总额')

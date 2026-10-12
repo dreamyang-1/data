@@ -53,7 +53,7 @@ def capture_sql_sources(scope):
     for row in rows:
         identifier = _id(row.get('entity_id'))
         table = _text(row.get('main_table_name'), row=row, key='main_table_name')
-        code = row.get('entity_code') or table
+        code = mysql._catalog_code(row.get('entity_code'), table)
         if not mysql._SAFE_IDENTIFIER.fullmatch(table) or not isinstance(code, str) or not code.strip():
             raise CatalogEvidenceError('CATALOG_SQL_SOURCE_METADATA_INVALID',
                 issues=[_issue(row, 'main_table_name', 'INVALID')])

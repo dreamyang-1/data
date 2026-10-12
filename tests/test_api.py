@@ -112,27 +112,24 @@ def test_planning_layout_is_shared_by_single_composite_and_clarification(
     content = thinking_content(events, "TASK_PLANNING", status="COMPLETED")
     assert "规划调用：" not in content
     assert "规划链路：" not in content
-    decision = content.split("任务1：", 1)[0]
+    decision = content.split("问题1：", 1)[0] if "问题1：" in content else content
     assert "业务域：" not in decision
     if clarifying:
         assert "当前任务参数不完整，暂停子任务拆分。" in decision
         assert "无需拆分" not in decision
     elif task_count == 1:
-        assert "拆分判断完成。当前问题无需拆分，按单任务执行。" in decision
+        assert "拆分判断完成。按单任务执行。" in decision
     else:
-        # STALE_TEST: deployed planner now describes task dependencies here.
         assert "拆分判断完成。分析内容：" in decision
-        assert "各任务相互独立，可并行执行。" in decision
+        assert "各子问题相互独立，可并行执行。" in decision
     for index in range(1, task_count + 1):
-        block = content.split(f"任务{index}：", 1)[1].split(f"任务{index + 1}：", 1)[0]
-        if domains:
-            assert block.count("业务域：") == 1
-            if "任务意图：" in block:
-                assert re.search(r"任务意图：[^\n]+\n业务域：", block)
-            if "参数提取：" in block:
-                assert block.index("业务域：") < block.index("参数提取：")
-        else:
-            assert "业务域：" not in block
+        assert f"问题{index}：" in content
+        block = content.split(f"问题{index}：", 1)[1]
+        if index < task_count:
+            block = block.split(f"问题{index + 1}：", 1)[0]
+        # 意图与业务域只在意图识别节点按问题展示，规划块不再重复
+        assert "业务域：" not in block
+        assert "任务意图：" not in block
     stages = [event.get("meta", {}).get("stage") for event in events
               if event.get("type") == "message_chunk"]
     assert stages.index("INTENT_RECOGNITION") < stages.index("TASK_PLANNING")
@@ -1687,8 +1684,8 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         events, "TASK_PLANNING", status="COMPLETED"
     )
     assert "#### ◉ 任务拆分与规划" in planning_completed_content
-    assert "拆分判断完成。当前问题无需拆分，按单任务执行。" in planning_completed_content
-    assert "当前问题无需拆分，按单任务执行。  \n任务1：" in planning_completed_content
+    assert "拆分判断完成。按单任务执行。" in planning_completed_content
+    assert "按单任务执行。  \n问题1：" in planning_completed_content
     assert "规划调用：" not in planning_completed_content
     completed_think_stages = [
         data.get("meta", {}).get("stage")
@@ -1822,13 +1819,13 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         if event["type"] == "message_chunk"
         and event.get("meta", {}).get("stage") == "TASK_PLANNING"
     )
-    assert "任务1：查询 TDC-3 产品的主要适用科室" in planning_content
-    assert "任务2：查询 TDC-3 产品的次要适用科室" in planning_content
+    assert "问题1：查询 TDC-3 产品的主要适用科室" in planning_content
+    assert "问题2：查询 TDC-3 产品的次要适用科室" in planning_content
     assert "拆分判断完成。分析内容：" in planning_content
     assert "规划调用：" not in planning_content
     # 两个子任务相互独立，不出现依赖关系行，但要有并行说明
     assert "依赖关系：" not in planning_content
-    assert "各任务相互独立，可并行执行。" in planning_content
+    assert "各子问题相互独立，可并行执行。" in planning_content
     completed = next(event for event in events if event["type"] == "complete")
     assert completed["execution_shape"] == "COMPOSITE"
     assert len(completed["task_results"]) == 2
@@ -1893,13 +1890,10 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     ):
         assert internal_label not in completed_retrieval_text
     completed_validation_text = "".join(
-        event["content"] for event in events
-        if event["type"] == "message_chunk"
-        and event.get("meta", {}).get("stage") == "RELIABILITY_CHECK"
+        event["content"] for event in child_public_progress
+        if event["meta"]["stage"] == "RELIABILITY_CHECK"
         and event["meta"]["status"] == "COMPLETED"
     )
-    assert "补全后的问题“查询 TDC-3 产品的主要适用科室、次要适用科室”" in completed_validation_text
-    assert completed_validation_text.count("校验依据：") == 1
     assert "校验结论：高可信" in completed_validation_text
     assert "数据质量：通过" in completed_validation_text
     assert "证据（" in completed_validation_text
@@ -1918,7 +1912,8 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         )
         for task_id in ("task-1", "task-2")
     }
-    assert validation_by_task == {"task-1": "", "task-2": ""}
+    assert "任务1：查询 TDC-3 产品的主要适用科室" in validation_by_task["task-1"]
+    assert "任务2：查询 TDC-3 产品的次要适用科室" in validation_by_task["task-2"]
     insight_by_task = {
         task_id: "".join(
             event["content"]

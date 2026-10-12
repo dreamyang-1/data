@@ -1,0 +1,102 @@
+# ==============================================================================
+# Cocogitto Configuration for email-mcp
+# ==============================================================================
+# Docs: https://docs.cocogitto.io/reference/config.html
+#
+# Quick Commands:
+#   cog bump --auto          # Auto-bump based on commit types
+#   cog bump --minor         # Manual minor bump
+#   cog bump --patch         # Manual patch bump
+#   cog check                # Verify commit history
+#   cog log                  # View conventional commit log
+#   cog changelog            # Generate changelog
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Global Settings
+# ------------------------------------------------------------------------------
+from_latest_tag = true
+ignore_merge_commits = true
+ignore_fixup_commits = true
+disable_changelog = false
+disable_bump_commit = false
+branch_whitelist = ["main", "develop", "release/**", "hotfix/**"]
+skip_ci = "[skip ci]"
+skip_untracked = false
+tag_prefix = "v"
+
+pre_bump_hooks = [
+    "pnpm check",
+    "pnpm build",
+]
+
+post_bump_hooks = [
+    "npm pkg set version={{version}}",
+    "git add package.json",
+    "jq --arg v {{version}} '.version = $v | .packages[0].version = $v' server.json > server.tmp && mv server.tmp server.json",
+    "git add server.json",
+    "git push origin HEAD",
+    "git push origin {{version}}",
+]
+
+# ------------------------------------------------------------------------------
+# Git Hooks
+# ------------------------------------------------------------------------------
+# Git hooks are managed by Lefthook (see lefthook.yml).
+# Do NOT run `cog install-hook` — Lefthook handles commit-msg and pre-push.
+
+# ------------------------------------------------------------------------------
+# Commit Types
+# ------------------------------------------------------------------------------
+[commit_types]
+feat = { changelog_title = "✨ Features" }
+fix = { changelog_title = "🐛 Bug Fixes" }
+perf = { changelog_title = "⚡ Performance" }
+refactor = { changelog_title = "♻️ Refactoring" }
+docs = { changelog_title = "📚 Documentation" }
+build = { changelog_title = "Build", hidden = true }
+ci = { changelog_title = "CI", hidden = true }
+test = { changelog_title = "Tests", hidden = true }
+style = { changelog_title = "Styles", hidden = true }
+chore = { changelog_title = "Chores", hidden = true }
+revert = { changelog_title = "⏪ Reverts" }
+
+# ------------------------------------------------------------------------------
+# Changelog Configuration
+# ------------------------------------------------------------------------------
+[changelog]
+path = "CHANGELOG.md"
+template = "remote"
+remote = "github.com"
+owner = "codefuturist"
+repository = "email-mcp"
+authors = [
+    { signature = "58808821+codefuturist@users.noreply.github.com", username = "codefuturist" },
+]
+
+# ------------------------------------------------------------------------------
+# Bump Profiles
+# ------------------------------------------------------------------------------
+[bump_profiles]
+
+[bump_profiles.release]
+pre_bump_hooks = ["pnpm check", "pnpm build"]
+post_bump_hooks = [
+    "npm pkg set version={{version}}",
+    "git add package.json",
+    "jq --arg v {{version}} '.version = $v | .packages[0].version = $v' server.json > server.tmp && mv server.tmp server.json",
+    "git add server.json",
+    "git push origin HEAD",
+    "git push origin {{version}}",
+]
+
+[bump_profiles.hotfix]
+pre_bump_hooks = ["pnpm check"]
+post_bump_hooks = [
+    "npm pkg set version={{version}}",
+    "git add package.json",
+    "jq --arg v {{version}} '.version = $v | .packages[0].version = $v' server.json > server.tmp && mv server.tmp server.json",
+    "git add server.json",
+    "git push origin HEAD",
+    "git push origin {{version}}",
+]
