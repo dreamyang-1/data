@@ -2338,7 +2338,21 @@ class SQLTranslatorProd:
             start = time_context.get('start')
             end = time_context.get('end')
             if start and end:
-                end_next = self._next_day(end)
+                # Date-only ranges keep their existing closed-day semantics.
+                # Sub-day ranges are closed seconds, never expanded by a day.
+                if (re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(start))
+                        and re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(end))):
+                    start_point, end_point = datetime.fromisoformat(start), datetime.fromisoformat(end)
+                    end_next = (end_point + timedelta(days=1)).strftime('%Y-%m-%d')
+                elif (re.fullmatch(r'\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}', str(start))
+                        and re.fullmatch(r'\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}', str(end))):
+                    start_point, end_point = datetime.fromisoformat(start), datetime.fromisoformat(end)
+                    start = start_point.isoformat(sep=' ', timespec='seconds')
+                    end_next = (end_point + timedelta(seconds=1)).isoformat(sep=' ', timespec='seconds')
+                else:
+                    raise ValueError('时间边界需要一致的ISO日期或秒级日期时间，不猜测时区或精度')
+                if start_point > end_point:
+                    raise ValueError('时间范围结束日期早于开始日期')
                 return f"{full_field_name} >= '{start}' AND {full_field_name} < '{end_next}'"
         elif time_type == 'today':
             return f"DATE({full_field_name}) = CURDATE()"
@@ -2415,17 +2429,23 @@ class SQLTranslatorProd:
     def _apply_time_granularity(field_ref: str, granularity: Optional[str]) -> str:
         """Build one canonical MySQL expression for time SELECT/GROUP BY."""
         normalized = (granularity or '').strip().lower()
-        if normalized in ('hour', '小时'):
+        if normalized in ('second', 'seconds', '秒', '秒钟'):
+            return f"DATE_FORMAT({field_ref}, '%Y-%m-%d %H:%i:%s')"
+        if normalized in ('minute', 'minutes', '分', '分钟'):
+            return f"DATE_FORMAT({field_ref}, '%Y-%m-%d %H:%i:00')"
+        if normalized in ('hour', 'hours', '时', '小时'):
             return f"DATE_FORMAT({field_ref}, '%Y-%m-%d %H:00:00')"
-        if normalized in ('day', '日', '天'):
+        if normalized in ('day', 'days', '日', '天', '自然日'):
             return f"DATE({field_ref})"
-        if normalized in ('week', '周', '星期'):
+        if normalized in ('week', 'weeks', '周', '星期'):
             return f"DATE_FORMAT({field_ref}, '%x-W%v')"
-        if normalized in ('month', '月'):
+        if normalized in ('month', 'months', '月', '月份', '自然月'):
             return f"DATE_FORMAT({field_ref}, '%Y-%m')"
-        if normalized in ('quarter', '季度', '季'):
+        if normalized in ('quarter', 'quarters', '季度', '季'):
             return f"CONCAT(YEAR({field_ref}), '-Q', QUARTER({field_ref}))"
-        if normalized in ('year', '年', '自然年'):
+        if normalized in ('half_year', '半年', '半年度'):
+            return f"CONCAT(YEAR({field_ref}), '-H', IF(MONTH({field_ref}) <= 6, 1, 2))"
+        if normalized in ('year', 'years', '年', '自然年', '年度'):
             return f"YEAR({field_ref})"
         if not normalized:
             return field_ref

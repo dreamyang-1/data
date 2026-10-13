@@ -2,12 +2,18 @@
 import calendar
 import json
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 
 UNITS = {
     'hour': 'hour', 'day': 'day', 'week': 'week', 'month': 'month',
     'quarter': 'quarter', 'year': 'year', '时': 'hour', '小时': 'hour',
+    'second': 'second', 'seconds': 'second', '秒': 'second', '秒钟': 'second',
+    'minute': 'minute', 'minutes': 'minute', '分': 'minute', '分钟': 'minute',
+    'hours': 'hour', 'days': 'day', 'weeks': 'week', 'months': 'month',
+    'quarters': 'quarter', 'years': 'year', '月份': 'month', '年度': 'year',
+    '自然年': 'year', '自然月': 'month', '自然日': 'day',
+    'half_year': 'half_year', '半年': 'half_year', '半年度': 'half_year',
     '日': 'day', '天': 'day', '周': 'week', '星期': 'week', '月': 'month',
     '季': 'quarter', '季度': 'quarter', '年': 'year',
 }
@@ -65,7 +71,9 @@ def grouping_grain(temporal, original, key, target, ast, catalog):
     if value is None:
         value = temporal.get('unit') if isinstance(temporal, dict) else None
     if value is not None and normalize_unit(value) is None:
-        raise ValueError('结构化参数的时间分组单位不受支持，请明确小时、日、周、月、季度或年')
+        raise ValueError('时间分组支持秒、分钟、小时、日、周、月、季度、半年和年；财年、工作日或自定义周期需提供业务口径，不能按自然周期猜测')
+    if normalize_unit(value) in {'hour', 'minute', 'second'} and str(meta.get('data_type') or '').upper() == 'DATE':
+        raise ValueError('所选时间字段只有日期精度，不能凭空生成小时、分钟或秒，请选择具有时分秒的时间字段')
     return normalize_unit(value)
 
 
@@ -89,15 +97,26 @@ def _month_bounds(year, month, count=1):
     return start, date(y, m + 1, calendar.monthrange(y, m + 1)[1])
 
 
-def _period(text, today):
+def _date_period(text, today):
     """Full-match a single declared period, never search the original question."""
-    text = re.sub(r'\s+', '', text)
+    text = re.sub(r'\s+', '', text).replace('月份', '月').replace('年份', '年').replace('号', '日')
+    for label, offset in [('今年', 0), ('去年', -1), ('明年', 1)]:
+        if text.startswith(label) and text != label:
+            text = str(today.year + offset) + '年' + text[len(label):]
+            break
+    week = re.fullmatch(r'(\d{4})(?:年?第?([\d一二三四五六七八九十]+)(?:周|星期)|-?[Ww](\d{1,2}))', text)
+    if week:
+        start = date.fromisocalendar(int(week[1]), _number(week[2] or week[3]), 1)
+        return start, start + timedelta(days=6)
     quarter = re.fullmatch(r'(\d{4})(?:年?第?([一二三四1-4])季度?|[-年]?[Qq]([1-4]))', text)
     if quarter:
         return _month_bounds(int(quarter[1]), (_number(quarter[2] or quarter[3]) - 1) * 3 + 1, 3)
-    half = re.fullmatch(r'(\d{4})年?([上下])半年', text)
+    half = re.fullmatch(r'(?:(\d{4})年?)?([上下])半年(?:度)?', text)
     if half:
-        return _month_bounds(int(half[1]), 1 if half[2] == '上' else 7, 6)
+        return _month_bounds(int(half[1]) if half[1] else today.year, 1 if half[2] == '上' else 7, 6)
+    half = re.fullmatch(r'(\d{4})[-年]?[Hh]([12])', text)
+    if half:
+        return _month_bounds(int(half[1]), 1 if half[2] == '1' else 7, 6)
     full_year = re.fullmatch(r'(\d{4})年(?:全年|度|全年度)', text)
     if full_year:
         return _month_bounds(int(full_year[1]), 1, 12)
@@ -110,10 +129,12 @@ def _period(text, today):
             point = date(year, int(month), int(day))
             return point, point
         return _month_bounds(year, int(month) if month else 1, 1 if month else 12)
-    if text in {'今天', '今日', 'today', '昨天', '昨日', 'yesterday'}:
-        point = today - timedelta(days=int(text in {'昨天', '昨日', 'yesterday'}))
+    days = {'今天': 0, '今日': 0, 'today': 0, '昨天': -1, '昨日': -1,
+            'yesterday': -1, '明天': 1, '明日': 1, 'tomorrow': 1, '前天': -2, '后天': 2}
+    if text in days:
+        point = today + timedelta(days=days[text])
         return point, point
-    period = re.fullmatch(r'(本|这|上|下|今|去|明)(?:个)?(年|月|周|星期|季度|季)', text)
+    period = re.fullmatch(r'(本|这|上|下|今|去|明)(?:一个|一|个)?(半年度|半年|年度|年|月|周|星期|季度|季)', text)
     aliases = {'今年': (0, 'year'), '去年': (-1, 'year'), '明年': (1, 'year'),
                'this_year': (0, 'year'), 'last_year': (-1, 'year'),
                'this_month': (0, 'month'), 'last_month': (-1, 'month'),
@@ -127,11 +148,11 @@ def _period(text, today):
         if unit == 'week':
             start = today - timedelta(days=today.weekday()) + timedelta(weeks=offset)
             return start, start + timedelta(days=6)
-        width = {'month': 1, 'quarter': 3, 'year': 12}[unit]
+        width = {'month': 1, 'quarter': 3, 'half_year': 6, 'year': 12}[unit]
         month = (today.month - 1) // width * width + 1
         year, m = divmod(today.year * 12 + month - 1 + width * offset, 12)
         return _month_bounds(year, m + 1, width)
-    rolling = re.fullmatch(r'(?:最近|近|过去)([\d一二两三四五六七八九十]+)(?:个)?(年|月|周|星期|季度|季|天|日)', text)
+    rolling = re.fullmatch(r'(?:最近|近|过去)([\d一二两三四五六七八九十]+)(?:个)?(半年|年|月|周|星期|季度|季|天|日)', text)
     if text in {'近半年', '最近半年', '过去半年'}:
         amount, unit = 6, 'month'
     elif rolling:
@@ -140,8 +161,8 @@ def _period(text, today):
         raise ValueError('时间范围尚未转换为明确日期，请在任务规划中明确起止日期；不会使用模型猜测的范围')
     if not 1 <= amount <= 3660:
         raise ValueError('时间数量超出支持范围')
-    if unit in {'month', 'quarter', 'year'}:
-        months = amount * {'month': 1, 'quarter': 3, 'year': 12}[unit]
+    if unit in {'month', 'quarter', 'half_year', 'year'}:
+        months = amount * {'month': 1, 'quarter': 3, 'half_year': 6, 'year': 12}[unit]
         year, m = divmod(today.year * 12 + today.month - 1 - months, 12)
         start = date(year, m + 1, min(today.day, calendar.monthrange(year, m + 1)[1]))
     else:
@@ -149,15 +170,104 @@ def _period(text, today):
     return start, today
 
 
+def _clock(today):
+    if not isinstance(today, datetime):
+        raise ValueError('小时、分钟或秒的相对范围需要当前时刻，不能使用日期零点或模型猜测的时刻')
+    if today.tzinfo is not None:
+        raise ValueError('带时区的时刻需先按数据源已配置的业务时区转换，不能自动猜测时区')
+    return today.replace(microsecond=0)
+
+
+def _period(text, today):
+    """Expand a declared period at its own precision, never from the question."""
+    text = text.strip().replace('月份', '月').replace('年份', '年')
+    compact = re.sub(r'\s+', '', text)
+    if '财年' in compact or '工作日' in compact:
+        raise ValueError('财年或工作日依赖业务日历，请明确起止时间或配置对应业务口径；不会按自然年或自然日替代')
+    base_date = today.date() if isinstance(today, datetime) else today
+    for label, offset in [('今天', 0), ('今日', 0), ('昨天', -1), ('明天', 1)]:
+        if text.startswith(label) and text != label:
+            text = (base_date + timedelta(days=offset)).isoformat() + ' ' + text[len(label):].strip()
+            break
+    fine_aliases = {f'{prefix}_{unit}': label + cn for prefix, label in
+                    [('this', '本'), ('last', '上'), ('next', '下')] for unit, cn in
+                    [('hour', '小时'), ('minute', '分钟'), ('second', '秒')]}
+    compact = fine_aliases.get(compact, compact)
+    fine_relative = re.fullmatch(r'(本|这|当前|上|下)(?:一个|一|个)?(小时|时|分钟|分|秒钟|秒)', compact)
+    fine_rolling = re.fullmatch(r'(?:最近|近|过去)([\d一二两三四五六七八九十]+)(?:个)?(小时|时|分钟|分|秒钟|秒)', compact)
+    if fine_relative or fine_rolling:
+        clock = _clock(today)
+        match = fine_relative or fine_rolling
+        unit = normalize_unit(match[2])
+        width = {'hour': 3600, 'minute': 60, 'second': 1}[unit]
+        if fine_rolling:
+            amount = _number(match[1])
+            if not 1 <= amount <= 3660:
+                raise ValueError('时间数量超出支持范围')
+            # Existing range ends are inclusive. Represent a rolling [start,
+            # now) window as closed second bounds; SQL restores the exact upper
+            # exclusive boundary without including an extra second.
+            return clock - timedelta(seconds=amount * width), clock - timedelta(seconds=1)
+        floor = clock.replace(minute=0, second=0) if unit == 'hour' else clock.replace(second=0) if unit == 'minute' else clock
+        offset = -1 if match[1] == '上' else 1 if match[1] == '下' else 0
+        start = floor + timedelta(seconds=offset * width)
+        return start, start + timedelta(seconds=width - 1)
+    precise = re.fullmatch(
+        r'(\d{4})(?:年|[-/])(\d{1,2})(?:月|[-/])(\d{1,2})(?:日|号)?[T\s]*'
+        r'(\d{1,2})(?:[:：时点](\d{1,2})(?:[:：分](\d{1,2})(?:秒)?)?(?:分)?|(?:时|点))', text)
+    if precise:
+        year, month, day, hour = map(int, precise.group(1, 2, 3, 4))
+        minute, second = precise[5], precise[6]
+        start = datetime(year, month, day, hour, int(minute or 0), int(second or 0))
+        width = 1 if second is not None else 60 if minute is not None else 3600
+        return start, start + timedelta(seconds=width - 1)
+    # ISO hour (without a trailing colon/Chinese unit).
+    hour_only = re.fullmatch(r'(\d{4}-\d{2}-\d{2})[T\s]+(\d{1,2})', text)
+    if hour_only:
+        start = datetime.combine(date.fromisoformat(hour_only[1]), time(int(hour_only[2])))
+        return start, start + timedelta(hours=1, seconds=-1)
+    return _date_period(text, base_date)
+
+
+def _compatible_pair(start, end):
+    if isinstance(start, datetime) or isinstance(end, datetime):
+        start = start if isinstance(start, datetime) else datetime.combine(start, time())
+        end = end if isinstance(end, datetime) else datetime.combine(end, time(23, 59, 59))
+    return start, end
+
+
+def validate_boundaries(start, end):
+    """Validate canonical ASL endpoints without timezone/precision guessing."""
+    def parse(text):
+        if not isinstance(text, str):
+            raise ValueError('时间边界必须是ISO日期或精确到秒的日期时间')
+        if re.fullmatch(r'\d{4}-\d{2}-\d{2}', text):
+            return date.fromisoformat(text)
+        if re.fullmatch(r'\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}', text):
+            return datetime.fromisoformat(text)
+        raise ValueError('时间边界只支持YYYY-MM-DD或YYYY-MM-DD HH:MM:SS，不猜测时区或更细精度')
+    start, end = parse(start), parse(end)
+    if type(start) is not type(end):
+        raise ValueError('时间边界精度不一致')
+    if end < start:
+        raise ValueError('时间范围结束日期早于开始日期')
+    return start, end
+
+
 def bounds(value, today):
     if isinstance(value, dict):
         if not value.get('start') or not any(value.get(k) for k in ('end', 'end_inclusive', 'end_exclusive')):
             raise ValueError('结构化时间范围缺少明确的起止日期，请检查任务规划中的时间参数')
-        start = date.fromisoformat(str(value['start']))
+        start = _period(str(value['start']), today)[0]
         if value.get('end_exclusive'):
-            end = date.fromisoformat(str(value['end_exclusive'])) - timedelta(days=1)
+            upper = _period(str(value['end_exclusive']), today)[0]
+            if isinstance(start, datetime) or isinstance(upper, datetime):
+                upper = upper if isinstance(upper, datetime) else datetime.combine(upper, time())
+                end = upper - timedelta(seconds=1)
+            else:
+                end = upper - timedelta(days=1)
         else:
-            end = date.fromisoformat(str(value.get('end') or value['end_inclusive']))
+            end = _period(str(value.get('end') or value['end_inclusive']), today)[1]
     elif isinstance(value, (list, tuple)) and len(value) == 2:
         start, end = _period(str(value[0]), today)[0], _period(str(value[1]), today)[1]
     elif isinstance(value, str):
@@ -170,9 +280,10 @@ def bounds(value, today):
             raise ValueError('多个不连续时间区间需要在任务规划中明确拆分')
     else:
         raise ValueError('结构化时间范围格式不完整')
+    start, end = _compatible_pair(start, end)
     if end < start:
         raise ValueError('时间范围结束日期早于开始日期')
-    return start.isoformat(), end.isoformat()
+    return (start.isoformat(sep=' ', timespec='seconds'), end.isoformat(sep=' ', timespec='seconds')) if isinstance(start, datetime) else (start.isoformat(), end.isoformat())
 
 
 def time_anchor(temporal, ast, catalog, knowledge, model_time):
@@ -254,4 +365,6 @@ def compile_time(temporal, ast, catalog, knowledge, model_time, today):
         return None
     start, end = bounds(value, today)
     anchor = time_anchor(temporal, ast, catalog, knowledge, model_time if isinstance(model_time, dict) else {})
-    return {'type': 'range', 'start': start, 'end': end, 'unit': 'day', 'anchor': anchor}
+    if ' ' in start and str(catalog['fields'].get(anchor, {}).get('data_type') or '').upper() == 'DATE':
+        raise ValueError(f'时间字段【{anchor}】的数据类型为DATE，只有日期精度；秒、分钟或小时范围需映射具有时分秒的时间字段')
+    return {'type': 'range', 'start': start, 'end': end, 'unit': 'second' if ' ' in start else 'day', 'anchor': anchor}
