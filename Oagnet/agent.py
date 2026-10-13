@@ -5364,7 +5364,7 @@ def _validate_asl_output(
                 raise ValueError("ASL dimension attr was not retrieved from semantic scope")
         granularity = item.get("granularity")
         if granularity is not None and str(granularity) not in {
-            "hour", "day", "week", "month", "quarter", "year",
+            "second", "minute", "hour", "day", "week", "month", "quarter", "half_year", "year",
         }:
             raise ValueError("ASL dimension granularity is invalid")
 
@@ -5461,7 +5461,7 @@ def _validate_asl_output(
         }:
             raise ValueError("ASL time_context type is invalid")
         if str(time_context.get("unit") or "") not in {
-            "hour", "day", "week", "month", "quarter", "year",
+            "second", "minute", "hour", "day", "week", "month", "quarter", "half_year", "year",
         }:
             raise ValueError("ASL time_context unit is invalid")
         if not _PHYSICAL_FIELD.fullmatch(str(time_context.get("anchor") or "")):
@@ -5474,10 +5474,10 @@ def _validate_asl_output(
             raise ValueError("ASL custom/range time_context requires start and end")
         if time_type in {"custom", "range"}:
             try:
-                start_date = date.fromisoformat(str(time_context["start"]))
-                end_date = date.fromisoformat(str(time_context["end"]))
+                from structured_time import validate_boundaries
+                start_date, end_date = validate_boundaries(time_context["start"], time_context["end"])
             except (TypeError, ValueError) as exc:
-                raise ValueError("ASL time_context dates must use YYYY-MM-DD") from exc
+                raise ValueError("ASL time_context dates must use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, without guessed timezone or precision") from exc
             if start_date > end_date:
                 raise ValueError("ASL time_context date range is reversed")
         if time_type == "year" and time_context.get("value") is None:

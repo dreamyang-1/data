@@ -120,11 +120,17 @@ def test_aggregate_shape_is_not_rewritten():
 @pytest.mark.parametrize('all_time', [False, True])
 def test_main_time_comes_from_structured_parameters_only(monkeypatch, all_time):
     import structured_binding
+    from datetime import datetime
     class FixedDate(date):
         @classmethod
         def today(cls):
             return cls(2026, 9, 23)
     monkeypatch.setattr(structured_binding, 'date', FixedDate)
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls):
+            return cls(2026, 9, 23, 12, 30, 45)
+    monkeypatch.setattr(structured_binding, 'datetime', FixedDateTime, raising=False)
     knowledge=catalog()
     raw=extraction(operator='>')
     raw['排序']=[]

@@ -1,7 +1,7 @@
 """Bind planner slots to finite catalog candidates; never extract from a question."""
 import json
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from query_binding_review import _metadata, _object, _field
 from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields
 from binding_ownership import (entity_label_candidates, field_owners, matching_fields,
@@ -719,7 +719,8 @@ def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=No
                                       for attr in meta.get('attribute_bindings') or []]
     prompt_catalog['values'] = [dict(value, owners=sorted(catalog['_value_owners'].get(value['id']) or []))
                                 for value in catalog['values']]
-    context = {'catalog': prompt_catalog, 'current_date': (today or date.today()).isoformat(),
+    clock = today or datetime.now()
+    context = {'catalog': prompt_catalog, 'current_date': clock.isoformat(),
                'structured_extraction': extraction}
     prompt = '''你只做结构化参数到授权目录的绑定，不做自然语言问题提取。structured_extraction 是唯一业务要求。
 实体数组表示涉及的表，不是筛选值；指标/维度/展示字段/过滤/排序/时间/限制的角色及数量不得更改。
@@ -1107,7 +1108,7 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
     else:ast['limit']=limit
     temporal=extraction.get('时间粒度') or {}
     try:
-        ast['time_context'] = compile_time(temporal, ast, catalog, knowledge, plan.get('time'), today or date.today())
+        ast['time_context'] = compile_time(temporal, ast, catalog, knowledge, plan.get('time'), clock)
     except (ValueError, TypeError, KeyError, OverflowError) as exc:
         ast['ambiguity'].append(issue('时间粒度', temporal, str(exc)))
     if not ast['metrics'] and not ast['dimensions'] and not ast['ambiguity']:
