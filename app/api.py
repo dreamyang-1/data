@@ -12,7 +12,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import Field, model_validator
 
@@ -47,6 +47,7 @@ from app.services.upload_file_resolver import (
     UploadReferenceResolutionError,
 )
 from app.services.orchestrator import DataAnalysisOrchestrator
+from app.services import semantic_recommend
 from app.services.progress import _progress_callback, progress_scope
 from minio_followup_store import DatasetScope
 from app.security import trusted_backend, require_application_namespace, resolve_conversation_identity
@@ -1956,3 +1957,83 @@ def _stream_error_payload(exc: HTTPException) -> dict[str, Any]:
         "status_code": exc.status_code,
         "retryable": exc.status_code >= 500,
     }
+
+
+# ====================== 语义建模推荐接口（只读，供后端调用） ======================
+# 路径、参数与 Resp 包装和 youoagent-api 的 Java 版保持一致：
+#   GET /semanticModelEntityType/recommendTables
+#   GET /semanticModelEntityType/recommendFields
+#   GET /semanticModelRelationConfig/detectRelations
+#   GET /semanticModelRelationConfig/recommendRelations
+
+
+def _recommend_resp(data: Any, code: int = 200, msg: str = "成功") -> dict[str, Any]:
+    return {"code": code, "msg": msg, "data": data, "timestamp": int(time.time() * 1000)}
+
+
+async def _recommend_call(operation, *args) -> dict[str, Any]:
+    """同步 DB/网关调用移出事件循环；业务错误统一转 Resp(code=500)。"""
+    try:
+        return _recommend_resp(await asyncio.to_thread(operation, *args))
+    except semantic_recommend.SemanticRecommendError as exc:
+        return _recommend_resp(None, 500, str(exc))
+    except Exception:
+        logger.exception("语义建模推荐接口执行失败: %s", operation.__name__)
+        return _recommend_resp(None, 500, "推荐服务内部错误")
+
+
+@router.get(
+    "/semanticModelEntityType/recommendTables",
+    summary="实体表推荐（语义建模画布：拖入空白实体时推荐可映射的物理表）",
+)
+async def recommend_tables_endpoint(
+    semantic_model_id: int = Query(alias="semanticModelId", gt=0),
+    data_source_id: int | None = Query(alias="dataSourceId", default=None, gt=0),
+    keyword: str | None = Query(default=None, max_length=200),
+    limit: int | None = Query(default=None, ge=1, le=200),
+) -> dict[str, Any]:
+    return await _recommend_call(
+        semantic_recommend.get_service().recommend_tables,
+        semantic_model_id, data_source_id, keyword, limit,
+    )
+
+
+@router.get(
+    "/semanticModelEntityType/recommendFields",
+    summary="实体属性推荐（推荐弹框选中表后加载字段清单）",
+)
+async def recommend_fields_endpoint(
+    table_id: int = Query(alias="tableId", gt=0),
+) -> dict[str, Any]:
+    return await _recommend_call(
+        semantic_recommend.get_service().recommend_fields, table_id
+    )
+
+
+@router.get(
+    "/semanticModelRelationConfig/detectRelations",
+    summary="实体关联检测（拖入新实体时检测与已有实体的关联）",
+)
+async def detect_relations_endpoint(
+    semantic_model_id: int = Query(alias="semanticModelId", gt=0),
+    entity_type_id: str = Query(alias="entityTypeId", min_length=1, max_length=64),
+) -> dict[str, Any]:
+    return await _recommend_call(
+        semantic_recommend.get_service().detect_relations,
+        semantic_model_id, entity_type_id,
+    )
+
+
+@router.get(
+    "/semanticModelRelationConfig/recommendRelations",
+    summary="关系推荐（两个实体连线时推荐已配置关系与物理层推导候选）",
+)
+async def recommend_relations_endpoint(
+    semantic_model_id: int = Query(alias="semanticModelId", gt=0),
+    source_entity_type_id: str = Query(alias="sourceEntityTypeId", min_length=1, max_length=64),
+    target_entity_type_id: str = Query(alias="targetEntityTypeId", min_length=1, max_length=64),
+) -> dict[str, Any]:
+    return await _recommend_call(
+        semantic_recommend.get_service().recommend_relations,
+        semantic_model_id, source_entity_type_id, target_entity_type_id,
+    )

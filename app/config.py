@@ -349,6 +349,50 @@ class Settings(BaseSettings):
     mysql_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
     mysql_read_timeout_seconds: int = Field(default=10, ge=1, le=60)
     mysql_write_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    # ---------- 语义建模推荐接口（只读） ----------
+    # 元数据库：实体/关系推荐查询物理表、字段与实体关系配置（info_sec_kb_v3）。
+    metadata_mysql_host: str = Field(
+        default="192.168.1.223",
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_HOST", "METADATA_MYSQL_HOST"
+        ),
+    )
+    metadata_mysql_port: int = Field(
+        default=3306,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_PORT", "METADATA_MYSQL_PORT"
+        ),
+    )
+    metadata_mysql_user: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_USER", "METADATA_MYSQL_USER"
+        ),
+    )
+    metadata_mysql_password: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_PASSWORD", "METADATA_MYSQL_PASSWORD"
+        ),
+    )
+    metadata_mysql_database: str = Field(
+        default="info_sec_kb_v3",
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_DATABASE", "METADATA_MYSQL_DATABASE"
+        ),
+    )
+    metadata_mysql_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
+    metadata_mysql_read_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    # 大模型增强走 49 网关 /chat/workflow_chat（与 Java langchain.base-url 同一入口），
+    # 鉴权 key 同 Java 的 langchain.auth-key；超时/异常静默降级为纯规则推荐。
+    semantic_recommend_llm_enabled: bool = True
+    model_gateway_base_url: str = "http://192.168.1.49:7873"
+    model_gateway_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATA_AGENT_MODEL_GATEWAY_API_KEY"),
+    )
+    model_gateway_model_name: str = "qwen3-max"
+    model_gateway_timeout_seconds: float = Field(default=15, gt=0, le=60)
     platform_upload_reference_resolution_enabled: bool = True
     platform_upload_reference_max_age_seconds: int = Field(
         default=600, ge=30, le=3600

@@ -1,0 +1,577 @@
+"""语义建模推荐接口（Python 版）单测与路由契约测试。
+
+覆盖：实体表推荐（configured 标记/关键词分组/limit/LLM 重排与降级）、
+属性推荐（主键优先/排序/enumValues）、关联检测（计数/related/skip 零）、
+关系推荐（已配置分组/反向交换/基数翻转/物理推导 PK-FK/LLM 语义增强）、
+路由层 Resp 包装与鉴权。
+"""
+from contextlib import contextmanager
+
+import pytest
+from fastapi.testclient import TestClient as RawTestClient
+
+from app.config import Settings
+from app.main import create_app
+from app.services import semantic_recommend
+from app.services.semantic_recommend import (
+    SemanticRecommendError,
+    SemanticRecommendService,
+    _build_semantic_description,
+    _derive_entity_name,
+    _is_foreign_key_to,
+    _normalize_cardinality,
+    _parse_llm_json_array,
+    _split_table_column,
+)
+
+
+# ====================== 测试替身 ======================
+
+
+class FakeReader:
+    """按表驱动返回元数据行（snake_case，与数据库列同名）。"""
+
+    def __init__(self, *, entities=None, sub_tables=None, tables=None,
+                 fields=None, relations=None):
+        self._entities = entities or []
+        self._sub_tables = sub_tables or []
+        self._tables = tables or []
+        self._fields = fields or {}
+        self._relations = relations or []
+        self.field_calls = []
+
+    def entities(self, semantic_model_id):
+        return [dict(row) for row in self._entities]
+
+    def sub_table_names(self, semantic_model_id):
+        return list(self._sub_tables)
+
+    def tables(self, semantic_model_id, data_source_id):
+        rows = [dict(row) for row in self._tables]
+        if data_source_id is None:
+            return rows
+        return [row for row in rows if row.get("data_source_id") == data_source_id]
+
+    def field_counts(self, table_ids):
+        self.field_calls.append(list(table_ids))
+        return {tid: len(self._fields.get(tid, [])) for tid in table_ids}
+
+    def fields(self, table_id):
+        return [dict(row) for row in self._fields.get(table_id, [])]
+
+    def relations(self, semantic_model_id):
+        return [dict(row) for row in self._relations]
+
+
+class FakeGateway:
+    def __init__(self, answer=None):
+        self.answer = answer
+        self.calls = []
+
+    def complete(self, query, prompt):
+        self.calls.append((query, prompt))
+        return self.answer
+
+
+def field(fid, name, comment=None, ftype="varchar", enum_values=None):
+    return {"id": fid, "name": name, "comment": comment,
+            "type": ftype, "enum_values": enum_values}
+
+
+def base_reader(**overrides):
+    data = dict(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58},
+        ],
+        sub_tables=["customer_ext"],
+        tables=[
+            {"id": 1, "name": "customer", "comment": "客户信息表",
+             "data_source_id": 58},
+            {"id": 2, "name": "sales_order", "comment": "订单记录表",
+             "data_source_id": 58},
+            {"id": 3, "name": "log_record", "comment": None,
+             "data_source_id": 58},
+            {"id": 4, "name": "config_item", "comment": "系统配置",
+             "data_source_id": 59},
+        ],
+        fields={
+            1: [
+                field(11, "id", "主键", "bigint"),
+                field(12, "customer_name", "客户名称"),
+                field(13, "status", None, "varchar", "A,B"),
+            ],
+            2: [
+                field(21, "id", "主键", "bigint"),
+                field(22, "customer_id", "客户ID"),
+            ],
+        },
+        relations=[
+            {"id": 9, "name": "拥有", "category": "IDENTIFYING", "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+             "source_table_column_name": "customer-id",
+             "target_table_column_name": "sales_order-customer_id"},
+            {"id": 10, "name": "属于", "category": None, "type": "N:1",
+             "source_entity_type_id": "et-2", "target_entity_type_id": "et-1",
+             "source_table_column_name": "sales_order-order_no",
+             "target_table_column_name": "customer-id"},
+        ],
+    )
+    data.update(overrides)
+    return FakeReader(**data)
+
+
+# ====================== 纯函数 ======================
+
+
+def test_is_foreign_key_to_rules():
+    assert _is_foreign_key_to("customer_id", "customer", "id")
+    assert _is_foreign_key_to("CUSTOMER_ID", "customer", "id")
+    assert not _is_foreign_key_to("id", "customer", "id")
+    assert not _is_foreign_key_to(None, "customer", "id")
+    assert not _is_foreign_key_to("customer_name", "customer", "id")
+    # 去下划线后仍不匹配对方表名，也没有同名主键
+    assert not _is_foreign_key_to("cust_id", "customer", None)
+    # 与对方主键同名
+    assert _is_foreign_key_to("sales_order_id", None, "sales_order_id")
+    # 短表名（长度<=2 去下划线）不参与前缀判断
+    assert not _is_foreign_key_to("ab_id", "ab", None)
+
+
+def test_split_table_column():
+    assert _split_table_column("customer-id") == ("customer", "id")
+    assert _split_table_column("customer") == ("customer", None)
+    assert _split_table_column(None) == (None, None)
+    assert _split_table_column("  ") == (None, None)
+    assert _split_table_column("-id") == ("-id", None)  # idx=0 视为无分隔符
+
+
+def test_normalize_cardinality_reversal():
+    assert _normalize_cardinality("1:N", True) == "N:1"
+    assert _normalize_cardinality("N:1", True) == "1:N"
+    assert _normalize_cardinality("N:N", True) == "N:N"
+    assert _normalize_cardinality("1:N", False) == "1:N"
+    assert _normalize_cardinality(None, False) == "1:N"
+
+
+def test_build_semantic_description_sentences():
+    assert _build_semantic_description("客户", "订单", "1:1", "拥有") == (
+        "1个【客户】拥有1个【订单】"
+    )
+    assert _build_semantic_description("客户", "订单", "N:1", "隶属") == (
+        "多个【客户】隶属1个【订单】，1个【订单】被多个【客户】隶属"
+    )
+    assert _build_semantic_description("客户", "订单", "N:N", "关联") == (
+        "多个【客户】关联多个【订单】"
+    )
+    assert _build_semantic_description("客户", "订单", "1:N", "开设") == (
+        "1个【客户】开设多个【订单】，一个【订单】被多个【客户】开设"
+    )
+
+
+def test_derive_entity_name_suffixes():
+    assert _derive_entity_name("customer", "客户信息表") == "客户"
+    assert _derive_entity_name("sales_order", "订单记录表") == "订单"
+    assert _derive_entity_name("t_user", "用户数据表") == "用户"
+    assert _derive_entity_name("t_user", None) == "t_user"
+    assert _derive_entity_name("t_user", "") == "t_user"
+    assert _derive_entity_name("t_user", "配置") == "配置"
+
+
+def test_parse_llm_json_array():
+    assert _parse_llm_json_array(None) is None
+    assert _parse_llm_json_array("") is None
+    assert _parse_llm_json_array("说明文字") is None
+    assert _parse_llm_json_array("结果：[{'a':1}]") is None  # 非法 JSON
+    assert _parse_llm_json_array('前缀 [ {"a":1} ] 后缀') == [{"a": 1}]
+    assert _parse_llm_json_array('{"a":1}') is None  # 不是数组
+
+
+# ====================== 接口一：实体表推荐 ======================
+
+
+def test_recommend_tables_configured_keyword_and_limit():
+    reader = base_reader()
+    service = SemanticRecommendService(reader, None)
+
+    # 无关键词：有注释在前（按表名），无注释在后；字段数经一次 GROUP BY 查询
+    result = service.recommend_tables(81, None, None, None)
+    assert [vo["tableName"] for vo in result] == [
+        "config_item", "customer", "sales_order", "log_record",
+    ]
+    assert reader.field_calls == [[1, 2, 3, 4]]
+    by_name = {vo["tableName"]: vo for vo in result}
+    assert by_name["customer"]["configured"] is True
+    assert by_name["sales_order"]["configured"] is True
+    assert by_name["config_item"]["configured"] is False
+    assert by_name["log_record"]["configured"] is False
+    assert by_name["customer"]["suggestedEntityName"] == "客户"
+    assert by_name["customer"]["fieldCount"] == 3
+    assert by_name["log_record"]["fieldCount"] == 0
+
+    # 关键词命中：名称命中 > 注释命中，未命中的被过滤
+    result = service.recommend_tables(81, None, "订单", None)
+    assert [vo["tableName"] for vo in result] == ["sales_order"]
+
+    # 关键词命中注释
+    result = service.recommend_tables(81, None, "系统", None)
+    assert [vo["tableName"] for vo in result] == ["config_item"]
+
+    # limit 截断
+    result = service.recommend_tables(81, None, None, 2)
+    assert [vo["tableName"] for vo in result] == ["config_item", "customer"]
+
+    # data_source 过滤
+    result = service.recommend_tables(81, 59, None, None)
+    assert [vo["tableName"] for vo in result] == ["config_item"]
+
+
+def test_recommend_tables_llm_reorder_and_entity_names():
+    reader = base_reader()
+    gateway = FakeGateway(
+        '[{"tableName":"sales_order","entityName":"销售订单"},'
+        '{"tableName":"customer","entityName":"客户"}]'
+    )
+    service = SemanticRecommendService(reader, gateway)
+    result = service.recommend_tables(81, None, None, None)
+    # LLM 返回顺序在前，未返回的（config_item/log_record）保持规则顺序在后
+    assert [vo["tableName"] for vo in result][:2] == ["sales_order", "customer"]
+    by_name = {vo["tableName"]: vo for vo in result}
+    assert by_name["sales_order"]["suggestedEntityName"] == "销售订单"
+    assert by_name["customer"]["suggestedEntityName"] == "客户"
+    assert "实体映射表推荐排序" == gateway.calls[0][0]
+
+
+def test_recommend_tables_llm_failure_falls_back_to_rules():
+    reader = base_reader()
+    service = SemanticRecommendService(reader, FakeGateway(None))
+    result = service.recommend_tables(81, None, None, None)
+    assert [vo["tableName"] for vo in result] == [
+        "config_item", "customer", "sales_order", "log_record",
+    ]
+    assert result[0]["suggestedEntityName"] == "系统配置"
+
+
+def test_recommend_tables_llm_ignored_without_gateway():
+    reader = base_reader()
+    service = SemanticRecommendService(reader, None, llm_enabled=True)
+    # gateway 为 None 时 _llm_enabled 自动为 False，不应报错
+    assert service.recommend_tables(81, None, None, None)
+
+
+# ====================== 接口二：属性推荐 ======================
+
+
+def test_recommend_fields_primary_first_and_ordering():
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.recommend_fields(1)
+    assert [vo["name"] for vo in result] == ["id", "customer_name", "status"]
+    assert result[0]["primaryKey"] is True
+    assert result[0]["fieldId"] == 11
+    assert result[1]["primaryKey"] is False
+    # 无注释字段排在有注释字段之后
+    status = result[2]
+    assert status["comment"] is None
+    assert status["enumValues"] == "A,B"
+    assert status["suggestedAttrName"] == "status"
+    assert result[1]["suggestedAttrName"] == "客户名称"
+
+
+def test_recommend_fields_rejects_bad_table_id():
+    service = SemanticRecommendService(base_reader(), None)
+    with pytest.raises(SemanticRecommendError):
+        service.recommend_fields(0)
+    with pytest.raises(SemanticRecommendError):
+        service.recommend_fields(-1)
+
+
+# ====================== 接口三：关联检测 ======================
+
+
+def test_detect_relations_counts_configured_and_inferred():
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.detect_relations(81, "et-1")
+    assert len(result) == 1
+    row = result[0]
+    assert row["otherEntityTypeId"] == "et-2"
+    assert row["otherEntityName"] == "订单"
+    assert row["related"] is True
+    assert row["relationCount"] == 2  # 两条已配置关系（含反向）
+    assert row["inferred"] is True
+    assert row["inferredCount"] == 1  # sales_order.customer_id -> customer.id
+
+
+def test_detect_relations_skips_entities_without_evidence():
+    reader = base_reader(entities=[
+        {"id": "et-1", "name": "客户", "main_table_name": "customer",
+         "data_source_id": 58},
+        {"id": "et-3", "name": "孤立实体", "main_table_name": "no_such_table",
+         "data_source_id": 58},
+    ])
+    service = SemanticRecommendService(reader, None)
+    assert service.detect_relations(81, "et-1") == []
+
+
+def test_detect_relations_validates_input():
+    service = SemanticRecommendService(base_reader(), None)
+    with pytest.raises(SemanticRecommendError):
+        service.detect_relations(81, "")
+    with pytest.raises(SemanticRecommendError, match="实体类型不存在"):
+        service.detect_relations(81, "et-404")
+
+
+# ====================== 接口四：关系推荐 ======================
+
+
+def test_recommend_relations_existing_grouping_and_reversal():
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.recommend_relations(81, "et-1", "et-2")
+
+    existing = [vo for vo in result if vo["fromExisting"]]
+    assert len(existing) == 2
+    by_id = {vo["relationId"]: vo for vo in existing}
+
+    forward = by_id[9]  # et-1 -> et-2 原方向
+    assert forward["relationName"] == "拥有"
+    assert forward["cardinality"] == "1:N"
+    assert forward["fieldPairs"] == [{
+        "sourceTableName": "customer", "sourceColumnName": "id",
+        "sourceColumnComment": None,
+        "targetTableName": "sales_order", "targetColumnName": "customer_id",
+        "targetColumnComment": None,
+    }]
+    assert forward["semanticDescription"] == (
+        "1个【客户】拥有多个【订单】，一个【订单】被多个【客户】拥有"
+    )
+
+    reversed_vo = by_id[10]  # et-2 -> et-1 存储方向，需翻转为请求视角
+    assert reversed_vo["cardinality"] == "1:N"  # N:1 反向翻转
+    # 字段对按请求方向交换：存储的 sales_order.order_no -> customer.id
+    # 展示为 customer.id -> sales_order.order_no
+    assert reversed_vo["fieldPairs"][0]["sourceTableName"] == "customer"
+    assert reversed_vo["fieldPairs"][0]["sourceColumnName"] == "id"
+    assert reversed_vo["fieldPairs"][0]["targetTableName"] == "sales_order"
+    assert reversed_vo["fieldPairs"][0]["targetColumnName"] == "order_no"
+
+
+def test_recommend_relations_inferred_candidates_and_llm_names():
+    gateway = FakeGateway(
+        '[{"candidate":1,"relationName":"开设","semanticDescription":"自定义"},'
+        '{"candidate":99,"relationName":"越界"}]'
+    )
+    service = SemanticRecommendService(base_reader(), gateway)
+    result = service.recommend_relations(81, "et-1", "et-2")
+
+    inferred = [vo for vo in result if not vo["fromExisting"]]
+    # 1:N（PK-FK）一条；无反向 FK、无同名外键
+    assert len(inferred) == 1
+    candidate = inferred[0]
+    assert candidate["relationName"] == "开设"
+    assert candidate["semanticDescription"] == "自定义"
+    assert candidate["cardinality"] == "1:N"
+    assert candidate["fieldPairs"] == [{
+        "sourceTableName": "customer", "sourceColumnName": "id",
+        "sourceColumnComment": "主键",
+        "targetTableName": "sales_order", "targetColumnName": "customer_id",
+        "targetColumnComment": "客户ID",
+    }]
+
+
+def test_recommend_relations_same_name_fk_and_reverse_fk():
+    reader = base_reader(fields={
+        1: [
+            field(11, "id", "主键", "bigint"),
+            field(12, "dept_id", "部门ID"),
+            field(13, "region_id", "区域ID"),
+        ],
+        2: [
+            field(21, "id", "主键", "bigint"),
+            field(22, "customer_id", "客户ID"),
+            field(23, "dept_id", "部门ID"),
+        ],
+    })
+    service = SemanticRecommendService(reader, None)
+    result = service.recommend_relations(81, "et-1", "et-2")
+    inferred = [vo for vo in result if not vo["fromExisting"]]
+    # 1:N（customer.id -> sales_order.customer_id）
+    # + N:1（sales_order.id 无对应 customer 主键外键 → 无）
+    # + N:N（同名 dept_id）
+    cardinalities = sorted(vo["cardinality"] for vo in inferred)
+    assert cardinalities == ["1:N", "N:N"]
+    nn = next(vo for vo in inferred if vo["cardinality"] == "N:N")
+    assert nn["relationName"] == "关联"  # 无网关时保留模板
+    assert nn["semanticDescription"] == (
+        "多个【客户】关联多个【订单】"
+    )
+    assert nn["fieldPairs"] == [{
+        "sourceTableName": "customer", "sourceColumnName": "dept_id",
+        "sourceColumnComment": "部门ID",
+        "targetTableName": "sales_order", "targetColumnName": "dept_id",
+        "targetColumnComment": "部门ID",
+    }]
+
+
+def test_recommend_relations_without_llm_keeps_template():
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.recommend_relations(81, "et-1", "et-2")
+    inferred = [vo for vo in result if not vo["fromExisting"]]
+    assert inferred[0]["relationName"] == "关联"
+
+
+def test_recommend_relations_validates_input():
+    service = SemanticRecommendService(base_reader(), None)
+    with pytest.raises(SemanticRecommendError):
+        service.recommend_relations(81, "", "et-2")
+    with pytest.raises(SemanticRecommendError, match="实体类型不存在"):
+        service.recommend_relations(81, "et-1", "et-404")
+
+
+def test_recommend_relations_requires_both_entities():
+    reader = base_reader(entities=[])
+    service = SemanticRecommendService(reader, None)
+    with pytest.raises(SemanticRecommendError, match="实体类型不存在"):
+        service.recommend_relations(81, "et-1", "et-2")
+
+
+# ====================== 路由层契约 ======================
+
+
+HEADERS = {
+    "Authorization": "Bearer phase0c-fixture-token",
+    "X-Tenant-Id": "t1",
+    "X-User-Id": "u1",
+}
+
+
+@contextmanager
+def route_client(service):
+    """注入 fake 推荐服务并启动应用 lifespan（container 注入 trusted_backend）。"""
+    app = create_app(Settings(
+        env="test",
+        adapter_mode="mock",
+        intent_model_enabled=False,
+        business_question_collection_enabled=False,
+        trusted_backend_token="phase0c-fixture-token",
+    ))
+    original = semantic_recommend.get_service
+    semantic_recommend.get_service = lambda: service
+    try:
+        with RawTestClient(app) as client:
+            yield client
+    finally:
+        semantic_recommend.get_service = original
+
+
+def test_route_recommend_tables_resp_contract():
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81, "keyword": "订单"},
+            headers=HEADERS,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["code"] == 200
+        assert body["msg"] == "成功"
+        assert isinstance(body["timestamp"], int)
+        assert [row["tableName"] for row in body["data"]] == ["sales_order"]
+
+
+def test_route_recommend_fields():
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendFields",
+            params={"tableId": 1},
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert body["code"] == 200
+        assert [row["name"] for row in body["data"]] == [
+            "id", "customer_name", "status",
+        ]
+
+
+def test_route_detect_relations_and_recommend_relations():
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        resp = client.get(
+            "/semanticModelRelationConfig/detectRelations",
+            params={"semanticModelId": 81, "entityTypeId": "et-1"},
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert body["code"] == 200
+        assert body["data"][0]["otherEntityTypeId"] == "et-2"
+
+        resp = client.get(
+            "/semanticModelRelationConfig/recommendRelations",
+            params={
+                "semanticModelId": 81,
+                "sourceEntityTypeId": "et-1",
+                "targetEntityTypeId": "et-2",
+            },
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert body["code"] == 200
+        assert any(vo["fromExisting"] for vo in body["data"])
+
+
+def test_route_business_error_maps_to_resp_500():
+    class FailingService:
+        def recommend_tables(self, *args):
+            raise SemanticRecommendError("物理表ID不能为空")
+
+    with route_client(FailingService()) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81},
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert resp.status_code == 200
+        assert body["code"] == 500
+        assert body["msg"] == "物理表ID不能为空"
+        assert body["data"] is None
+
+
+def test_route_unexpected_error_maps_to_internal_message():
+    class FailingService:
+        def recommend_tables(self, *args):
+            raise RuntimeError("db down")
+
+    with route_client(FailingService()) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81},
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert body["code"] == 500
+        assert body["msg"] == "推荐服务内部错误"
+
+
+def test_route_requires_trusted_backend_headers():
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81},
+        )
+        assert resp.status_code == 401
+
+
+def test_route_query_validation():
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        # 缺少必填 semanticModelId
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables", headers=HEADERS
+        )
+        assert resp.status_code == 422
+        # limit 超上限
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81, "limit": 201},
+            headers=HEADERS,
+        )
+        assert resp.status_code == 422
