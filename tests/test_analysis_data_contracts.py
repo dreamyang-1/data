@@ -319,8 +319,9 @@ def test_danger_entry_intercepts_any_keyword_question():
     assert response.status == "COMPLETED"
     assert response.intent_source == "SAFETY_GUARD"
     assert response.answer == (
-        "该问题涉及删除、新增、修改等危险操作，已被安全策略拦截。"
-        "请改为查询、统计、分析类问题。"
+        "您当前的问题涉及数据的危险操作。为了保障数据安全，"
+        "当前系统仅支持数据的查询、统计与分析，"
+        "无法执行任何修改或删除指令。"
     )
     # 英文关键词同样拦截
     assert (

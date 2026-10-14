@@ -1508,8 +1508,10 @@ class V2ContextV1ExecutionBridge:
                 await emit_progress(
                     "INTENT_RECOGNITION",
                     "RUNNING",
-                    "判定思考：用户问题为「" + chat.question.strip() + "」，"
-                    "涉及删除、新增、修改等危险操作，我按安全策略直接拦截这个问题。",
+                    "判定思考：用户原始问题为「" + chat.question.strip() + "」。"
+                    "经意图识别，该问题包含数据破坏性动作。根据系统安全与权限管控策略，"
+                    "当前对话环境仅支持数据的查询、统计与分析，严禁执行任何增删改（CUD）操作。"
+                    "因此，系统需触发安全拦截机制。",
                     progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
                     off_topic=True,
                 )
@@ -1517,8 +1519,8 @@ class V2ContextV1ExecutionBridge:
                 await emit_progress(
                     "INTENT_RECOGNITION",
                     "RUNNING",
-                    "判定思考：用户问题为「" + chat.question.strip() + "」，"
-                    "和业务数据分析场景无关，我直接回答这个问题。",
+                    "判定思考：用户输入「" + chat.question.strip() + "」属于日常问候语，"
+                    "未包含具体的业务指标、实体或分析意图。系统应直接响应问候。",
                     progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
                     off_topic=True,
                 )
@@ -1550,6 +1552,7 @@ class V2ContextV1ExecutionBridge:
                         "INTENT_RECOGNITION",
                         "RUNNING",
                         "正在判断问题类型，并识别各问题的意图与业务域。",
+                        progress_phase="V2_COMPOUND_JUDGE_START",
                     )
                     judgment_section = ""
                     try:

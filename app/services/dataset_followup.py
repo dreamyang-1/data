@@ -358,6 +358,57 @@ def dataset_operation_family(operation: Mapping[str, Any] | None) -> str | None:
             'drilldown':'DRILLDOWN'}.get(str(operation.get('type')))
 
 
+def describe_dataset_operation(operation: Mapping[str, Any] | None) -> str | None:
+    """把快照操作转成用户能看懂的中文描述，说不清的操作返回None。"""
+    if not isinstance(operation, Mapping):
+        return None
+    op_type = str(operation.get('type') or '').lower()
+    field = str(operation.get('field') or '').strip()
+    if op_type == 'sort':
+        direction = '降序' if operation.get('descending') else '升序'
+        return f'按{field}{direction}排列' if field else None
+    if op_type == 'limit':
+        count = operation.get('count')
+        return f'只看前{count}条' if count else None
+    if op_type == 'sort_limit':
+        if not field:
+            return None
+        direction = '降序' if operation.get('descending') else '升序'
+        return f'按{field}{direction}取前{operation.get("count")}名'
+    if op_type == 'filter':
+        return f'筛选{operation.get("field")}为{operation.get("value")}'
+    if op_type == 'select':
+        selected = '、'.join(str(column) for column in operation.get('columns') or [])
+        return f'只展示{selected}' if selected else None
+    if op_type == 'aggregate':
+        groups = '、'.join(str(column) for column in operation.get('group_by') or [])
+        parts = []
+        for item in operation.get('aggregations') or []:
+            if not isinstance(item, Mapping):
+                continue
+            function_names = {'avg': '平均', 'sum': '合计', 'max': '最高', 'min': '最低'}
+            name = function_names.get(str(item.get('function') or ''), str(item.get('function') or ''))
+            parts.append(f'{name}{item.get("field")}')
+        if not parts:
+            return None
+        body = '、'.join(parts)
+        return f'按{groups}统计{body}' if groups else f'统计{body}'
+    if op_type == 'extrema':
+        return f'取{field}{"最高" if operation.get("descending") else "最低"}值' if field else None
+    if op_type == 'extrema_difference':
+        return f'计算{field}最高与最低的差额' if field else None
+    if op_type == 'derive':
+        return (
+            f'按{operation.get("left_field")}除以{operation.get("right_field")}'
+            f'计算{operation.get("result_field")}'
+        )
+    if op_type == 'pipeline':
+        parts = [describe_dataset_operation(item) for item in operation.get('operations') or []]
+        parts = [part for part in parts if part]
+        return '，'.join(parts) if parts else None
+    return None
+
+
 def presentation_ancestors(
     selected: Mapping[str, Any], references: Sequence[Mapping[str, Any]], *, allow_rank_slice: bool = False,
 ) -> list[Mapping[str, Any]]:

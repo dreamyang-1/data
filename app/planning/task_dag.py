@@ -299,6 +299,8 @@ class PlannerOutcome:
     single_intent: PrimaryIntent | None = None
     single_parameters: tuple[str, ...] = ()
     single_structured: dict[str, Any] | None = None
+    # 模型生成的任务名称（陈述句），缺省时展示层按规则从问题文本转换
+    single_task_name: str | None = None
     # 本次注入规范解析出的指标目录（登记名集合 + 别名映射），供归一与重试判定
     metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None
 
@@ -327,6 +329,7 @@ class DecomposedTask:
     intent: PrimaryIntent | None = None
     parameters: tuple[str, ...] = ()
     structured: dict[str, Any] | None = None
+    name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -514,6 +517,14 @@ class _PlannedTask(BaseModel):
         max_length=1000,
         description="必填；该任务完整可独立执行的问题文本",
     )
+    name: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=60,
+        description="该任务的名称：动词+业务指标+过滤条件的陈述句，"
+            "概括任务要得到的业务结果，不得照抄用户问题原文，"
+            "不带疑问词（是多少、有哪些等），结尾不加标点",
+    )
     depends_on: list[int] = Field(
         default_factory=list,
         description="必填；默认空数组；依赖同问题内前序任务时填从0开始的任务下标",
@@ -559,6 +570,7 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 4. 用户明确要求分别查询多个结果再比较或合并计算时（如“分别查询今年和去年销售额，并比较同比变化”），按查询数拆任务，再加一个依赖全部前序任务的计算任务，任务问题写明“根据上述任务的查询结果……不再查询数据库”。
 5. 业务语义规范指标表中某指标的依赖指标列登记了成分指标（取值不是"无"或空）时，该指标必须按公式成分拆分：依赖指标列里的每个成分指标各一个查询任务（指标名用该成分的规范登记原名，筛选条件按规范中该成分的口径与公式规则归属，分组维度只放在需要按维度分组的成分任务上），最后再加一个计算任务，依赖全部成分任务，问题写明"根据上述任务的查询结果计算×××，不再查询数据库"。对复合指标做趋势、占比、对比等分析时同样先按成分拆分，分析口径写进成分任务与计算任务的问题文本。依赖指标列为无、或成分指标不在规范指标表内时不拆；依赖指标列为无的普通指标的趋势、占比、对比分析，以及围绕同一份数据的分析都保持1个任务。
 6. 不要把ASL、SQL、取数、校验、洞察这些内部步骤拆成任务。
+7. 每个任务都要输出name字段：任务名称是"动词+业务指标+过滤条件"的陈述句（如"统计2025年上海市各经销商的含税销售总额""计算2025年上海市平均每单销售金额""查询订单笔数大于5笔的经销商名单"），用规范登记的指标、维度或实体名概括任务要得到的业务结果，不得照抄用户问题原文，不得出现"是多少""有哪些"等疑问词，结尾不加标点；计算任务的name直接写"计算×××"，不用带"根据上述任务的查询结果"前缀。
 
 意图判断规则（问题级intent字段）：
 1. 从下列意图枚举中选一个最贴合问题目标的取值，只输出枚举名本身。不需要查询业务数据的问题（闲聊、超出业务范围）按实际选CHAT或OUT_OF_SCOPE，extraction输出null。
@@ -705,6 +717,7 @@ class SingleQuestionPlanner:
             single_intent=first.intent or decomposition.intent,
             single_parameters=first.parameters,
             single_structured=first.structured,
+            single_task_name=first.name,
             metric_catalog=decomposition.metric_catalog,
         )
 
@@ -966,6 +979,11 @@ class SingleQuestionPlanner:
                 intent=task_intent,
                 parameters=parameters,
                 structured=structured,
+                name=(
+                    item.name.strip()
+                    if item.name and item.name.strip()
+                    else None
+                ),
             ))
         return QuestionDecomposition(
             intent=question_intent,

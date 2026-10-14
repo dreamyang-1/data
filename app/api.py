@@ -808,8 +808,8 @@ async def chat_stream(
         titled_think_sections: set[str] = set()
         composite_mode = False
         off_topic_flag = False
-        dialogue_state_label = ""
         planning_data_verdict = ""
+        planning_data_operation_text = ""
         composite_child_orderer = _CompositeChildProgressOrderer()
         latest_progress_stage = "INTENT_RECOGNITION"
         settings = request.app.state.container.settings
@@ -872,48 +872,77 @@ async def chat_stream(
 
         def _with_planning_verdict(
             planning_event: dict[str, Any],
-        ) -> dict[str, Any]:
-            # 追问的数据来源结论替换规划完成消息的判定首行（识别模型的
-            # 初判或"拆分判断完成"），让结论与任务、参数出现在同一个规划块里
+        ) -> list[dict[str, Any]]:
+            # 快照复用成立时把数据来源写进任务名：单个任务用"复用上一轮
+            # 查询结果，{操作描述}"的说法，多个任务行退回句首状语；
+            # 参数提取里的"是否查询数据库"同步纠正
             if not planning_data_verdict:
-                return planning_event
+                return _split_planning_summary(planning_event)
             message = str(planning_event.get("message") or "")
-            tail = None
-            for prefix in ("拆分判断完成。", "追问判断完成："):
-                if message.startswith(prefix):
-                    remainder = message[len(prefix):]
-                    pieces = remainder.split("\n", 1)
-                    # 整个判定首行（含识别模型的初判结论体）都让位给执行层
-                    # 结论：两者不一致时以实际执行为准，只保留一行判定话术
-                    tail = pieces[1] if len(pieces) > 1 else ""
-                    break
-            if tail is None:
-                return planning_event
-            rest = tail.lstrip("\n")
-            if "不再发起新查询" in planning_data_verdict:
-                # 快照复用成立时，规划阶段注入的"是否查询数据库：是"
-                # 已被实际路由推翻，展示的参数提取同步纠正
-                rest = rest.replace(
-                    '"是否查询数据库": "是"',
-                    '"是否查询数据库": "否（基于上一轮查询结果数据集直接分析）"',
-                )
+            lines = message.split("\n")
+            task_line_count = sum(
+                1 for line in lines if re.match(r"^任务\d+：", line)
+            )
+            operation_text = planning_data_operation_text.strip(" 。")
+            tagged_lines = []
+            for line in lines:
+                match = re.match(r"^(任务\d+：)(.*)$", line)
+                if match and "复用上一轮" not in line and "基于上一轮" not in line:
+                    if operation_text and task_line_count == 1:
+                        line = match.group(1) + "复用上一轮查询结果，" + operation_text + "。"
+                    else:
+                        line = (
+                            match.group(1)
+                            + "基于上一轮查询结果数据集直接分析，"
+                            + match.group(2)
+                        )
+                tagged_lines.append(line)
             merged = dict(planning_event)
-            merged["message"] = (
-                planning_data_verdict + "\n" + rest
-            ).rstrip() if rest else planning_data_verdict
-            return merged
+            merged["message"] = "\n".join(tagged_lines)
+            if merged.get("task_table"):
+                # 快照复用后任务表里的查询标记同步改为不查库；
+                # 单任务的名称与任务行同样改成复用上一轮的说法
+                table_rows = merged["task_table"]
+                merged["task_table"] = [
+                    {
+                        **row,
+                        "是否查询数据库": "否（基于上一轮查询结果数据集直接分析）",
+                        **(
+                            {"名称": f"复用上一轮查询结果，{operation_text}"}
+                            if operation_text and len(table_rows) == 1
+                            else {}
+                        ),
+                    }
+                    for row in table_rows
+                ]
+            return _split_planning_summary(merged)
+
+        def _split_planning_summary(
+            planning_event: dict[str, Any],
+        ) -> list[dict[str, Any]]:
+            # 决策行单独成事件保留 phase；任务与参数提取内容拆到后续事件
+            # 且不带 phase，后端按 phase 识别提示行时不会扫到整块任务详情
+            message = str(planning_event.get("message") or "")
+            pieces = message.split("\n", 1)
+            if len(pieces) == 1 or not planning_event.get("progress_phase"):
+                return [planning_event]
+            rest = pieces[1].strip("\n")
+            if not rest:
+                return [planning_event]
+            tail_event = dict(planning_event, message=rest)
+            tail_event.pop("progress_phase", None)
+            # 任务表只随决策行事件的state下发一次
+            tail_event.pop("task_table", None)
+            return [dict(planning_event, message=pieces[0]), tail_event]
 
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
             nonlocal question_completion_displayed
             nonlocal planning_released, presentation_scenario, composite_mode
             nonlocal latest_progress_stage, off_topic_flag
-            nonlocal dialogue_state_label, planning_data_verdict
+            nonlocal planning_data_verdict, planning_data_operation_text
             stage = str(event.get("stage") or "").upper()
             message_text = str(event.get("message") or "")
-            if message_text.startswith("对话状态识别："):
-                # 最近的对话状态结论，规划 RUNNING 按追问/新问题区分话术
-                dialogue_state_label = message_text
             if bool(event.get("off_topic")):
                 # 语义识别判成业务无关的问题，规划节点对这轮不再点亮
                 off_topic_flag = True
@@ -962,24 +991,28 @@ async def chat_stream(
                     {
                         "stage": "TASK_PLANNING",
                         "status": "RUNNING",
-                        "message": (
-                            "本轮为追问，正在判断是基于上一轮查询结果直接分析，"
-                            "还是需要新数据查询，并进行任务拆分与参数提取。"
-                            if "追问" in dialogue_state_label
-                            else "正在进行任务拆分、任务意图分析与参数提取。"
-                        ),
+                        "progress_phase": "V2_TASK_PLANNING_START",
+                        "message": "正在进行任务拆分、任务意图分析与参数提取。",
                     },
                 ]
             if stage == "TASK_PLANNING" and event.get("data_source_verdict"):
-                # 执行层的追问数据来源结论：不单独成行，释放规划块时
-                # 替换"拆分判断完成"首行
-                planning_data_verdict = message_text
+                # 追问的数据来源结论：快照复用要说明为什么不查库，保留并
+                # 替换规划块首行；判定为新查询时和参数提取里的
+                # "是否查询数据库"标注一致，不再重复说明
+                if "不再发起新查询" in message_text:
+                    planning_data_verdict = message_text
+                    planning_data_operation_text = str(
+                        event.get("dataset_operation_text") or ""
+                    )
                 return []
-            if stage == "TASK_PLANNING" and not planning_released:
-                # The document format presents one stable planning block. Keep
-                # the latest completed planner message and release it only once
-                # completeness is known, so a missing-parameter request cannot
-                # first claim that it will execute and then immediately stop.
+            if stage == "TASK_PLANNING" and (
+                not planning_released
+                or (event.get("task_table") and not composite_mode)
+            ):
+                # 单问题桥接轮的规划摘要在 completeness 提前释放后到达，
+                # 要扣住等快照结论到齐再经改写函数下发，否则复用轮的
+                # 任务名和数据来源标记来不及纠正；
+                # 复合流程的摘要在意图完结后直通渲染，扣住会乱序
                 if str(event.get("status") or "").upper() == "COMPLETED":
                     deferred_planning[:] = [event]
                     if intent_completed:
@@ -1010,8 +1043,9 @@ async def chat_stream(
                     ordered = [
                         event,
                         *(
-                            _with_planning_verdict(item)
-                            for item in deferred_planning
+                            item
+                            for deferred in deferred_planning
+                            for item in _with_planning_verdict(deferred)
                         ),
                     ]
                     deferred_planning.clear()
@@ -1070,10 +1104,13 @@ async def chat_stream(
                         # Keep the same task / intent / domain / parameters
                         # layout when asking for missing input. Only replace
                         # the decision line; no executable plan is promised.
-                        base = _with_planning_verdict(deferred_planning[-1])
-                        _, _, task_details = str(
-                            base.get("message") or ""
-                        ).partition("\n")
+                        verdict_pieces = _with_planning_verdict(
+                            deferred_planning[-1]
+                        )
+                        task_details = "\n".join(
+                            str(item.get("message") or "")
+                            for item in verdict_pieces[1:]
+                        ).strip()
                         decision_parts = ["当前任务参数不完整，暂停子任务拆分。"]
                         if planning_data_verdict:
                             # 追问结论保留在判定行，参数不完整紧随其后
@@ -1081,9 +1118,9 @@ async def chat_stream(
                         if task_details:
                             decision_parts.append(task_details)
                         planning["message"] = "\n".join(decision_parts).rstrip()
-                        ordered.append(planning)
+                        ordered.extend(_split_planning_summary(planning))
                     else:
-                        ordered.append(
+                        ordered.extend(
                             _with_planning_verdict(deferred_planning[-1])
                         )
                     deferred_planning.clear()
@@ -1096,7 +1133,7 @@ async def chat_stream(
                 # adapters emit ASL/SQL milestones before DATA_RETRIEVAL; release
                 # the completed planning block before the first such milestone
                 # instead of appending planning after tool output.
-                ordered = [_with_planning_verdict(deferred_planning[-1]), event]
+                ordered = [*_with_planning_verdict(deferred_planning[-1]), event]
                 deferred_planning.clear()
                 planning_released = True
                 return ordered
@@ -1196,9 +1233,11 @@ async def chat_stream(
             for event in composite_child_orderer.flush():
                 async for rendered_event in stream_thinking(event):
                     yield rendered_event
-            for event in deferred_planning:
-                async for rendered_event in stream_thinking(event):
-                    yield rendered_event
+            for deferred_item in deferred_planning:
+                # 兜底释放也要过改写函数：正常轮原样透传，快照轮补任务名纠正
+                for piece in _with_planning_verdict(deferred_item):
+                    async for rendered_event in stream_thinking(piece):
+                        yield rendered_event
             deferred_planning.clear()
             response_scenario = (
                 "ANALYTIC"
@@ -1407,10 +1446,14 @@ def _thinking_events(
     # as ``intent_recognition`` or ``data_retrieval``; it groups think content
     # by the canonical New_Agent nodes below.
     step = _new_agent_think_step(stage)
-    state_event = _event("updata_state", {
-        "step": "",
-        "data": step,
-    })
+    state_payload = {"step": "", "data": step}
+    if progress.get("task_table"):
+        # 任务表存进state状态：任务名、是否查询数据库、依赖都在表里
+        state_payload["task_table"] = progress["task_table"]
+    state_event = _event("updata_state", state_payload)
+    if state_payload.get("task_table") and bool(progress.get("heading_only")):
+        # 纯任务表状态刷新事件没有正文，只下发state，避免渲染出空消息分片
+        return [state_event]
     content = (
         ""
         if bool(progress.get("heading_only"))
@@ -1430,6 +1473,9 @@ def _thinking_events(
         chunk_size=chunk_size,
         max_chunks=max_chunks,
     )
+    # progress_phase 只对外的四类关键提示行暴露：补全问题、判断问题类型、
+    # 任务拆分启动、拆分判断完成；其余内部中间步骤的 phase 不出传输层
+    public_phase = progress.get("progress_phase") in _PUBLIC_PROGRESS_PHASES
     message_events: list[str] = []
     for index, chunk in enumerate(chunks):
         chunk_meta = progress if index == 0 else {
@@ -1437,6 +1483,7 @@ def _thinking_events(
             for key in (
                 "stage",
                 "status",
+                "progress_phase",
                 "is_child_task",
                 "task_id",
                 "task_index",
@@ -1445,6 +1492,9 @@ def _thinking_events(
             )
             if key in progress
         }
+        if not public_phase:
+            chunk_meta = dict(chunk_meta)
+            chunk_meta.pop("progress_phase", None)
         message_payload: dict[str, Any] = {
             "step": step,
             "index": index,
@@ -1519,6 +1569,16 @@ def _markdown_hard_line_breaks(content: str) -> str:
         next_line = lines[index + 1] if index + 1 < len(lines) else ""
         rendered.append(f"{line}  " if line and next_line else line)
     return "\n".join(rendered)
+
+
+# 对外只暴露这四类提示行的阶段标识（前端按 phase 区分展示），
+# 其余内部中间步骤的 phase 不进传输层
+_PUBLIC_PROGRESS_PHASES = frozenset({
+    "V2_CONTEXT_START",
+    "V2_COMPOUND_JUDGE_START",
+    "V2_TASK_PLANNING_START",
+    "V2_PLANNING_SUMMARY",
+})
 
 
 def _thinking_section(stage: str) -> str | None:
@@ -1824,7 +1884,7 @@ def _new_agent_think_step(stage: str) -> str:
     """Map internal milestones to New_Agent's public think-tag protocol."""
 
     normalized = stage.strip().upper()
-    if normalized == "TASK_PLANNING":
+    if normalized in {"TASK_PLANNING", "TASK_STATUS"}:
         return "execute_plan"
     if normalized in {
         "DATA_RETRIEVAL",

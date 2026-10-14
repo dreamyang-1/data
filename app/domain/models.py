@@ -259,7 +259,7 @@ class DependencyConstraint(StrictModel):
     constraint before SQL translation/execution is allowed.
     """
 
-    source_task_id: str = Field(pattern=r"^task-[1-5]$")
+    source_task_id: str = Field(pattern=r"^task-(?:[1-9]|1[0-2])$")
     source_dataset_id: str = Field(min_length=1, max_length=128)
     source_column: str = Field(min_length=1, max_length=257)
     values: list[str | int | float | bool] = Field(min_length=1, max_length=50)
@@ -954,12 +954,12 @@ class ChatRequest(StrictModel):
             return {}
         if not isinstance(value, dict):
             return value
-        if len(value) > 5:
-            raise ValueError("task_answers must contain at most 5 items")
+        if len(value) > 12:
+            raise ValueError("task_answers must contain at most 12 items")
         normalized: dict[str, str] = {}
         for task_id, answer in value.items():
-            if not isinstance(task_id, str) or not re.fullmatch(r"task-[1-5]", task_id):
-                raise ValueError("task_answers keys must use task-1 to task-5")
+            if not isinstance(task_id, str) or not re.fullmatch(r"task-(?:[1-9]|1[0-2])", task_id):
+                raise ValueError("task_answers keys must use task-1 to task-12")
             if not isinstance(answer, str) or not answer.strip():
                 raise ValueError("task_answers values must be non-empty strings")
             if len(answer.strip()) > 4000:
@@ -1337,7 +1337,10 @@ class ChartSpec(StrictModel):
 class AtomicTask(StrictModel):
     task_id: str = Field(min_length=1, max_length=32)
     question: str = Field(min_length=2, max_length=1000)
-    depends_on: list[str] = Field(default_factory=list, max_length=5)
+    # 任务名称：拆解模型生成的陈述句（动词+业务指标+过滤条件），展示用；
+    # 缺省时展示层按规则从问题文本转换
+    name: str | None = Field(default=None, max_length=60)
+    depends_on: list[str] = Field(default_factory=list, max_length=11)
     expected_output: str | None = Field(default=None, max_length=300)
     parameters: list[str] = Field(default_factory=list, max_length=10)
     # 拆分模型产出的结构化提取JSON（国药语义解析规范格式）。
@@ -1349,6 +1352,8 @@ class QuestionTaskGroup(StrictModel):
     """复合规划里一个子问题与其拆出任务的区间，规划节点按问题分组展示用。"""
 
     question: str = Field(min_length=1, max_length=1000)
+    # 子问题的简短业务名称，来自拆分判断模型，任务规划节点的分组名；缺省回退问题文本
+    label: str | None = Field(default=None, max_length=60)
     task_offset: int = Field(ge=0)
     task_count: int = Field(ge=1)
 
@@ -1356,7 +1361,8 @@ class QuestionTaskGroup(StrictModel):
 class TaskPlan(StrictModel):
     schema_version: str = "1.0"
     planner: Literal["STRUCTURED_MODEL", "DETERMINISTIC_RULE"]
-    tasks: list[AtomicTask] = Field(min_length=2, max_length=5)
+    # 上限按复合问题上限（3个子问题×每题4任务）留足余量
+    tasks: list[AtomicTask] = Field(min_length=2, max_length=12)
     final_deliverable: Literal["COMBINED_REPORT"] | None = None
     split_reason_code: str | None = Field(default=None, max_length=80)
     shared_conditions: list[str] = Field(default_factory=list, max_length=20)
@@ -1387,7 +1393,7 @@ class GeneratedFile(StrictModel):
 
     file_id: str = Field(min_length=1, max_length=128)
     dataset_id: str | None = Field(default=None, max_length=128)
-    dataset_ids: list[str] = Field(default_factory=list, max_length=5)
+    dataset_ids: list[str] = Field(default_factory=list, max_length=12)
     format: Literal["xlsx", "docx", "pdf"]
     object_name: str = Field(min_length=1, max_length=1024)
     download_url: str = Field(min_length=1, max_length=4096)
@@ -1565,7 +1571,7 @@ class AgentResponse(StrictModel):
     intent_source: str = "RULE"
     intent_confidence: float = Field(default=0.6, ge=0, le=1)
     execution_shape: Literal["SINGLE", "COMPOSITE"] = "SINGLE"
-    task_intents: list[PrimaryIntent] = Field(default_factory=list, max_length=5)
+    task_intents: list[PrimaryIntent] = Field(default_factory=list, max_length=12)
     answer: str
     clarification_questions: list[str] = Field(default_factory=list)
     clarification_items: list[ClarificationItem] = Field(default_factory=list, max_length=5)
@@ -1598,7 +1604,7 @@ class AgentResponse(StrictModel):
         description="按Skill显式绑定后实际调用的HTTP/MCP工具结果；不替代核心确定性结论",
     )
     task_plan: TaskPlan | None = None
-    task_results: list[TaskExecutionResult] = Field(default_factory=list, max_length=5)
+    task_results: list[TaskExecutionResult] = Field(default_factory=list, max_length=12)
     dag_resume_token: str | None = Field(
         default=None,
         description=(
@@ -1606,14 +1612,14 @@ class AgentResponse(StrictModel):
             "显式回传时服务端会校验其是否为最新值"
         ),
     )
-    awaiting_task_ids: list[str] = Field(default_factory=list, max_length=5)
+    awaiting_task_ids: list[str] = Field(default_factory=list, max_length=12)
     dataset_id: str | None = Field(
         default=None,
         description="本轮查询或派生结果的数据集ID，供后续追问关联使用",
     )
     dataset_ids: list[str] = Field(
         default_factory=list,
-        max_length=5,
+        max_length=12,
         description="复合任务中各独立结果集ID；单任务通常为空",
     )
     result_file_url: str | None = Field(

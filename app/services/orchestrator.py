@@ -31,7 +31,6 @@ from app.analysis import (
 )
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
 from app.analysis.visualization import render_chart_svg, requested_chart_specs
-from app.services.chat_responder import QwenChatResponder
 from app.services.general_rules import attach_general_rules
 from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.memory_manager import MemoryManager
@@ -62,6 +61,7 @@ from app.services.dataset_followup import (
     is_dataset_operation_followup,
     plan_dataset_followup,
     dataset_operation_family,
+    describe_dataset_operation,
     presentation_ancestors,
     restore_reference,
     scope_for_request,
@@ -129,6 +129,92 @@ ANALYSIS_INTENTS = {
     PrimaryIntent.ROOT_CAUSE_ANALYSIS, PrimaryIntent.FORECAST_ANALYSIS,
     PrimaryIntent.REPORT_GENERATION, PrimaryIntent.DATA_QUALITY,
 }
+
+# 任务名统一为陈述句：结尾的疑问词组直接去掉，开头一段里没有任务动词时
+# 按意图补一个，避免任务行出现"×××是多少？"这类疑问句式。
+_TASK_QUESTION_TAIL = re.compile(
+    r"(?:是多少|有多少|有多少个|有多少种|有几个|有哪几|有哪些|是哪些|是什么"
+    r"|是什么样的|怎样|怎么样|如何|多少|哪些|吗|呢)+[？?！!。．～~]*\s*$"
+)
+# "了哪些"转成"的"字结构，句子就不再是疑问语气
+_TASK_MID_QUESTION = re.compile(r"了哪些")
+_TASK_CALC_PREFIX = re.compile(
+    r"^(?:根据|基于)(?:上述|前述|以上)?任务的?查询结果[，,]?"
+)
+_TASK_LEADING_VERBS = (
+    "查询", "统计", "计算", "分析", "对比", "比较", "列出", "获取", "查看",
+    "预测", "识别", "检查", "汇总", "排序", "生成", "解释", "梳理", "输出",
+)
+# "计算公式""统计口径"这类名词组合带动词字样，判定时要剔除
+_TASK_VERB_NOUN_FORMS = ("计算公式", "计算方式", "计算方法", "统计口径", "分析方法")
+_TASK_INTENT_VERBS = {
+    PrimaryIntent.METRIC_QUERY: "统计",
+    PrimaryIntent.DETAIL_QUERY: "查询",
+    PrimaryIntent.TREND_ANALYSIS: "统计",
+    PrimaryIntent.COMPARISON_ANALYSIS: "对比",
+    PrimaryIntent.COMPOSITION_ANALYSIS: "统计",
+    PrimaryIntent.ANOMALY_ANALYSIS: "分析",
+    PrimaryIntent.ROOT_CAUSE_ANALYSIS: "分析",
+    PrimaryIntent.FORECAST_ANALYSIS: "预测",
+    PrimaryIntent.REPORT_GENERATION: "生成",
+    PrimaryIntent.METRIC_DEFINITION: "解释",
+    PrimaryIntent.DATA_LINEAGE: "查询",
+    PrimaryIntent.DATA_QUALITY: "检查",
+}
+
+
+def _task_display_statement(question: str, intent: PrimaryIntent | None) -> str:
+    """把任务名转成"动词 + 业务指标 + 过滤条件"的陈述句，原样可读时不强改。"""
+    text = str(question or "").strip().rstrip("。．.!！?？;；,， ：: ")
+    tail_removed = _TASK_QUESTION_TAIL.sub("", text).strip(" ，,、;；：: ")
+    if tail_removed:
+        text = tail_removed
+    text = _TASK_MID_QUESTION.sub("的", text)
+    # 计算任务的"根据上述任务的查询结果计算×××"先剥前缀再判动词，
+    # 剥掉的前缀最后拼回去
+    prefix = ""
+    prefix_match = _TASK_CALC_PREFIX.match(text)
+    if prefix_match:
+        prefix = prefix_match.group(0)
+        text = text[len(prefix):]
+    probe = text
+    for noun_form in _TASK_VERB_NOUN_FORMS:
+        probe = probe.replace(noun_form, "")
+    probe = probe[:12]
+    if any(verb in probe for verb in _TASK_LEADING_VERBS):
+        return prefix + text
+    return prefix + _TASK_INTENT_VERBS.get(intent, "查询") + text
+
+
+def _apply_sort_type(structured: dict | None) -> None:
+    """数值指标默认按降序排列：用户要求了排序就按要求的方向，
+    没要求时补主指标的默认降序，让ASL按这个方向排。"""
+    if not isinstance(structured, dict) or not structured.get("指标"):
+        return
+    sort_items = [
+        item for item in (structured.get("排序") or [])
+        if isinstance(item, dict)
+    ]
+    if sort_items:
+        orders = {
+            str(item.get("order") or "").strip().lower()
+            for item in sort_items
+        }
+        structured["排序类型"] = "升序" if orders & {"asc", "升序"} else "降序"
+        return
+    metric_names = []
+    for item in structured.get("指标") or []:
+        name = (
+            str(item.get("name") or "").strip()
+            if isinstance(item, dict)
+            else str(item or "").strip()
+        )
+        if name:
+            metric_names.append(name)
+    if not metric_names:
+        return
+    structured["排序"] = [{"field": metric_names[0], "order": "desc"}]
+    structured["排序类型"] = "降序"
 
 # Contract failures that can be repaired by regenerating ASL against the same
 # published semantic snapshot.  The second attempt receives the exact missing
@@ -300,7 +386,6 @@ class DataAnalysisOrchestrator:
         file_importer: Any | None = None,
         extension_dispatcher: ExtensionDispatcher | None = None,
         mcp_file_analysis_runner: McpFileAnalysisRunner | None = None,
-        chat_responder: QwenChatResponder | None = None,
         event_store: SessionEventStore | None = None,
         turn_admission_gate: TurnAdmissionGate | None = None,
         agent_prompt_store: Any | None = None,
@@ -346,13 +431,6 @@ class DataAnalysisOrchestrator:
         self.analysis_synthesizer = analysis_synthesizer or (
             QwenAnalysisSynthesizer(settings)
             if settings.analysis_synthesis_enabled and settings.env != "test"
-            else None
-        )
-        self.chat_responder = chat_responder or (
-            QwenChatResponder(settings)
-            if settings.chat_model_enabled
-            and settings.env != "test"
-            and settings.intent_model_api_key is not None
             else None
         )
         self.agent_prompt_store = agent_prompt_store
@@ -1180,14 +1258,25 @@ class DataAnalysisOrchestrator:
                                         planned_task.extraction["是否查询数据库"] = "否（基于前序任务结果计算）"
                                     elif planned_task.depends_on:
                                         planned_task.extraction["是否查询数据库"] = "是（依赖前序任务结果发新查询）"
+                                        _apply_sort_type(planned_task.extraction)
                                     else:
                                         planned_task.extraction["是否查询数据库"] = "是"
+                                        _apply_sort_type(planned_task.extraction)
                             # 规划护栏可能改写桥内暂存的判断结论（如顶替拦截
                             # 整拆分作废转单一），以规划后的最终结论为准
                             if outcome.judgment is not None:
                                 chat._compound_judgment = outcome.judgment
                             if plan is None and outcome.single_extraction is not None:
                                 chat._planner_extraction = outcome.single_extraction
+                                # 单任务展示名用拆解模型生成的陈述句名称，
+                                # 模型没给时展示层按规则从问题文本转换
+                                chat._planner_task_name = outcome.single_task_name
+                                # 单一任务没有依赖与计算标记，参数提取里同样
+                                # 标注要查库；追问的快照复用由执行层白名单
+                                # 判定，真实路由以 DATA_RETRIEVAL 的说明为准。
+                                if outcome.single_extraction.structured is not None:
+                                    outcome.single_extraction.structured["是否查询数据库"] = "是"
+                                    _apply_sort_type(outcome.single_extraction.structured)
                         except TaskPlanningError as exc:
                             logger.warning("multi-question plan rejected: %s", exc)
                     # 拆分模型判成闲聊/超范围的单任务不亮规划节点，
@@ -1286,6 +1375,7 @@ class DataAnalysisOrchestrator:
                         intent: PrimaryIntent | None,
                         parameters: list[str],
                         structured: dict | None = None,
+                        task_name: str | None = None,
                         header: str | None = None,
                     ) -> str:
                         # 意图与业务域在意图识别节点按问题展示，
@@ -1294,17 +1384,25 @@ class DataAnalysisOrchestrator:
                         display_question = question
                         for phrase in ("，不再查询数据库", "。不再查询数据库", "不再查询数据库"):
                             display_question = display_question.replace(phrase, "")
-                        display_question = display_question.strip(" ：:，。")
-                        if display_question != question:
-                            display_question += "。"
+                        # 任务名优先用拆解模型生成的陈述句名称；
+                        # 模型没给时按规则从问题文本转换，同样过一遍兜底清洗
+                        display_question = _task_display_statement(
+                            (task_name or "").strip() or display_question.strip(" ：:，。"),
+                            intent,
+                        )
+                        display_question += "。"
                         is_data_task = intent not in NO_DATA_INTENTS
-                        if structured is not None and is_data_task:
-                            # 意图、业务域不在JSON里重复展示；
+                        if "不再查询数据库" in question:
+                            # 计算任务不发新查询，只展示任务内容，不列参数提取
+                            parameters_line = ""
+                        elif structured is not None and is_data_task:
+                            # 意图、业务域、是否查询数据库不在JSON里重复展示；
+                            # 是否查询数据库挪到任务表里下发；
                             # 内部提取结构保持完整，下游去重、绑定仍读全量键。
                             display_payload = {
                                 key: value
                                 for key, value in structured.items()
-                                if key not in ("意图", "业务域")
+                                if key not in ("意图", "业务域", "是否查询数据库")
                             }
                             parameters_line = (
                                 "参数提取："
@@ -1327,19 +1425,8 @@ class DataAnalysisOrchestrator:
                         return text
 
                     if plan is not None:
-                        # 依赖说明由拆分判断模型写在分析内容里，不再单独输出依赖行
-                        task_order = {
-                            task.task_id: index
-                            for index, task in enumerate(plan.tasks, 1)
-                        }
-                        dependency_pairs = [
-                            f"任务{index}依赖任务{task_order[dep_id]}"
-                            for index, task in enumerate(plan.tasks, 1)
-                            for dep_id in task.depends_on
-                            if dep_id in task_order
-                        ]
-                        # 复合计划带子问题分组区间：先按 问题N 分组，
-                        # 组内单任务直接挂参数提取，多任务再列任务行；
+                        # 复合计划带子问题分组区间：每个问题下列自己的任务，
+                        # 任务编号全局连续，和依赖表述、执行编排保持一致；
                         # 区间对不上时退回任务平铺，保证展示不缺任务。
                         groups = plan.question_groups
                         groups_valid = False
@@ -1357,6 +1444,16 @@ class DataAnalysisOrchestrator:
                             groups_valid = (
                                 groups_valid and expected_offset == len(plan.tasks)
                             )
+                        task_order = {
+                            task.task_id: index
+                            for index, task in enumerate(plan.tasks)
+                        }
+                        dependency_pairs = [
+                            f"任务{index + 1}依赖任务{task_order[dep_id] + 1}"
+                            for index, task in enumerate(plan.tasks)
+                            for dep_id in task.depends_on
+                            if dep_id in task_order
+                        ]
                         if groups_valid:
                             group_blocks = []
                             for group_index, group in enumerate(groups, 1):
@@ -1371,12 +1468,15 @@ class DataAnalysisOrchestrator:
                                         task_requests[start].primary_intent,
                                         list(group_tasks[0].parameters),
                                         group_tasks[0].extraction,
+                                        group_tasks[0].name,
                                         header=f"问题{group_index}：",
                                     ))
                                 else:
                                     lines = [
                                         f"问题{group_index}："
-                                        + _question_group_header(group.question)
+                                        + _question_group_header(
+                                            group.label or group.question
+                                        )
                                     ]
                                     for local_index, task in enumerate(group_tasks):
                                         lines.append(_planning_task_block(
@@ -1385,6 +1485,7 @@ class DataAnalysisOrchestrator:
                                             task_requests[start + local_index].primary_intent,
                                             list(task.parameters),
                                             task.extraction,
+                                            task.name,
                                         ))
                                     group_blocks.append("\n".join(lines))
                             task_section = "\n\n".join(group_blocks)
@@ -1396,6 +1497,7 @@ class DataAnalysisOrchestrator:
                                     task_requests[index - 1].primary_intent,
                                     list(task.parameters),
                                     task.extraction,
+                                    task.name,
                                 )
                                 for index, task in enumerate(plan.tasks, 1)
                             )
@@ -1448,35 +1550,71 @@ class DataAnalysisOrchestrator:
                                 if single_extraction is not None
                                 else None
                             ),
+                            getattr(chat, "_planner_task_name", None),
                         )
                     if not nondata_direct:
-                        # 识别模型对追问轮的数据来源判定直接作为规划首行；
-                        # 执行层路由如有出入会以最终结论纠正。
+                        # 追问的数据来源结论不再展示（意图节点已区分新问题
+                        # 和追问），规划首行统一口径
                         decision_line = "拆分判断完成。"
-                        model_data_source = getattr(
-                            chat, "_model_data_source", None
-                        )
-                        if plan is None:
-                            route_choice = self._structured_database_query_choice(chat._planner_extraction)
-                            if route_choice is not None:
-                                model_data_source = "NEW_QUERY" if route_choice else "SNAPSHOT"
-                        elif any(self._structured_database_query_choice(task.extraction) is not None
-                                 for task in plan.tasks):
-                            model_data_source = None
-                        if model_data_source == "SNAPSHOT":
-                            decision_line = (
-                                "追问判断完成：本轮基于上一轮查询结果"
-                                "数据集直接分析，不再发起新查询。"
-                            )
-                        elif model_data_source == "NEW_QUERY":
-                            decision_line = (
-                                "追问判断完成：本轮需要新数据查询。"
-                            )
+                        # 任务表随规划结论一起下发：是否查询数据库、依赖
+                        # 关系都在表里，参数提取JSON不再重复这些字段
+                        if plan is not None:
+                            task_table = []
+                            for task_index, planned_task in enumerate(plan.tasks):
+                                if "不再查询数据库" in planned_task.question:
+                                    query_flag = "否（基于前序任务结果计算）"
+                                elif planned_task.depends_on:
+                                    query_flag = "是（依赖前序任务结果发新查询）"
+                                else:
+                                    query_flag = str(
+                                        (planned_task.extraction or {}).get(
+                                            "是否查询数据库"
+                                        )
+                                        or "是"
+                                    )
+                                task_table.append({
+                                    "任务": planned_task.task_id,
+                                    "名称": _task_display_statement(
+                                        (planned_task.name or "").strip()
+                                        or planned_task.question,
+                                        task_requests[task_index].primary_intent,
+                                    ).rstrip("。"),
+                                    "是否查询数据库": query_flag,
+                                    "依赖": list(planned_task.depends_on),
+                                    "执行状态": "待执行",
+                                })
+                        else:
+                            single_structured = (
+                                chat._planner_extraction.structured
+                                if chat._planner_extraction is not None
+                                else None
+                            ) or {}
+                            task_table = [{
+                                "任务": "task-1",
+                                "名称": _task_display_statement(
+                                    (getattr(chat, "_planner_task_name", None) or "").strip()
+                                    or planning_question,
+                                    (
+                                        chat._planner_extraction.intent
+                                        if chat._planner_extraction is not None
+                                        else None
+                                    ),
+                                ).rstrip("。"),
+                                "是否查询数据库": str(
+                                    single_structured.get("是否查询数据库") or "是"
+                                ),
+                                "依赖": [],
+                                "执行状态": "待执行",
+                            }]
+                        # 执行期按这份表刷新任务状态，存chat供恢复会话复用
+                        chat._task_table = copy.deepcopy(task_table)
                         await emit_progress(
                             "TASK_PLANNING",
                             "COMPLETED",
                             decision_line + "\n" + planning_detail,
+                            progress_phase="V2_PLANNING_SUMMARY",
                             task_count=len(plan.tasks) if plan is not None else 1,
+                            task_table=task_table,
                         )
                 if (confirmed_pending_choice is not None and plan is None
                         and self.settings.surface_asl_execution_enabled
@@ -1764,8 +1902,9 @@ class DataAnalysisOrchestrator:
             intent_source="SAFETY_GUARD",
             intent_confidence=1.0,
             answer=(
-                "该问题涉及删除、新增、修改等危险操作，已被安全策略拦截。"
-                "请改为查询、统计、分析类问题。"
+                "您当前的问题涉及数据的危险操作。为了保障数据安全，"
+                "当前系统仅支持数据的查询、统计与分析，"
+                "无法执行任何修改或删除指令。"
             ),
             semantic_model_id=chat.semantic_model_id,
             database_id=chat.database_id,
@@ -2815,6 +2954,9 @@ class DataAnalysisOrchestrator:
                     "TASK_PLANNING", "RUNNING",
                     "追问判断完成：本轮基于上一轮查询结果数据集直接分析，不再发起新查询。",
                     data_source_verdict=True,
+                    dataset_operation_text=describe_dataset_operation(
+                        (snapshot_result.asl or {}).get("operation")
+                    ),
                 )
                 await self.sessions.put_task_frame(snapshot_request)
                 return await self._complete_query_result(
@@ -2864,6 +3006,46 @@ class DataAnalysisOrchestrator:
         task_index_by_id = {
             task.task_id: index for index, task in enumerate(plan.tasks)
         }
+        # 任务表随执行进度更新：规划时建的表带"待执行"状态，
+        # 每个任务开跑和落终态时刷新对应行重新下发。
+        # 复用前先核对任务编号集合，防止跨轮残留的旧表串进来
+        planned_table = getattr(chat, "_task_table", None)
+        plan_task_ids = {task.task_id for task in plan.tasks}
+        if planned_table and {row.get("任务") for row in planned_table} == plan_task_ids:
+            task_table = [dict(row) for row in planned_table]
+        else:
+            task_table = [
+                {
+                    "任务": task.task_id,
+                    "名称": _task_display_statement(
+                        (task.name or "").strip() or task.question,
+                        task.primary_intent,
+                    ).rstrip("。"),
+                    "是否查询数据库": (
+                        "否（基于前序任务结果计算）"
+                        if "不再查询数据库" in task.question
+                        else "是"
+                    ),
+                    "依赖": list(task.depends_on),
+                    "执行状态": "待执行",
+                }
+                for task in plan.tasks
+            ]
+        chat._task_table = task_table
+
+        async def _emit_task_status(task_id: str, status_text: str) -> None:
+            # 直接原地改行再整体快照下发：并发任务同时刷状态时
+            # 不会像整表替换那样互相覆盖
+            for row in task_table:
+                if row.get("任务") == task_id:
+                    row["执行状态"] = status_text
+            await emit_progress(
+                "TASK_STATUS",
+                "RUNNING",
+                "",
+                heading_only=True,
+                task_table=copy.deepcopy(task_table),
+            )
         checkpoint = await self.sessions.get_dag_checkpoint(
             identity.tenant_id, identity.user_id, chat.application_id,
             chat.conversation_id, root_message_id,
@@ -2886,6 +3068,22 @@ class DataAnalysisOrchestrator:
         for answered_task_id in task_answers:
             responses.pop(answered_task_id, None)
             deferred_insights.pop(answered_task_id, None)
+        if checkpoint and any(
+            row.get("任务") in responses and row.get("执行状态") != "已完成"
+            for row in task_table
+        ):
+            # 断点续跑：已完成的任务在下发任务表时先落好状态，
+            # 不等重跑的任务刷"执行中"时才顺带带出来
+            for row in task_table:
+                if row.get("任务") in responses:
+                    row["执行状态"] = "已完成"
+            await emit_progress(
+                "TASK_STATUS",
+                "RUNNING",
+                "",
+                heading_only=True,
+                task_table=copy.deepcopy(task_table),
+            )
         checkpoint_lock = asyncio.Lock()
 
         async def save_checkpoint() -> None:
@@ -3093,6 +3291,7 @@ class DataAnalysisOrchestrator:
             ):
                 # 多任务拆分：子任务不做单独的洞察解读，由父级在全部任务完成后合并汇总
                 child._dag_defer_insight = True
+            await _emit_task_status(task.task_id, "执行中")
             try:
                 with task_progress_scope(
                     parent_message_id=root_message_id,
@@ -3165,6 +3364,14 @@ class DataAnalysisOrchestrator:
                 else "SKIPPED" if status in {"NEEDS_CLARIFICATION", "SKIPPED"}
                 else "FAILED"
             )
+            status_text = {
+                "COMPLETED": "已完成",
+                "PARTIAL_SUCCESS": "已完成",
+                "FAILED": "执行失败",
+                "SKIPPED": "已跳过",
+                "NEEDS_CLARIFICATION": "待补充条件",
+            }.get(status, status)
+            await _emit_task_status(task.task_id, status_text)
             with task_progress_scope(
                 parent_message_id=root_message_id, task_id=task.task_id,
                 task_index=task_index_by_id[task.task_id], task_count=len(plan.tasks),
@@ -3535,9 +3742,9 @@ class DataAnalysisOrchestrator:
                 if result.intent is not None
             ],
             answer=combined_answer,
-            clarification_questions=clarification_questions[:5],
-            clarification_items=clarification_items[:5],
-            remaining_question_count=max(0, len(clarification_questions) - 5),
+            clarification_questions=clarification_questions[:12],
+            clarification_items=clarification_items[:12],
+            remaining_question_count=max(0, len(clarification_questions) - 12),
             missing_slots=missing_slots,
             evidence=evidence,
             reliability=reliability,
@@ -4372,7 +4579,7 @@ class DataAnalysisOrchestrator:
         )
         # 追问轮先试上一轮结果快照：识别模型判定可复用（或文本白名单命中）
         # 就尝试快照操作，复用不了再走 surface 查询，结论回填规划判定行。
-        surface_model_data_source = self._execution_data_source(chat, request)
+        surface_model_data_source = getattr(chat, "_model_data_source", None)
         if (
             surface_model_data_source == "NEW_QUERY"
             and request.source_dataset_id is None
@@ -4416,6 +4623,9 @@ class DataAnalysisOrchestrator:
                     "RUNNING",
                     "追问判断完成：本轮基于上一轮查询结果数据集直接分析，不再发起新查询。",
                     data_source_verdict=True,
+                    dataset_operation_text=describe_dataset_operation(
+                        (snapshot_result.asl or {}).get("operation")
+                    ),
                 )
                 await self.sessions.put_task_frame(request)
                 return await self._complete_query_result(
@@ -4955,6 +5165,7 @@ class DataAnalysisOrchestrator:
                     "INTENT_RECOGNITION",
                     "RUNNING",
                     "正在判断本轮问题与会话上下文的关系，并补全问题。",
+                    progress_phase="V2_CONTEXT_START",
                 )
         model_entity_mentions: list[str] = []
         filter_semantic_ambiguities: list[SemanticAmbiguity] = []
@@ -6551,7 +6762,15 @@ class DataAnalysisOrchestrator:
         # operation before applying fresh-query completeness requirements.
         query_result: DataQueryResult | None = None
         dataset_id: str | None = None
-        model_data_source = self._execution_data_source(chat, request)
+        model_data_source = getattr(chat, "_model_data_source", None)
+        logger.info(
+            "followup data-source route: source=%s op=%s control=%s dataset_id=%s question=%s",
+            model_data_source,
+            getattr(chat, "_model_data_source_op", None),
+            request.conversation_control,
+            request.source_dataset_id,
+            str(request.original_question)[:60],
+        )
         if (
             model_data_source == "NEW_QUERY"
             and request.source_dataset_id is None
@@ -6598,6 +6817,9 @@ class DataAnalysisOrchestrator:
                     "RUNNING",
                     "追问判断完成：本轮基于上一轮查询结果数据集直接分析，不再发起新查询。",
                     data_source_verdict=True,
+                    dataset_operation_text=describe_dataset_operation(
+                        (query_result.asl or {}).get("operation")
+                    ),
                 )
             elif (
                 request.source_dataset_id is None
@@ -6794,7 +7016,7 @@ class DataAnalysisOrchestrator:
 
         if request.primary_intent in NO_DATA_INTENTS:
             return await self._finish_terminal(
-                request, await self._direct(request, chat)
+                request, await self._direct(request)
             )
         if request.primary_intent in METADATA_INTENTS:
             response = await self._metadata_answer(
@@ -14049,37 +14271,14 @@ class DataAnalysisOrchestrator:
     async def _direct(
         self,
         request: CanonicalAnalysisRequest,
-        chat: ChatRequest | None = None,
     ) -> AgentResponse:
         answers = {
             PrimaryIntent.CAPABILITY_HELP: "我可以进行指标、明细、趋势、对比、占比、异常、归因、预测和报表分析。",
-            PrimaryIntent.OUT_OF_SCOPE: "该请求超出只读数据分析范围。",
+            # 闲聊和场景无关的问题统一走这句固定话术，不再让模型自由发挥
+            PrimaryIntent.OUT_OF_SCOPE: "你好！我是您的专属数据智能体，随时准备为您进行业务数据的查询与分析。",
         }
-        model_used = False
-        # 闲聊和超范围的问题都交给受控聊天模型直接回复，固定话术只做兜底
         if request.primary_intent in {PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE}:
-            answer = (
-                "当然可以呀。你想聊点什么？"
-                if request.primary_intent == PrimaryIntent.CHAT
-                else "该请求超出只读数据分析范围。"
-            )
-            if self.chat_responder is not None:
-                try:
-                    answer = await self.chat_responder.respond(
-                        request.original_question,
-                        agent_prompt=await self._agent_prompt_text(chat),
-                        history=(
-                            [
-                                {"role": item.role, "content": item.content}
-                                for item in chat.history
-                            ]
-                            if chat is not None
-                            else None
-                        ),
-                    )
-                    model_used = True
-                except Exception as exc:
-                    logger.warning("controlled chat model unavailable: %s", exc)
+            answer = answers[PrimaryIntent.OUT_OF_SCOPE]
         else:
             answer = answers[request.primary_intent]
         return AgentResponse(
@@ -14094,7 +14293,6 @@ class DataAnalysisOrchestrator:
                 level="HIGH", score=1,
                 gates={
                     "no_data_claim": True,
-                    "controlled_chat_model": model_used,
                 },
             ),
         )

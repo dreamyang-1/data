@@ -196,8 +196,8 @@ async def test_multi_task_surface_evidence_never_skips_planning():
 
 
 @pytest.mark.asyncio
-async def test_nondata_single_task_skips_planning_display_and_replies_via_chat_model():
-    """闲聊/超范围单任务不亮规划节点，直接由受控聊天模型回复。"""
+async def test_nondata_single_task_skips_planning_display_and_replies_fixed_greeting():
+    """闲聊/超范围单任务不亮规划节点，直接回固定话术。"""
 
     class _WeatherPlanner(CompoundQuestionRouter):
         async def route_and_plan(self, question, **kwargs):
@@ -205,14 +205,6 @@ async def test_nondata_single_task_skips_planning_display_and_replies_via_chat_m
                 judgment=CompoundJudgment(is_compound=False),
                 single=PlannerOutcome(single_intent=PrimaryIntent.OUT_OF_SCOPE),
             )
-
-    class _StubChatResponder:
-        def __init__(self):
-            self.calls = 0
-
-        async def respond(self, question, agent_prompt=None, history=None):
-            self.calls += 1
-            return f"直接回复：{question}"
 
     settings = Settings(
         _env_file=None,
@@ -223,7 +215,6 @@ async def test_nondata_single_task_skips_planning_display_and_replies_via_chat_m
         multi_question_model_enabled=False,
         analysis_synthesis_enabled=False,
     )
-    responder = _StubChatResponder()
     orchestrator = DataAnalysisOrchestrator(
         settings=settings,
         classifier=RuleBasedIntentClassifier(),
@@ -231,7 +222,6 @@ async def test_nondata_single_task_skips_planning_display_and_replies_via_chat_m
         sessions=InMemorySessionStore(),
         task_planner=_WeatherPlanner(settings),
         question_rewriter=QuestionRewriter(None),
-        chat_responder=responder,
     )
 
     progress_events: list[dict] = []
@@ -241,22 +231,21 @@ async def test_nondata_single_task_skips_planning_display_and_replies_via_chat_m
 
     with progress_scope(capture_progress):
         response = await orchestrator.handle(
-            # 不绑知识库，验证聊天模型直答路径
+            # 不绑知识库，验证闲聊直答路径
             _chat(question="合肥天气怎么样").model_copy(
                 update={"knowledge_base_names": []}
             ),
             IDENTITY,
         )
 
-    # 规划节点对这类问题完全不出现，回复由聊天模型生成
+    # 规划节点对这类问题完全不出现，回复走统一固定话术
     assert [e for e in progress_events if e.get("stage") == "TASK_PLANNING"] == []
-    assert responder.calls == 1
-    assert response.answer == "直接回复：合肥天气怎么样"
+    assert response.answer == "你好！我是您的专属数据智能体，随时准备为您进行业务数据的查询与分析。"
 
 
 @pytest.mark.asyncio
-async def test_off_topic_question_skips_planner_and_classifier_replies_via_chat_model():
-    """语义识别判成业务无关的问题时，拆分器和分类模型都不调度，直接聊天回复。"""
+async def test_off_topic_question_skips_planner_and_classifier_replies_fixed_greeting():
+    """语义识别判成业务无关的问题时，拆分器和分类模型都不调度，直接回固定话术。"""
 
     class _CountingPlanner(CompoundQuestionRouter):
         def __init__(self, settings):
@@ -276,14 +265,6 @@ async def test_off_topic_question_skips_planner_and_classifier_replies_via_chat_
             self.calls += 1
             return await super().classify(question, identity, conversation_id, **kwargs)
 
-    class _StubChatResponder:
-        def __init__(self):
-            self.calls = 0
-
-        async def respond(self, question, agent_prompt=None, history=None):
-            self.calls += 1
-            return f"直接回复：{question}"
-
     settings = Settings(
         _env_file=None,
         env="test",
@@ -295,7 +276,6 @@ async def test_off_topic_question_skips_planner_and_classifier_replies_via_chat_
     )
     planner = _CountingPlanner(settings)
     classifier = _CountingClassifier()
-    responder = _StubChatResponder()
     orchestrator = DataAnalysisOrchestrator(
         settings=settings,
         classifier=classifier,
@@ -303,7 +283,6 @@ async def test_off_topic_question_skips_planner_and_classifier_replies_via_chat_
         sessions=InMemorySessionStore(),
         task_planner=planner,
         question_rewriter=QuestionRewriter(None),
-        chat_responder=responder,
     )
 
     progress_events: list[dict] = []
@@ -323,6 +302,5 @@ async def test_off_topic_question_skips_planner_and_classifier_replies_via_chat_
     assert planner.calls == 0
     assert classifier.calls == 0
     assert [e for e in progress_events if e.get("stage") == "TASK_PLANNING"] == []
-    assert responder.calls == 1
-    assert response.answer == "直接回复：合肥天气怎么样"
+    assert response.answer == "你好！我是您的专属数据智能体，随时准备为您进行业务数据的查询与分析。"
     assert response.intent == PrimaryIntent.OUT_OF_SCOPE

@@ -350,6 +350,17 @@ def _relation_reason_text(reason):
     return text
 
 
+def _context_relation_label(context_trace, snapshot_operation=None, default='澄清问题'):
+    """对话状态展示名：追问轮带操作子类型，排序类追问标成结果重排。"""
+    label = _CONTEXT_RELATION_LABELS.get(
+        str(context_trace.get('FINAL_RELATION') or ''), default
+    )
+    op_type = str((snapshot_operation or {}).get('type') or '').lower()
+    if label == '问题追问' and op_type in {'sort', 'sort_limit'}:
+        return label + '（结果重排）'
+    return label
+
+
 async def _emit_relation_reason(reason, *, fallback=None):
     """把判定思考句发到意图识别节点，让用户看出这轮是澄清还是追问。
 
@@ -858,8 +869,11 @@ class RawTurnPlanner:
                 if not completed or not completed.strip():
                     raise RecognitionFailure('SURFACE_CONTEXT_COMPLETED_QUESTION_REQUIRED')
                 await emit_progress('INTENT_RECOGNITION', 'RUNNING',
-                    '对话状态识别：' + _CONTEXT_RELATION_LABELS.get(
-                        context_trace['FINAL_RELATION'], '当前问题承接上文') + '。',
+                    '对话状态识别：' + _context_relation_label(
+                        context_trace,
+                        recognized.context_proposal.snapshot_operation,
+                        default='当前问题承接上文',
+                    ) + '。',
                     progress_phase='V2_CURRENT_TURN_PARSED')
                 return self._materialize_standalone_fallback({
                     'session': session, 'parse': parsed, 'context_trace': context_trace,
@@ -894,9 +908,9 @@ class RawTurnPlanner:
                 'INTENT_RECOGNITION',
                 'RUNNING',
                 '对话状态识别：'
-                + _CONTEXT_RELATION_LABELS.get(
-                    final_context_relation,
-                    '澄清问题',
+                + _context_relation_label(
+                    context_trace,
+                    recognized.context_proposal.snapshot_operation,
                 )
                 + '。',
                 progress_phase='V2_CURRENT_TURN_PARSED',

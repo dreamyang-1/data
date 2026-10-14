@@ -180,7 +180,7 @@ class SemanticDecision(StrictModel):
     conversation_state: str = Field(min_length=1, max_length=100)
     original_question: str = Field(min_length=1, max_length=4000)
     completed_question: str = Field(min_length=1, max_length=4000)
-    tasks: tuple[SemanticDecisionTask, ...] = Field(min_length=1, max_length=5)
+    tasks: tuple[SemanticDecisionTask, ...] = Field(min_length=1, max_length=12)
     scope_proof: SemanticScopeProof
     clarification_needed: bool = False
     clarification_reason: str | None = Field(default=None, max_length=500)

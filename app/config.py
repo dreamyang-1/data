@@ -254,10 +254,6 @@ class Settings(BaseSettings):
     analysis_synthesis_timeout_seconds: float = Field(default=60, gt=0, le=120)
     analysis_synthesis_max_retries: int = Field(default=0, ge=0, le=1)
     analysis_synthesis_validation_retries: int = Field(default=1, ge=0, le=1)
-    chat_model_enabled: bool = True
-    chat_model_name: str = "qwen3.7-max"
-    chat_model_timeout_seconds: float = Field(default=8, gt=0, le=20)
-    chat_model_max_retries: int = Field(default=0, ge=0, le=1)
     # Optional Langfuse export. Content is hash/shape-only unless the explicit
     # capture flag is enabled; tests never export even when developer env files
     # contain shared Langfuse credentials.

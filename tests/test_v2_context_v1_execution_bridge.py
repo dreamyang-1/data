@@ -457,14 +457,21 @@ async def test_compound_judgment_is_shown_in_resolved_context_and_stashed(provid
         event for event in events
         if event.get("progress_phase") == "V2_RESOLVED_INTENT_CONTEXT_READY"
     )
-    assert "问题类型：复合问题，拆分为2个子问题：" in resolved_context["message"]
+    # 补全问题先展示，判断进度随后，判断结论作为意图节点收尾
+    assert intent_messages[0].startswith("用户原始问题：")
+    assert "补全后的问题：" in intent_messages[0]
+    judge_start = next(
+        event for event in events
+        if event.get("progress_phase") == "V2_COMPOUND_JUDGE_START"
+    )
+    assert judge_start["message"] == "正在判断问题类型，并识别各问题的意图与业务域。"
+    assert events.index(judge_start) < events.index(resolved_context)
+    assert "问题拆分为2个独立子问题：" in resolved_context["message"]
     assert (
-        "问题1：统计各经销商的订单笔数"
-        "（意图：指标查询；业务域：医药销售域）"
+        "问题1：统计各经销商的订单笔数，意图：指标查询，业务域：医药销售域。"
     ) in resolved_context["message"]
     assert (
-        "问题2：筛选订单笔数大于5笔的经销商名单"
-        "（意图：明细查询；业务域：医药销售域）"
+        "问题2：筛选订单笔数大于5笔的经销商名单，意图：明细查询，业务域：医药销售域。"
     ) in resolved_context["message"]
     # 执行层 chat 由 model_copy(deep=True) 派生，判断结论深拷贝透传，内容一致
     assert seen["judgment"] == judgment

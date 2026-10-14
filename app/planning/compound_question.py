@@ -82,6 +82,8 @@ class CompoundJudgmentEntry:
     """一个拆出的子问题：完整可独立执行的业务问题文本 + 该问题的意图与业务域。"""
 
     question: str
+    # 子问题的简短业务名称，任务规划节点的分组名；缺省回退问题文本
+    label: str | None = None
     intent: str | None = None
     business_domain: str | None = None
     expected_output: str | None = None
@@ -119,6 +121,13 @@ class _JudgeTask(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     question: str = Field(min_length=2, max_length=1000)
+    label: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=60,
+        description="该子问题的简短业务名称，用规范登记的指标、维度或实体名"
+            "概括要得到的业务结果，不得照抄用户问题原文，不带筛选值和标点",
+    )
     intent: str = Field(
         max_length=20,
         description="必填；该子问题的问题意图，取值为意图枚举之一",
@@ -225,8 +234,8 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 
 
 def validate_plan(plan: TaskPlan, *, source_question: str | None = None) -> None:
-    if not 2 <= len(plan.tasks) <= 5:
-        raise TaskPlanningError("任务计划必须包含2到5个原子任务")
+    if not 2 <= len(plan.tasks) <= 12:
+        raise TaskPlanningError("任务计划必须包含2到12个原子任务")
     task_ids = [task.task_id for task in plan.tasks]
     if len(task_ids) != len(set(task_ids)):
         raise TaskPlanningError("任务ID重复")
@@ -847,6 +856,8 @@ def _plan_from_judgment(judgment: CompoundJudgment) -> TaskPlan:
         AtomicTask(
             task_id=f"task-{index + 1}",
             question=entry.question.strip(),
+            # 规则兜底拆分没有拆解模型的任务名，用判定模型的简短业务名
+            name=entry.label,
             depends_on=[f"task-{dep + 1}" for dep in entry.depends_on],
             expected_output=entry.expected_output,
         )
@@ -862,6 +873,7 @@ def _plan_from_judgment(judgment: CompoundJudgment) -> TaskPlan:
         question_groups=[
             QuestionTaskGroup(
                 question=entry.question.strip(),
+                label=entry.label,
                 task_offset=index,
                 task_count=1,
             )
@@ -1155,6 +1167,7 @@ class CompoundQuestionJudge:
         entries = tuple(
             CompoundJudgmentEntry(
                 question=item.question.strip(),
+                label=(item.label.strip() if item.label and item.label.strip() else None),
                 intent=(item.intent or "").strip() or None,
                 business_domain=(item.business_domain or "").strip() or None,
                 expected_output=(
@@ -1240,6 +1253,7 @@ class CompoundTaskPlanner:
                 tasks.append(AtomicTask(
                     task_id=f"task-{offset + local_index + 1}",
                     question=task_question.strip(),
+                    name=task.name,
                     depends_on=depends_on,
                     expected_output=expected_output,
                     parameters=list(task.parameters),
@@ -1248,6 +1262,7 @@ class CompoundTaskPlanner:
                 ))
             question_groups.append(QuestionTaskGroup(
                 question=entry.question.strip(),
+                label=entry.label,
                 task_offset=offset,
                 task_count=len(entry_tasks),
             ))
@@ -1263,7 +1278,40 @@ class CompoundTaskPlanner:
             analyze_summary=judgment.analyze_summary,
             final_deliverable=judgment.final_deliverable,
             question_groups=question_groups,
+            compound_metrics=_compound_metrics_in_decompositions(decompositions),
         )
+        if len(tasks) > 12:
+            # 子问题数×每题任务数超出计划上限时按子问题截断，
+            # 剩余子问题让用户分轮提问，不能让整轮规划直接失败
+            keep_entries = 0
+            kept = 0
+            for group in question_groups:
+                if kept + group.task_count > 12:
+                    break
+                keep_entries += 1
+                kept += group.task_count
+            if keep_entries < 2:
+                raise TaskPlanningError(
+                    "复合问题拆分后的任务数超出执行上限，请减少问题中的业务目标后重试"
+                )
+            tasks = tasks[:kept]
+            question_groups = question_groups[:keep_entries]
+            plan = TaskPlan(
+                tasks=tasks,
+                planner=(
+                    "STRUCTURED_MODEL"
+                    if judgment.judge_source == "STRUCTURED_MODEL"
+                    else "DETERMINISTIC_RULE"
+                ),
+                split_reason_code=judgment.split_reason_code or "UNSPECIFIED",
+                shared_conditions=list(dict.fromkeys(judgment.shared_conditions)),
+                analyze_summary=(
+                    (judgment.analyze_summary or "")
+                    + f"；任务数超出上限，本轮仅执行前{keep_entries}个子问题，其余请分开提问"
+                ),
+                final_deliverable=judgment.final_deliverable,
+                question_groups=question_groups,
+            )
         validate_plan(plan, source_question=source_question)
         self._reject_metric_substitution(plan, source_question)
         return plan
@@ -1308,13 +1356,30 @@ def _question_annotation(intent: str | None, business_domain: str | None) -> str
         parts.append(f"意图：{intent}")
     if business_domain:
         parts.append(f"业务域：{business_domain}")
+    return "，".join(parts)
+
+
+# 子问题文本尾部统一成句号，避免"统计各经销商的订单笔数？"这类问号混在陈述句里
+_SUBQUESTION_TAIL_PUNCT = "。．.!！?？;；,， "
+
+
+def _subquestion_statement(entry: CompoundJudgmentEntry) -> str:
+    """子问题一行：问题文本在前，意图与业务域字段标注跟在后面，缺项跳过。"""
+    question = str(entry.question or "").strip().rstrip(_SUBQUESTION_TAIL_PUNCT)
+    parts: list[str] = []
+    if question:
+        parts.append(question)
+    if entry.intent:
+        parts.append(f"意图：{entry.intent}")
+    if entry.business_domain:
+        parts.append(f"业务域：{entry.business_domain}")
     if not parts:
         return ""
-    return "，" + "，".join(parts)
+    return "，".join(parts) + "。"
 
 
 def judgment_display_section(judgment: CompoundJudgment | None) -> str:
-    """意图识别节点展示的复合/单一判断段：判断结论、子问题列表及各自的意图与业务域。"""
+    """意图识别节点展示的复合/单一判断段：意图、业务域与拆分出的子问题。"""
     if judgment is None:
         return ""
     if not judgment.is_compound:
@@ -1322,12 +1387,11 @@ def judgment_display_section(judgment: CompoundJudgment | None) -> str:
             judgment.intent, judgment.business_domain
         )
         if annotation:
-            return f"问题类型：单一问题{annotation}。"
-        return "问题类型：单一问题。"
-    lines = [f"问题类型：复合问题，拆分为{len(judgment.entries)}个子问题："]
+            return f"{annotation}。"
+        return ""
+    lines = [f"问题拆分为{len(judgment.entries)}个独立子问题："]
     lines.extend(
-        f"问题{index}：{entry.question}"
-        + _question_annotation(entry.intent, entry.business_domain)
+        f"问题{index}：{_subquestion_statement(entry)}"
         for index, entry in enumerate(judgment.entries, 1)
     )
     return "\n".join(lines)
@@ -1445,6 +1509,9 @@ class CompoundQuestionRouter:
                 single_structured=(
                     first.structured if first is not None else None
                 ),
+                single_task_name=(
+                    first.name if first is not None else None
+                ),
                 metric_catalog=decomposition.metric_catalog,
             )
             return CompoundRouteResult(judgment=judgment, single=outcome)
@@ -1453,6 +1520,7 @@ class CompoundQuestionRouter:
             AtomicTask(
                 task_id=f"task-{index + 1}",
                 question=task.question.strip(),
+                name=task.name,
                 depends_on=[f"task-{dep + 1}" for dep in task.depends_on],
                 expected_output=task.expected_output,
                 parameters=list(task.parameters),
@@ -1465,26 +1533,27 @@ class CompoundQuestionRouter:
             tasks=tasks,
             planner="STRUCTURED_MODEL",
             split_reason_code="TASK_DECOMPOSITION",
-            compound_metrics=self._compound_metrics_in_split(decomposition),
+            compound_metrics=_compound_metrics_in_decompositions([decomposition]),
         )
         validate_plan(plan, source_question=question)
         return CompoundRouteResult(judgment=judgment, plan=plan)
 
-    @staticmethod
-    def _compound_metrics_in_split(
-        decomposition: QuestionDecomposition,
-    ) -> list[str]:
-        """拆分结果里出现的复合指标名：指标命中规范依赖指标映射时登记。
 
-        计算任务的指标名保留用户原文叫法，归一到登记名后再比对；
-        结果去重并保持首次出现顺序。
-        """
+def _compound_metrics_in_decompositions(
+    decompositions: list[QuestionDecomposition],
+) -> list[str]:
+    """拆分结果里出现的复合指标名：指标命中规范依赖指标映射时登记。
+
+    计算任务的指标名保留用户原文叫法，归一到登记名后再比对；
+    跨拆解结果去重并保持首次出现顺序。
+    """
+    compound: list[str] = []
+    for decomposition in decompositions:
         dependencies = decomposition.metric_dependencies
         catalog = decomposition.metric_catalog
         if not dependencies or catalog is None:
-            return []
+            continue
         registered, aliases = catalog
-        compound: list[str] = []
         for task in decomposition.tasks:
             structured = task.structured
             if not isinstance(structured, dict):
@@ -1499,4 +1568,4 @@ class CompoundQuestionRouter:
                 normalized = _normalize_metric_name(name.strip(), registered, aliases)
                 if normalized in dependencies and normalized not in compound:
                     compound.append(normalized)
-        return compound
+    return compound

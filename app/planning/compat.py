@@ -13,6 +13,8 @@ class PlanningResult:
     plan: TaskPlan | None
     single_extraction: PlannerExtraction | None
     judgment: Any = None
+    # 拆解模型生成的单任务陈述句名称，规划节点展示用
+    single_task_name: str | None = None
 
 
 async def plan_question(planner: Any, question: str, *, semantic_context: str,
@@ -31,7 +33,10 @@ async def plan_question(planner: Any, question: str, *, semantic_context: str,
     single = outcome.single if routed else outcome
     return PlanningResult(plan=outcome.plan,
                           single_extraction=single.single_extraction if single is not None else None,
-                          judgment=outcome.judgment if routed else None)
+                          judgment=outcome.judgment if routed else None,
+                          single_task_name=(
+                              single.single_task_name if single is not None else None
+                          ))
 
 
 def prepare_execution(planner: Any, plan: TaskPlan):
