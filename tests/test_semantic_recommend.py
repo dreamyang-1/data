@@ -6,6 +6,7 @@
 路由层 Resp 包装与鉴权。
 """
 from contextlib import contextmanager
+import json
 import logging
 
 import pytest
@@ -302,6 +303,53 @@ def test_recommend_fields_rejects_bad_table_id():
         service.recommend_fields(0)
     with pytest.raises(SemanticRecommendError):
         service.recommend_fields(-1)
+
+
+def test_recommend_fields_llm_refines_names():
+    # 2026-10-14 契约：注释含字母/数字的字段必须由模型提炼为纯中文属性名
+    reader = base_reader(fields={
+        1: [
+            field(11, "id", "主键", "bigint"),
+            field(12, "customer_name", "客户名称"),
+            field(14, "level3_code", "customer_level3编码"),
+            field(13, "status", None, "varchar", "A,B"),
+        ],
+    })
+    answer = json.dumps([
+        {"name": "id", "attrName": "主键"},
+        {"name": "customer_name", "attrName": "客户名称"},
+        {"name": "level3_code", "attrName": "客户等级编码"},
+        {"name": "status", "attrName": "状态A"},  # 含字母，必须被拒绝
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(reader, FakeGateway(answer))
+    result = service.recommend_fields(1)
+    by_name = {vo["name"]: vo for vo in result}
+    assert by_name["level3_code"]["suggestedAttrName"] == "客户等级编码"
+    assert by_name["customer_name"]["suggestedAttrName"] == "客户名称"
+    # 模型输出含字母 → 拒绝，保留规则结果（原字段名）
+    assert by_name["status"]["suggestedAttrName"] == "status"
+    # 模型被调用过（属性名提炼入口）
+    gateway = service._gateway
+    assert gateway.calls and gateway.calls[0][0] == "实体属性名提炼"
+
+
+def test_recommend_fields_llm_invalid_answer_keeps_rule_names():
+    reader = base_reader(fields={
+        1: [field(12, "customer_name", "客户名称")],
+    })
+    # 网关返回空答案（如模型名不受支持）→ 静默降级为规则结果
+    service = SemanticRecommendService(reader, FakeGateway(None))
+    result = service.recommend_fields(1)
+    assert result[0]["suggestedAttrName"] == "客户名称"
+    assert len(service._gateway.calls) == 1
+
+
+def test_recommend_fields_llm_clean_name_kept_without_gateway_call_change():
+    # gateway 为 None 时 _llm_enabled 自动为 False，不应报错也不调模型
+    reader = base_reader(fields={1: [field(12, "customer_name", "客户名称")]})
+    service = SemanticRecommendService(reader, None)
+    result = service.recommend_fields(1)
+    assert result[0]["suggestedAttrName"] == "客户名称"
 
 
 # ====================== 接口三：关联检测 ======================

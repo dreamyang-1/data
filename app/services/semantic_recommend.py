@@ -11,6 +11,8 @@ Resp 包装、VO 字段）与 Java 版保持一致，后端可直接调用或整
   （MyBatis-Plus 无逻辑删除配置）不过滤，这是 Python 版的有意修复。
 - 大模型增强经 49 网关 /chat/workflow_chat（与 Java ChatModelBaseApi
   .translateWords 同一入口），失败或空答案静默降级为纯规则结果（留 WARNING 日志）。
+  覆盖：实体表推荐（重排 + 实体名）、属性推荐（属性名提炼，不含字母数字）、
+  关系推荐（关系名 + 语义描述）。
   模型名必须是网关 LLM_MODELS 支持的名称（当前为 qwen3.7-max；
   qwen3-max 不在列表，网关会静默返回空答案）。
 - 全部为只读接口，不落库、不改数据。
@@ -257,6 +259,20 @@ def _derive_attr_name(field_name: str | None, field_comment: str | None) -> str:
     return field_name or ""
 
 
+_ATTR_NAME_INVALID = re.compile(r"[A-Za-z0-9_]")
+_ATTR_NAME_CJK = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _attr_name_is_clean(value: str) -> bool:
+    """属性建议名必须是提炼后的纯中文名：不允许字母、数字、下划线，
+    且至少含一个中文字符（用户 2026-10-14 要求）。"""
+    return (
+        bool(value)
+        and not _ATTR_NAME_INVALID.search(value)
+        and bool(_ATTR_NAME_CJK.search(value))
+    )
+
+
 def _is_foreign_key_to(
     field_name: str | None, other_table_name: str | None, other_pk_name: str | None
 ) -> bool:
@@ -473,7 +489,60 @@ class SemanticRecommendService:
             }
             (primary if pk else normal).append(vo)
         normal.sort(key=lambda vo: (not _has_text(vo["comment"]), vo["name"] or ""))
+        self._enhance_fields_with_llm(primary + normal)
         return primary + normal
+
+    def _enhance_fields_with_llm(self, result: list[dict[str, Any]]) -> None:
+        """大模型为属性提炼规范中文名；失败保留规则结果。
+
+        用户 2026-10-14 要求：表/字段信息里带英文字母、数字的注释，
+        必须由模型提炼成不含字母数字的新中文名，不能照抄。
+        """
+        if not self._llm_enabled or not result:
+            return
+        try:
+            sample = result[:60]
+            listing = "\n".join(
+                f"{index + 1}. 字段名: {vo['name']} | 注释: {vo['comment'] or '(无注释)'}"
+                f" | 类型: {vo['type'] or ''}"
+                + (f" | 枚举值: {vo['enumValues']}" if vo["enumValues"] else "")
+                for index, vo in enumerate(sample)
+            )
+            prompt = (
+                "你在为数据语义建模平台做实体属性命名。以下是某张物理表的字段清单：\n"
+                + listing + "\n\n"
+                + "任务：为每个字段生成一个规范的中文属性名（attrName）：\n"
+                + "1. 以注释的业务含义为准提炼；注释为空或没有业务含义时，按字段名推断业务含义。\n"
+                + "2. 属性名中严禁出现英文字母、数字、下划线和英文标点，必须是纯中文（2~10 个字）。"
+                "例如注释为 \"customer_level3编码\"，必须提炼为 \"客户等级编码\"，不能照抄原文。\n"
+                + "3. 注释本身已是简洁规范的纯中文属性名时，原样保留，不要改写。\n"
+                + "4. 只输出 JSON 数组，不要任何解释或 markdown 代码块，"
+                "格式：[{\"name\":\"原字段名\",\"attrName\":\"中文属性名\"}]，"
+                "必须覆盖输入清单中的每一个字段且 name 原样照抄。\n"
+            )
+            array = _parse_llm_json_array(
+                self._gateway.complete("实体属性名提炼", prompt)
+            )
+            if not array:
+                return
+            clean_names: dict[str, str] = {}
+            for item in array:
+                if not isinstance(item, dict):
+                    continue
+                name = item.get("name")
+                attr_name = item.get("attrName")
+                if not isinstance(name, str) or not isinstance(attr_name, str):
+                    continue
+                attr_name = attr_name.strip()
+                # 模型输出若仍含字母/数字则拒绝，保留规则结果
+                if attr_name and _attr_name_is_clean(attr_name):
+                    clean_names[name.lower()] = attr_name
+            for vo in result:
+                better = clean_names.get((vo["name"] or "").lower())
+                if better:
+                    vo["suggestedAttrName"] = better
+        except Exception as exc:
+            logger.warning("大模型增强属性名提炼失败，降级为规则命名: %s", exc)
 
     # ---------- 接口三：实体关联检测 ----------
 
