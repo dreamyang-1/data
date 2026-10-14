@@ -7,9 +7,15 @@ Resp 包装、VO 字段）与 Java 版保持一致，后端可直接调用或整
 - 元数据库只读查询（semantic_model_table / semantic_model_field /
   semantic_model_entity_type / semantic_model_entity_sub_table_mapping /
   semantic_model_relation_config），pymysql 按请求开短连接。
+  所有查询过滤软删除行（is_deleted = 0）——注意：Java 版
+  （MyBatis-Plus 无逻辑删除配置）不过滤，这是 Python 版的有意修复。
 - 大模型增强经 49 网关 /chat/workflow_chat（与 Java ChatModelBaseApi
-  .translateWords 同一入口），失败静默降级为纯规则结果。
+  .translateWords 同一入口），失败或空答案静默降级为纯规则结果（留 WARNING 日志）。
+  模型名必须是网关 LLM_MODELS 支持的名称（当前为 qwen3.7-max；
+  qwen3-max 不在列表，网关会静默返回空答案）。
 - 全部为只读接口，不落库、不改数据。
+- detect_relations / recommend_relations 一次请求固定 4 条 SQL
+  （entities/relations/tables/fields_batch 各一条），不随实体数增长。
 """
 from __future__ import annotations
 
@@ -26,7 +32,11 @@ class SemanticRecommendError(Exception):
 
 
 class MetadataReader(Protocol):
-    """元数据库只读访问协议，行字段与数据库列同名（snake_case）。"""
+    """元数据库只读访问协议，行字段与数据库列同名（snake_case）。
+
+    所有实现必须过滤软删除行（is_deleted = 0），避免已删除的
+    表/实体/字段/关系进入推荐结果。
+    """
 
     def entities(self, semantic_model_id: int) -> list[dict[str, Any]]: ...
 
@@ -39,6 +49,8 @@ class MetadataReader(Protocol):
     def field_counts(self, table_ids: list[int]) -> dict[int, int]: ...
 
     def fields(self, table_id: int) -> list[dict[str, Any]]: ...
+
+    def fields_batch(self, table_ids: list[int]) -> dict[int, list[dict[str, Any]]]: ...
 
     def relations(self, semantic_model_id: int) -> list[dict[str, Any]]: ...
 
@@ -84,14 +96,15 @@ class PymysqlMetadataReader:
     def entities(self, semantic_model_id: int) -> list[dict[str, Any]]:
         return self._fetch(
             "SELECT id, name, main_table_name, data_source_id "
-            "FROM semantic_model_entity_type WHERE semantic_model_id = %s",
+            "FROM semantic_model_entity_type "
+            "WHERE semantic_model_id = %s AND is_deleted = 0",
             (semantic_model_id,),
         )
 
     def sub_table_names(self, semantic_model_id: int) -> list[str]:
         rows = self._fetch(
             "SELECT sub_table_name FROM semantic_model_entity_sub_table_mapping "
-            "WHERE semantic_model_id = %s",
+            "WHERE semantic_model_id = %s AND is_deleted = 0",
             (semantic_model_id,),
         )
         return [row["sub_table_name"] for row in rows]
@@ -101,7 +114,7 @@ class PymysqlMetadataReader:
     ) -> list[dict[str, Any]]:
         sql = (
             "SELECT id, name, comment, data_source_id FROM semantic_model_table "
-            "WHERE semantic_model_id = %s"
+            "WHERE semantic_model_id = %s AND is_deleted = 0"
         )
         params: list[Any] = [semantic_model_id]
         if data_source_id is not None:
@@ -115,7 +128,8 @@ class PymysqlMetadataReader:
         placeholders = ",".join(["%s"] * len(table_ids))
         rows = self._fetch(
             f"SELECT table_id, COUNT(*) AS cnt FROM semantic_model_field "
-            f"WHERE table_id IN ({placeholders}) GROUP BY table_id",
+            f"WHERE table_id IN ({placeholders}) AND is_deleted = 0 "
+            f"GROUP BY table_id",
             tuple(table_ids),
         )
         return {row["table_id"]: int(row["cnt"]) for row in rows}
@@ -123,15 +137,35 @@ class PymysqlMetadataReader:
     def fields(self, table_id: int) -> list[dict[str, Any]]:
         return self._fetch(
             "SELECT id, name, comment, type, enum_values "
-            "FROM semantic_model_field WHERE table_id = %s",
+            "FROM semantic_model_field "
+            "WHERE table_id = %s AND is_deleted = 0",
             (table_id,),
         )
+
+    _FIELDS_BATCH_CHUNK = 500
+
+    def fields_batch(self, table_ids: list[int]) -> dict[int, list[dict[str, Any]]]:
+        """按 table_id 批量取字段，替代逐表查询（detect_relations 消 N+1）。"""
+        result: dict[int, list[dict[str, Any]]] = {}
+        for start in range(0, len(table_ids), self._FIELDS_BATCH_CHUNK):
+            chunk = table_ids[start:start + self._FIELDS_BATCH_CHUNK]
+            placeholders = ",".join(["%s"] * len(chunk))
+            rows = self._fetch(
+                "SELECT id, table_id, name, comment, type, enum_values "
+                "FROM semantic_model_field "
+                f"WHERE table_id IN ({placeholders}) AND is_deleted = 0",
+                tuple(chunk),
+            )
+            for row in rows:
+                result.setdefault(row["table_id"], []).append(row)
+        return result
 
     def relations(self, semantic_model_id: int) -> list[dict[str, Any]]:
         return self._fetch(
             "SELECT id, name, category, type, source_entity_type_id, "
             "target_entity_type_id, source_table_column_name, target_table_column_name "
-            "FROM semantic_model_relation_config WHERE semantic_model_id = %s",
+            "FROM semantic_model_relation_config "
+            "WHERE semantic_model_id = %s AND is_deleted = 0",
             (semantic_model_id,),
         )
 
@@ -171,12 +205,27 @@ class WorkflowChatGateway:
                 headers=headers,
                 timeout=self._timeout_seconds,
             )
+            if response.status_code != 200:
+                logger.warning(
+                    "模型网关返回 HTTP %s，推荐降级为规则结果: %.200s",
+                    response.status_code, response.text,
+                )
+                return None
             text = response.text
             # 返回为 SSE 格式：data: {"answer": "..."}
             marker = text.find("data:")
             if marker >= 0:
                 text = text[marker + 5:].strip()
-            return json.loads(text).get("answer")
+            answer = json.loads(text).get("answer")
+            if not isinstance(answer, str) or not answer.strip():
+                # 网关对不在支持列表里的模型名会静默返回空答案，
+                # 必须留痕，否则 LLM 增强会长期静默失效。
+                logger.warning(
+                    "模型网关返回空答案（model=%s），请检查模型名是否在网关支持列表",
+                    self._model_name,
+                )
+                return None
+            return answer
         except Exception as exc:
             logger.warning("模型网关调用失败，推荐降级为规则结果: %s", exc)
             return None
@@ -433,13 +482,17 @@ class SemanticRecommendService:
     ) -> list[dict[str, Any]]:
         if not _has_text(entity_type_id):
             raise SemanticRecommendError("实体类型ID不能为空")
-        current = self._entity_by_id(semantic_model_id, entity_type_id)
+        entities = self._reader.entities(semantic_model_id)
+        current = next(
+            (e for e in entities if e["id"] == entity_type_id), None
+        )
         if current is None:
             raise SemanticRecommendError("实体类型不存在")
 
         # 已配置关系统计：对端实体 -> 关系数
+        relations = self._reader.relations(semantic_model_id)
         configured_count: dict[str, int] = {}
-        for relation in self._reader.relations(semantic_model_id):
+        for relation in relations:
             other = None
             if entity_type_id == relation.get("source_entity_type_id"):
                 other = relation.get("target_entity_type_id")
@@ -448,15 +501,18 @@ class SemanticRecommendService:
             if other:
                 configured_count[other] = configured_count.get(other, 0) + 1
 
-        # 同模型其它实体的物理层推导对数（字段按 table_id 缓存，避免逐实体查库）
-        fields_cache: dict[int, list[dict[str, Any]]] = {}
+        # 一次 tables + 一次批量 fields 装载全部实体主表信息，
+        # 替代逐实体查库（85 实体模型原实现约 173 条 SQL，实测 2.6s）
+        others = [e for e in entities if e["id"] != entity_type_id]
+        info_map = self._entity_table_info_map(
+            [current, *others], semantic_model_id
+        )
+        current_info = info_map.get(entity_type_id)
         result: list[dict[str, Any]] = []
-        for other in self._reader.entities(semantic_model_id):
-            if other["id"] == entity_type_id:
-                continue
+        for other in others:
             configured = configured_count.get(other["id"], 0)
             inferred = self._count_inferred_pairs(
-                current, other, semantic_model_id, fields_cache
+                current, other, current_info, info_map.get(other["id"])
             )
             if configured <= 0 and inferred <= 0:
                 continue
@@ -478,8 +534,13 @@ class SemanticRecommendService:
     ) -> list[dict[str, Any]]:
         if not _has_text(source_entity_type_id) or not _has_text(target_entity_type_id):
             raise SemanticRecommendError("源/目标实体类型ID不能为空")
-        source = self._entity_by_id(semantic_model_id, source_entity_type_id)
-        target = self._entity_by_id(semantic_model_id, target_entity_type_id)
+        entities = self._reader.entities(semantic_model_id)
+        source = next(
+            (e for e in entities if e["id"] == source_entity_type_id), None
+        )
+        target = next(
+            (e for e in entities if e["id"] == target_entity_type_id), None
+        )
         if source is None or target is None:
             raise SemanticRecommendError("实体类型不存在")
 
@@ -538,8 +599,13 @@ class SemanticRecommendService:
         result.extend(existing.values())
 
         # 2. 物理层推导候选 + 大模型语义增强
+        info_map = self._entity_table_info_map(
+            [source, target], semantic_model_id
+        )
         inferred = self._infer_relation_candidates(
-            source, target, semantic_model_id, {}
+            source, target,
+            info_map.get(source_entity_type_id),
+            info_map.get(target_entity_type_id),
         )
         self._enhance_relation_candidates_with_llm(
             source["name"], target["name"], inferred
@@ -549,41 +615,64 @@ class SemanticRecommendService:
 
     # ---------- 内部工具 ----------
 
-    def _entity_by_id(self, semantic_model_id: int, entity_type_id: str) -> dict[str, Any] | None:
-        for entity in self._reader.entities(semantic_model_id):
-            if entity["id"] == entity_type_id:
-                return entity
-        return None
+    def _entity_table_info_map(
+        self, entities: list[dict[str, Any]], semantic_model_id: int,
+    ) -> dict[str, dict[str, Any] | None]:
+        """批量装载一组实体的主表与字段信息（entity_id -> info 或 None）。
+
+        一次 tables 查询 + 一次批量 fields 查询，替代原逐实体
+        `_load_entity_table_fields`（每实体各查一次表清单和字段）。
+        表匹配语义与原实现一致：按实体 data_source_id 过滤后
+        取第一张与 main_table_name 同名的表。
+        """
+        all_tables = self._reader.tables(semantic_model_id, None)
+        table_by_entity: dict[str, dict[str, Any] | None] = {}
+        needed_ids: list[int] = []
+        seen_ids: set[int] = set()
+        for entity in entities:
+            main_table_name = entity.get("main_table_name")
+            if not _has_text(main_table_name):
+                table_by_entity[entity["id"]] = None
+                continue
+            data_source_id = entity.get("data_source_id")
+            table = next(
+                (
+                    t for t in all_tables
+                    if t.get("name") == main_table_name.strip()
+                    and (data_source_id is None
+                         or t.get("data_source_id") == data_source_id)
+                ),
+                None,
+            )
+            table_by_entity[entity["id"]] = table
+            if table and table.get("id") is not None and table["id"] not in seen_ids:
+                seen_ids.add(table["id"])
+                needed_ids.append(table["id"])
+        fields_by_table = self._reader.fields_batch(needed_ids)
+        info_map: dict[str, dict[str, Any] | None] = {}
+        for entity in entities:
+            table = table_by_entity.get(entity["id"])
+            if not table or table.get("id") is None:
+                info_map[entity["id"]] = None
+                continue
+            fields = fields_by_table.get(table["id"], [])
+            primary = next(
+                (f for f in fields if (f.get("name") or "").lower() == "id"),
+                None,
+            )
+            info_map[entity["id"]] = {
+                "tableName": table["name"], "fields": fields, "primary": primary,
+            }
+        return info_map
 
     def _count_inferred_pairs(
         self, source: dict[str, Any], target: dict[str, Any],
-        semantic_model_id: int, fields_cache: dict[int, list[dict[str, Any]]],
+        source_info: dict[str, Any] | None, target_info: dict[str, Any] | None,
     ) -> int:
         candidates = self._infer_relation_candidates(
-            source, target, semantic_model_id, fields_cache
+            source, target, source_info, target_info
         )
         return sum(len(candidate["fieldPairs"]) for candidate in candidates)
-
-    def _load_entity_table_fields(
-        self, entity: dict[str, Any], semantic_model_id: int,
-        fields_cache: dict[int, list[dict[str, Any]]],
-    ) -> dict[str, Any] | None:
-        """实体主表 + 字段集合（主键 = 名为 id 的字段）。"""
-        main_table_name = entity.get("main_table_name")
-        if not _has_text(main_table_name):
-            return None
-        table = None
-        for row in self._reader.tables(semantic_model_id, entity.get("data_source_id")):
-            if row.get("name") == main_table_name.strip():
-                table = row
-                break
-        if table is None or table.get("id") is None:
-            return None
-        if table["id"] not in fields_cache:
-            fields_cache[table["id"]] = self._reader.fields(table["id"])
-        fields = fields_cache[table["id"]]
-        primary = next((f for f in fields if (f.get("name") or "").lower() == "id"), None)
-        return {"tableName": table["name"], "fields": fields, "primary": primary}
 
     def _build_pair(
         self, source_table: str, source_field: dict[str, Any],
@@ -616,14 +705,20 @@ class SemanticRecommendService:
 
     def _infer_relation_candidates(
         self, source: dict[str, Any], target: dict[str, Any],
-        semantic_model_id: int, fields_cache: dict[int, list[dict[str, Any]]],
+        source_info: dict[str, Any] | None, target_info: dict[str, Any] | None,
     ) -> list[dict[str, Any]]:
-        """物理层推导：主键-外键命名规则（表A的id ↔ 表B的A_id）、同名字段（*_id）。"""
+        """物理层推导：主键-外键命名规则（表A的id ↔ 表B的A_id）、同名字段（*_id）。
+
+        source/target 为实体行（只用 name）；*_info 为主表信息
+        （tableName/fields/primary，由 _entity_table_info_map 预构建）。
+        """
         candidates: list[dict[str, Any]] = []
-        src = self._load_entity_table_fields(source, semantic_model_id, fields_cache)
-        tgt = self._load_entity_table_fields(target, semantic_model_id, fields_cache)
-        if not src or not tgt or src["primary"] is None or tgt["primary"] is None:
+        if (not source_info or not target_info
+                or source_info["primary"] is None
+                or target_info["primary"] is None):
             return candidates
+        src = source_info
+        tgt = target_info
 
         # 源表主键 ↔ 目标表外键（源:目标 = 1:N）
         pk_fk_pairs = [

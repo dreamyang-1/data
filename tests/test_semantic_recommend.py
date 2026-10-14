@@ -6,6 +6,7 @@
 路由层 Resp 包装与鉴权。
 """
 from contextlib import contextmanager
+import logging
 
 import pytest
 from fastapi.testclient import TestClient as RawTestClient
@@ -29,7 +30,11 @@ from app.services.semantic_recommend import (
 
 
 class FakeReader:
-    """按表驱动返回元数据行（snake_case，与数据库列同名）。"""
+    """按表驱动返回元数据行（snake_case，与数据库列同名）。
+
+    calls 记录每次读取的方法名，用于断言"固定查询次数"回归
+    （detect_relations 不随实体数增长 N+1）。
+    """
 
     def __init__(self, *, entities=None, sub_tables=None, tables=None,
                  fields=None, relations=None):
@@ -39,27 +44,39 @@ class FakeReader:
         self._fields = fields or {}
         self._relations = relations or []
         self.field_calls = []
+        self.calls = []
 
     def entities(self, semantic_model_id):
+        self.calls.append("entities")
         return [dict(row) for row in self._entities]
 
     def sub_table_names(self, semantic_model_id):
+        self.calls.append("sub_table_names")
         return list(self._sub_tables)
 
     def tables(self, semantic_model_id, data_source_id):
+        self.calls.append("tables")
         rows = [dict(row) for row in self._tables]
         if data_source_id is None:
             return rows
         return [row for row in rows if row.get("data_source_id") == data_source_id]
 
     def field_counts(self, table_ids):
+        self.calls.append("field_counts")
         self.field_calls.append(list(table_ids))
         return {tid: len(self._fields.get(tid, [])) for tid in table_ids}
 
     def fields(self, table_id):
+        self.calls.append("fields")
         return [dict(row) for row in self._fields.get(table_id, [])]
 
+    def fields_batch(self, table_ids):
+        self.calls.append("fields_batch")
+        return {tid: [dict(row) for row in self._fields.get(tid, [])]
+                for tid in table_ids}
+
     def relations(self, semantic_model_id):
+        self.calls.append("relations")
         return [dict(row) for row in self._relations]
 
 
@@ -322,6 +339,29 @@ def test_detect_relations_validates_input():
         service.detect_relations(81, "et-404")
 
 
+def test_detect_relations_fixed_reader_calls():
+    """回归：读取次数固定为 4（entities/relations/tables/fields_batch）。
+
+    原实现逐实体查表清单和字段（85 实体模型约 173 条 SQL，实测 2.6s）。
+    """
+    entities = [
+        {"id": "et-1", "name": "客户", "main_table_name": "customer",
+         "data_source_id": 58},
+        {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+         "data_source_id": 58},
+        {"id": "et-3", "name": "无主表实体", "main_table_name": None,
+         "data_source_id": 58},
+        {"id": "et-4", "name": "主表缺失实体", "main_table_name": "missing",
+         "data_source_id": 58},
+        {"id": "et-5", "name": "日志", "main_table_name": "log_record",
+         "data_source_id": 58},
+    ]
+    reader = base_reader(entities=entities)
+    service = SemanticRecommendService(reader, None)
+    service.detect_relations(81, "et-1")
+    assert reader.calls == ["entities", "relations", "tables", "fields_batch"]
+
+
 # ====================== 接口四：关系推荐 ======================
 
 
@@ -575,3 +615,94 @@ def test_route_query_validation():
             headers=HEADERS,
         )
         assert resp.status_code == 422
+
+
+# ====================== 软删除过滤与网关告警回归 ======================
+
+
+class _CaptureCursor:
+    def __init__(self, captured):
+        self._captured = captured
+
+    def execute(self, sql, params):
+        self._captured.append(sql)
+
+    def fetchall(self):
+        return []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+class _CaptureConn:
+    def __init__(self, captured, **kwargs):
+        self._captured = captured
+
+    def cursor(self, cursorclass=None):
+        return _CaptureCursor(self._captured)
+
+    def close(self):
+        pass
+
+
+def test_pymysql_reader_filters_soft_deleted(monkeypatch):
+    """回归：所有元数据 SQL 必须过滤 is_deleted = 0。
+
+    实测 223 元数据库 37% 表 / 52% 实体 / 37% 字段 / 53% 关系配置
+    处于已删除状态（模型 84 全部 793 张表已删除），不过滤会大量泄漏。
+    """
+    captured: list[str] = []
+    monkeypatch.setattr(
+        "pymysql.connect", lambda **kwargs: _CaptureConn(captured)
+    )
+    reader = semantic_recommend.PymysqlMetadataReader(
+        host="h", port=3306, user="u", password="p", database="d")
+    reader.entities(1)
+    reader.sub_table_names(1)
+    reader.tables(1, None)
+    reader.tables(1, 58)
+    reader.field_counts([1, 2])
+    reader.fields(1)
+    reader.fields_batch([1, 2])
+    reader.relations(1)
+    # field_counts([]) / fields_batch([]) 不应发 SQL
+    assert reader.field_counts([]) == {}
+    assert reader.fields_batch([]) == {}
+    assert captured, "应发出 SQL"
+    assert len(captured) == 8
+    for sql in captured:
+        assert "is_deleted = 0" in sql, f"缺少软删除过滤: {sql}"
+
+
+def test_gateway_empty_answer_returns_none_and_logs(monkeypatch, caplog):
+    """回归：网关空答案必须返回 None 并留 WARNING（qwen3-max 事故根因）。"""
+    class _Resp:
+        status_code = 200
+        text = 'data: {"answer": ""}'
+
+    monkeypatch.setattr("httpx.post", lambda *args, **kwargs: _Resp())
+    gateway = semantic_recommend.WorkflowChatGateway(
+        base_url="http://gw", api_key="k", model_name="qwen3-max")
+    with caplog.at_level(
+        logging.WARNING, logger="app.services.semantic_recommend"
+    ):
+        assert gateway.complete("query", "prompt") is None
+    assert any("空答案" in record.getMessage() for record in caplog.records)
+
+
+def test_gateway_non_200_returns_none_and_logs(monkeypatch, caplog):
+    class _Resp:
+        status_code = 502
+        text = "bad gateway"
+
+    monkeypatch.setattr("httpx.post", lambda *args, **kwargs: _Resp())
+    gateway = semantic_recommend.WorkflowChatGateway(
+        base_url="http://gw", api_key=None, model_name="qwen3.7-max")
+    with caplog.at_level(
+        logging.WARNING, logger="app.services.semantic_recommend"
+    ):
+        assert gateway.complete("query", "prompt") is None
+    assert any("HTTP 502" in record.getMessage() for record in caplog.records)

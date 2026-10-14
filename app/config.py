@@ -391,7 +391,9 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("DATA_AGENT_MODEL_GATEWAY_API_KEY"),
     )
-    model_gateway_model_name: str = "qwen3-max"
+    # 必须是 49 网关 LLM_MODELS 支持的模型名；qwen3-max 不在列表，
+    # 网关会静默返回空答案导致 LLM 增强失效（2026-10-14 修正）。
+    model_gateway_model_name: str = "qwen3.7-max"
     model_gateway_timeout_seconds: float = Field(default=15, gt=0, le=60)
     platform_upload_reference_resolution_enabled: bool = True
     platform_upload_reference_max_age_seconds: int = Field(
