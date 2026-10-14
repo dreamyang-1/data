@@ -97,7 +97,7 @@ class PymysqlMetadataReader:
 
     def entities(self, semantic_model_id: int) -> list[dict[str, Any]]:
         return self._fetch(
-            "SELECT id, name, main_table_name, data_source_id "
+            "SELECT id, name, main_table_name, data_source_id, business_domain_id "
             "FROM semantic_model_entity_type "
             "WHERE semantic_model_id = %s AND is_deleted = 0",
             (semantic_model_id,),
@@ -547,7 +547,8 @@ class SemanticRecommendService:
     # ---------- 接口三：实体关联检测 ----------
 
     def detect_relations(
-        self, semantic_model_id: int, entity_type_id: str
+        self, semantic_model_id: int, entity_type_id: str,
+        business_domain_id: int | None = None,
     ) -> list[dict[str, Any]]:
         if not _has_text(entity_type_id):
             raise SemanticRecommendError("实体类型ID不能为空")
@@ -572,7 +573,14 @@ class SemanticRecommendService:
 
         # 一次 tables + 一次批量 fields 装载全部实体主表信息，
         # 替代逐实体查库（85 实体模型原实现约 173 条 SQL，实测 2.6s）
-        others = [e for e in entities if e["id"] != entity_type_id]
+        # 业务域过滤（2026-10-14）：实体在业务域内配置，只检测同业务域实体，
+        # 避免跨域实体出现在关联提示里；不传时保持全模型行为。
+        others = [
+            e for e in entities
+            if e["id"] != entity_type_id
+            and (business_domain_id is None
+                 or e.get("business_domain_id") == business_domain_id)
+        ]
         info_map = self._entity_table_info_map(
             [current, *others], semantic_model_id
         )

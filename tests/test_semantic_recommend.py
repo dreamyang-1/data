@@ -355,6 +355,43 @@ def test_recommend_fields_llm_clean_name_kept_without_gateway_call_change():
 # ====================== 接口三：关联检测 ======================
 
 
+def test_detect_relations_filters_by_business_domain():
+    # 2026-10-14 契约：实体在业务域内配置，传 businessDomainId 时只检测同域实体
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58, "business_domain_id": 10},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58, "business_domain_id": 10},
+            {"id": "et-3", "name": "库存", "main_table_name": "stock",
+             "data_source_id": 58, "business_domain_id": 20},
+        ],
+        relations=[
+            {"id": 9, "name": "拥有", "category": "IDENTIFYING", "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+             "source_table_column_name": "customer-id",
+             "target_table_column_name": "sales_order-customer_id"},
+            {"id": 11, "name": "占用", "category": None, "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-3",
+             "source_table_column_name": "customer-stock_id",
+             "target_table_column_name": "stock-id"},
+        ],
+    )
+    service = SemanticRecommendService(reader, None)
+    # 不传业务域：保持全模型行为
+    all_ids = {row["otherEntityTypeId"]
+               for row in service.detect_relations(81, "et-1")}
+    assert all_ids == {"et-2", "et-3"}
+    # 传业务域 10：跨域实体 et-3 不再出现
+    scoped = service.detect_relations(81, "et-1", business_domain_id=10)
+    assert [row["otherEntityTypeId"] for row in scoped] == ["et-2"]
+    assert scoped[0]["related"] is True
+    # 传其他域 20：只返回该域内的 et-3（它与当前实体有已配置关系）
+    other_domain = service.detect_relations(81, "et-1", business_domain_id=20)
+    assert [row["otherEntityTypeId"] for row in other_domain] == ["et-3"]
+    assert other_domain[0]["relationCount"] == 1
+
+
 def test_detect_relations_counts_configured_and_inferred():
     service = SemanticRecommendService(base_reader(), None)
     result = service.detect_relations(81, "et-1")

@@ -2020,10 +2020,11 @@ async def recommend_fields_endpoint(
 async def detect_relations_endpoint(
     semantic_model_id: int = Query(alias="semanticModelId", gt=0),
     entity_type_id: str = Query(alias="entityTypeId", min_length=1, max_length=64),
+    business_domain_id: int | None = Query(alias="businessDomainId", default=None, gt=0),
 ) -> dict[str, Any]:
     return await _recommend_call(
         semantic_recommend.get_service().detect_relations,
-        semantic_model_id, entity_type_id,
+        semantic_model_id, entity_type_id, business_domain_id,
     )
 
 
