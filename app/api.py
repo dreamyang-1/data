@@ -54,6 +54,9 @@ from app.security import trusted_backend, require_application_namespace, resolve
 
 
 router = APIRouter(tags=["data-analysis"], dependencies=[Depends(trusted_backend)])
+# 语义建模推荐接口为只读元数据查询（用户 2026-10-14 决定）：挂独立无鉴权 router，
+# 供 Java 后端内网直接调用，与其余内部服务的调用方式保持一致。
+recommend_router = APIRouter(tags=["semantic-modeling"])
 logger = logging.getLogger(__name__)
 
 
@@ -1982,7 +1985,7 @@ async def _recommend_call(operation, *args) -> dict[str, Any]:
         return _recommend_resp(None, 500, "推荐服务内部错误")
 
 
-@router.get(
+@recommend_router.get(
     "/semanticModelEntityType/recommendTables",
     summary="实体表推荐（语义建模画布：拖入空白实体时推荐可映射的物理表）",
 )
@@ -1998,7 +2001,7 @@ async def recommend_tables_endpoint(
     )
 
 
-@router.get(
+@recommend_router.get(
     "/semanticModelEntityType/recommendFields",
     summary="实体属性推荐（推荐弹框选中表后加载字段清单）",
 )
@@ -2010,7 +2013,7 @@ async def recommend_fields_endpoint(
     )
 
 
-@router.get(
+@recommend_router.get(
     "/semanticModelRelationConfig/detectRelations",
     summary="实体关联检测（拖入新实体时检测与已有实体的关联）",
 )
@@ -2024,7 +2027,7 @@ async def detect_relations_endpoint(
     )
 
 
-@router.get(
+@recommend_router.get(
     "/semanticModelRelationConfig/recommendRelations",
     summary="关系推荐（两个实体连线时推荐已配置关系与物理层推导候选）",
 )

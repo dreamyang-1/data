@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 
-from app.api import router
+from app.api import recommend_router, router
 from app.config import Settings, get_settings
 from app.dependencies import build_container
 from app.observability.langfuse_client import (
@@ -110,6 +110,7 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
     # production app is constructed without it and remains on the V1 workflow.
     application.state.isolated_chat_handler = isolated_chat_handler
     application.include_router(router)
+    application.include_router(recommend_router)
 
     @application.exception_handler(RequestValidationError)
     async def scope_validation_error(request, exc):

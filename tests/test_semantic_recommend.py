@@ -592,13 +592,16 @@ def test_route_unexpected_error_maps_to_internal_message():
         assert body["msg"] == "推荐服务内部错误"
 
 
-def test_route_requires_trusted_backend_headers():
+def test_route_allows_anonymous_access():
+    # STALE_TEST: 2026-10-14 用户决定 4 个推荐接口去鉴权（只读元数据，内网供 Java 后端调用），
+    # 旧断言“无鉴权返回 401”按新契约改为可直接 200。
     with route_client(SemanticRecommendService(base_reader(), None)) as client:
         resp = client.get(
             "/semanticModelEntityType/recommendTables",
             params={"semanticModelId": 81},
         )
-        assert resp.status_code == 401
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 200
 
 
 def test_route_query_validation():
