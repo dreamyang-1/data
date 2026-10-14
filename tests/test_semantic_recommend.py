@@ -378,11 +378,11 @@ def test_detect_relations_filters_by_business_domain():
         ],
     )
     service = SemanticRecommendService(reader, None)
-    # 不传业务域：保持全模型行为
-    all_ids = {row["otherEntityTypeId"]
-               for row in service.detect_relations(81, "et-1")}
-    assert all_ids == {"et-2", "et-3"}
-    # 传业务域 10：跨域实体 et-3 不再出现
+    # 不传参：自动按当前实体 et-1 所属域 10 过滤（STALE_TEST：2026-10-14 契约
+    # 从"不传=全模型"改为"不传=自动识别业务域"）
+    auto = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in auto] == ["et-2"]
+    # 显式传业务域 10：与自动识别结果一致
     scoped = service.detect_relations(81, "et-1", business_domain_id=10)
     assert [row["otherEntityTypeId"] for row in scoped] == ["et-2"]
     assert scoped[0]["related"] is True
@@ -390,6 +390,40 @@ def test_detect_relations_filters_by_business_domain():
     other_domain = service.detect_relations(81, "et-1", business_domain_id=20)
     assert [row["otherEntityTypeId"] for row in other_domain] == ["et-3"]
     assert other_domain[0]["relationCount"] == 1
+
+
+def test_detect_relations_auto_derives_domain_from_current_entity():
+    # 2026-10-14 契约：进入业务域才能选实体，服务端按当前实体所属业务域自动过滤
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58, "business_domain_id": 10},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58, "business_domain_id": 10},
+            {"id": "et-3", "name": "库存", "main_table_name": "stock",
+             "data_source_id": 58, "business_domain_id": 20},
+        ],
+        relations=[
+            {"id": 9, "name": "拥有", "category": "IDENTIFYING", "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+             "source_table_column_name": "customer-id",
+             "target_table_column_name": "sales_order-customer_id"},
+            {"id": 11, "name": "占用", "category": None, "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-3",
+             "source_table_column_name": "customer-stock_id",
+             "target_table_column_name": "stock-id"},
+        ],
+    )
+    service = SemanticRecommendService(reader, None)
+    # 不传参：自动按 et-1 所属域 10 过滤，跨域 et-3 被剔除
+    scoped = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in scoped] == ["et-2"]
+    # 当前实体无业务域：不过滤（全模型行为）
+    reader._entities[0]["business_domain_id"] = None
+    service2 = SemanticRecommendService(reader, None)
+    all_ids = {row["otherEntityTypeId"]
+               for row in service2.detect_relations(81, "et-1")}
+    assert all_ids == {"et-2", "et-3"}
 
 
 def test_detect_relations_counts_configured_and_inferred():

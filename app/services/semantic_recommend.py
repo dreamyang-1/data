@@ -573,8 +573,11 @@ class SemanticRecommendService:
 
         # 一次 tables + 一次批量 fields 装载全部实体主表信息，
         # 替代逐实体查库（85 实体模型原实现约 173 条 SQL，实测 2.6s）
-        # 业务域过滤（2026-10-14）：实体在业务域内配置，只检测同业务域实体，
-        # 避免跨域实体出现在关联提示里；不传时保持全模型行为。
+        # 业务域过滤（2026-10-14）：实体在业务域内配置（须先进入业务域才能选实体），
+        # 默认按当前实体所属业务域自动过滤，避免跨域实体出现在关联提示里；
+        # 当前实体无业务域时不过滤（全模型行为），显式传参可覆盖。
+        if business_domain_id is None:
+            business_domain_id = current.get("business_domain_id")
         others = [
             e for e in entities
             if e["id"] != entity_type_id
