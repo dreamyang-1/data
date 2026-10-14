@@ -1897,31 +1897,27 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         "quality_status=", "data_as_of=", "rows_preview=",
     ):
         assert internal_label not in completed_retrieval_text
-    completed_validation_text = "".join(
-        event["content"] for event in child_public_progress
-        if event["meta"]["stage"] == "RELIABILITY_CHECK"
-        and event["meta"]["status"] == "COMPLETED"
+    # 子任务校验已转为内部事件（提交 303b525：父级对补全后的整体目标
+    # 统一校验一次），结果校验内容只出现在根级 RELIABILITY_CHECK
+    assert not any(
+        event["meta"]["stage"] == "RELIABILITY_CHECK"
+        for event in child_public_progress
     )
-    assert "校验结论：高可信" in completed_validation_text
-    assert "数据质量：通过" in completed_validation_text
-    assert "证据（" in completed_validation_text
-    assert "查询结果：" in completed_validation_text
-    assert "（来源：本轮只读数据库查询返回的数据集" in completed_validation_text
-    assert "告警：无。" in completed_validation_text
-    assert "HIGH" not in completed_validation_text
-    assert "PASS" not in completed_validation_text
-    validation_by_task = {
-        task_id: "".join(
-            event["content"]
-            for event in child_public_progress
-            if event["meta"]["task_id"] == task_id
-            and event["meta"]["stage"] == "RELIABILITY_CHECK"
-            and event["meta"]["status"] == "COMPLETED"
-        )
-        for task_id in ("task-1", "task-2")
-    }
-    assert "任务1：查询 TDC-3 产品的主要适用科室" in validation_by_task["task-1"]
-    assert "任务2：查询 TDC-3 产品的次要适用科室" in validation_by_task["task-2"]
+    root_validation_text = "".join(
+        event["content"] for event in events
+        if event["type"] == "message_chunk"
+        and event.get("meta", {}).get("stage") == "RELIABILITY_CHECK"
+        and event.get("meta", {}).get("status") == "COMPLETED"
+        and not event.get("meta", {}).get("task_id")
+    )
+    assert "校验结论：高可信" in root_validation_text
+    assert "数据质量：通过" in root_validation_text
+    assert "证据（" in root_validation_text
+    assert "查询结果：" in root_validation_text
+    assert "（来源：本轮只读数据库查询返回的数据集" in root_validation_text
+    assert "告警：无。" in root_validation_text
+    assert "HIGH" not in root_validation_text
+    assert "PASS" not in root_validation_text
     insight_by_task = {
         task_id: "".join(
             event["content"]
