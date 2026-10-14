@@ -457,7 +457,13 @@ async def test_compound_judgment_is_shown_in_resolved_context_and_stashed(provid
         event for event in events
         if event.get("progress_phase") == "V2_RESOLVED_INTENT_CONTEXT_READY"
     )
-    # 补全问题先展示，判断进度随后，判断结论作为意图节点收尾
+    # 补全问题先展示（不带phase的意图事件），判断进度随后，
+    # 判断结论作为意图节点收尾
+    intent_messages = [
+        event["message"] for event in events
+        if event.get("stage") == "INTENT_RECOGNITION"
+        and not event.get("progress_phase")
+    ]
     assert intent_messages[0].startswith("用户原始问题：")
     assert "补全后的问题：" in intent_messages[0]
     judge_start = next(

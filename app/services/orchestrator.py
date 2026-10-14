@@ -1606,8 +1606,10 @@ class DataAnalysisOrchestrator:
                                 "依赖": [],
                                 "执行状态": "待执行",
                             }]
-                        # 执行期按这份表刷新任务状态，存chat供恢复会话复用
+                        # 执行期按这份表刷新任务状态，存chat供恢复会话复用；
+                        # 记下建表消息ID，执行期只复用同一消息的表
                         chat._task_table = copy.deepcopy(task_table)
+                        chat._task_table_message_id = chat.message_id
                         await emit_progress(
                             "TASK_PLANNING",
                             "COMPLETED",
@@ -3008,10 +3010,13 @@ class DataAnalysisOrchestrator:
         }
         # 任务表随执行进度更新：规划时建的表带"待执行"状态，
         # 每个任务开跑和落终态时刷新对应行重新下发。
-        # 复用前先核对任务编号集合，防止跨轮残留的旧表串进来
+        # 复用前先核对建表消息ID与任务编号集合：任务编号每轮都从
+        # task-1重来，仅比编号会让恢复会话里同构旧表串进本轮展示
         planned_table = getattr(chat, "_task_table", None)
+        planned_message_id = getattr(chat, "_task_table_message_id", None)
         plan_task_ids = {task.task_id for task in plan.tasks}
-        if planned_table and {row.get("任务") for row in planned_table} == plan_task_ids:
+        if (planned_table and planned_message_id == chat.message_id
+                and {row.get("任务") for row in planned_table} == plan_task_ids):
             task_table = [dict(row) for row in planned_table]
         else:
             task_table = [
@@ -3032,6 +3037,7 @@ class DataAnalysisOrchestrator:
                 for task in plan.tasks
             ]
         chat._task_table = task_table
+        chat._task_table_message_id = chat.message_id
 
         async def _emit_task_status(task_id: str, status_text: str) -> None:
             # 直接原地改行再整体快照下发：并发任务同时刷状态时

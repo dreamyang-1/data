@@ -815,6 +815,11 @@ class ChatRequest(StrictModel):
     _analysis_root_context: dict[str, Any] = PrivateAttr(default_factory=dict)
     # 复合指标拆出的纯计算任务的依赖任务：单值结果也要落盘，供计算任务取分母
     _dag_keep_result_dataset: bool = PrivateAttr(default=False)
+    # 任务表随执行进度刷新：规划建表、执行刷状态，均在本轮 chat 上流转。
+    # 建表时记录所属消息ID，执行期只有同消息的表才复用，防止恢复会话里
+    # 同构旧表（任务编号每轮都从task-1重来）把旧任务名串进本轮展示。
+    _task_table: list[dict[str, Any]] | None = PrivateAttr(default=None)
+    _task_table_message_id: str | None = PrivateAttr(default=None)
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)

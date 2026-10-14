@@ -1833,7 +1833,7 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert "规划调用：" not in planning_content
     # 两个子任务相互独立，不出现依赖关系行，但要有并行说明
     assert "依赖关系：" not in planning_content
-    assert "各子问题相互独立，可并行执行。" in planning_content
+    assert "各任务相互独立，可并行执行。" in planning_content
     completed = next(event for event in events if event["type"] == "complete")
     assert completed["execution_shape"] == "COMPOSITE"
     assert len(completed["task_results"]) == 2
