@@ -42,8 +42,6 @@ class MetadataReader(Protocol):
 
     def entities(self, semantic_model_id: int) -> list[dict[str, Any]]: ...
 
-    def sub_table_names(self, semantic_model_id: int) -> list[str]: ...
-
     def tables(
         self, semantic_model_id: int, data_source_id: int | None
     ) -> list[dict[str, Any]]: ...
@@ -102,14 +100,6 @@ class PymysqlMetadataReader:
             "WHERE semantic_model_id = %s AND is_deleted = 0",
             (semantic_model_id,),
         )
-
-    def sub_table_names(self, semantic_model_id: int) -> list[str]:
-        rows = self._fetch(
-            "SELECT sub_table_name FROM semantic_model_entity_sub_table_mapping "
-            "WHERE semantic_model_id = %s AND is_deleted = 0",
-            (semantic_model_id,),
-        )
-        return [row["sub_table_name"] for row in rows]
 
     def tables(
         self, semantic_model_id: int, data_source_id: int | None
@@ -364,15 +354,13 @@ class SemanticRecommendService:
     ) -> list[dict[str, Any]]:
         max_size = 30 if not limit or limit <= 0 else min(limit, 200)
 
-        # 已被当前语义模型下实体映射的表（主表 + 子表）不再推荐
-        # （2026-10-14 契约：未配置的表正常返回，已配置的表不返回）
-        configured_tables: set[str] = set()
-        for entity in self._reader.entities(semantic_model_id):
-            if _has_text(entity.get("main_table_name")):
-                configured_tables.add(entity["main_table_name"].lower())
-        for name in self._reader.sub_table_names(semantic_model_id):
-            if _has_text(name):
-                configured_tables.add(name.lower())
+        # 实体唯一不能重复（2026-10-14 契约）：一张表可派生多个实体，
+        # 故不按表过滤，而是过滤"建议实体名与当前模型已有实体重名"的条目
+        existing_names: set[str] = {
+            e["name"].strip().lower()
+            for e in self._reader.entities(semantic_model_id)
+            if _has_text(e.get("name"))
+        }
 
         tables = self._reader.tables(semantic_model_id, data_source_id)
         field_counts = self._reader.field_counts(
@@ -387,17 +375,18 @@ class SemanticRecommendService:
             if not name:
                 continue
             lower_name = name.lower()
-            if lower_name in configured_tables:
-                continue
             comment = (table.get("comment") or "").lower()
             if kw and kw not in lower_name and kw not in comment:
+                continue
+            suggested = _derive_entity_name(name, table.get("comment"))
+            if not _has_text(suggested) or suggested.strip().lower() in existing_names:
                 continue
             vo = {
                 "tableId": table["id"],
                 "tableName": name,
                 "tableComment": table.get("comment"),
                 "dataSourceId": table.get("data_source_id"),
-                "suggestedEntityName": _derive_entity_name(name, table.get("comment")),
+                "suggestedEntityName": suggested,
                 "fieldCount": field_counts.get(table["id"], 0),
             }
             # 关键词命中放前面；同组内按“名称命中 > 注释命中 > 有注释 > 表名”排序
@@ -412,7 +401,24 @@ class SemanticRecommendService:
         result = matched + others[: max(0, max_size - len(matched))]
         result = result[:max_size]
         self._enhance_tables_with_llm(result, keyword)
-        return result
+        return self._drop_duplicate_entity_names(result, existing_names)
+
+    def _drop_duplicate_entity_names(
+        self, result: list[dict[str, Any]], existing_names: set[str]
+    ) -> list[dict[str, Any]]:
+        """过滤建议实体名与已有实体重名/批次内重复的条目（实体唯一）。
+
+        大模型改写建议实体名后可能撞上已有实体名，统一在返回前剔除。
+        """
+        seen: set[str] = set()
+        deduped: list[dict[str, Any]] = []
+        for vo in result:
+            key = (vo.get("suggestedEntityName") or "").strip().lower()
+            if not key or key in existing_names or key in seen:
+                continue
+            seen.add(key)
+            deduped.append(vo)
+        return deduped
 
     def _enhance_tables_with_llm(
         self, result: list[dict[str, Any]], keyword: str | None

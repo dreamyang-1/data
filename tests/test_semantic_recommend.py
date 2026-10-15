@@ -1,6 +1,6 @@
 """语义建模推荐接口（Python 版）单测与路由契约测试。
 
-覆盖：实体表推荐（已配置表过滤/关键词分组/limit/LLM 重排与降级）、
+覆盖：实体表推荐（建议实体名去重/关键词分组/limit/LLM 重排与降级）、
 属性推荐（主键优先/排序/enumValues）、关联检测（计数/related/skip 零）、
 关系推荐（已配置分组/反向交换/基数翻转/物理推导 PK-FK/LLM 语义增强）、
 路由层 Resp 包装与鉴权。
@@ -37,10 +37,9 @@ class FakeReader:
     （detect_relations 不随实体数增长 N+1）。
     """
 
-    def __init__(self, *, entities=None, sub_tables=None, tables=None,
+    def __init__(self, *, entities=None, tables=None,
                  fields=None, relations=None):
         self._entities = entities or []
-        self._sub_tables = sub_tables or []
         self._tables = tables or []
         self._fields = fields or {}
         self._relations = relations or []
@@ -50,10 +49,6 @@ class FakeReader:
     def entities(self, semantic_model_id):
         self.calls.append("entities")
         return [dict(row) for row in self._entities]
-
-    def sub_table_names(self, semantic_model_id):
-        self.calls.append("sub_table_names")
-        return list(self._sub_tables)
 
     def tables(self, semantic_model_id, data_source_id):
         self.calls.append("tables")
@@ -104,7 +99,6 @@ def base_reader(**overrides):
             {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
              "data_source_id": 58},
         ],
-        sub_tables=["customer_ext"],
         tables=[
             {"id": 1, "name": "customer", "comment": "客户信息表",
              "data_source_id": 58},
@@ -210,9 +204,10 @@ def test_parse_llm_json_array():
 # ====================== 接口一：实体表推荐 ======================
 
 
-def test_recommend_tables_configured_keyword_and_limit():
-    # 2026-10-14 契约：已配置表（customer/sales_order/customer_ext）不再返回，
-    # 只返回未配置的表；VO 不再有 configured 字段
+def test_recommend_tables_entity_name_dedup_and_keyword_limit():
+    # 2026-10-14 契约：实体唯一——建议实体名与已有实体重名的条目不返回；
+    # 表本身是否被映射不影响（一张表可派生多个实体）。
+    # fixture 中 et-1(客户)/et-2(订单) 使 customer/sales_order 的建议名撞车
     reader = base_reader()
     service = SemanticRecommendService(reader, None)
 
@@ -221,13 +216,12 @@ def test_recommend_tables_configured_keyword_and_limit():
     assert [vo["tableName"] for vo in result] == ["config_item", "log_record"]
     assert reader.field_calls == [[1, 2, 3, 4]]
     by_name = {vo["tableName"]: vo for vo in result}
-    assert "configured" not in by_name["config_item"]
     assert by_name["config_item"]["suggestedEntityName"] == "系统配置"
     assert by_name["config_item"]["fieldCount"] == 0
     assert by_name["log_record"]["fieldCount"] == 0
 
     # 关键词命中：名称命中 > 注释命中，未命中的被过滤；
-    # 命中的表若已配置（sales_order）同样不返回
+    # 命中表的建议名撞已有实体（sales_order→订单）同样不返回
     result = service.recommend_tables(81, None, "订单", None)
     assert result == []
 
@@ -235,7 +229,7 @@ def test_recommend_tables_configured_keyword_and_limit():
     result = service.recommend_tables(81, None, "系统", None)
     assert [vo["tableName"] for vo in result] == ["config_item"]
 
-    # 关键词命中未配置表
+    # 关键词命中建议名未撞车的表
     result = service.recommend_tables(81, None, "log", None)
     assert [vo["tableName"] for vo in result] == ["log_record"]
 
@@ -246,6 +240,33 @@ def test_recommend_tables_configured_keyword_and_limit():
     # data_source 过滤
     result = service.recommend_tables(81, 59, None, None)
     assert [vo["tableName"] for vo in result] == ["config_item"]
+
+
+def test_recommend_tables_table_not_mapped_but_name_taken():
+    # 表未被任何实体映射，但建议实体名已存在 → 不返回（实体唯一）
+    reader = base_reader(tables=[
+        {"id": 1, "name": "customer", "comment": "客户信息表", "data_source_id": 58},
+        {"id": 2, "name": "sales_order", "comment": "订单记录表", "data_source_id": 58},
+        {"id": 5, "name": "merchant_order", "comment": "订单", "data_source_id": 58},
+        {"id": 3, "name": "log_record", "comment": None, "data_source_id": 58},
+        {"id": 4, "name": "config_item", "comment": "系统配置", "data_source_id": 59},
+    ])
+    service = SemanticRecommendService(reader, None)
+    # merchant_order 未被映射，但建议名"订单"与已有实体 et-2 重名 → 剔除
+    names = [vo["tableName"] for vo in service.recommend_tables(81, None, None, None)]
+    assert "merchant_order" not in names
+    assert names == ["config_item", "log_record"]
+
+
+def test_recommend_tables_llm_rename_into_existing_entity_dropped():
+    # 大模型把建议实体名改成已有实体名 → 返回前剔除
+    reader = base_reader()
+    gateway = FakeGateway('[{"tableName":"log_record","entityName":"客户"}]')
+    service = SemanticRecommendService(reader, gateway)
+    result = service.recommend_tables(81, None, None, None)
+    names = [vo["tableName"] for vo in result]
+    assert "log_record" not in names
+    assert names == ["config_item"]
 
 
 def test_recommend_tables_llm_reorder_and_entity_names():
@@ -782,7 +803,6 @@ def test_pymysql_reader_filters_soft_deleted(monkeypatch):
     reader = semantic_recommend.PymysqlMetadataReader(
         host="h", port=3306, user="u", password="p", database="d")
     reader.entities(1)
-    reader.sub_table_names(1)
     reader.tables(1, None)
     reader.tables(1, 58)
     reader.field_counts([1, 2])
@@ -793,7 +813,7 @@ def test_pymysql_reader_filters_soft_deleted(monkeypatch):
     assert reader.field_counts([]) == {}
     assert reader.fields_batch([]) == {}
     assert captured, "应发出 SQL"
-    assert len(captured) == 8
+    assert len(captured) == 7
     for sql in captured:
         assert "is_deleted = 0" in sql, f"缺少软删除过滤: {sql}"
 
