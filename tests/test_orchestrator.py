@@ -2369,6 +2369,171 @@ async def test_top_n_only_followup_ranks_an_unordered_relationship_list():
     assert "SET_RELATIONSHIP_PROJECTION" in remembered.assumptions
 
 
+def _metric_query_result(
+    rows: list[dict], *, truncated: bool = False, columns: list[str] | None = None,
+) -> DataQueryResult:
+    dataset = Dataset(
+        columns=columns or ["经销商名称", "销售额"],
+        rows=list(rows),
+        snapshot_id="snap-sort-test",
+        data_as_of=datetime(2026, 10, 15, tzinfo=timezone.utc),
+        row_count=len(rows),
+        truncated=truncated,
+    )
+    return DataQueryResult(asl={"version": "2.0"}, sql="SELECT 1", dataset=dataset)
+
+
+def _metric_request(structured: dict) -> CanonicalAnalysisRequest:
+    request = CanonicalAnalysisRequest(
+        conversation_id="metric-sort",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询各经销商销售额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+    )
+    request._planner_extraction = PlannerExtraction(structured=structured)
+    return request
+
+
+def test_metric_result_sort_orders_rows_by_structured_sort_type_desc():
+    # 结构化参数“排序类型=降序”：无序 SQL 返回行按指标数值列降序
+    request = _metric_request({
+        "意图": "指标查询",
+        "指标": [{"name": "销售额"}],
+        "排序类型": "降序",
+        "排序": [{"field": "销售额", "order": "desc"}],
+    })
+    result = _metric_query_result([
+        {"经销商名称": "乙", "销售额": 20},
+        {"经销商名称": "丙", "销售额": 5},
+        {"经销商名称": "甲", "销售额": 50},
+    ])
+    agent = service()
+
+    agent._apply_metric_result_sort(request, result)
+
+    assert [row["经销商名称"] for row in result.dataset.rows] == ["甲", "乙", "丙"]
+
+
+def test_metric_result_sort_orders_rows_by_structured_sort_type_asc():
+    request = _metric_request({
+        "意图": "指标查询",
+        "指标": [{"name": "销售额"}],
+        "排序类型": "升序",
+        "排序": [{"field": "销售额", "order": "asc"}],
+    })
+    result = _metric_query_result([
+        {"经销商名称": "甲", "销售额": 50},
+        {"经销商名称": "乙", "销售额": 20},
+    ])
+    agent = service()
+
+    agent._apply_metric_result_sort(request, result)
+
+    assert [row["销售额"] for row in result.dataset.rows] == [20, 50]
+
+
+def test_metric_result_sort_keeps_rows_without_sort_type():
+    # 无“排序类型”时保持 SQL 原序
+    request = _metric_request({
+        "意图": "指标查询",
+        "指标": [{"name": "销售额"}],
+        "排序": [],
+    })
+    rows = [
+        {"经销商名称": "乙", "销售额": 20},
+        {"经销商名称": "甲", "销售额": 50},
+    ]
+    result = _metric_query_result(rows)
+    agent = service()
+
+    agent._apply_metric_result_sort(request, result)
+
+    assert result.dataset.rows == rows
+
+
+def test_metric_result_sort_skips_non_numeric_metric_column():
+    # 指标列含非数值时不重排，保持 SQL 原序（fail-safe）
+    request = _metric_request({
+        "意图": "指标查询",
+        "指标": [{"name": "销售额"}],
+        "排序类型": "降序",
+    })
+    rows = [
+        {"经销商名称": "乙", "销售额": "20"},
+        {"经销商名称": "甲", "销售额": "50"},
+    ]
+    result = _metric_query_result(rows)
+    agent = service()
+
+    agent._apply_metric_result_sort(request, result)
+
+    assert result.dataset.rows == rows
+
+
+def test_metric_result_sort_skips_truncated_preview():
+    # 截断预览不排序：部分数据上排序会被误解为全量排名
+    request = _metric_request({
+        "意图": "指标查询",
+        "指标": [{"name": "销售额"}],
+        "排序类型": "降序",
+    })
+    rows = [
+        {"经销商名称": "乙", "销售额": 20},
+        {"经销商名称": "甲", "销售额": 50},
+    ]
+    result = _metric_query_result(rows, truncated=True)
+    agent = service()
+
+    agent._apply_metric_result_sort(request, result)
+
+    assert result.dataset.rows == rows
+
+
+def test_metric_result_sort_prefers_structured_sort_field_over_first_numeric():
+    # 结构化排序字段命中数据集列时优先生效
+    request = _metric_request({
+        "意图": "指标查询",
+        "指标": [{"name": "订单量"}, {"name": "销售额"}],
+        "排序类型": "升序",
+        "排序": [{"field": "订单量", "order": "asc"}],
+    })
+    dataset = Dataset(
+        columns=["经销商名称", "订单量", "销售额"],
+        rows=[
+            {"经销商名称": "甲", "订单量": 3, "销售额": 50},
+            {"经销商名称": "乙", "订单量": 9, "销售额": 20},
+        ],
+        snapshot_id="snap-sort-test",
+        data_as_of=datetime(2026, 10, 15, tzinfo=timezone.utc),
+        row_count=2,
+    )
+    result = DataQueryResult(asl={"version": "2.0"}, sql="SELECT 1", dataset=dataset)
+    agent = service()
+
+    agent._apply_metric_result_sort(request, result)
+
+    assert [row["经销商名称"] for row in result.dataset.rows] == ["甲", "乙"]
+
+
+def test_metric_result_sort_uses_first_numeric_column_without_bindings():
+    # 结构化字段与指标别名都对不上列时，回退到首个全数值列
+    request = _metric_request({
+        "意图": "指标查询",
+        "指标": [{"name": "区域全部医院总数"}],
+        "排序类型": "降序",
+    })
+    result = _metric_query_result([
+        {"经销商名称": "乙", "有效订单去重医院数": 20},
+        {"经销商名称": "甲", "有效订单去重医院数": 50},
+    ], columns=["经销商名称", "有效订单去重医院数"])
+    agent = service()
+
+    agent._apply_metric_result_sort(request, result)
+
+    assert [row["有效订单去重医院数"] for row in result.dataset.rows] == [50, 20]
+
+
 @pytest.mark.asyncio
 async def test_follow_up_uses_task_frame_after_upstream_failure():
     adapters = build_mock_adapters()

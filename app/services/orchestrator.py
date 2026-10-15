@@ -7280,6 +7280,64 @@ class DataAnalysisOrchestrator:
             dataset.total_row_count = len(deduped)
         return query_result
 
+    def _apply_metric_result_sort(self, request, query_result):
+        """指标类数值查询按结构化参数“排序类型”对返回行做确定性排序。
+
+        ASL 未生成 ORDER BY 时（例如分组指标查询），SQL 返回行顺序不确定；
+        这里按规划参数的方向（升序/降序）按指标数值列排序，方向缺省视为降序。
+        非数值列或截断预览不排序，保持 SQL 原序。
+        """
+        extraction = getattr(request, "_planner_extraction", None)
+        structured = extraction.structured if extraction is not None else None
+        if not isinstance(structured, dict) or not structured.get("指标"):
+            return query_result
+        direction = str(structured.get("排序类型") or "").strip().lower()
+        if not direction:
+            return query_result
+        ascending = direction in {"升序", "asc", "从低到高", "从小到大"}
+        dataset = query_result.dataset
+        rows = dataset.rows
+        if len(rows) < 2 or dataset.truncated:
+            return query_result
+        column = self._metric_sort_column(structured, request, dataset)
+        if column is None:
+            return query_result
+        keys = [row.get(column) for row in rows]
+        if any(
+            isinstance(value, bool) or not isinstance(value, (int, float))
+            for value in keys
+        ):
+            return query_result
+        expected = sorted(keys, reverse=not ascending)
+        if keys == expected:
+            return query_result
+        dataset.rows = sorted(rows, key=lambda row: row[column], reverse=not ascending)
+        return query_result
+
+    @staticmethod
+    def _metric_sort_column(structured: dict, request, dataset) -> str | None:
+        """优先取结构化排序字段，其次请求指标别名，最后取首个全数值列。"""
+        for item in structured.get("排序") or []:
+            if isinstance(item, dict):
+                field = str(item.get("field") or "").strip()
+                if field and field in dataset.columns:
+                    return field
+        for metric in getattr(request, "metrics", None) or []:
+            for name in (
+                getattr(metric, "canonical_name", None),
+                getattr(metric, "input", None),
+            ):
+                if name and name in dataset.columns:
+                    return name
+        for column in dataset.columns:
+            if all(
+                isinstance(row.get(column), (int, float))
+                and not isinstance(row.get(column), bool)
+                for row in dataset.rows
+            ):
+                return column
+        return None
+
     async def _complete_query_result(
         self, chat, identity, request, query_result, *,
         dataset_id=None, external_search_mode=None,
@@ -7292,6 +7350,7 @@ class DataAnalysisOrchestrator:
             dataset_id = None
         query_result = cleaned_result
         query_result = self._dedup_detail_result(request, query_result)
+        query_result = self._apply_metric_result_sort(request, query_result)
         list_cleanup_note = cleanup_message(query_result)
         list_was_cleaned = any(
             item.get("type") == "NAME_LIST_CLEANUP"
@@ -7307,11 +7366,11 @@ class DataAnalysisOrchestrator:
             "COMPLETED",
             (
                 "调度执行完成。\n"
-                f"返回行数：{query_result.dataset.row_count}；\n"
+                f"返回行数：{query_result.dataset.row_count}。"
                 + (
-                    "全量清理后行数：未知。"
+                    "\n全量清理后行数：未知。"
                     if list_was_cleaned and query_result.dataset.truncated
-                    else f"结果总行数：{query_result.dataset.total_row_count}。"
+                    else ""
                 )
                 + (f"\n{list_cleanup_note}" if list_cleanup_note else "")
             ),
@@ -7981,14 +8040,25 @@ class DataAnalysisOrchestrator:
                 },
                 "query_data": {
                     "columns": query_result.dataset.columns,
-                    "rows": query_result.dataset.rows,
-                    "returned_row_count": len(query_result.dataset.rows),
+                    # 送入模型的行数封顶：完整数据仍可从附件下载，模型输入
+                    # 只保留前 data_query_max_rows 行（已按指标排序时即
+                    # 对应方向的 Top/Bottom N），避免超长结果撑爆上下文。
+                    "rows": (
+                        query_result.dataset.rows[:self.settings.data_query_max_rows]
+                    ),
+                    "returned_row_count": min(
+                        len(query_result.dataset.rows),
+                        self.settings.data_query_max_rows,
+                    ),
                     "total_row_count": total_row_count,
                     "total_row_count_confirmed": total_row_count_confirmed,
                     "sample_only": (
                         query_result.dataset.truncated
                         or not total_row_count_confirmed
-                        or total_row_count > len(query_result.dataset.rows)
+                        or total_row_count > min(
+                            len(query_result.dataset.rows),
+                            self.settings.data_query_max_rows,
+                        )
                     ),
                 },
             })
@@ -8019,14 +8089,25 @@ class DataAnalysisOrchestrator:
                 },
                 "query_data": {
                     "columns": query_result.dataset.columns,
-                    "rows": query_result.dataset.rows,
-                    "returned_row_count": len(query_result.dataset.rows),
+                    # 送入模型的行数封顶：完整数据仍可从附件下载，模型输入
+                    # 只保留前 data_query_max_rows 行（已按指标排序时即
+                    # 对应方向的 Top/Bottom N），避免超长结果撑爆上下文。
+                    "rows": (
+                        query_result.dataset.rows[:self.settings.data_query_max_rows]
+                    ),
+                    "returned_row_count": min(
+                        len(query_result.dataset.rows),
+                        self.settings.data_query_max_rows,
+                    ),
                     "total_row_count": total_row_count,
                     "total_row_count_confirmed": total_row_count_confirmed,
                     "sample_only": (
                         query_result.dataset.truncated
                         or not total_row_count_confirmed
-                        or total_row_count > len(query_result.dataset.rows)
+                        or total_row_count > min(
+                            len(query_result.dataset.rows),
+                            self.settings.data_query_max_rows,
+                        )
                     ),
                 },
             })
@@ -8875,11 +8956,15 @@ class DataAnalysisOrchestrator:
                     current_scope=DatasetScope(identity.tenant_id, identity.user_id, chat.application_id,
                         conversation, chat.authorized_semantic_scope.fingerprint()),
                 )
+                model_rows = list(loaded.rows)[: self.settings.data_query_max_rows]
                 facts["query_data"] = {
-                    "columns": list(reference.columns), "rows": list(loaded.rows),
-                    "returned_row_count": len(loaded.rows), "total_row_count": reference.row_count,
+                    "columns": list(reference.columns), "rows": model_rows,
+                    "returned_row_count": len(model_rows), "total_row_count": reference.row_count,
                     "total_row_count_confirmed": True,
-                    "sample_only": not dataset_source_complete(reference, len(loaded.rows)),
+                    "sample_only": (
+                        not dataset_source_complete(reference, len(loaded.rows))
+                        or len(model_rows) < len(loaded.rows)
+                    ),
                 }
             except Exception as exc:
                 logger.warning("root result materialization failed: %s", type(exc).__name__)

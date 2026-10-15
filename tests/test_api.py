@@ -1887,7 +1887,8 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert "数据集输出：" not in completed_retrieval_text
     assert "查询字段：" not in completed_retrieval_text
     assert "返回行数：" in completed_retrieval_text
-    assert "结果总行数：" in completed_retrieval_text
+    # 2026-10-15 用户要求：调度执行展示只保留“返回行数”，不再展示“结果总行数”
+    assert "结果总行数：" not in completed_retrieval_text
     assert "数据质量：" not in completed_retrieval_text
     assert "查询快照时间：" not in completed_retrieval_text
     assert "数据预览：" not in completed_retrieval_text

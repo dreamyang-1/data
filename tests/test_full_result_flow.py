@@ -50,12 +50,17 @@ async def test_full_rows_reach_analysis_storage_and_only_twenty_reach_table(defe
         response=await agent._complete_query_result(chat, TrustedIdentity(tenant_id='tenant', user_id='user'), request, result)
     assert len(store.rows)==2154 and store.rows[-1]==rows[-1]
     facts=(chat._dag_deferred_insight['facts'] if deferred else json.loads(calls[0]['messages'][1]['content'])['facts'])
-    assert facts['query_data']['rows']==rows
-    assert facts['query_data']['sample_only'] is False
+    # 2026-10-15 用户要求：SQL 结果送入模型的行数封顶为 data_query_max_rows
+    # （默认1000），完整 2154 行仍进入分析存储与附件；超过上限后模型输入
+    # 标记 sample_only，不再把全量行塞进提示词。
+    model_cap=agent.settings.data_query_max_rows
+    assert facts['query_data']['rows']==rows[:model_cap]
+    assert facts['query_data']['returned_row_count']==model_cap
+    assert facts['query_data']['sample_only'] is True
     if deferred:
         await model.synthesize_combined(request.original_question, [chat._dag_deferred_insight])
         combined=json.loads(calls[0]['messages'][1]['content'])
-        assert combined['tasks'][0]['facts']['query_data']['rows']==rows
+        assert combined['tasks'][0]['facts']['query_data']['rows']==rows[:model_cap]
     query=next(item.payload for item in response.evidence if item.kind=='QUERY_RESULT')
     assert query['returned_row_count']==2154 and not query['truncated']
     assert 'DEALER-0019' in response.answer and 'DEALER-0020' not in response.answer
@@ -153,5 +158,6 @@ async def test_cached_root_material_loads_full_rows_only_with_current_scope(wron
     if wrong_scope:
         assert 'query_data' not in materials[0]['facts'] and materials[0]['warnings']
     else:
-        assert materials[0]['facts']['query_data']['rows']==rows
-        assert not materials[0]['facts']['query_data']['sample_only']
+        # 2026-10-15 用户要求：模型输入行数封顶（默认1000），完整行仍在数据集存储
+        assert materials[0]['facts']['query_data']['rows']==rows[:agent.settings.data_query_max_rows]
+        assert materials[0]['facts']['query_data']['sample_only'] is True
