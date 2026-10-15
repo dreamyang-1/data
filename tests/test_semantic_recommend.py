@@ -556,8 +556,12 @@ def test_detect_relations_llm_reviews_rule_pairs_and_adds_suggestions():
     assert suggestion["llmFieldPairs"][0]["targetColumnName"] == "customer_id"
 
 
-def test_detect_relations_llm_denial_moves_rule_pair_last():
-    """模型否决规则命中的对：该对排到模型确认的对之后（tier3）。"""
+def test_detect_relations_llm_denial_drops_rule_pair():
+    """2026-10-15 用户契约：模型否决且无已配置关系的对不返回。
+
+    只有存在关联关系（已配置/规则命中且模型未否决/模型确认建议）的实体对
+    才出现在结果里。
+    """
     reader = base_reader(
         entities=[
             {"id": "et-1", "name": "客户", "main_table_name": "customer",
@@ -598,11 +602,11 @@ def test_detect_relations_llm_denial_moves_rule_pair_last():
     service = SemanticRecommendService(reader, FakeGateway(answer))
     result = service.detect_relations(81, "et-1")
 
-    # 规则顺序是 [et-3, et-2]（entities 顺序），模型确认 et-2、否决 et-3 后重排
-    assert [row["otherEntityTypeId"] for row in result] == ["et-2", "et-3"]
+    # 规则顺序是 [et-3, et-2]（entities 顺序）；模型确认 et-2、否决 et-3 后
+    # et-3（无已配置关系）整体不返回
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
     assert result[0]["llmConfirmed"] is True
-    assert result[1]["llmConfirmed"] is False
-    assert result[1]["llmFieldPairs"] == []
+    assert result[0]["llmFieldPairs"][0]["sourceColumnName"] == "customer_id"
 
 
 def test_detect_relations_llm_failure_keeps_rule_result():

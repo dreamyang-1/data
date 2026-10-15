@@ -900,18 +900,22 @@ class SemanticRecommendService:
                 )
                 vo["llmFieldPairs"] = pairs
                 vo.setdefault("llmOnly", False)
-            # 排序：已配置 > 规则命中且模型未否决 > 仅模型建议 > 规则命中但模型否决
+            # 过滤（2026-10-15 用户契约）：模型否决且无已配置关系的对不返回
+            # ——只有存在关联关系（已配置/规则命中/模型确认）的实体对才出现在结果里
+            result[:] = [
+                vo for vo in result
+                if vo.get("related") or vo.get("llmConfirmed") is not False
+            ]
+            # 排序：已配置 > 规则命中且模型未否决 > 仅模型建议
             conf_rank = {"high": 0, "medium": 1, "low": 2}
 
             def sort_key(vo: dict[str, Any]) -> tuple:
                 if vo.get("related"):
                     tier = 0
-                elif vo.get("inferred") and vo.get("llmConfirmed") is not False:
+                elif vo.get("inferred"):
                     tier = 1
-                elif not vo.get("inferred") and vo.get("llmConfirmed"):
-                    tier = 2
                 else:
-                    tier = 3
+                    tier = 2
                 return (
                     tier, conf_rank.get(vo.get("llmConfidence"), 1),
                     -vo.get("inferredCount", 0),
