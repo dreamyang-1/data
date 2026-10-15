@@ -120,6 +120,12 @@ class Settings(BaseSettings):
     # budget below this value so orchestration still has time to terminate and
     # persist an idempotent response.
     request_timeout_seconds: float = Field(default=120, gt=0, le=300)
+    # 集中日志配置（app/logging_config.setup_logging 消费）。log_file 为空时
+    # 只写 stdout（systemd/journald 抓取）；非空时启用按大小轮转的文件输出。
+    log_level: str = Field(default="INFO")
+    log_file: str = Field(default="")
+    log_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
+    log_backup_count: int = Field(default=5, ge=0, le=100)
     business_question_collection_enabled: bool = True
     business_question_document_path: Path = PROJECT_ROOT / "实际业务问题.md"
     dynamic_skills_enabled: bool = True

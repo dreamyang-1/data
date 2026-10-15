@@ -1063,6 +1063,7 @@ class DataAnalysisOrchestrator:
                 if cached is not None:
                     return cached
         try:
+            request_started = time.perf_counter()
             # Recheck after acquiring the lease: the previous owner may have
             # stored its response immediately before releasing the lease.
             cached = await self.sessions.get_response(
@@ -1231,6 +1232,11 @@ class DataAnalysisOrchestrator:
                                 # 结论分发规划，不再二次判断；无暂存结论时
                                 # （V1 直达、桥内判断失败等）走完整链路。
                                 # 规划层对每个问题做任务拆解与参数提取。
+                                logger.info(
+                                    "node=task_planning status=STARTED message_id=%s question=%s",
+                                    chat.message_id, planning_question[:120],
+                                )
+                                task_planning_started = time.perf_counter()
                                 outcome = await plan_question(
                                     self.task_planner, planning_question,
                                     semantic_context=planner_semantic_context,
@@ -1245,6 +1251,12 @@ class DataAnalysisOrchestrator:
                                     else 1,
                                 )
                             plan = outcome.plan
+                            logger.info(
+                                "node=task_planning status=COMPLETED elapsed=%.2fs plan=%s tasks=%s",
+                                time.perf_counter() - task_planning_started,
+                                "multi" if plan is not None else "single",
+                                len(plan.tasks) if plan is not None else 1,
+                            )
                             # 查不查库由确定性信号推导后写进提取参数，展示与
                             # 下游 ASL 生成读同一份：纯计算任务带"不再查询
                             # 数据库"标记，依赖任务要发新查询，其余照常查库。
@@ -1694,7 +1706,19 @@ class DataAnalysisOrchestrator:
                     repeat_fingerprint,
                     response,
                 )
+            logger.info(
+                "orchestration request completed message_id=%s status=%s intent=%s elapsed=%.2fs",
+                chat.message_id, stored.status, stored.intent,
+                time.perf_counter() - request_started,
+            )
             return stored
+        except Exception:
+            logger.exception(
+                "orchestration request failed message_id=%s conversation_id=%s elapsed=%.2fs",
+                chat.message_id, chat.conversation_id,
+                time.perf_counter() - request_started,
+            )
+            raise
         finally:
             if claimed and callable(release):
                 await release(
@@ -2985,6 +3009,12 @@ class DataAnalysisOrchestrator:
         """Execute validated DAG layers; independent tasks run concurrently."""
         if self.task_planner is None:
             raise RuntimeError("task planner is not configured")
+        task_plan_started = time.perf_counter()
+        logger.info(
+            "node=task_execution status=STARTED message_id=%s tasks=%s dependencies=%s",
+            root_message_id or chat.message_id, len(plan.tasks),
+            {task.task_id: list(task.depends_on) for task in plan.tasks},
+        )
         execution_plan, aliases, layers = prepare_execution(self.task_planner, plan)
         responses: dict[str, AgentResponse | Exception] = {}
         # 多任务拆分时各子任务暂存的洞察模型输入，父级在全部任务完成后合并成一次整体分析。
@@ -3042,6 +3072,7 @@ class DataAnalysisOrchestrator:
         async def _emit_task_status(task_id: str, status_text: str) -> None:
             # 直接原地改行再整体快照下发：并发任务同时刷状态时
             # 不会像整表替换那样互相覆盖
+            logger.info("node=task_execution task_status task_id=%s status=%s", task_id, status_text)
             for row in task_table:
                 if row.get("任务") == task_id:
                     row["执行状态"] = status_text
@@ -3672,6 +3703,12 @@ class DataAnalysisOrchestrator:
         })
         # Child checks stay internal. Validate all available evidence against
         # the completed root goal once, before root insight (also on resume).
+        logger.info(
+            "node=reliability_check status=%s level=%s score=%.4f warnings=%s",
+            "COMPLETED" if reliability.level != "FAIL" else "FAILED",
+            reliability.level, float(reliability.score),
+            [str(w)[:80] for w in reliability.warnings][:5],
+        )
         await emit_progress(
             "RELIABILITY_CHECK",
             "COMPLETED" if reliability.level != "FAIL" else "FAILED",
@@ -3703,6 +3740,10 @@ class DataAnalysisOrchestrator:
                 "INSIGHT_ANALYSIS", "COMPLETED" if merged_insight else "DEGRADED",
                 merged_insight or "整体分析暂不可用，已保留本次可用查询结果；未完成部分将在最终回答中说明。",
                 message_limit=8192, chart_image_count=0, chart_source="NONE",
+            )
+            logger.info(
+                "node=insight_analysis scope=merged status=%s materials=%s",
+                "COMPLETED" if merged_insight else "DEGRADED", len(materials),
             )
         combined_answer, selected_task_ids = render_root_report(completed_question, materials, final_plan)
         requested_root_charts = apply_requested_root_charts(
@@ -3829,6 +3870,11 @@ class DataAnalysisOrchestrator:
                 identity.tenant_id, identity.user_id, chat.application_id,
                 chat.conversation_id, root_message_id,
             )
+        logger.info(
+            "node=task_execution status=COMPLETED elapsed=%.2fs tasks=%s completed=%s awaiting=%s final_status=%s",
+            time.perf_counter() - task_plan_started, len(plan.tasks),
+            completed_count, list(awaiting_task_ids), final_response.status,
+        )
         return final_response
 
     async def _persist_dag_root_context(
@@ -8189,6 +8235,12 @@ class DataAnalysisOrchestrator:
                 warning.rstrip("。") for warning in insight_output.warnings
             ) + "。"
         if not chat._dag_defer_insight:
+            logger.info(
+                "node=insight_analysis scope=single status=%s intent=%s warnings=%s",
+                "COMPLETED" if reliability.level != "FAIL" else "SKIPPED",
+                request.primary_intent,
+                [str(w)[:80] for w in (insight_output.warnings if insight_output is not None else [])][:5],
+            )
             await emit_progress(
                 "INSIGHT_ANALYSIS",
                 "COMPLETED" if reliability.level != "FAIL" else "SKIPPED",
@@ -8965,6 +9017,10 @@ class DataAnalysisOrchestrator:
                 request, empty_dataset, identity
             )
         except AdapterError as exc:
+            logger.warning(
+                "knowledge retrieval failed; falling back request_id=%s code=%s upstream_code=%s",
+                request.request_id, exc.code, exc.upstream_code,
+            )
             return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
         if not context.documents:
             if empty_result_falls_to_chat:
@@ -9979,6 +10035,11 @@ class DataAnalysisOrchestrator:
             "V1_ORCHESTRATION",
             "v1.intent_recognition",
         ) as timing:
+            logger.info(
+                "node=intent_recognition status=STARTED pre_resolved=%s use_extraction=%s question=%s",
+                pre_resolved, use_extraction, question[:120],
+            )
+            timing_started = time.perf_counter()
             classify = self.classifier.classify
             signature = inspect.signature(classify).parameters
             supports_pre_resolved = "pre_resolved" in signature
@@ -10025,6 +10086,12 @@ class DataAnalysisOrchestrator:
             self._apply_platform_metric_vocabulary(result, agent_prompt)
             timing.mark_first_result()
             timing.set_attribute("intent_source", result.intent_source)
+            logger.info(
+                "node=intent_recognition status=COMPLETED elapsed=%.2fs intent=%s intent_source=%s metrics=%s",
+                time.perf_counter() - timing_started,
+                result.primary_intent, result.intent_source,
+                [metric.input for metric in result.metrics][:5],
+            )
             return result
 
     @staticmethod
@@ -11209,6 +11276,11 @@ class DataAnalysisOrchestrator:
                 request.conversation_id,
                 expected_version=request.pending_state_version,
             )
+        logger.info(
+            "node=final_output status=%s intent=%s evidence=%s answer_chars=%s files=%s",
+            response.status, request.primary_intent, len(response.evidence),
+            len(response.answer or ""), len(response.files),
+        )
         return response
 
     @staticmethod
@@ -12620,6 +12692,10 @@ class DataAnalysisOrchestrator:
             else:
                 item = await (self.adapters.semantic.definition(resolved[0]) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.adapters.semantic.lineage(resolved[0], identity))
         except AdapterError as exc:
+            logger.warning(
+                "semantic metadata retrieval failed; falling back request_id=%s code=%s upstream_code=%s",
+                request.request_id, exc.code, exc.upstream_code,
+            )
             return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
         if request.primary_intent == PrimaryIntent.DATA_LINEAGE:
             business_lineage = [
@@ -14575,4 +14651,8 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _fallback(request: CanonicalAnalysisRequest, reason: str, *, error_code: str | None = None) -> AgentResponse:
+        logger.warning(
+            "node=safe_fallback error_code=%s reason=%s request_id=%s",
+            error_code, str(reason)[:200], request.request_id,
+        )
         return AgentResponse(request_id=request.request_id, conversation_id=request.conversation_id, status="SAFE_FALLBACK", error_code=error_code, intent=request.primary_intent, intent_source=request.intent_source, intent_confidence=request.intent_confidence, answer=reason, reliability=ReliabilityReport(level="FAIL", score=0, gates={"safe_termination": True}, warnings=[reason]))

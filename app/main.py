@@ -10,6 +10,7 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from app.api import recommend_router, router
 from app.config import Settings, get_settings
 from app.dependencies import build_container
+from app.logging_config import setup_logging
 from app.observability.langfuse_client import (
     configure_langfuse,
     is_enabled as langfuse_is_enabled,
@@ -20,6 +21,13 @@ from app.observability.langfuse_client import (
 def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
                limited_scalar_external=None, context_v1_external=None) -> FastAPI:
     effective_settings = settings or get_settings()
+    # 日志最先初始化：容器构建、Langfuse 与请求处理日志从此全部生效。
+    setup_logging(
+        effective_settings.log_level,
+        effective_settings.log_file,
+        effective_settings.log_max_bytes,
+        effective_settings.log_backup_count,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

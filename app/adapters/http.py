@@ -4,6 +4,7 @@ import copy
 import asyncio
 import hashlib
 import json
+import logging
 import re
 import time
 from contextlib import suppress
@@ -56,6 +57,8 @@ from app.services.relationship_projection import (
 )
 from app.tools.database_load import DatabaseLoadError, build_database_load_tool
 from app.adapters.semantic_query import CompositeSemanticQueryTool
+
+logger = logging.getLogger(__name__)
 
 
 # These codes describe a deterministic semantic/query contract rejection.  A
@@ -215,6 +218,9 @@ class PlatformHttpClient:
         attempts = self.settings.http_max_retries + 1 if retryable else 1
         last_error: Exception | None = None
         last_adapter_error: AdapterError | None = None
+        request_started = time.perf_counter()
+        # 不打印 payload：请求体可能含业务问题文本与凭证相关字段
+        logger.debug("upstream request method=%s base_url=%s path=%s attempts=%s", method, base_url, path, attempts)
         for attempt in range(attempts):
             try:
                 async with httpx.AsyncClient(
@@ -266,10 +272,20 @@ class PlatformHttpClient:
                         details=error_details,
                     )
                     if effective_retryable and attempt + 1 < attempts:
+                        logger.warning(
+                            "upstream retrying path=%s attempt=%s/%s status=%s upstream_code=%s elapsed=%.2fs",
+                            path, attempt + 1, attempts, response.status_code,
+                            upstream_code, time.perf_counter() - request_started,
+                        )
                         await asyncio.sleep(
                             self.settings.http_retry_backoff_seconds * (2**attempt)
                         )
                         continue
+                    logger.error(
+                        "upstream failed path=%s status=%s upstream_code=%s elapsed=%.2fs",
+                        path, response.status_code, upstream_code,
+                        time.perf_counter() - request_started,
+                    )
                     raise last_adapter_error
                 if response.is_error:
                     upstream_code = self._upstream_error_code(response)
@@ -289,7 +305,18 @@ class PlatformHttpClient:
             except (httpx.HTTPError, ValueError) as exc:
                 last_error = exc
                 if attempt + 1 < attempts:
+                    logger.warning(
+                        "upstream retrying path=%s attempt=%s/%s error=%s elapsed=%.2fs",
+                        path, attempt + 1, attempts, type(exc).__name__,
+                        time.perf_counter() - request_started,
+                    )
                     await asyncio.sleep(self.settings.http_retry_backoff_seconds * (2**attempt))
+                else:
+                    logger.error(
+                        "upstream unreachable path=%s attempts=%s error=%s elapsed=%.2fs",
+                        path, attempts, type(exc).__name__,
+                        time.perf_counter() - request_started,
+                    )
         if last_adapter_error is not None:
             raise last_adapter_error
         raise AdapterError(

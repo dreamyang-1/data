@@ -49,6 +49,7 @@ from app.services.upload_file_resolver import (
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services import semantic_recommend
 from app.services.progress import _progress_callback, progress_scope
+from app.logging_config import set_log_trace_id, reset_log_trace_id
 from minio_followup_store import DatasetScope
 from app.security import trusted_backend, require_application_namespace, resolve_conversation_identity
 
@@ -219,6 +220,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
     performance_trace_logged = False
     timing_terminal_status = "FAILED"
     existing_progress = _progress_callback.get()
+    trace_token = set_log_trace_id(chat.message_id)
 
     async def trace_progress(event: dict[str, Any]) -> None:
         if performance_tracker is not None:
@@ -327,6 +329,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
             detail={"code": exc.code, "message": str(exc)},
         ) from exc
     finally:
+        reset_log_trace_id(trace_token)
         if performance_tracker is not None and not performance_trace_logged:
             log_performance_trace(
                 performance_tracker.finish(timing_terminal_status)
@@ -778,6 +781,10 @@ async def chat_stream(
             status_code=409,
             detail={"code": exc.code, "message": str(exc)},
         ) from exc
+
+    # SSE 流式链路独立于 invoke 的任务上下文：在端点上下文绑定 trace_id，
+    # 覆盖流式生成器里的日志；请求任务结束即随上下文消亡，不会跨请求泄漏。
+    set_log_trace_id(payload.message_id)
 
     async def events() -> AsyncIterator[str]:
         progress_queue: asyncio.Queue[
