@@ -328,6 +328,37 @@ def test_contract_completeness_rejects_post_classification_filter_loss():
     ]
 
 
+def test_contract_query_object_accepts_catalog_code_of_chinese_slot():
+    """回归：意图槽位是中文实体名（医院），语义绑定产出英文目录编码（hospital），
+    完整性校验必须视为同一实体，不得误报 EXPLICIT_QUERY_OBJECT_MISSING。
+
+    49 环境在 2026-10-09 前的历史故障：任务级子请求 contract.query_object 为
+    英文编码 hospital，与准入槽位 医院 字面不等导致 SAFE_FALLBACK。
+    """
+    question = "上海销售规模最大的医院"
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "p0-code-equiv"
+    )
+    decision = TurnAdmissionGate().evaluate(
+        question=question,
+        current=request,
+        previous=None,
+        message_id="p0-code-equiv-message",
+    )
+    request.turn_admission = decision
+    contract = build_intent_asl_contract(request)
+    assert contract["query_object"] == "医院"
+
+    # 语义绑定把查询对象替换为目录实体编码，校验必须放行
+    contract["query_object"] = "hospital"
+    assert validate_intent_asl_contract_completeness(contract, request) == []
+
+    # 对照：真实对象漂移（编码指向另一实体）仍必须拦截
+    contract["query_object"] = "salesperson"
+    errors = validate_intent_asl_contract_completeness(contract, request)
+    assert [item["code"] for item in errors] == ["EXPLICIT_QUERY_OBJECT_MISSING"]
+
+
 def test_relationship_count_projection_is_an_audited_contract_transform():
     question = "统计上海市紫杉醇释放冠脉球囊导管已合作医院数。"
     request = RuleBasedIntentClassifier().classify(
