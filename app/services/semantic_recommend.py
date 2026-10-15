@@ -334,6 +334,23 @@ def _parse_llm_json_array(answer: str | None) -> list[dict[str, Any]] | None:
     return array if isinstance(array, list) else None
 
 
+def _valid_field_pairs(value: Any) -> list[dict[str, str]]:
+    """校验模型输出的关联字段对：四个表名/字段名键齐全且非空。"""
+    pairs: list[dict[str, str]] = []
+    if not isinstance(value, list):
+        return pairs
+    keys = (
+        "sourceTableName", "sourceColumnName",
+        "targetTableName", "targetColumnName",
+    )
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        if all(isinstance(item.get(k), str) and item[k].strip() for k in keys):
+            pairs.append({k: item[k].strip() for k in keys})
+    return pairs
+
+
 # ====================== 服务 ======================
 
 
@@ -597,13 +614,16 @@ class SemanticRecommendService:
         )
         current_info = info_map.get(entity_type_id)
         result: list[dict[str, Any]] = []
+        evidence: dict[str, list[dict[str, Any]]] = {}
         for other in others:
             configured = configured_count.get(other["id"], 0)
-            inferred = self._count_inferred_pairs(
+            candidates = self._infer_relation_candidates(
                 current, other, current_info, info_map.get(other["id"])
             )
+            inferred = sum(len(c["fieldPairs"]) for c in candidates)
             if configured <= 0 and inferred <= 0:
                 continue
+            evidence[other["id"]] = candidates
             result.append({
                 "otherEntityTypeId": other["id"],
                 "otherEntityName": other.get("name"),
@@ -612,6 +632,11 @@ class SemanticRecommendService:
                 "inferred": inferred > 0,
                 "inferredCount": inferred,
             })
+        # 大模型复核（2026-10-15）：确认/否决规则推导、补充语义关联建议并重排；
+        # 失败时静默降级，result 保持纯规则结果与原顺序。
+        self._enhance_detect_relations_with_llm(
+            current, current_info, result, evidence, info_map, others
+        )
         return result
 
     # ---------- 接口四：关系推荐 ----------
@@ -753,14 +778,148 @@ class SemanticRecommendService:
             }
         return info_map
 
-    def _count_inferred_pairs(
-        self, source: dict[str, Any], target: dict[str, Any],
-        source_info: dict[str, Any] | None, target_info: dict[str, Any] | None,
-    ) -> int:
-        candidates = self._infer_relation_candidates(
-            source, target, source_info, target_info
-        )
-        return sum(len(candidate["fieldPairs"]) for candidate in candidates)
+    def _enhance_detect_relations_with_llm(
+        self, current: dict[str, Any], current_info: dict[str, Any] | None,
+        result: list[dict[str, Any]],
+        evidence: dict[str, list[dict[str, Any]]],
+        info_map: dict[str, dict[str, Any] | None],
+        others: list[dict[str, Any]],
+    ) -> None:
+        """大模型复核关联检测（2026-10-15）：对规则已命中的对核对字段对并
+        排序，对规则未命中的对按表名/注释/字段语义补充关联建议。
+
+        单次批量调用覆盖全部候选对；网关失败或输出不可解析时静默降级，
+        result 保持纯规则结果与原顺序。新增字段：
+        llmReviewed / llmConfirmed / llmCardinality / llmFieldPairs /
+        llmConfidence / llmReason / llmOnly（仅模型建议、无规则证据时为 true）。
+        """
+        if not self._llm_enabled or not result or current_info is None:
+            return
+
+        def schema_block(name: str, info: dict[str, Any] | None) -> str:
+            if info is None:
+                return f"  实体【{name}】：无登记主表信息"
+            fields = info["fields"][:40]
+            lines = [
+                f"  {f.get('name')}({f.get('comment') or '无注释'})"
+                for f in fields
+            ]
+            more = "" if len(info["fields"]) <= 40 else "\n  ...(其余字段省略)"
+            pk = info["primary"].get("name") if info["primary"] else "无"
+            return (
+                f"  实体【{name}】主表 {info['tableName']}，主键 {pk}，字段：\n"
+                + "\n".join(lines) + more
+            )
+
+        try:
+            by_id = {vo["otherEntityTypeId"]: vo for vo in result}
+            blocks: list[str] = []
+            for vo in result:
+                other_info = info_map.get(vo["otherEntityTypeId"])
+                other_name = vo.get("otherEntityName") or vo["otherEntityTypeId"]
+                block = schema_block(other_name, other_info)
+                if vo["related"]:
+                    block += f"\n  （已有 {vo['relationCount']} 条人工配置的关联关系）"
+                candidates = evidence.get(vo["otherEntityTypeId"]) or []
+                if candidates:
+                    pair_lines = [
+                        f"    {pair['sourceTableName']}.{pair['sourceColumnName']}"
+                        f" -> {pair['targetTableName']}.{pair['targetColumnName']}"
+                        for candidate in candidates
+                        for pair in candidate["fieldPairs"]
+                    ]
+                    block += "\n  规则推导出的可关联字段对：\n" + "\n".join(pair_lines)
+                else:
+                    block += "\n  规则未推导出可关联字段对。"
+                blocks.append(block)
+            prompt = (
+                "你在为数据语义建模平台复核实体间的关联关系。当前拖入实体：\n"
+                + schema_block(current.get("name") or "", current_info)
+                + "\n\n候选关联实体（共 " + str(len(result)) + " 个）：\n"
+                + "\n\n".join(blocks)
+                + "\n\n任务：对每个候选实体判断它与当前实体是否存在业务关联：\n"
+                + "1. 规则已推导出字段对的：核对字段对是否有真实业务对应意义，可修正或补充字段对。\n"
+                + "2. 规则未推导出的：根据表名、表注释和字段语义判断是否存在业务关联"
+                "（如同名称维度、同机构、编码互相对应等），存在则给出关联字段对。\n"
+                + "3. cardinality 取值：1:1、1:N、N:1、N:N（以当前实体为源）。\n"
+                + "4. confidence 取值：high/medium/low。\n"
+                + "只输出 JSON 数组，不要任何解释或 markdown 代码块，格式："
+                + "[{\"otherEntityTypeId\":\"候选实体ID\",\"confirmed\":true,"
+                "\"cardinality\":\"1:N\",\"confidence\":\"high\","
+                "\"reason\":\"一句话理由\","
+                "\"fieldPairs\":[{\"sourceTableName\":\"表名\","
+                "\"sourceColumnName\":\"字段名\",\"targetTableName\":\"表名\","
+                "\"targetColumnName\":\"字段名\"}]}]，"
+                + "必须覆盖每一个候选实体。\n"
+            )
+            array = _parse_llm_json_array(
+                self._gateway.complete("实体关联检测复核", prompt)
+            )
+            if not array:
+                return
+            name_by_id = {o["id"]: o.get("name") for o in others}
+            for item in array:
+                if not isinstance(item, dict):
+                    continue
+                other_id = item.get("otherEntityTypeId")
+                vo = by_id.get(other_id) if isinstance(other_id, str) else None
+                pairs = _valid_field_pairs(item.get("fieldPairs"))[:10]
+                confirmed = bool(item.get("confirmed"))
+                if vo is None:
+                    # 模型补充的全新建议：仅接受明确确认且给出字段对的对
+                    if not confirmed or not pairs:
+                        continue
+                    name = name_by_id.get(other_id)
+                    if not name:
+                        continue
+                    vo = {
+                        "otherEntityTypeId": other_id,
+                        "otherEntityName": name,
+                        "related": False,
+                        "relationCount": 0,
+                        "inferred": False,
+                        "inferredCount": 0,
+                        "llmOnly": True,
+                    }
+                    result.append(vo)
+                    by_id[other_id] = vo
+                vo["llmReviewed"] = True
+                vo["llmConfirmed"] = confirmed
+                vo["llmConfidence"] = (
+                    item.get("confidence")
+                    if item.get("confidence") in ("high", "medium", "low")
+                    else "medium"
+                )
+                reason = item.get("reason")
+                vo["llmReason"] = (
+                    reason.strip() if isinstance(reason, str) and reason.strip() else None
+                )
+                cardinality = item.get("cardinality")
+                vo["llmCardinality"] = (
+                    cardinality if cardinality in ("1:1", "1:N", "N:1", "N:N") else None
+                )
+                vo["llmFieldPairs"] = pairs
+                vo.setdefault("llmOnly", False)
+            # 排序：已配置 > 规则命中且模型未否决 > 仅模型建议 > 规则命中但模型否决
+            conf_rank = {"high": 0, "medium": 1, "low": 2}
+
+            def sort_key(vo: dict[str, Any]) -> tuple:
+                if vo.get("related"):
+                    tier = 0
+                elif vo.get("inferred") and vo.get("llmConfirmed") is not False:
+                    tier = 1
+                elif not vo.get("inferred") and vo.get("llmConfirmed"):
+                    tier = 2
+                else:
+                    tier = 3
+                return (
+                    tier, conf_rank.get(vo.get("llmConfidence"), 1),
+                    -vo.get("inferredCount", 0),
+                )
+
+            result.sort(key=sort_key)
+        except Exception as exc:
+            logger.warning("大模型复核关联检测失败，降级为规则结果: %s", exc)
 
     def _build_pair(
         self, source_table: str, source_field: dict[str, Any],

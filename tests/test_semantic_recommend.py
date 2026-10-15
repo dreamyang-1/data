@@ -500,6 +500,156 @@ def test_detect_relations_fixed_reader_calls():
     assert reader.calls == ["entities", "relations", "tables", "fields_batch"]
 
 
+# ---------- 接口三：大模型复核（2026-10-15） ----------
+
+
+def test_detect_relations_llm_reviews_rule_pairs_and_adds_suggestions():
+    """模型复核：确认规则对并给出字段对；对规则未命中的对补充建议（llmOnly）。"""
+    reader = base_reader(entities=[
+        {"id": "et-1", "name": "客户", "main_table_name": "customer",
+         "data_source_id": 58},
+        {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+         "data_source_id": 58},
+        {"id": "et-5", "name": "日志", "main_table_name": "log_record",
+         "data_source_id": 58},
+    ])
+    answer = json.dumps([
+        {"otherEntityTypeId": "et-2", "confirmed": True,
+         "cardinality": "N:1", "confidence": "high",
+         "reason": "订单表客户ID指向客户主键",
+         "fieldPairs": [
+             {"sourceTableName": "sales_order", "sourceColumnName": "customer_id",
+              "targetTableName": "customer", "targetColumnName": "id"},
+         ]},
+        {"otherEntityTypeId": "et-5", "confirmed": True,
+         "cardinality": "1:N", "confidence": "low",
+         "reason": "操作日志按客户维度记录",
+         "fieldPairs": [
+             {"sourceTableName": "customer", "sourceColumnName": "id",
+              "targetTableName": "log_record", "targetColumnName": "customer_id"},
+         ]},
+    ], ensure_ascii=False)
+    gateway = FakeGateway(answer)
+    service = SemanticRecommendService(reader, gateway)
+    result = service.detect_relations(81, "et-1")
+
+    # 单次批量调用
+    assert len(gateway.calls) == 1
+    assert len(result) == 2
+    confirmed = result[0]
+    assert confirmed["otherEntityTypeId"] == "et-2"
+    assert confirmed["related"] is True
+    assert confirmed["inferred"] is True
+    assert confirmed["llmReviewed"] is True
+    assert confirmed["llmConfirmed"] is True
+    assert confirmed["llmConfidence"] == "high"
+    assert confirmed["llmCardinality"] == "N:1"
+    assert confirmed["llmFieldPairs"][0]["sourceColumnName"] == "customer_id"
+    assert confirmed["llmReason"] == "订单表客户ID指向客户主键"
+    assert confirmed["llmOnly"] is False
+    suggestion = result[1]
+    assert suggestion["otherEntityTypeId"] == "et-5"
+    assert suggestion["llmOnly"] is True
+    assert suggestion["related"] is False
+    assert suggestion["inferred"] is False
+    assert suggestion["llmConfirmed"] is True
+    assert suggestion["llmFieldPairs"][0]["targetColumnName"] == "customer_id"
+
+
+def test_detect_relations_llm_denial_moves_rule_pair_last():
+    """模型否决规则命中的对：该对排到模型确认的对之后（tier3）。"""
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58},
+            {"id": "et-3", "name": "库存", "main_table_name": "stock",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "customer_id", "客户ID")],
+            5: [field(51, "id", "主键", "bigint"),
+                field(52, "customer_id", "客户ID")],
+        },
+        tables=[
+            {"id": 1, "name": "customer", "comment": "客户信息表",
+             "data_source_id": 58},
+            {"id": 2, "name": "sales_order", "comment": "订单记录表",
+             "data_source_id": 58},
+            {"id": 5, "name": "stock", "comment": "库存表",
+             "data_source_id": 58},
+        ],
+        relations=[],
+    )
+    answer = json.dumps([
+        {"otherEntityTypeId": "et-3", "confirmed": False,
+         "cardinality": None, "confidence": "low", "reason": "客户与库存无直接业务关联",
+         "fieldPairs": []},
+        {"otherEntityTypeId": "et-2", "confirmed": True,
+         "cardinality": "N:1", "confidence": "high", "reason": "外键指向客户",
+         "fieldPairs": [
+             {"sourceTableName": "sales_order", "sourceColumnName": "customer_id",
+              "targetTableName": "customer", "targetColumnName": "id"},
+         ]},
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(reader, FakeGateway(answer))
+    result = service.detect_relations(81, "et-1")
+
+    # 规则顺序是 [et-3, et-2]（entities 顺序），模型确认 et-2、否决 et-3 后重排
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2", "et-3"]
+    assert result[0]["llmConfirmed"] is True
+    assert result[1]["llmConfirmed"] is False
+    assert result[1]["llmFieldPairs"] == []
+
+
+def test_detect_relations_llm_failure_keeps_rule_result():
+    """网关失败/输出不可解析：静默降级，结果与纯规则完全一致且无 llm 字段。"""
+    for answer in (None, "不是JSON", "[]"):
+        service = SemanticRecommendService(base_reader(), FakeGateway(answer))
+        result = service.detect_relations(81, "et-1")
+        assert len(result) == 1
+        row = result[0]
+        assert row["otherEntityTypeId"] == "et-2"
+        assert row["inferredCount"] == 1
+        assert not any(k.startswith("llm") for k in row)
+
+
+def test_detect_relations_llm_invalid_suggestions_ignored():
+    """未确认/无字段对的建议、未知实体ID、字段对缺失键均被忽略。"""
+    reader = base_reader(entities=[
+        {"id": "et-1", "name": "客户", "main_table_name": "customer",
+         "data_source_id": 58},
+        {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+         "data_source_id": 58},
+        {"id": "et-5", "name": "日志", "main_table_name": "log_record",
+         "data_source_id": 58},
+    ])
+    answer = json.dumps([
+        # 未确认且无字段对：忽略
+        {"otherEntityTypeId": "et-5", "confirmed": False,
+         "confidence": "low", "fieldPairs": []},
+        # 未知实体ID：忽略
+        {"otherEntityTypeId": "et-999", "confirmed": True,
+         "confidence": "high",
+         "fieldPairs": [{"sourceTableName": "a", "sourceColumnName": "id",
+                         "targetTableName": "b", "targetColumnName": "a_id"}]},
+        # 字段对缺键：过滤为空
+        {"otherEntityTypeId": "et-2", "confirmed": True, "confidence": "high",
+         "fieldPairs": [{"sourceTableName": "sales_order"}]},
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(reader, FakeGateway(answer))
+    result = service.detect_relations(81, "et-1")
+
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
+    row = result[0]
+    assert row["llmReviewed"] is True
+    assert row["llmConfirmed"] is True
+    assert row["llmFieldPairs"] == []
+
+
 # ====================== 接口四：关系推荐 ======================
 
 
