@@ -503,8 +503,8 @@ def test_detect_relations_fixed_reader_calls():
 # ---------- 接口三：大模型复核（2026-10-15） ----------
 
 
-def test_detect_relations_llm_reviews_rule_pairs_and_adds_suggestions():
-    """模型复核：确认规则对并给出字段对；对规则未命中的对补充建议（llmOnly）。"""
+def test_detect_relations_llm_reviews_rule_pairs_and_ignores_suggestions():
+    """模型复核：确认规则对并给出字段对；对未命中/未配置的对不做新建议。"""
     reader = base_reader(entities=[
         {"id": "et-1", "name": "客户", "main_table_name": "customer",
          "data_source_id": 58},
@@ -521,6 +521,7 @@ def test_detect_relations_llm_reviews_rule_pairs_and_adds_suggestions():
              {"sourceTableName": "sales_order", "sourceColumnName": "customer_id",
               "targetTableName": "customer", "targetColumnName": "id"},
          ]},
+        # et-5 未配置且规则未命中：模型建议被忽略，整体不返回
         {"otherEntityTypeId": "et-5", "confirmed": True,
          "cardinality": "1:N", "confidence": "low",
          "reason": "操作日志按客户维度记录",
@@ -535,9 +536,9 @@ def test_detect_relations_llm_reviews_rule_pairs_and_adds_suggestions():
 
     # 单次批量调用
     assert len(gateway.calls) == 1
-    assert len(result) == 2
+    # 2026-10-15 用户契约：没有关联关系的对不返回（et-5 建议不采纳）
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
     confirmed = result[0]
-    assert confirmed["otherEntityTypeId"] == "et-2"
     assert confirmed["related"] is True
     assert confirmed["inferred"] is True
     assert confirmed["llmReviewed"] is True
@@ -546,14 +547,6 @@ def test_detect_relations_llm_reviews_rule_pairs_and_adds_suggestions():
     assert confirmed["llmCardinality"] == "N:1"
     assert confirmed["llmFieldPairs"][0]["sourceColumnName"] == "customer_id"
     assert confirmed["llmReason"] == "订单表客户ID指向客户主键"
-    assert confirmed["llmOnly"] is False
-    suggestion = result[1]
-    assert suggestion["otherEntityTypeId"] == "et-5"
-    assert suggestion["llmOnly"] is True
-    assert suggestion["related"] is False
-    assert suggestion["inferred"] is False
-    assert suggestion["llmConfirmed"] is True
-    assert suggestion["llmFieldPairs"][0]["targetColumnName"] == "customer_id"
 
 
 def test_detect_relations_llm_denial_drops_rule_pair():

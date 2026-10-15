@@ -632,10 +632,12 @@ class SemanticRecommendService:
                 "inferred": inferred > 0,
                 "inferredCount": inferred,
             })
-        # 大模型复核（2026-10-15）：确认/否决规则推导、补充语义关联建议并重排；
+        # 大模型复核（2026-10-15）：确认/否决/修正规则命中的字段对并排序；
         # 失败时静默降级，result 保持纯规则结果与原顺序。
+        # 2026-10-15 用户契约：模型不做无中生有的建议——未配置且规则未命中
+        # 的实体对一律不返回。
         self._enhance_detect_relations_with_llm(
-            current, current_info, result, evidence, info_map, others
+            current, current_info, result, evidence, info_map
         )
         return result
 
@@ -783,15 +785,15 @@ class SemanticRecommendService:
         result: list[dict[str, Any]],
         evidence: dict[str, list[dict[str, Any]]],
         info_map: dict[str, dict[str, Any] | None],
-        others: list[dict[str, Any]],
     ) -> None:
-        """大模型复核关联检测（2026-10-15）：对规则已命中的对核对字段对并
-        排序，对规则未命中的对按表名/注释/字段语义补充关联建议。
+        """大模型复核关联检测（2026-10-15）：对规则已命中的对核对/修正字段
+        对并排序。模型不做无中生有的建议——只复核 result 中已存在的对
+        （已配置或规则命中），未配置且规则未命中的对一律不返回。
 
         单次批量调用覆盖全部候选对；网关失败或输出不可解析时静默降级，
         result 保持纯规则结果与原顺序。新增字段：
         llmReviewed / llmConfirmed / llmCardinality / llmFieldPairs /
-        llmConfidence / llmReason / llmOnly（仅模型建议、无规则证据时为 true）。
+        llmConfidence / llmReason。
         """
         if not self._llm_enabled or not result or current_info is None:
             return
@@ -838,11 +840,9 @@ class SemanticRecommendService:
                 + "\n\n候选关联实体（共 " + str(len(result)) + " 个）：\n"
                 + "\n\n".join(blocks)
                 + "\n\n任务：对每个候选实体判断它与当前实体是否存在业务关联：\n"
-                + "1. 规则已推导出字段对的：核对字段对是否有真实业务对应意义，可修正或补充字段对。\n"
-                + "2. 规则未推导出的：根据表名、表注释和字段语义判断是否存在业务关联"
-                "（如同名称维度、同机构、编码互相对应等），存在则给出关联字段对。\n"
-                + "3. cardinality 取值：1:1、1:N、N:1、N:N（以当前实体为源）。\n"
-                + "4. confidence 取值：high/medium/low。\n"
+                + "1. 核对规则推导出的字段对是否有真实业务对应意义，可修正或补充字段对。\n"
+                + "2. cardinality 取值：1:1、1:N、N:1、N:N（以当前实体为源）。\n"
+                + "3. confidence 取值：high/medium/low。\n"
                 + "只输出 JSON 数组，不要任何解释或 markdown 代码块，格式："
                 + "[{\"otherEntityTypeId\":\"候选实体ID\",\"confirmed\":true,"
                 "\"cardinality\":\"1:N\",\"confidence\":\"high\","
@@ -857,34 +857,17 @@ class SemanticRecommendService:
             )
             if not array:
                 return
-            name_by_id = {o["id"]: o.get("name") for o in others}
             for item in array:
                 if not isinstance(item, dict):
                     continue
                 other_id = item.get("otherEntityTypeId")
                 vo = by_id.get(other_id) if isinstance(other_id, str) else None
-                pairs = _valid_field_pairs(item.get("fieldPairs"))[:10]
-                confirmed = bool(item.get("confirmed"))
+                # 只复核已存在的对：未知实体ID的输出忽略（不做新建议）
                 if vo is None:
-                    # 模型补充的全新建议：仅接受明确确认且给出字段对的对
-                    if not confirmed or not pairs:
-                        continue
-                    name = name_by_id.get(other_id)
-                    if not name:
-                        continue
-                    vo = {
-                        "otherEntityTypeId": other_id,
-                        "otherEntityName": name,
-                        "related": False,
-                        "relationCount": 0,
-                        "inferred": False,
-                        "inferredCount": 0,
-                        "llmOnly": True,
-                    }
-                    result.append(vo)
-                    by_id[other_id] = vo
+                    continue
+                pairs = _valid_field_pairs(item.get("fieldPairs"))[:10]
                 vo["llmReviewed"] = True
-                vo["llmConfirmed"] = confirmed
+                vo["llmConfirmed"] = bool(item.get("confirmed"))
                 vo["llmConfidence"] = (
                     item.get("confidence")
                     if item.get("confidence") in ("high", "medium", "low")
@@ -899,23 +882,17 @@ class SemanticRecommendService:
                     cardinality if cardinality in ("1:1", "1:N", "N:1", "N:N") else None
                 )
                 vo["llmFieldPairs"] = pairs
-                vo.setdefault("llmOnly", False)
-            # 过滤（2026-10-15 用户契约）：模型否决且无已配置关系的对不返回
-            # ——只有存在关联关系（已配置/规则命中/模型确认）的实体对才出现在结果里
+            # 过滤（2026-10-15 用户契约）：没有关联关系的对不返回——
+            # 模型否决且无已配置关系的对整体移除
             result[:] = [
                 vo for vo in result
                 if vo.get("related") or vo.get("llmConfirmed") is not False
             ]
-            # 排序：已配置 > 规则命中且模型未否决 > 仅模型建议
+            # 排序：已配置 > 规则命中且模型未否决
             conf_rank = {"high": 0, "medium": 1, "low": 2}
 
             def sort_key(vo: dict[str, Any]) -> tuple:
-                if vo.get("related"):
-                    tier = 0
-                elif vo.get("inferred"):
-                    tier = 1
-                else:
-                    tier = 2
+                tier = 0 if vo.get("related") else 1
                 return (
                     tier, conf_rank.get(vo.get("llmConfidence"), 1),
                     -vo.get("inferredCount", 0),
