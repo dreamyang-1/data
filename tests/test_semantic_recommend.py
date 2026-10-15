@@ -1,6 +1,6 @@
 """语义建模推荐接口（Python 版）单测与路由契约测试。
 
-覆盖：实体表推荐（configured 标记/关键词分组/limit/LLM 重排与降级）、
+覆盖：实体表推荐（已配置表过滤/关键词分组/limit/LLM 重排与降级）、
 属性推荐（主键优先/排序/enumValues）、关联检测（计数/related/skip 零）、
 关系推荐（已配置分组/反向交换/基数翻转/物理推导 PK-FK/LLM 语义增强）、
 路由层 Resp 包装与鉴权。
@@ -211,35 +211,37 @@ def test_parse_llm_json_array():
 
 
 def test_recommend_tables_configured_keyword_and_limit():
+    # 2026-10-14 契约：已配置表（customer/sales_order/customer_ext）不再返回，
+    # 只返回未配置的表；VO 不再有 configured 字段
     reader = base_reader()
     service = SemanticRecommendService(reader, None)
 
     # 无关键词：有注释在前（按表名），无注释在后；字段数经一次 GROUP BY 查询
     result = service.recommend_tables(81, None, None, None)
-    assert [vo["tableName"] for vo in result] == [
-        "config_item", "customer", "sales_order", "log_record",
-    ]
+    assert [vo["tableName"] for vo in result] == ["config_item", "log_record"]
     assert reader.field_calls == [[1, 2, 3, 4]]
     by_name = {vo["tableName"]: vo for vo in result}
-    assert by_name["customer"]["configured"] is True
-    assert by_name["sales_order"]["configured"] is True
-    assert by_name["config_item"]["configured"] is False
-    assert by_name["log_record"]["configured"] is False
-    assert by_name["customer"]["suggestedEntityName"] == "客户"
-    assert by_name["customer"]["fieldCount"] == 3
+    assert "configured" not in by_name["config_item"]
+    assert by_name["config_item"]["suggestedEntityName"] == "系统配置"
+    assert by_name["config_item"]["fieldCount"] == 0
     assert by_name["log_record"]["fieldCount"] == 0
 
-    # 关键词命中：名称命中 > 注释命中，未命中的被过滤
+    # 关键词命中：名称命中 > 注释命中，未命中的被过滤；
+    # 命中的表若已配置（sales_order）同样不返回
     result = service.recommend_tables(81, None, "订单", None)
-    assert [vo["tableName"] for vo in result] == ["sales_order"]
+    assert result == []
 
     # 关键词命中注释
     result = service.recommend_tables(81, None, "系统", None)
     assert [vo["tableName"] for vo in result] == ["config_item"]
 
+    # 关键词命中未配置表
+    result = service.recommend_tables(81, None, "log", None)
+    assert [vo["tableName"] for vo in result] == ["log_record"]
+
     # limit 截断
-    result = service.recommend_tables(81, None, None, 2)
-    assert [vo["tableName"] for vo in result] == ["config_item", "customer"]
+    result = service.recommend_tables(81, None, None, 1)
+    assert [vo["tableName"] for vo in result] == ["config_item"]
 
     # data_source 过滤
     result = service.recommend_tables(81, 59, None, None)
@@ -249,16 +251,14 @@ def test_recommend_tables_configured_keyword_and_limit():
 def test_recommend_tables_llm_reorder_and_entity_names():
     reader = base_reader()
     gateway = FakeGateway(
-        '[{"tableName":"sales_order","entityName":"销售订单"},'
-        '{"tableName":"customer","entityName":"客户"}]'
+        '[{"tableName":"config_item","entityName":"配置项"}]'
     )
     service = SemanticRecommendService(reader, gateway)
     result = service.recommend_tables(81, None, None, None)
-    # LLM 返回顺序在前，未返回的（config_item/log_record）保持规则顺序在后
-    assert [vo["tableName"] for vo in result][:2] == ["sales_order", "customer"]
+    # 已配置表（customer/sales_order）不返回；LLM 返回的排在前
+    assert [vo["tableName"] for vo in result] == ["config_item", "log_record"]
     by_name = {vo["tableName"]: vo for vo in result}
-    assert by_name["sales_order"]["suggestedEntityName"] == "销售订单"
-    assert by_name["customer"]["suggestedEntityName"] == "客户"
+    assert by_name["config_item"]["suggestedEntityName"] == "配置项"
     assert "实体映射表推荐排序" == gateway.calls[0][0]
 
 
@@ -266,9 +266,7 @@ def test_recommend_tables_llm_failure_falls_back_to_rules():
     reader = base_reader()
     service = SemanticRecommendService(reader, FakeGateway(None))
     result = service.recommend_tables(81, None, None, None)
-    assert [vo["tableName"] for vo in result] == [
-        "config_item", "customer", "sales_order", "log_record",
-    ]
+    assert [vo["tableName"] for vo in result] == ["config_item", "log_record"]
     assert result[0]["suggestedEntityName"] == "系统配置"
 
 
@@ -627,7 +625,7 @@ def test_route_recommend_tables_resp_contract():
     with route_client(SemanticRecommendService(base_reader(), None)) as client:
         resp = client.get(
             "/semanticModelEntityType/recommendTables",
-            params={"semanticModelId": 81, "keyword": "订单"},
+            params={"semanticModelId": 81, "keyword": "log"},
             headers=HEADERS,
         )
         assert resp.status_code == 200
@@ -635,7 +633,8 @@ def test_route_recommend_tables_resp_contract():
         assert body["code"] == 200
         assert body["msg"] == "成功"
         assert isinstance(body["timestamp"], int)
-        assert [row["tableName"] for row in body["data"]] == ["sales_order"]
+        assert [row["tableName"] for row in body["data"]] == ["log_record"]
+        assert all("configured" not in row for row in body["data"])
 
 
 def test_route_recommend_fields():

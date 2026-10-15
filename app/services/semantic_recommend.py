@@ -364,7 +364,8 @@ class SemanticRecommendService:
     ) -> list[dict[str, Any]]:
         max_size = 30 if not limit or limit <= 0 else min(limit, 200)
 
-        # 已被当前语义模型下实体映射的表（主表 + 子表）标记 configured
+        # 已被当前语义模型下实体映射的表（主表 + 子表）不再推荐
+        # （2026-10-14 契约：未配置的表正常返回，已配置的表不返回）
         configured_tables: set[str] = set()
         for entity in self._reader.entities(semantic_model_id):
             if _has_text(entity.get("main_table_name")):
@@ -386,6 +387,8 @@ class SemanticRecommendService:
             if not name:
                 continue
             lower_name = name.lower()
+            if lower_name in configured_tables:
+                continue
             comment = (table.get("comment") or "").lower()
             if kw and kw not in lower_name and kw not in comment:
                 continue
@@ -395,7 +398,6 @@ class SemanticRecommendService:
                 "tableComment": table.get("comment"),
                 "dataSourceId": table.get("data_source_id"),
                 "suggestedEntityName": _derive_entity_name(name, table.get("comment")),
-                "configured": lower_name in configured_tables,
                 "fieldCount": field_counts.get(table["id"], 0),
             }
             # 关键词命中放前面；同组内按“名称命中 > 注释命中 > 有注释 > 表名”排序
