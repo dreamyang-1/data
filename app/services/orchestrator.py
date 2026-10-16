@@ -12525,10 +12525,12 @@ class DataAnalysisOrchestrator:
                 action="请提供历史起止范围或窗口，例如：基于过去12个月。",
             ))
         prefix = f"我已理解：{understood_text}。" if understood_text else ""
+        supplement = "还需要补充："
         if source_stage in {"OAGNET_ASL_GENERATION", "STRUCTURED_ASL_BINDING"} and "semantic_ambiguity" in request.missing_slots:
             # Upstream hypotheses can differ from the ASL that produced this
             # clarification. Do not present their metric/entity as validated.
             prefix = f"当前问题：{request.rewritten_question or request.original_question}。"
+            supplement = ""
             if source_stage == "STRUCTURED_ASL_BINDING":
                 prefix += "本次停在解析校验阶段，还没有生成或执行SQL。"
         response = AgentResponse(
@@ -12541,7 +12543,7 @@ class DataAnalysisOrchestrator:
             intent_confidence=request.intent_confidence,
             answer=(
                 prefix
-                + "还需要补充："
+                + supplement
                 + ("\n" if any("\n" in item for item in visible_questions) else "")
                 + "；".join(visible_questions)
             ),
