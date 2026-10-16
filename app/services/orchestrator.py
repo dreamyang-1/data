@@ -11413,12 +11413,54 @@ class DataAnalysisOrchestrator:
         return sanitized
 
     @classmethod
+    def _plain_structured_param_question(cls, raw: str) -> str:
+        """把结构化参数绑定的追问原文改写成业务化提问。
+
+        Oagnet issue() 的问题原文带槽位名、过滤条件 JSON、物理字段路径和
+        “向量标准值”等内部校验术语，用户可见的追问里不能复述这些内容。
+        """
+        match = re.search(
+            r"结构化参数【[^】]*】(?P<label>\{.*?\})：(?P<reason>.*)", raw, re.S
+        )
+        field_label = value_text = ""
+        reason = raw
+        if match:
+            reason = match.group("reason")
+            try:
+                param = json.loads(match.group("label"))
+            except ValueError:
+                param = None
+            if isinstance(param, dict):
+                field_label = str(param.get("field") or param.get("name") or "").strip()
+                values = param.get("value")
+                if isinstance(values, list):
+                    value_text = "、".join(
+                        str(v).strip() for v in values if str(v).strip()
+                    )
+                else:
+                    value_text = str(values or "").strip()
+        if "向量标准值" in reason or "值目录" in reason:
+            target = f"“{field_label}”" if field_label else "对应字段"
+            if value_text:
+                return (
+                    f"筛选值“{value_text}”暂时没有在{target}的可选范围里找到对应项，"
+                    "请确认这个值的写法或所属分类是否正确。"
+                )
+            return f"筛选条件暂时没有在{target}的可选范围里找到对应项，请确认条件写法是否正确。"
+        if field_label or value_text:
+            condition = "：".join(part for part in (field_label, value_text) if part)
+            return f"查询条件“{condition}”没有能准确对应到系统里的数据口径，请确认写法或换个说法描述。"
+        return "部分查询条件没有能准确对应到系统里的数据口径，请确认后换个说法描述。"
+
+    @classmethod
     def _sanitize_clarification_text(cls, text: str) -> str:
         """Convert upstream diagnostics into a bounded business question."""
 
         raw = str(text or "").strip()
         if not raw:
             return "请确认本次查询希望采用的业务口径。"
+        if "结构化参数【" in raw:
+            return cls._plain_structured_param_question(raw)
         compact = re.sub(r"\s+", "", raw).casefold()
         if "metrics必须为空" in compact or "未指定具体聚合指标" in compact:
             return "请确认本次需要查看明细名单，还是按销售额、数量等指标汇总？"
@@ -12488,7 +12530,7 @@ class DataAnalysisOrchestrator:
             # clarification. Do not present their metric/entity as validated.
             prefix = f"当前问题：{request.rewritten_question or request.original_question}。"
             if source_stage == "STRUCTURED_ASL_BINDING":
-                prefix += "本次停在ASL参数绑定阶段，尚未生成或执行SQL。"
+                prefix += "本次停在解析校验阶段，还没有生成或执行SQL。"
         response = AgentResponse(
             request_id=request.request_id,
             conversation_id=request.conversation_id,

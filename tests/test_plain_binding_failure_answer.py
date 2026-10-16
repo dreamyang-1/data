@@ -124,3 +124,62 @@ class TestPlainBindingFailureAnswer:
         assert "没有执行任何数据查询" in answer
         assert "换个说法" in answer
         assert "不用重复提供" in answer
+
+
+class TestStructuredParamClarificationPlain:
+    """ASL 参数绑定追问（ASK 路径）同样必须口语化。
+
+    Oagnet issue() 的追问原文带槽位名、过滤条件 JSON、物理字段路径与
+    “向量标准值”等内部术语，澄清提问展示前必须改写成业务化提问。
+    """
+
+    RAW_VALUE_MISMATCH = (
+        '结构化参数【过滤条件[1]】{"entity": "产品分类", "field": "产品一级分类", '
+        '"op": "=", "value": "内窥镜"}：'
+        "字段 product_category.category_level1 已匹配，"
+        "但条件值尚未匹配到该字段的向量标准值，请核对字段层级及值目录。"
+        "请补充或确认该项；已明确的其他条件无需重复提供。"
+    )
+
+    def test_value_mismatch_question_is_plain(self):
+        text = Orchestrator._sanitize_clarification_text(self.RAW_VALUE_MISMATCH)
+        for mark in ("结构化参数【", "向量标准值", "category_level1", "{", "}",
+                     "请补充或确认该项", "op"):
+            assert mark not in text, f"追问泄露内部术语: {mark}"
+        assert "内窥镜" in text
+        assert "产品一级分类" in text
+        assert "写法" in text or "所属分类" in text
+
+    def test_value_mismatch_without_value_keeps_field_only(self):
+        raw = (
+            '结构化参数【过滤条件[2]】{"field": "城市", "op": "=", "value": []}：'
+            "字段 dim_city.city_id 已匹配，但条件值尚未匹配到该字段的向量标准值，"
+            "请核对字段层级及值目录"
+        )
+        text = Orchestrator._sanitize_clarification_text(raw)
+        assert "结构化参数【" not in text
+        assert "向量标准值" not in text
+        assert "dim_city" not in text
+        assert "城市" in text
+
+    def test_non_json_structured_param_falls_back_generic(self):
+        raw = "结构化参数【结构化提取】null：上游未提供结构化参数，请检查任务拆分与规划节点"
+        text = Orchestrator._sanitize_clarification_text(raw)
+        for mark in ("结构化参数【", "null", "任务拆分与规划"):
+            assert mark not in text
+        assert "没有能准确对应到系统里的数据口径" in text
+
+    def test_other_structured_reasons_keep_business_condition(self):
+        raw = (
+            '结构化参数【排序[1]】{"field": "含税销售总额", "order": "DOWN"}：'
+            "当前ASL仅支持一个明确升序/降序的排序字段"
+        )
+        text = Orchestrator._sanitize_clarification_text(raw)
+        for mark in ("结构化参数【", "{", "}", "ASL"):
+            assert mark not in text
+        assert "含税销售总额" in text
+        assert "换个说法" in text
+
+    def test_normal_business_question_passes_through(self):
+        text = Orchestrator._sanitize_clarification_text("请确认要统计哪个大区的销售额？")
+        assert text == "请确认要统计哪个大区的销售额？"
