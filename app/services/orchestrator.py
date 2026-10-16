@@ -11676,19 +11676,15 @@ class DataAnalysisOrchestrator:
         if not scope:
             return message + "无数据不等同于指标值为 0。"
         message += f"当前筛选条件：{scope}。"
-        bindings_complete, unbound_fields = DataAnalysisOrchestrator._filter_binding_coverage(request)
+        bindings_complete, _unbound_fields = DataAnalysisOrchestrator._filter_binding_coverage(request)
         if bindings_complete:
             return message + (
                 "筛选字段和值已完成语义绑定；本次查询在该条件下确实没有返回业务记录，"
                 "这不等同于指标值为 0。"
             )
-        fields = "、".join(unbound_fields)
-        return message + (
-            "本次查询未携带完整的筛选值绑定证据，不能仅凭空结果判断是业务上无数据"
-            "还是筛选名称未匹配。"
-            + (f"未完成绑定的字段：{fields}。" if fields else "")
-            + "请查看本次 ASL 的字段和值绑定，或补充更完整的业务名称后重试。"
-        )
+        # 绑定证据不足时不向用户输出内部绑定诊断（未绑定字段/ASL 提示），
+        # 查询成功的结果只保留空结果事实与筛选条件。
+        return message
 
     @classmethod
     def _preserve_pending_execution_contract(
