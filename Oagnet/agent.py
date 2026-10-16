@@ -6415,6 +6415,38 @@ def _repair_contract_filter(
     return canonical_repair or repair
 
 
+def _repair_contract_grouping(
+    ast: dict,
+    grouping: str,
+    knowledge: dict,
+    *,
+    query_object: str | None = None,
+) -> str | None:
+    """Append the unique metadata-resolved dimension for a missed grouping.
+
+    与过滤修复同族：结构化生成偶发漏写必选分组（例如分组「商品」唯一解析为
+    product.product_name，而 ASL 只写了同实体的 product_code），校验必然报
+    "omitted a required grouping" 并转成不可回答歧义（SAFE_FALLBACK）。仅
+    在元数据恰好解析出唯一候选且 ASL 未携带时追加该维度；候选为零或多义时
+    不动，交由合同校验照常失败，绝不放宽校验。
+    """
+    dimensions = ast.setdefault("dimensions", [])
+    if not isinstance(dimensions, list):
+        ast["dimensions"] = dimensions = []
+    selected_names = {
+        str(item.get("name") or "")
+        for item in dimensions if isinstance(item, dict)
+    }
+    candidates = _contract_projection_candidates(
+        str(grouping), query_object, knowledge,
+        preferred_fields=selected_names,
+    )
+    if len(candidates) != 1 or candidates[0] in selected_names:
+        return None
+    dimensions.append({"name": candidates[0]})
+    return candidates[0]
+
+
 def _administrative_mention_level(mention: str) -> str | None:
     """Return the administrative level stated by the mention's own suffix."""
     text = re.sub(r"\s+", "", str(mention or ""))
@@ -8158,6 +8190,12 @@ def _validate_intent_asl_contract(
                 preferred_fields=selected_dimension_names,
                 prefer_display=True,
             )
+            if not candidates:
+                # 元数据完全解析不出候选（例如指标展示名被并入 required_projections）
+                # 时，该投影既无法校验也无法向用户提问：空候选歧义必然
+                # SYSTEM_FAILURE→SAFE_FALLBACK，而 ASL 通常已按自身选择携带
+                # 对应字段。按无证据可查处理，交由其余校验与执行兜底。
+                continue
             if len(candidates) != 1 or candidates[0] not in selected_dimension_names:
                 raise ASLValidationError(
                     "ASL_DETAIL_PROJECTION_MISSING",
@@ -8179,6 +8217,10 @@ def _validate_intent_asl_contract(
                 knowledge,
                 preferred_fields=selected_dimension_names,
             )
+            if not candidates:
+                # 与投影分支同理：零候选意味着校验与澄清都无从下手，
+                # 强行报错只会制造不可回答的歧义和必然的 SAFE_FALLBACK。
+                continue
             if len(candidates) != 1 or candidates[0] not in selected_dimension_names:
                 raise ASLValidationError(
                     "ASL_GROUPING_DIMENSION_MISSING",
@@ -9133,6 +9175,55 @@ def main(
             try:
                 _validate_vector_grounded_asl(result, knowledge)
                 result = _validate_asl_output(result, knowledge, "", metric_codes or None)
+                if intent_asl_contract is not None:
+                    # 契约过滤修复：bind 只按结构化参数「过滤条件」绑定，任务级
+                    # expected_filter（依赖前序任务结果、未进「过滤条件」节）会被
+                    # 生成漏写，校验必然报 "omitted a required filter" 并转成不可
+                    # 回答的空候选歧义（SAFE_FALLBACK）。按元数据把缺失的契约过滤
+                    # 注入 ASL，再交给下方合同校验统一把关；过滤条件仍缺失或字段
+                    # 无法唯一解析时照常失败，绝不放宽校验。
+                    contract_ast = json.loads(result)
+                    filters_before = json.dumps(
+                        contract_ast.get("filters") or [],
+                        ensure_ascii=False, sort_keys=True)
+                    for expected in intent_asl_contract.get("filters") or []:
+                        _repair_contract_filter(
+                            contract_ast, expected, knowledge, negative=False,
+                            semantic_model_id=semantic_model_id,
+                            domain_scope=domain_scope,
+                            query_object=intent_asl_contract.get("query_object"),
+                        )
+                    for expected in intent_asl_contract.get("negative_filters") or []:
+                        _repair_contract_filter(
+                            contract_ast, expected, knowledge, negative=True,
+                            semantic_model_id=semantic_model_id,
+                            domain_scope=domain_scope,
+                            query_object=intent_asl_contract.get("query_object"),
+                        )
+                    filters_after = json.dumps(
+                        contract_ast.get("filters") or [],
+                        ensure_ascii=False, sort_keys=True)
+                    if filters_after != filters_before:
+                        result = json.dumps(contract_ast, ensure_ascii=False)
+                    # 契约分组修复：与过滤修复同族——结构化生成偶发漏写必选
+                    # 分组（分组「商品」唯一解析为 product.product_name 而 ASL
+                    # 只写了同实体的编码列），校验会报 "omitted a required
+                    # grouping" 并转成不可回答歧义（SAFE_FALLBACK）。仅在唯一
+                    # 候选且 ASL 未携带时追加该维度，零候选或多义时不动，交由
+                    # 下方合同校验照常失败，绝不放宽校验。
+                    dimensions_before = json.dumps(
+                        contract_ast.get("dimensions") or [],
+                        ensure_ascii=False, sort_keys=True)
+                    for grouping in intent_asl_contract.get("required_groupings") or []:
+                        _repair_contract_grouping(
+                            contract_ast, str(grouping), knowledge,
+                            query_object=intent_asl_contract.get("query_object"),
+                        )
+                    dimensions_after = json.dumps(
+                        contract_ast.get("dimensions") or [],
+                        ensure_ascii=False, sort_keys=True)
+                    if dimensions_after != dimensions_before:
+                        result = json.dumps(contract_ast, ensure_ascii=False)
                 _validate_intent_asl_contract(result, intent_asl_contract, knowledge)
             except (ASLValidationError, ValueError) as exc:
                 ast["ambiguity"].append(issue(

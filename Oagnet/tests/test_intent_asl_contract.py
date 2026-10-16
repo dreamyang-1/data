@@ -11,6 +11,7 @@ from agent import (
     _normalize_surface_detail_projections,
     _contract_filter_candidates,
     _repair_contract_filter,
+    _repair_contract_grouping,
     _select_surface_mention_match,
     _validate_asl_output,
     _validate_intent_asl_contract,
@@ -176,6 +177,66 @@ def test_detail_projection_missing_has_precise_structured_error():
     assert exc.value.code == "ASL_DETAIL_PROJECTION_MISSING"
     assert exc.value.field == "dimensions"
     assert exc.value.code != "ASL_METRIC_SELECTION_INVALID"
+
+
+def test_unresolvable_projection_label_is_skipped_instead_of_unanswerable_ambiguity():
+    """回归：元数据解析不出任何候选的投影标签不得报 ASL_DETAIL_PROJECTION_MISSING。
+
+    2026-10-16 晨 49 现场：指标展示名（含税金额）被并入 required_projections，
+    元数据解析出零候选，报错被转换为 type=context、candidates=[] 的不可回答
+    歧义，子任务禁追问下必然 SYSTEM_FAILURE→SAFE_FALLBACK（整体
+    PARTIAL_SUCCESS，任务级明细查询永远无内容）。
+    """
+    knowledge = {"entities": [
+        _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+    ]}
+    contract = {
+        "version": "1.0",
+        "intent": "DETAIL_QUERY",
+        "query_object": "经销商",
+        "metric_required": False,
+        "required_metrics": [],
+        "required_metric_codes": [],
+        "required_projections": ["含税金额", "经销商名称"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["dimensions"] = [
+        {"name": "dealer.dealer_name"},
+        {"name": "sales_order.amount_with_tax"},
+    ]
+
+    # 零候选投影跳过校验，可解析投影仍正常校验，整体不得抛错
+    _validate_intent_asl_contract(json.dumps(ast, ensure_ascii=False), contract, knowledge)
+
+
+def test_unresolvable_grouping_label_is_skipped_instead_of_unanswerable_ambiguity():
+    """与投影分支同理：零候选的分组标签跳过校验而非制造不可回答歧义。"""
+    knowledge = {"entities": [
+        _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+    ]}
+    contract = {
+        "version": "1.0",
+        "intent": "METRIC_QUERY",
+        "query_object": "经销商",
+        "metric_required": True,
+        "required_metrics": [],
+        "required_metric_codes": ["sales_amount"],
+        "required_projections": [],
+        "required_groupings": ["渠道业态"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["metrics"] = [{"name": "sales_amount"}]
+    ast["dimensions"] = [{"name": "dealer.dealer_name"}]
+
+    _validate_intent_asl_contract(json.dumps(ast, ensure_ascii=False), contract, knowledge)
 
 
 def test_metricless_attribute_detail_uses_registered_subject_event_time(monkeypatch):
@@ -2656,3 +2717,192 @@ def test_exact_projected_value_can_still_be_an_explicit_filter(monkeypatch):
         "value": "通用科室",
     }]
     assert repairs[-1]["type"] == "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
+
+
+def test_missing_contract_filter_is_injected_before_validation():
+    """main 校验前必须修复漏写的契约过滤（2026-10-16 SAFE_FALLBACK 根因）。
+
+    任务2 的 expected_filter（依赖前序任务结果的经销商编码 IN 列表）未进
+    结构化参数「过滤条件」节时，bind 生成会漏写该过滤，合同校验必然报
+    "omitted a required positive filter" 并转成不可回答的空候选歧义。修复
+    接入后（main 校验前调 _repair_contract_filter 注入），同一输入应放行。
+    """
+    knowledge = {
+        "entities": [_entity("dealer", "经销商", "dealer.dealer_name", "经销商名称")],
+    }
+    contract = {
+        "intent": "DETAIL_QUERY",
+        "query_object": "经销商",
+        "metric_required": False,
+        "required_projections": ["经销商名称"],
+        "required_groupings": [],
+        "filters": [{
+            "field": "经销商名称", "operator": "IN",
+            "value": ["国药控股北京有限公司", "华润安徽医药有限公司"],
+        }],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["dimensions"] = [{"name": "dealer.dealer_name"}]
+
+    # 模拟 main 校验前的修复接入：bind 漏写过滤 → 修复注入 → 校验放行
+    _repair_contract_filter(
+        ast, contract["filters"][0], knowledge, negative=False,
+        query_object=contract.get("query_object"),
+    )
+    result = json.dumps(ast, ensure_ascii=False)
+    _validate_intent_asl_contract(result, contract, knowledge)
+
+    assert ast["filters"] == [{
+        "field": "dealer.dealer_name", "operator": "IN",
+        "value": ["国药控股北京有限公司", "华润安徽医药有限公司"],
+    }]
+
+
+def test_missing_contract_filter_without_repair_still_fails_closed():
+    """不接入修复时同一输入必须仍被校验拦截（校验本身不放宽）。"""
+    knowledge = {
+        "entities": [_entity("dealer", "经销商", "dealer.dealer_name", "经销商名称")],
+    }
+    contract = {
+        "intent": "DETAIL_QUERY",
+        "query_object": "经销商",
+        "metric_required": False,
+        "required_projections": ["经销商名称"],
+        "required_groupings": [],
+        "filters": [{
+            "field": "经销商名称", "operator": "IN",
+            "value": ["国药控股北京有限公司", "华润安徽医药有限公司"],
+        }],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["dimensions"] = [{"name": "dealer.dealer_name"}]
+    with pytest.raises(ASLValidationError) as excinfo:
+        _validate_intent_asl_contract(json.dumps(ast, ensure_ascii=False), contract, knowledge)
+    assert "omitted a required positive filter" in str(excinfo.value)
+
+
+def _product_entity(code: str, name_label: str):
+    table, column = "product", code
+    return SimpleNamespace(metadata={
+        "entity_code": "product" if code == "product_name" else f"product_{code}",
+        "entity_name": name_label,
+        "attributes": json.dumps([
+            {
+                "attr_code": "product_code",
+                "attr_name": "商品编码",
+                "field_mapping": {"mappingTable": table, "mappingColumn": "product_code"},
+            },
+            {
+                "attr_code": "product_name",
+                "attr_name": "商品名称",
+                "field_mapping": {"mappingTable": table, "mappingColumn": "product_name"},
+                "is_display_name": True,
+            },
+        ], ensure_ascii=False),
+    })
+
+
+def test_missing_contract_grouping_is_injected_before_validation():
+    """main 校验前必须修复漏写的必选分组（2026-10-16 任务2 波动根因）。
+
+    结构化生成偶发漏写分组「商品」对应的 product.product_name（ASL 只写了
+    同实体编码列 product.product_code），合同校验必然报 "omitted a required
+    grouping" 并转成不可回答歧义（SAFE_FALLBACK）。修复接入后（main 校验前
+    调 _repair_contract_grouping 按唯一元数据候选注入），同一输入应放行，
+    且原维度不被改动。
+    """
+    knowledge = {
+        "entities": [
+            _entity("dealer", "经销商", "dealer.dealer_name", "经销商名称"),
+            _product_entity("product_name", "商品"),
+        ],
+    }
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "商品",
+        "metric_required": True,
+        "required_metric_codes": ["sales_amount"],
+        "required_projections": [],
+        "required_groupings": ["商品"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["metrics"] = [{"name": "sales_amount"}]
+    ast["dimensions"] = [{"name": "dealer.dealer_name"}, {"name": "product.product_code"}]
+
+    resolved = _repair_contract_grouping(
+        ast, "商品", knowledge, query_object=contract.get("query_object"),
+    )
+    result = json.dumps(ast, ensure_ascii=False)
+    _validate_intent_asl_contract(result, contract, knowledge)
+
+    assert resolved == "product.product_name"
+    assert [item["name"] for item in ast["dimensions"]] == [
+        "dealer.dealer_name", "product.product_code", "product.product_name",
+    ]
+
+
+def test_grouping_repair_skips_ambiguous_candidates_and_validation_still_fails():
+    """多个实体都能解析「商品」时不注入，交由合同校验照常拦截（不放宽）。"""
+    knowledge = {
+        "entities": [
+            _product_entity("product_name", "商品"),
+            SimpleNamespace(metadata={
+                "entity_code": "product_alt",
+                "entity_name": "商品",
+                "attributes": json.dumps([{
+                    "attr_code": "product_name",
+                    "attr_name": "商品名称",
+                    "field_mapping": {"mappingTable": "product_alt", "mappingColumn": "product_name"},
+                    "is_display_name": True,
+                }], ensure_ascii=False),
+            }),
+        ],
+    }
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "商品",
+        "metric_required": True,
+        "required_metric_codes": ["sales_amount"],
+        "required_projections": [],
+        "required_groupings": ["商品"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["metrics"] = [{"name": "sales_amount"}]
+    ast["dimensions"] = [{"name": "product_alt.product_code"}]
+
+    resolved = _repair_contract_grouping(
+        ast, "商品", knowledge, query_object=contract.get("query_object"),
+    )
+    assert resolved is None
+    assert [item["name"] for item in ast["dimensions"]] == ["product_alt.product_code"]
+    with pytest.raises(ASLValidationError) as excinfo:
+        _validate_intent_asl_contract(json.dumps(ast, ensure_ascii=False), contract, knowledge)
+    assert "omitted a metadata-resolved required grouping" in str(excinfo.value)
+
+
+def test_grouping_repair_is_noop_when_dimension_already_present():
+    """ASL 已携带分组时不得重复注入。"""
+    knowledge = {
+        "entities": [_product_entity("product_name", "商品")],
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["metrics"] = [{"name": "sales_amount"}]
+    ast["dimensions"] = [{"name": "product.product_name"}]
+
+    resolved = _repair_contract_grouping(ast, "商品", knowledge, query_object="商品")
+    assert resolved is None
+    assert [item["name"] for item in ast["dimensions"]] == ["product.product_name"]
