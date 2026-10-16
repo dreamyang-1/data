@@ -143,3 +143,52 @@ def test_relation_fallback_preserves_declared_keys_and_uuid():
     assert relation['relation_type'] == '1:N'
     assert relation['join_key'] == dict(source_field='departments.code', target_field='orders.department')
     assert row['code'] == ''
+
+
+def test_degenerate_attribute_code_redirects_to_physical_column(blank_metadata):
+    """两个属性显式共用编码且恰一方与自身物理列不一致时，退化方回退物理列。
+
+    2026-10-16 模型130 实录：产品线分类标识误配 code=category_id（物理列
+    product_line_id），与产品分类标识（category_id/category_id 自洽）冲突，
+    曾导致 CATALOG_VALUE_SOURCE_MAPPING_AMBIGUOUS 拦停全部查询。修复后
+    document 层把退化方回退为物理列，与人工修正结果一致。
+    """
+    blank_metadata('semantic_model_attribute_config', id='abcdef0123456789abcdef0123456788',
+        semantic_model_id=81, entity_type_id=ENTITY, code='name', attr_name='Degenerate',
+        mapping_table='hospitals', mapping_column='secret', is_deleted=0)
+    entity = mysql.get_entity(205)[0]
+    codes = {a['attr_code'] for a in entity['attributes']}
+    assert 'name' in codes and 'secret' in codes
+    degenerate = next(a for a in entity['attributes'] if a['attr_code'] == 'secret')
+    assert degenerate['field_mapping'] == 'hospitals.secret'
+
+
+def test_value_source_degenerate_code_redirects_instead_of_blocking(monkeypatch):
+    """捕获层同一规则：退化方回退物理列后正常捕获，不再 MAPPING_AMBIGUOUS。"""
+    good = source()
+    degenerate = source(attribute_id=1206, attr_code='city', mapping_column='city2',
+                        field_id=3, attr_name='城市别名')
+    monkeypatch.setattr(values, "_definition_rows", lambda scope: [good, degenerate])
+    captured = values.capture_value_sources(SCOPE)
+    codes = {str(f["attribute_id"]): f["attr_code"] for f in captured["fields"]}
+    assert codes == {'1205': 'city', '1206': 'city2'}
+
+
+def test_value_source_redirect_collision_still_blocks(monkeypatch):
+    """退化方回退后仍与其他属性冲突（第三属性已占用该物理列名）→ 仍拦截。"""
+    good = source()
+    degenerate = source(attribute_id=1206, attr_code='city', mapping_column='city2',
+                        field_id=3, attr_name='城市别名')
+    third = source(attribute_id=1207, attr_code='city2', mapping_column='city2',
+                   field_id=4, attr_name='城市二')
+    monkeypatch.setattr(values, "_definition_rows",
+                        lambda scope: [good, degenerate, third])
+    with pytest.raises(CatalogEvidenceError, match="MAPPING_AMBIGUOUS") as caught:
+        values.capture_value_sources(SCOPE)
+    conflict = caught.value.issues[0].get("conflicting_attribute")
+    assert conflict, "AMBIGUOUS issue 必须带冲突对方明细"
+    # 回退后 city2 被 1207（自洽）与 1206（回退后自洽）共同争夺：真歧义。
+    # issue 由后遍历的 1207 触发，冲突对方 1206 显示其原始配置（city/city2）
+    # 便于在界面中定位该条误配。
+    assert str(conflict["attribute_id"]) == '1206'
+    assert conflict["attr_code"] == 'city' and conflict["mapping_column"] == 'city2'

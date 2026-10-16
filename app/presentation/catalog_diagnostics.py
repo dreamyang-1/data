@@ -69,6 +69,17 @@ def catalog_configuration_answer(exc: Exception, *, semantic_model_id: int, busi
             v for k in ("mapping_table", "mapping_column") if (v := _label(issue.get(k))))
         if mapping:
             objects.append("物理映射「" + mapping + "」")
+        conflict = issue.get("conflicting_attribute")
+        if isinstance(conflict, dict):
+            cvalues = list(dict.fromkeys(v for k in ("attr_name", "attr_code", "attribute_id")
+                                         if (v := _label(conflict.get(k)))))
+            cmapping = ".".join(v for k in ("mapping_table", "mapping_column")
+                                if (v := _label(conflict.get(k))))
+            parts = ("属性「" + " / ".join(cvalues) + "」") if cvalues else ""
+            if cmapping:
+                parts += ("；" if parts else "") + "物理映射「" + cmapping + "」"
+            if parts:
+                objects.append("与之冲突的另一条配置：" + parts)
         for title, slot in (("子表", "sub_table_name"), ("主表连接字段", "main_join_column"),
                             ("子表连接字段", "sub_join_column"), ("目标实体", "target_entity")):
             if value := _label(issue.get(slot)):

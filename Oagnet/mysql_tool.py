@@ -1434,10 +1434,36 @@ def get_entity(business_domain_id: int):
 
         attr_map = {}
         derived_attributes = {}
+        # 2026-10-16：两个不同属性显式共用同一编码时，若恰有一方的编码与自身
+        # 物理列不一致（配置退化，如「产品线分类标识」误配 code=category_id 而
+        # 物理列是 product_line_id），按查询期物理绑定口径把退化方回退为自身
+        # 物理列重新入组，而不是 first-wins 静默选择；回退后仍冲突才报错。
+        # 与 catalog_value_sources.capture_value_sources 保持同一规则。
+        grouped_attrs: dict = {}
+        for raw_row in attr_rows:
+            row = dict(raw_row)
+            row["code"] = _catalog_code(row.get("code"), row.get("mapping_column"))
+            grouped_attrs.setdefault(
+                (row.get("entity_type_id"), row.get("code")), []).append(row)
+        degraded_codes: dict = {}
+        for group in grouped_attrs.values():
+            attr_ids = {r.get("id") for r in group}
+            if len(group) != 2 or len(attr_ids) != 2:
+                continue  # 同一属性的 JOIN 放大行或多方冲突：交由原逻辑
+            degenerate = [r for r in group
+                          if str(r.get("code") or "") != str(r.get("mapping_column") or "")]
+            consistent = [r for r in group
+                          if str(r.get("code") or "") == str(r.get("mapping_column") or "")]
+            if len(degenerate) != 1 or len(consistent) != 1:
+                continue  # 双方均自洽或均退化：真歧义，保持原行为
+            degraded_codes[degenerate[0].get("id")] = degenerate[0].get("mapping_column")
         for raw_row in attr_rows:
             row = dict(raw_row)
             raw_code = row.get("code")
-            row["code"] = _catalog_code(raw_code, row.get("mapping_column"))
+            if row.get("id") in degraded_codes:
+                row["code"] = degraded_codes[row.get("id")]
+            else:
+                row["code"] = _catalog_code(raw_code, row.get("mapping_column"))
             entity_type_id = row.get("entity_type_id")
             derived_key = (entity_type_id, row.get("code"))
             previous = derived_attributes.get(derived_key)

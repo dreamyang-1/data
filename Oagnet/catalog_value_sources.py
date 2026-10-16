@@ -128,24 +128,64 @@ def field_identity(row, scope):
 def capture_value_sources(scope):
     """Called inside capture_catalog's single read-only metadata transaction."""
     scope = catalog_scope(scope["semantic_model_id"], scope["business_domain_ids"])
-    fields, seen, issues = [], set(), []
+    issues = []
     failure_code = None
-    logical_owners = {}
+    valid = []
     for raw_row in _definition_rows(scope):
         row = _normalized_codes(raw_row)
         try:
-            field = field_identity(row, scope)
+            valid.append((row, field_identity(row, scope)))
         except CatalogEvidenceError as exc:
             failure_code = failure_code or str(exc)
             issues.extend(_mapping_issues(row, scope))
             continue
+
+    # 2026-10-16：两个不同属性显式共用同一编码时，若恰有一方的编码与自身
+    # 物理列不一致（配置退化，如「产品线分类标识」误配 code=category_id 而
+    # 物理列是 product_line_id），按查询期物理绑定口径把退化方回退为自身
+    # 物理列，而不是拦停整个目录发布；回退后仍无法唯一归属时才判定
+    # AMBIGUOUS。与 document 层（mysql_tool.get_entity）保持同一规则。
+    logical_groups: dict = {}
+    for row, field in valid:
+        logical_groups.setdefault(
+            (field["business_domain_id"], field["entity_code"], field["attr_code"]), []
+        ).append((row, field))
+    redirected: dict = {}
+    for group in logical_groups.values():
+        attr_ids = {field["attribute_id"] for _, field in group}
+        if len(group) != 2 or len(attr_ids) != 2:
+            continue  # 同一属性的 JOIN 放大行或多方冲突：交由物理键/主循环检查
+        degenerate = [item for item in group
+                      if item[1]["attr_code"] != item[1]["mapping_column"]]
+        consistent = [item for item in group
+                      if item[1]["attr_code"] == item[1]["mapping_column"]]
+        if len(degenerate) != 1 or len(consistent) != 1:
+            continue  # 双方均自洽或均退化：真歧义，保持拦截
+        row, field = degenerate[0]
+        retry_row = dict(row)
+        retry_row["attr_code"] = field["mapping_column"]
+        try:
+            redirected[field["attribute_id"]] = field_identity(retry_row, scope)
+        except CatalogEvidenceError as exc:
+            failure_code = failure_code or str(exc)
+            issues.extend(_mapping_issues(retry_row, scope))
+
+    fields, seen = [], set()
+    logical_owners = {}
+    owner_rows = {}
+    for row, field in valid:
+        redirect = redirected.get(field["attribute_id"])
+        if redirect is not None:
+            field = redirect
         key = field["business_domain_id"], field["entity_id"], field["attribute_id"]
         logical_key = field["business_domain_id"], field["entity_code"], field["attr_code"]
         if logical_key in logical_owners and logical_owners[logical_key] != key:
             failure_code = failure_code or "CATALOG_VALUE_SOURCE_MAPPING_AMBIGUOUS"
-            issues.append(_mapping_issue(row, "attr_code", "AMBIGUOUS"))
+            issues.append(_mapping_issue(row, "attr_code", "AMBIGUOUS",
+                                         conflict=owner_rows.get(logical_key)))
             continue
         logical_owners[logical_key] = key
+        owner_rows[logical_key] = row
         if key in seen:
             # Duplicated physical registrations are not first-wins authority.
             failure_code = failure_code or "CATALOG_VALUE_SOURCE_MAPPING_AMBIGUOUS"
@@ -162,13 +202,19 @@ def capture_value_sources(scope):
     return {"contract": CONTRACT, "scope": deepcopy(scope), "fields": fields}
 
 
-def _mapping_issue(row, key, reason):
+def _mapping_issue(row, key, reason, conflict=None):
     issue = {"key": key, "reason": reason}
     for name in ("business_domain_id", "entity_id", "entity_name", "entity_code"):
         issue[name] = row.get(name)
     if key != "entity_code":
         for name in ("attribute_id", "attr_name", "attr_code", "mapping_table", "mapping_column"):
             issue[name] = row.get(name)
+    if isinstance(conflict, dict):
+        # Surface the other side of a coding collision so the operator can fix
+        # the exact duplicate instead of guessing which rows are involved.
+        issue["conflicting_attribute"] = {
+            name: conflict.get(name) for name in (
+                "attribute_id", "attr_name", "attr_code", "mapping_table", "mapping_column")}
     # Connection locators and credentials must never enter the issue contract.
     if key in {"db_type", "host", "db_name", "port", "data_source_id"}:
         issue["data_source_id"] = row.get("data_source_id")
