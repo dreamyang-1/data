@@ -12318,6 +12318,63 @@ class DataAnalysisOrchestrator:
             trace.conversation_id = chat.conversation_id
             trace.message_id = chat.message_id
 
+    @staticmethod
+    def _plain_binding_failure_reasons(request: CanonicalAnalysisRequest) -> list[str]:
+        """把 ASL 绑定失败的内部歧义归类成口语化原因，不复述校验原文。
+
+        最终输出不给用户看内部槽位名、英文校验信息或字段路径；这里只按
+        歧义类型概括业务影响，完整细节仍保留在 semantic_ambiguities 与
+        决策轨迹中供排查。
+        """
+
+        def usable_phrase(value: object) -> str:
+            text = " ".join(str(value or "").split())
+            if not text or text.casefold() in {"null", "none", "unknown"}:
+                return ""
+            # 内部槽位名/字段路径（纯英文、下划线、点号）不展示给用户
+            if re.fullmatch(r"[A-Za-z0-9_.:\-\s]+", text):
+                return ""
+            return text
+
+        reasons: list[str] = []
+        for item in request.semantic_ambiguities or []:
+            target = usable_phrase(getattr(item, "phrase", None))
+            kind = str(getattr(item, "type", "") or "")
+            question = str(getattr(item, "question", "") or "")
+            if kind == "context" or "上游未提供结构化参数" in question:
+                reason = "系统内部没有取得生成查询所需的结构化条件，属于系统处理问题，不是您的问题描述有误"
+            elif kind in {"filter", "filter_slot", "entity_value"}:
+                reason = (
+                    f"筛选条件“{target}”没有能准确对应到数据里的字段"
+                    if target else "部分筛选条件没有能准确对应到数据里的字段"
+                )
+            elif kind in {"dimension", "subject", "schema_relation"}:
+                reason = (
+                    f"“{target}”的分组或展示方式没有能准确对应到数据里的字段"
+                    if target else "部分分组或展示字段没有能准确对应到数据里的字段"
+                )
+            elif kind == "metric":
+                reason = (
+                    f"指标“{target}”的统计口径没有能对应到系统里的指标定义"
+                    if target else "指标的统计口径没有能对应到系统里的指标定义"
+                )
+            elif kind == "time_anchor":
+                reason = "查询的时间范围没有能确定按哪种业务时间计算"
+            else:
+                reason = "部分查询条件没有能通过系统内部的一致性校验"
+            if reason not in reasons:
+                reasons.append(reason)
+        return reasons or ["查询条件在系统内部校验时没有通过"]
+
+    @classmethod
+    def _plain_binding_failure_answer(cls, request: CanonicalAnalysisRequest) -> str:
+        reasons = "；".join(cls._plain_binding_failure_reasons(request))
+        return (
+            f"本次查询没有执行，原因是：{reasons}。\n"
+            "为了避免查错数据，系统在生成查询这一步主动停了下来，没有执行任何数据查询。\n"
+            "您可以换个说法再问一次；之前已经说明过的条件不用重复提供。"
+        )
+
     async def _request_clarification(
         self,
         request: CanonicalAnalysisRequest,
@@ -12346,7 +12403,9 @@ class DataAnalysisOrchestrator:
         if not allowed_slots:
             response = self._fallback(request, '该问题已在当前待确认任务中提出，原选项继续保留。' if any(t.already_asked for t in traces) else '当前语义目录或执行服务尚未提供足够依据，系统无法安全继续处理。')
             if source_stage == 'STRUCTURED_ASL_BINDING' and not any(t.already_asked for t in traces):
-                response.answer = '本次停在ASL参数绑定阶段，尚未生成或执行SQL。\n' + '\n'.join(request.ambiguities)
+                # 最终输出用口语化总结说明原因，不复述内部校验原文
+                # （校验细节保留在歧义与决策轨迹里供排查）。
+                response.answer = self._plain_binding_failure_answer(request)
             response.clarification_decision_traces = traces
             return response
         # Keep unresolved slots in state, but never ask the same pending
