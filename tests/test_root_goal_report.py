@@ -27,7 +27,8 @@ def test_final_selects_user_deliverables_not_all_tasks_or_only_last_task(ids):
     assert selected == ids
     for item in materials():
         assert (item["presentation"]["table"] in answer) == (item["task_id"] in ids)
-    assert answer.count("### 1、概况总结") == 1
+    assert "### 1、概况总结" not in answer
+    assert "整体简短回答" in answer
     assert "任务1" not in answer
 
 
