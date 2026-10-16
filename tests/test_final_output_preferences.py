@@ -281,4 +281,4 @@ async def test_single_model_requests_final_summary_without_extra_model_call():
         'claims': [{'statement': '详细解释。'}], 'final_answer': {'overview': '简短回答。'}}, calls)).synthesize(request(), analysis(), evidence())
     assert result.final_answer['overview'] == '简短回答。' and len(calls) == 1
     assert '以 completed_question' in calls[0]['messages'][0]['content']
-    assert '1至3句话' in calls[0]['messages'][0]['content']
+    assert '3至5句连贯文字' in calls[0]['messages'][0]['content']

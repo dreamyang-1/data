@@ -184,6 +184,55 @@ def build_chart_specs(
     ]
 
 
+def suggested_chart_specs(
+    columns: list[str],
+    rows: list[dict[str, Any]],
+    suggestions: Any,
+) -> tuple[list[ChartSpec], list[str]]:
+    """Ground insight-driven chart suggestions in the actual result dataset.
+
+    Suggestions are presentation hints only; they never change SQL or data.
+    A suggestion whose columns do not exist verbatim, whose value column is
+    not a measurable numeric field, or whose data is unsuitable for the asked
+    chart is dropped instead of being coerced into a misleading picture.
+    """
+    notes: list[str] = []
+    if not isinstance(suggestions, list) or not suggestions:
+        return [], notes
+    if not rows:
+        return [], ['洞察建议的图表缺少可用的结果数据，未渲染。']
+    if len(rows) > MAX_CHART_POINTS:
+        return [], ['结果行数较多，属明细数据，不适合按洞察建议绘制图表。']
+    metrics = [column for column in columns
+               if not is_identifier_column(column) and _column_is_numeric(column, rows)]
+    temporal = next((column for column in columns if column not in metrics
+                     and _looks_temporal(column, rows)), None)
+    specs: list[ChartSpec] = []
+    for item in suggestions:
+        if not isinstance(item, Mapping):
+            continue
+        label, value = item.get("label_column"), item.get("value_column")
+        title = str(item.get("title") or "").strip()
+        if not isinstance(value, str) or value not in metrics:
+            notes.append(f'洞察建议的图表因结果中不存在可计算的指标列“{value}”，未渲染。')
+            continue
+        if (not isinstance(label, str) or label not in columns or label == value
+                or is_identifier_column(label)):
+            notes.append(f'洞察建议的图表因结果中缺少可用的维度列“{label}”，未渲染。')
+            continue
+        kind = str(item.get("chart_type") or "").upper()
+        if kind not in {"BAR", "LINE", "PIE"}:
+            kind = "LINE" if label == temporal else "BAR"
+        if kind == "LINE" and len({str(row.get(label)) for row in rows}) != len(rows):
+            notes.append(f'洞察建议的折线图因“{label}”存在重复时间或序列值，未连接成折线渲染。')
+            continue
+        if kind == "PIE" and len({str(row.get(label)) for row in rows}) > 8:
+            kind = "BAR"
+            notes.append(f'“{label}”的类别超过8个，饼图建议已按柱状图渲染。')
+        specs.extend(_one(kind, label, value, rows, title[:200] or f"{value}概览"))
+    return specs[:3], list(dict.fromkeys(notes))
+
+
 def _build_metric_chart(
     intent: PrimaryIntent,
     columns: list[str],

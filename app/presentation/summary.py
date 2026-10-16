@@ -14,8 +14,12 @@ def result_introduction(question: str, *, analysis: bool = False) -> str:
     return '分析结果如下：' if analysis else '查询结果如下：'
 
 
-def brief_summary(value: Any) -> str:
-    """Keep a few complete prose sentences, not tables, links or insight reports."""
+def brief_summary(value: Any, *, limit: int = 240, max_sentences: int = 3) -> str:
+    """Keep a few complete prose sentences, not tables, links or insight reports.
+
+    The final-output business summary passes wider limits; other call sites
+    keep the default compact size.
+    """
     if not isinstance(value, str):
         return ''
     lines = [line.strip() for line in value.splitlines() if line.strip()
@@ -28,9 +32,9 @@ def brief_summary(value: Any) -> str:
     for sentence in sentences:
         if not sentence:
             continue
-        if selected and sum(map(len, selected)) + len(sentence) > 240:
+        if selected and sum(map(len, selected)) + len(sentence) > limit:
             break
         selected.append(sentence)
-        if len(selected) >= 3:
+        if len(selected) >= max_sentences:
             break
     return ''.join(selected)

@@ -64,7 +64,7 @@ SYSTEM_PROMPT = """你是负责“数据洞察分析”节点的资深数据分�
 - 对业务原因的合理推测在相应文字前标注【推测】，并说明支持它的本轮数据及尚未确认的条件；【推测】不是编造外部背景的许可。例如，仅凭 ICU 领用量较高，不能推断具体治疗场景或采购原因。普通数据比较和可复算的计算不必标成推测；没有推测依据时直接说明原因无法确定，不为凑报告增加猜测。
 - query_data 是本次处理后的完整查询结果，与最终页面仅展示20行的预览不同；用全部提供的数据分析，不得把页面展示条数当成分析样本量。只有 sample_only=true 或 warnings 明确说明上游结果不完整时，才按已有部分分析，不当作全量排名、分布或总体统计。查询本身的筛选、TopN或LIMIT范围仍然有效，不能扩大成数据库全部业务数据。
 - 保留指标、对象、时间、单位和筛选口径；用户未指定且结果也未提供的时间范围，不得自行补充。已有 summary、facts 是分析参考，不要求逐字复述，也不限制只能用预先选好的几句判断。
-- 不生成图表、图片或附件链接，不展示内部算法字段，不输出隐藏思维链或自我对话；交付可供用户阅读的数据依据、比较方法、解释和局限。
+- 分析正文不生成图表、图片或附件链接，不展示内部算法字段，不输出隐藏思维链或自我对话；交付可供用户阅读的数据依据、比较方法、解释和局限。是否适合配图通过 final_answer.chart_suggestions 表达，不在正文里描述或要求图表。
 - 数据充分时写成约八百至一千五百字的连贯分析报告；段落、小标题和分析次序由问题及数据决定，不固定套用章节。单值或少量数据按实际信息量展开，不凑字数，不重复结论，末尾至多一句简短判断。
 - 输出 JSON claims，每条 statement 是一段分析，certainty 可用 VERIFIED_FACT（观察）、SUPPORTED_HYPOTHESIS（推断）、LIMITATION（局限）。evidence_ids 可以省略，不要求逐条引用。若引用，只用输入中存在的 ID。
 """
@@ -75,22 +75,30 @@ COMBINED_ADDENDUM = """本次调用面向一个完整用户目标，而不是分
 - 每个子任务的口径相互独立，计算和比较只在各自 facts 范围内进行；不同子任务的结果不能直接相加或合并出总体数字，跨任务比较时说明各自口径与覆盖范围的差异。
 - claims 围绕补全后的问题组织一份连贯的详细洞察，按业务关系说明依据、比较方法、含义和限制；不要按任务编号逐项分析，不复述规划流水或每个子任务的回答。
 - executed_query 与 query_data 的边界规则对每个子任务分别适用：使用每项任务提供的全部处理后数据；sample_only=true 时如实说明范围，不把最终页面的20行展示限制当成分析范围。
-- 同一次调用另返回 final_answer 对象：overview（直接回答用户问题的简短总结）、findings（简短关键发现字符串数组）、tips（限制和必要建议字符串数组）、result_task_ids（最终需要展示的实际结果对应 task_id 数组）。详细洞察和最终摘要各司其职，不复制整份 claims。
+- 同一次调用另返回 final_answer 对象：overview（结合根问题从业务层面直接回答用户的总结）、findings（简短关键发现字符串数组）、tips（限制和必要建议字符串数组）、result_task_ids（最终需要展示的实际结果对应 task_id 数组）、chart_suggestions（可选，基于某个子任务真实结果给出的图表建议，规则见 FINAL_SUMMARY_ADDENDUM）。详细洞察和最终摘要各司其职，不复制整份 claims。
 - result_task_ids 按 completed_question 中用户明确要求的结果选择，保留已经完成的合并结果：同一计算结果已包含用户要求的分子数值和比例时，只选该合并结果，不再重复展示分子表。独立要求且合并结果未包含的总数等结果另选。只问比例时，不展示中间取数表。选择依据是完整问题的语义和已执行结果，不按任务序号、固定词或依赖末端机械判断；缺失结果如实说明。
 - final_answer 同时返回 result_titles 对象（键为选中的 task_id，值为业务标题）。标题必须概括该合并结果承接的全部用户诉求，不是给最后一道计算步骤取名字。以 completed_question 为依据保留对象、范围和用户明确要求的指标；任务问题只解释执行步骤，表头只用于核对结果，二者都不能取代用户需求来命名。用户没有要求的辅助指标不自动加入标题。不同地区、时期、对象在标题中保留区别。
 - 标题正反例：用户要求“分别统计上海市各个经销商的已合作医院数和上海市的区域医院总数，并计算各个经销商的区域医院覆盖率”，已合作医院数与覆盖率已在同一结果中，则标题为“上海市各经销商的已合作医院数及区域医院覆盖率”，不能仅写“上海市各经销商的区域医院覆盖率”；另一个总数结果标题为“上海市区域医院总数”。相反，用户只问覆盖率时，标题为“上海市各经销商的区域医院覆盖率”，不能因为返回了辅助医院数列就扩大标题。此原则同样适用于销量与占比、金额与增长率等，不固定套用示例指标。
 - 上述例子不是本次请求：如果当前用户只要“已合作医院数和覆盖率”，应仅选择承载二者的合并结果，不选择区域医院总数；仅当当前用户明确索要区域医院总数时才单独选它。不能因为总数是计算依赖、或示例里出现过，就把它当成用户要求返回的内容。
-- final_answer 不写表格、图表、附件链接，不重新编写数据单元格；程序会按选中的 task_id 使用原始结果展示。不能虚构 task_id、计算结果或把规划当成已执行事实。
+- final_answer 不写表格、附件链接，不重新编写数据单元格；图表只通过 chart_suggestions 给出结构化建议，由程序依据真实结果校验并渲染。程序会按选中的 task_id 使用原始结果展示。不能虚构 task_id、计算结果或把规划当成已执行事实。
 - 输出必须同时包含 claims 和 final_answer，示例结构：{"claims":[{"statement":"整体分析正文"}],"final_answer":{"overview":"回答补全后的问题","findings":[],"tips":[],"result_task_ids":["最终交付结果的任务ID"],"result_titles":{"最终交付结果的任务ID":"概括用户在这份结果中要求返回的内容"}}}。分子、分母等中间取数只作为依据，用户只问计算后的指标时，不选中这些中间表；只有用户明确同时索要中间指标时才另选。不得将不同经销商的去重医院数相加，声称是合并后的去重医院覆盖数。
 """
 
 FINAL_SUMMARY_ADDENDUM = """
-同时提供 final_answer.overview，作为最终输出的简短总结：以 completed_question
-为准，结合本轮实际查询和计算数据，用1至3句话（通常不超过200字）直接回答用户。
-不要只写“查询成功”“见表格”，不要复述工具过程或整份详细分析。保留必要的对象、
-时间、指标和范围；预览、缺失结果、零结果与执行失败必须区分，不猜原因或补造数字。
-用户要求的图型交给程序依据真实结果绘制，摘要不输出图片、表格或下载链接。
-该摘要与 claims 详细分析分别输出；不存在可用数据时如实说明，不能编造成功结论。
+同时提供 final_answer.overview，作为最终输出面向用户的业务总结：以 completed_question
+为准，结合本轮洞察分析的内容，从业务层面总结并直接回答用户的问题——先回应问题本身，
+再概括关键业务含义（总体水平、主要差异、结构特点或值得关注的点），写成3至5句连贯文字
+（通常不超过400字）。不要只写“查询成功”“见表格”，不要复述工具过程、任务步骤或整份
+详细分析。保留必要的对象、时间、指标和范围；预览、缺失结果、零结果与执行失败必须区分，
+不猜原因或补造数字。该总结与 claims 详细分析分别输出；不存在可用数据时如实说明，
+不能编造成功结论。
+
+final_answer 还可包含 chart_suggestions：当结果适合图形化（类别对比、构成占比、时间趋势）
+且为聚合后的小表（不超过200行）时，给出建议数组；每项包含 chart_type（仅限 BAR、LINE、PIE）、
+label_column（维度列名）、value_column（数值指标列名）、title（简短概括图表内容的标题），
+多任务场景再加 task_id 指明建议基于哪个任务的结果。列名必须逐字取自该任务实际返回的
+表头，不得虚构、翻译或改写；程序会按真实结果校验，列名对不上就不会渲染。明细名单、
+单值结果或行数过多的数据不要建议图表；不确定时省略该字段，宁缺毋滥。
 """
 
 # Adapt the context-driven method from NL_Agent/node/step3_Planner_and_execute.py
@@ -281,6 +289,20 @@ class QwenAnalysisSynthesizer:
                     key: " ".join(value.split()) for key, value in final["result_titles"].items()
                     if isinstance(key, str) and isinstance(value, str) and value.strip()
                 }
+            if isinstance(final.get("chart_suggestions"), list):
+                suggestions = []
+                for item in final["chart_suggestions"]:
+                    if not isinstance(item, dict):
+                        continue
+                    entry = {
+                        key: " ".join(str(item[key]).split())
+                        for key in ("task_id", "chart_type", "label_column", "value_column", "title")
+                        if isinstance(item.get(key), str) and item[key].strip()
+                    }
+                    if entry.get("label_column") and entry.get("value_column"):
+                        suggestions.append(entry)
+                if suggestions:
+                    clean_final["chart_suggestions"] = suggestions[:3]
         return SynthesisOutput(claims=claims, final_answer=clean_final)
 
     @classmethod

@@ -30,7 +30,7 @@ from app.analysis import (
     build_query_result_insight,
 )
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
-from app.analysis.visualization import render_chart_svg, requested_chart_specs
+from app.analysis.visualization import render_chart_svg, requested_chart_specs, suggested_chart_specs
 from app.services.general_rules import attach_general_rules
 from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.memory_manager import MemoryManager
@@ -111,7 +111,7 @@ from app.presentation import (
     render_intent_recognition_display_v2,
     render_reliability_validation,
 )
-from app.presentation.root_report import collect_root_materials, render_root_report, preview_result_tables, apply_requested_root_charts
+from app.presentation.root_report import collect_root_materials, render_root_report, preview_result_tables, apply_requested_root_charts, apply_insight_root_charts
 from app.presentation.summary import brief_summary, result_introduction
 from app.skills import DynamicSkillLoader, skill_for_intent
 from minio_followup_store import (
@@ -3748,8 +3748,17 @@ class DataAnalysisOrchestrator:
         combined_answer, selected_task_ids = render_root_report(completed_question, materials, final_plan)
         requested_root_charts = apply_requested_root_charts(
             completed_question, materials, selected_task_ids, self._render_inline_charts)
+        # 用户显式图型优先；未显式要求时采纳洞察模型的结构化建议（逐条经
+        # suggested_chart_specs 按真实结果校验后渲染），建议无效则不出图。
+        insight_root_charts: list = []
         if requested_root_charts is not None:
             combined_answer, selected_task_ids = render_root_report(completed_question, materials, final_plan)
+        elif final_plan.get('chart_suggestions'):
+            insight_root_charts = apply_insight_root_charts(
+                completed_question, materials, selected_task_ids,
+                final_plan['chart_suggestions'], self._render_inline_charts)
+            if insight_root_charts:
+                combined_answer, selected_task_ids = render_root_report(completed_question, materials, final_plan)
         # Keep real links available, but never repeat child answer bodies.
         merged_links = list(dict.fromkeys(
             link for result in task_results
@@ -3759,6 +3768,8 @@ class DataAnalysisOrchestrator:
         chart_specs = [spec for result in task_results if result.task_id in selected_task_ids for spec in result.chart_specs]
         if requested_root_charts is not None:
             chart_specs = requested_root_charts
+        elif insight_root_charts:
+            chart_specs = insight_root_charts
         if shared_clarification is not None:
             # A clarification is not a completed report. Keep the shared
             # question as the response instead of wrapping it in an empty
@@ -8029,6 +8040,8 @@ class DataAnalysisOrchestrator:
                     )
                 )
 
+        # 洞察综合结果：defer/不可用路径下保持 None，图表管线据此跳过建议。
+        synthesis = None
         if insight_output is not None and chat._dag_defer_insight:
             # 多任务拆分：子任务不出单独的解读，模型输入暂存到请求上，
             # 等全部任务跑完由父级调 synthesize_combined 做一次整体汇总。
@@ -8126,7 +8139,7 @@ class DataAnalysisOrchestrator:
                             semantic_model_id=chat.semantic_model_id,
                         )
                     )
-                    final_summary = brief_summary((getattr(synthesis, 'final_answer', None) or {}).get('overview'))
+                    final_summary = brief_summary((getattr(synthesis, 'final_answer', None) or {}).get('overview'), limit=400, max_sentences=5)
                     timing.mark_first_result()
                 evidence.append(
                     EvidenceItem(
@@ -8222,6 +8235,16 @@ class DataAnalysisOrchestrator:
             )
             if explicit_charts is not None:
                 chart_specs = [spec.model_dump(mode='json') for spec in explicit_charts]
+            else:
+                # 用户没有显式指定图型时，洞察模型的结构化建议优先于按意图的
+                # 自动图：建议逐条经真实结果校验（列名、数值、行数），全部
+                # 无效时保留原有意图自动图，行为不回退。
+                suggested, suggest_notes = suggested_chart_specs(
+                    query_result.dataset.columns, query_result.dataset.rows,
+                    (getattr(synthesis, 'final_answer', None) or {}).get('chart_suggestions') or [])
+                if suggested:
+                    chart_specs = [spec.model_dump(mode='json') for spec in suggested]
+                    chart_notes = [*chart_notes, *suggest_notes]
             timing.set_attribute("chart_count", len(chart_specs))
             timing.mark_first_result()
         visualization_executions: list[ExtensionExecution] = []

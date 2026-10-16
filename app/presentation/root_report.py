@@ -5,7 +5,7 @@ from typing import Any
 
 from app.analysis.interpretation import AnswerPlan
 from app.domain.models import AgentResponse, TaskExecutionResult, TaskPlan
-from app.analysis.visualization import requested_chart_specs
+from app.analysis.visualization import requested_chart_specs, suggested_chart_specs
 from app.presentation.summary import brief_summary
 
 
@@ -179,7 +179,7 @@ def render_root_report(
             charts.append(presentation["chart"])
     if requested and not valid_selection:
         notes.append("部分汇总信息未生成，以下保留已完成的结果。")
-    overview = brief_summary(final.get("overview")) or ' '.join(dict.fromkeys(
+    overview = brief_summary(final.get("overview"), limit=400, max_sentences=5) or ' '.join(dict.fromkeys(
         summary for item in selected[:2] if (summary := brief_summary(item.get('summary')))
     )) or "以下为本次问题已获得的结果。"
     answer = AnswerPlan(
@@ -215,4 +215,45 @@ def apply_requested_root_charts(question, materials, selected_ids, render):
         if requested and not images:
             notes.append('所要求的图表暂未渲染成功，已保留查询结果，未提供虚构图片链接。')
         presentation.setdefault('notes', []).extend(notes)
+    return specifications
+
+
+def apply_insight_root_charts(
+    question, materials, selected_ids, suggestions, render,
+):
+    """Render only insight-driven suggestions grounded in a delivered dataset.
+
+    Unlike user-requested charts, these come from the insight model and are
+    validated by suggested_chart_specs before rendering. A suggestion without
+    task_id is honored only when exactly one task is selected; suggestions
+    pointing at unselected tasks are ignored. Never exceeds 3 charts total.
+    """
+    specifications = []
+    single = len(selected_ids) == 1
+    for item in materials:
+        if item['task_id'] not in selected_ids:
+            continue
+        matched = [
+            entry for entry in suggestions
+            if entry.get('task_id') == item['task_id']
+            or (not entry.get('task_id') and single)
+        ]
+        if not matched:
+            continue
+        facts = item.get('facts') or {}
+        data = facts.get('query_data') or {}
+        task_specs, notes = suggested_chart_specs(
+            data.get('columns') or [], data.get('rows') or [], matched)
+        presentation = item.setdefault('presentation', {})
+        room = max(0, 3 - len(specifications))
+        if task_specs and len(task_specs) > room:
+            notes.append('本次已达到3张图的展示上限，其余结果仍保留在表格和附件中。')
+        presentation.setdefault('notes', []).extend(notes)
+        take = task_specs[:room]
+        if not take:
+            continue
+        specifications.extend(take)
+        images = render(chart_specs=[spec.model_dump(mode='json') for spec in take])
+        if images:
+            presentation['chart'] = ('\n\n#### 图表\n\n' + '\n\n'.join(images))
     return specifications
