@@ -249,6 +249,17 @@ def _group_exposes_field(group, field, catalog):
         return True
     definition = catalog['dimensions'].get(code)
     entity = catalog['entities'].get(code)
+    if definition is None and entity is None and '.' in code and not group.get('granularity'):
+        # 字段式分组维度（如 product.product_code）没有逻辑维度定义。
+        # 它与展示字段同属一个实体时，分组字段与该实体的主名称属性是
+        # 同一行的 1:1 身份/标签对，沿用与逻辑维度一致的判定，
+        # 不改变统计粒度。
+        owner = catalog['fields'].get(code, {}).get('owner')
+        entity = catalog['entities'].get(owner) or {}
+        if not entity:
+            return False
+        definition = {'field_mapping': code}
+        code = owner
     if not definition or not entity or group.get('granularity') or definition.get('enum_list'):
         return False
     mappings = _object(definition.get('bind_entities')) or []
