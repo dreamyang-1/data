@@ -1,8 +1,11 @@
 """Auditable last gate for Legacy clarification; no raw business text in traces."""
 import hashlib
 import json
+import logging
 
 from app.domain.models import CanonicalAnalysisRequest, ClarificationDecisionTrace
+
+logger = logging.getLogger(__name__)
 
 
 USER_SLOTS = {
@@ -149,4 +152,20 @@ def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source
         evidence_codes=[reason, 'LEGACY_CLARIFICATION_GATE_V1'], is_user_ambiguity=is_user,
         system_repair_possible=system_repair, safe_default_available=safe_default, decision='ASK' if allowed else 'SUPPRESS',
     )
+    if trace.decision == 'SUPPRESS':
+        # 拦停诊断：SUPPRESS（尤其 ASL 绑定阶段）会直接导致 SAFE_FALLBACK，
+        # 决策依据必须落日志，否则事后无从定位是哪条歧义、因何种原因被拦。
+        logger.warning(
+            "clarification suppress detail: request_id=%s slot=%s stage=%s reason=%s "
+            "is_user=%s already_asked=%s safe_default=%s options=%s blockers=%s",
+            request.request_id, slot, source_stage, reason,
+            is_user, already, safe_default, list(options)[:5],
+            [
+                {
+                    'id': item.ambiguity_id, 'type': item.type, 'phrase': item.phrase,
+                    'question': item.question, 'candidates': list(item.candidates)[:5],
+                }
+                for item in ambiguities[:5]
+            ],
+        )
     return key, trace

@@ -220,6 +220,46 @@ def test_different_business_decision_does_not_share_repetition_key(change):
     assert not new_trace.already_asked and new_trace.decision == "ASK"
 
 
+def _suppress_detail_records(caplog):
+    return [
+        record for record in caplog.records
+        if "clarification suppress detail" in record.getMessage()
+    ]
+
+
+def test_orphan_semantic_slot_suppress_logs_system_failure_with_empty_blockers(caplog):
+    """回归：孤儿 semantic_ambiguity 槽位被抑制时必须留下完整诊断日志。
+
+    2026-10-16 晨 49 现场：任务级子请求在 STRUCTURED_ASL_BINDING 阶段
+    missing_slots=['semantic_ambiguity'] 但决策依据未落日志，SAFE_FALLBACK
+    后无从定位是哪条歧义、因何种原因被拦。
+    """
+    import logging
+    request = pending()
+    request.semantic_ambiguities = []
+    with caplog.at_level(logging.WARNING, logger="app.services.clarification_policy"):
+        _, trace = decision(request)
+    assert trace.decision == "SUPPRESS"
+    assert trace.reason_type == "SYSTEM_FAILURE"
+    records = _suppress_detail_records(caplog)
+    assert records and "reason=SYSTEM_FAILURE" in records[-1].getMessage()
+    assert "blockers=[]" in records[-1].getMessage()
+
+
+def test_repeated_question_suppress_logs_reason_and_blocker_details(caplog):
+    import logging
+    request = pending()
+    with caplog.at_level(logging.WARNING, logger="app.services.clarification_policy"):
+        key, _ = decision(request)
+        _, repeated = decision(request, [key])
+    assert repeated.decision == "SUPPRESS"
+    assert repeated.reason_type == "REPEATED_QUESTION"
+    records = _suppress_detail_records(caplog)
+    assert records and "reason=REPEATED_QUESTION" in records[-1].getMessage()
+    # 歧义明细（类型/短语/候选数）必须可见，便于定位是哪条口径被拦
+    assert "blockers=[{'id':" in records[-1].getMessage()
+
+
 def test_trace_contains_only_visible_candidate_hashes():
     request = pending()
     request.semantic_ambiguities.append(ambiguity("dimension", "区域"))
