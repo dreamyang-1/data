@@ -2639,6 +2639,34 @@ class SQLTranslatorProd:
                 group_parts.append(companion[0])
         return f"GROUP BY {', '.join(group_parts)}" if group_parts else ""
 
+    def _projected_metric_having(self, conditions, metrics, model_id=None, dialect=None):
+        """MySQL HAVING resolves projected scalar metrics through their aliases.
+
+        A catalog expression can select an ungrouped source column, while
+        repeating that column in HAVING produces error 1054. Reuse the selected
+        metric's output; preserve all other predicates and dialect behavior.
+        """
+        if not conditions:
+            return conditions
+        effective_dialect = dialect or sql_dialects.mysql_dialect()
+        if effective_dialect.key not in {'mysql', 'mariadb'}:
+            return conditions
+        compact = lambda value: re.sub(r'\s+', '', str(value)).casefold()
+        mappings = {}
+        for metric in metrics:
+            code = str(metric['name'])
+            definition = self._get_metric(code, model_id) or {}
+            formula = str((definition.get('calculation_rule') or {}).get('calc_formula') or '')
+            formula = re.sub(r'^\s*[A-Za-z_][A-Za-z0-9_]*\s*=\s*', '', formula).strip()
+            if formula and not re.search(r'\b(?:COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT|STDDEV\w*|VARIANCE)\s*\(', formula, re.I):
+                mappings[compact(formula)] = effective_dialect.order_alias(str(metric.get('alias') or code))
+        result = []
+        for condition in conditions:
+            match = re.fullmatch(r'\s*(.+?)\s*(>=|<=|!=|=|>|<)\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*', condition)
+            alias = mappings.get(compact(match[1])) if match else None
+            result.append(f'{alias} {match[2]} {match[3]}' if alias else condition)
+        return result
+
     def _build_having_clause(self, having_conditions: List[str]) -> str:
         if not having_conditions:
             return ""
@@ -3809,7 +3837,8 @@ class SQLTranslatorProd:
             "" if is_detail_projection
             else self._build_group_by_clause(dimensions, entity_code, model_id, dialect)
         )
-        having_clause = self._build_having_clause(having)
+        having_clause = self._build_having_clause(
+            self._projected_metric_having(having, metrics, model_id, dialect))
         order_by_clause = self._build_order_by_clause(sort, metrics, dimensions, model_id, dialect)
 
         select_keyword = (
