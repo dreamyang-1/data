@@ -318,6 +318,8 @@ class QuestionDecomposition:
     metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None
     # 规范指标表里依赖指标列非空的复合指标：登记名 -> 成分指标
     metric_dependencies: dict[str, tuple[str, ...]] | None = None
+    grounding_default_times: tuple[str, ...] = ()
+    shared_region_denominator: bool = False
 
 
 _NO_DATABASE_QUERY = re.compile(r"(?:不|无需|无须|别)(?:要|用|得|需要)?(?:再)?(?:查询|访问|查)(?:业务)?(?:数据库|库)")
@@ -512,6 +514,65 @@ class TaskPlanningError(RuntimeError):
     pass
 
 
+def _registered_default_times(source: str, spec: str) -> tuple[str, ...]:
+    """Only the current model's declared defaults can supplement user text."""
+    if re.search(
+        r"\d{4}|(?:\d+|[一二三四五六七八九十两]+)(?:年|个月|月份|月|季度|周|日|天)"
+        r"|今天|昨天|前天|本周|上周|下周|本月|上月|下月|今年|去年|前年|明年|最近|近期|近来",
+        source,
+    ):
+        return ()
+    defaults = re.findall(
+        r"未指定时间(?:范围)?[^。；\n]{0,30}?默认(?:取|为|使用)?\s*"
+        r"(最近\s*\d+\s*个?\s*(?:月|周|天|年))",
+        spec,
+    )
+    return tuple(re.sub(r"\s+", "", default) for default in defaults)
+
+
+def _respect_shared_region_denominator(decomposition, source):
+    """Apply the existing versioned catalog rule to the proven bad component."""
+    if not decomposition.shared_region_denominator or '经销商' not in source or re.search(
+            r"按(?:省份|城市)|各(?:省|市)|每(?:个)?(?:省份|城市)", source):
+        return decomposition
+    tasks = []
+    for task in decomposition.tasks:
+        data = task.structured
+        names = [item.get('name') if isinstance(item, dict) else item
+                 for item in (data or {}).get('指标', [])]
+        if names != ['区域全部医院总数'] or (data or {}).get('是否查询数据库') == '否':
+            tasks.append(task)
+            continue
+        wrong_grouping = bool(data.get('维度'))
+        wrong_entity = any(entity in ('经销商', '销售订单') for entity in data.get('实体', []))
+        wrong_filters = any(item.get('entity') == '经销商' for item in data.get('过滤条件', [])
+                            if isinstance(item, dict))
+        wrong_period = bool((data.get('时间粒度') or {}).get('time_range')) and (
+            (data.get('时间粒度') or {}).get('time_range') != '全部历史')
+        if not (wrong_grouping or wrong_entity or wrong_filters or wrong_period):
+            tasks.append(task)
+            continue
+        fixed = copy.deepcopy(data)
+        fixed['维度'] = []
+        fixed['实体'] = [entity for entity in fixed.get('实体', []) if entity not in ('经销商', '销售订单')]
+        fixed['过滤条件'] = [item for item in fixed.get('过滤条件', [])
+                             if not isinstance(item, dict) or item.get('entity') != '经销商']
+        fixed['展示字段'] = [item for item in fixed.get('展示字段', [])
+                             if not isinstance(item, dict) or item.get('entity') != '经销商']
+        # A master-data denominator is independent of transaction activity time.
+        fixed['时间粒度'] = {'unit': None, 'time_range': '全部历史', 'anchor': None}
+        period = '全部历史'
+        filters = json.dumps(fixed.get('过滤条件') or [], ensure_ascii=False)
+        question = f'查询{period}区域全部医院总数'
+        if fixed.get('过滤条件'):
+            question += '，筛选条件：' + filters
+        if task.depends_on:
+            question = '根据上述任务的查询结果，' + question
+        tasks.append(replace(task, question=question, name=f'查询{period}区域全部医院总数',
+                             structured=fixed, parameters=tuple(extraction_to_parameters(fixed))))
+    return replace(decomposition, tasks=tuple(tasks))
+
+
 _EXTRACTION_SCHEMA_DESCRIPTION = (
     "结构化提取JSON，严格按系统提示词中的结构化提取规范输出，"
     "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重/是否查询数据库；"
@@ -599,6 +660,7 @@ _SINGLE_SYSTEM_PROMPT += """
 3. 根据已有结果直接计算、筛选或投影且无须新数据时，作为依赖任务，问题写明“不再查询数据库”，extraction中“是否查询数据库”输出“否”。需要前序数据集中没有的新字段或新关系时应查询数据库，不得用前序表代替新结果。
 4. 有依赖时保留原问题明确的共享时间和筛选范围；用户为后续任务明确指定其他范围时按其要求。不关联的独立任务不消费彼此结果。依赖用于真实的数据传递，不为叙述先后添加虚假依赖。
 5. 不把ASL、SQL、取数、校验、洞察等内部技术步骤拆成业务任务；不重复或遗漏用户要求交付的结果。
+6. 复合指标的每个成分按它自己的登记口径、可用维度生成任务问题与extraction，不能把整题的分组、实体和筛选全部复制给每个成分。若说明文件规定所有对象共用同一区域分母，分母只按明确的区域条件查询，不按这些对象分组，也不改查各对象各自所在区域；分子仍按原要求分组。
 """
 
 # 结构化提取规范整段取自国药语义解析器提示词，extraction字段按此输出。
@@ -678,7 +740,7 @@ class SingleQuestionPlanner:
                     decomposition, unsplit_compound
                 )
                 last_result = decomposition
-            return last_result
+            return _respect_shared_region_denominator(last_result, question)
         return last_result
 
     @staticmethod
@@ -703,6 +765,8 @@ class SingleQuestionPlanner:
                 continue
             structured = task.structured
             if not isinstance(structured, dict):
+                continue
+            if str(structured.get('是否查询数据库') or '').startswith('否'):
                 continue
             metrics = structured.get("指标")
             if not isinstance(metrics, list):
@@ -732,7 +796,9 @@ class SingleQuestionPlanner:
             return decomposition
         split_by_metric = dict(findings)
         new_tasks: list[DecomposedTask] = []
-        for task in decomposition.tasks:
+        old_to_new: dict[int, int] = {}
+        inherited_dependencies: set[int] = set()
+        for old_index, task in enumerate(decomposition.tasks):
             structured = task.structured if isinstance(task.structured, dict) else None
             metric = None
             if structured:
@@ -742,7 +808,9 @@ class SingleQuestionPlanner:
                         metric = name.strip()
                         break
             if metric is None or not structured:
+                inherited_dependencies.add(len(new_tasks))
                 new_tasks.append(task)
+                old_to_new[old_index] = len(new_tasks) - 1
                 continue
             components = split_by_metric[metric]
 
@@ -763,30 +831,38 @@ class SingleQuestionPlanner:
             for comp in components:
                 comp_structured = copy.deepcopy(structured)
                 comp_structured["指标"] = [{"name": comp}]
+                comp_structured['是否查询数据库'] = '是'
                 for sort_item in comp_structured.get("排序") or []:
                     if isinstance(sort_item, dict) and sort_item.get("field") == metric:
                         sort_item["field"] = comp
                 comp_structured["限制"] = None
+                inherited_dependencies.add(len(new_tasks))
                 new_tasks.append(DecomposedTask(
-                    question=f"统计{condition}{comp}",
+                    question=("根据上述任务的查询结果，" if task.depends_on else "") + f"统计{condition}{comp}",
                     name=f"统计{condition}{comp}",
                     intent=task.intent,
-                    parameters=task.parameters,
+                    depends_on=task.depends_on,
+                    parameters=tuple(extraction_to_parameters(comp_structured)),
                     structured=comp_structured,
                 ))
             calc_structured = copy.deepcopy(structured)
             calc_structured["指标"] = [{"name": metric}]
             calc_structured["意图"] = "指标计算"
+            calc_structured['是否查询数据库'] = '否'
             new_tasks.append(DecomposedTask(
                 question=f"根据上述任务的查询结果计算{metric}，不再查询数据库",
                 depends_on=tuple(range(component_start, component_start + len(components))),
                 name=f"计算{metric}",
                 intent=task.intent,
-                parameters=task.parameters,
+                parameters=tuple(extraction_to_parameters(calc_structured)),
                 structured=calc_structured,
             ))
+            old_to_new[old_index] = len(new_tasks) - 1
         if len(new_tasks) == len(decomposition.tasks):
             return decomposition
+        new_tasks = [replace(task, depends_on=tuple(old_to_new.get(dep, dep) for dep in task.depends_on))
+                     if index in inherited_dependencies else task
+                     for index, task in enumerate(new_tasks)]
         return replace(decomposition, tasks=tuple(new_tasks))
 
     async def plan_single(
@@ -1094,6 +1170,8 @@ class SingleQuestionPlanner:
             tasks=tuple(tasks),
             metric_catalog=metric_catalog,
             metric_dependencies=_parse_metric_dependencies(spec_for_catalog),
+            grounding_default_times=_registered_default_times(question, spec_for_catalog),
+            shared_region_denominator='[dealer_shared_region_denominator:v1]' in spec_for_catalog,
         )
 
     @staticmethod
