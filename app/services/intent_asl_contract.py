@@ -487,6 +487,12 @@ def validate_intent_asl_contract_completeness(
         and entity_key(contract.get("query_object"))
         != entity_key(expected_object.value)
         and not relationship_count_projection
+        # 一句话提到多个对象时（如"根据上述任务的查询结果，查询这些经销商
+        # 主要销售的产品"同时出现销售订单/经销商/商品），主查询对象由 ASL
+        # 层按问题语义选定；只要选中的对象在用户本轮显式提及的实体范围内，
+        # 就不算丢失显式条件，仍要求与单个槽位值强相等会把合法选择拦下
+        and entity_key(contract.get("query_object"))
+        not in {entity_key(mention) for mention in request.semantic_entity_mentions}
     ):
         add(
             "EXPLICIT_QUERY_OBJECT_MISSING",

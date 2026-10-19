@@ -39,6 +39,8 @@ class CurrentTurnSemanticParse(StrictModel):
     explicit_slot_mentions: dict[str, list[Identifier]] = Field(default_factory=dict)
     # 语义识别判出的业务无关标记，随解析透传给执行层决定是否跳过任务规划
     off_topic: bool = False
+    # 业务无关的细分：问候类与天气/常识等其他无关内容，展示文案不同
+    off_topic_kind: Literal['GREETING', 'OTHER'] | None = None
 
 
 class CandidateSelectionDecision(StrictModel):

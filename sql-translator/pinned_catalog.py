@@ -347,9 +347,9 @@ class _PinnedTranslator(SQLTranslatorProd):
             clause += ' AND (' + governed[6:] + ')'
         return clause
 
-    def _build_order_by_clause(self, sort, metrics, dimensions, model_id=None):
+    def _build_order_by_clause(self, sort, metrics, dimensions, model_id=None, dialect=None):
         if self.ordering_contract is None:
-            return super()._build_order_by_clause(sort, metrics, dimensions, model_id)
+            return super()._build_order_by_clause(sort, metrics, dimensions, model_id, dialect)
         clauses = []
         for order in self.ordering_contract['order_by']:
             alias = '`' + order['sql_alias'] + '`'

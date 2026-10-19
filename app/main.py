@@ -84,6 +84,7 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
                     app.state.container.orchestrator.close_external_turn
                 ),
                 agent_prompt_store=app.state.container.agent_prompt_store,
+                sessions_store=app.state.container.sessions,
                 external=context_v1_external,
             )
         app.state.isolated_chat_handler = handler

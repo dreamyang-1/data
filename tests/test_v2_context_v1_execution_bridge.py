@@ -453,6 +453,12 @@ async def test_compound_judgment_is_shown_in_resolved_context_and_stashed(provid
 
     assert result.status == "COMPLETED"
     assert len(judge_calls) == 1
+    intent_messages = [
+        event["message"] for event in events
+        if event.get("stage") == "INTENT_RECOGNITION"
+        and event.get("status") == "RUNNING"
+        and event.get("progress_phase") is None
+    ]
     resolved_context = next(
         event for event in events
         if event.get("progress_phase") == "V2_RESOLVED_INTENT_CONTEXT_READY"

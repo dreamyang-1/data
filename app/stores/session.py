@@ -68,6 +68,8 @@ class SessionStore(Protocol):
     async def get_task_frame(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str) -> CanonicalAnalysisRequest | None: ...
     async def put_task_frame(self, request: CanonicalAnalysisRequest) -> None: ...
     async def get_recent_task_frames(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, *, limit: int) -> list[CanonicalAnalysisRequest]: ...
+    async def get_task_table(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str) -> dict | None: ...
+    async def put_task_table(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, table: dict) -> None: ...
     async def put_dataset_reference(self, reference: dict, *, recent_limit: int) -> None: ...
     async def get_recent_dataset_references(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, *, limit: int) -> list[dict]: ...
     async def list_expired_dataset_references(self, *, now_epoch: float, limit: int) -> list[dict]: ...
@@ -106,6 +108,7 @@ class InMemorySessionStore:
         self._recent_task_frames: dict[
             tuple[str, str, str, str], list[tuple[float, CanonicalAnalysisRequest]]
         ] = {}
+        self._task_tables: dict[tuple[str, str, str, str], tuple[float, list[dict]]] = {}
         self._dataset_references: dict[str, dict] = {}
         self._conversation_datasets: dict[tuple[str, str, str, str], list[str]] = {}
         self._dag_checkpoints: dict[tuple[str, str, str, str, str], tuple[float, dict]] = {}
@@ -277,6 +280,28 @@ class InMemorySessionStore:
             ]
             self._recent_task_frames[key] = frames
             return [item[1].model_copy(deep=True) for item in frames[:max(0, limit)]]
+
+    async def get_task_table(
+        self, tenant_id: str, user_id: str, application_id: str, conversation_id: str,
+    ) -> dict | None:
+        key = (tenant_id, user_id, application_id, conversation_id)
+        async with self._lock:
+            item = self._task_tables.get(key)
+            if not item or item[0] <= time.monotonic():
+                self._task_tables.pop(key, None)
+                return None
+            return json.loads(json.dumps(item[1]))
+
+    async def put_task_table(
+        self, tenant_id: str, user_id: str, application_id: str,
+        conversation_id: str, table: dict,
+    ) -> None:
+        key = (tenant_id, user_id, application_id, conversation_id)
+        async with self._lock:
+            self._task_tables[key] = (
+                time.monotonic() + self.ttl_seconds,
+                json.loads(json.dumps(table)),
+            )
 
     async def put_dataset_reference(self, reference: dict, *, recent_limit: int) -> None:
         scope = reference["scope"]
@@ -722,6 +747,29 @@ return 0
             except (ValidationError, ValueError, TypeError):
                 logger.warning("discarding invalid recalled task frame: key=%s", key)
         return result
+
+    async def get_task_table(
+        self, tenant_id: str, user_id: str, application_id: str, conversation_id: str,
+    ) -> dict | None:
+        key = self._key("task-table", tenant_id, user_id, application_id, conversation_id)
+        raw = await self.redis.get(key)
+        if not raw:
+            return None
+        try:
+            return json.loads(raw)
+        except (ValueError, TypeError):
+            logger.error("discarding invalid task-table session state: key=%s", key)
+            await self.redis.delete(key)
+            return None
+
+    async def put_task_table(
+        self, tenant_id: str, user_id: str, application_id: str,
+        conversation_id: str, table: dict,
+    ) -> None:
+        key = self._key("task-table", tenant_id, user_id, application_id, conversation_id)
+        await self.redis.set(
+            key, json.dumps(table, ensure_ascii=False), ex=self.ttl_seconds
+        )
 
     @property
     def _dataset_expiry_key(self) -> str:

@@ -38,6 +38,7 @@ from app.planning import (
     extract_semantic_spec_section,
     judgment_display_section,
 )
+from app.planning.compat import render_prior_task_table_context
 from app.presentation import render_resolved_intent_context_v2
 from app.presentation.catalog_diagnostics import catalog_configuration_answer
 from app.stores import MessageIdReuseConflictError
@@ -526,8 +527,12 @@ class V2ContextV1ExecutionBridge:
         surface_asl_execution_enabled: bool = False,
         agent_prompt_store: Any | None = None,
         compound_judge: Callable[..., Awaitable[Any]] | None = None,
+        sessions_store: Any | None = None,
     ):
         self.store = store
+        # 会话级 store（与 v2 桥接自身的 live state store 不是一回事），
+        # 用于读上一轮落盘的任务表
+        self.sessions_store = sessions_store
         self.catalog = catalog
         self.model = model
         self.v1_executor = v1_executor
@@ -931,8 +936,19 @@ class V2ContextV1ExecutionBridge:
                 current, chat.message_id
             )
             fallback_session.accept_catalog()
+            # 兜底按独立新问题重新走V1链路执行，状态识别行在这里补发，
+            # 保证意图节点的展示与成功路径一致（成功路径的发点在
+            # 识别流程内部，兜底走不到）
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "对话状态识别：新问题。",
+                progress_phase="V2_CURRENT_TURN_PARSED",
+            )
             logger.info(
-                "V2 complete current question falling back to original V1 execution",
+                "V2 complete current question falling back to original V1 "
+                "execution, fallback_reason=%s",
+                str(exc),
                 extra={
                     "message_id": chat.message_id,
                     "fallback_reason": str(exc),
@@ -1128,6 +1144,51 @@ class V2ContextV1ExecutionBridge:
             turn_started = time.monotonic()
             await self._open_external_lifecycle(chat, identity)
 
+            # 危险词检查放在语义识别之前：带挂起任务的会话会把危险输入
+            # 判成对历史任务的继续，AMBIGUOUS 澄清分支先于原检查点返回，
+            # 拦截会被澄清话术顶掉
+            if danger_keyword_hits(chat.question):
+                logger.info(
+                    "dangerous request blocked at v2 bridge: question=%s",
+                    chat.question.strip(),
+                )
+                await emit_progress(
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    "判定思考：用户原始问题为「" + chat.question.strip() + "」。"
+                    "经意图识别，该问题包含数据破坏性动作。根据系统安全与权限管控策略，"
+                    "当前对话环境仅支持数据的查询、统计与分析，严禁执行任何增删改（CUD）操作。"
+                    "因此，系统需触发安全拦截机制。",
+                    progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+                    off_topic=True,
+                )
+                response = self._response(
+                    chat,
+                    status="COMPLETED",
+                    answer=(
+                        "您当前的问题涉及数据的危险操作。为了保障数据安全，"
+                        "当前系统仅支持数据的查询、统计与分析，"
+                        "无法执行任何修改或删除指令。"
+                    ),
+                ).model_copy(update={
+                    "intent": PrimaryIntent.OUT_OF_SCOPE,
+                    "intent_source": "SAFETY_GUARD",
+                })
+                return await self._finalize_turn(
+                    chat,
+                    identity,
+                    await self._save_without_v1(
+                        snapshot,
+                        chat=chat,
+                        identity=identity,
+                        fingerprint=fingerprint,
+                        resolved=ResolvedContextTurn(None, None, None),
+                        response=response,
+                        provenance=None,
+                    ),
+                    turn_started,
+                )
+
             if chat.temp_file_paths:
                 # An uploaded file is already a concrete V1 execution input;
                 # business-semantic completion cannot add meaning to a bare
@@ -1288,6 +1349,18 @@ class V2ContextV1ExecutionBridge:
                 )
 
             context_chat = chat.model_copy(deep=True, update={"history": []})
+            if self.sessions_store is not None:
+                try:
+                    prior_table = await self.sessions_store.get_task_table(
+                        identity.tenant_id, identity.user_id,
+                        chat.application_id, chat.conversation_id,
+                    )
+                    if prior_table:
+                        # 上一轮的任务表随本轮识别上下文一起给模型，辅助
+                        # 判断意图/追问与复用、参数提取
+                        context_chat._prior_task_table = prior_table
+                except Exception as exc:
+                    logger.warning("failed to load prior task table: %s", exc)
             await emit_progress(
                 "INTENT_RECOGNITION",
                 "RUNNING",
@@ -1516,11 +1589,23 @@ class V2ContextV1ExecutionBridge:
                     off_topic=True,
                 )
             elif off_topic_parse is not None and off_topic_parse.off_topic:
+                # 问候与天气/常识等其他无关内容的判定思考措辞不同，
+                # off_topic_kind 由识别模型输出
+                question = chat.question.strip()
+                if getattr(off_topic_parse, "off_topic_kind", None) == "GREETING":
+                    off_topic_thinking = (
+                        "判定思考：用户输入「" + question + "」属于日常问候语，"
+                        "未包含具体的业务指标、实体或分析意图。系统应直接响应问候。"
+                    )
+                else:
+                    off_topic_thinking = (
+                        "判定思考：用户输入「" + question + "」与业务数据查询与分析场景无关，"
+                        "未包含具体的业务指标、实体或分析意图。系统直接回复。"
+                    )
                 await emit_progress(
                     "INTENT_RECOGNITION",
                     "RUNNING",
-                    "判定思考：用户输入「" + chat.question.strip() + "」属于日常问候语，"
-                    "未包含具体的业务指标、实体或分析意图。系统应直接响应问候。",
+                    off_topic_thinking,
                     progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
                     off_topic=True,
                 )
@@ -1538,11 +1623,17 @@ class V2ContextV1ExecutionBridge:
                     self.compound_judge is not None
                     and semantic_decision.status == "REQUIRES_V1_FALLBACK"
                 ):
-                    judge_semantic_context = (
+                    judge_semantic_context = "\n".join(filter(None, (
                         extract_semantic_spec_section(chat.prompt.render())
                         if chat.prompt is not None
-                        else ""
-                    )
+                        else "",
+                        # 上一轮任务表给拆分判断
+                        # 能否由上轮结果承接，判断时就要知道；任务表挂在
+                        # context_chat 上，不能读错对象
+                        render_prior_task_table_context(
+                            getattr(context_chat, "_prior_task_table", None)
+                        ),
+                    )))
                     await emit_progress(
                         "INTENT_RECOGNITION",
                         "RUNNING",
@@ -1604,6 +1695,13 @@ class V2ContextV1ExecutionBridge:
                 deep=True,
                 update={"question": resolved.completed_question, "history": []},
             )
+            # 上一轮任务表挂在识别用的 context_chat 上，深拷贝不自带，
+            # 执行层规划（拆分判断/任务拆解）要靠它看到上轮结果
+            prior_table_for_execution = getattr(
+                context_chat, "_prior_task_table", None
+            )
+            if prior_table_for_execution:
+                execution_chat._prior_task_table = prior_table_for_execution
             execution_chat._completed_question_execution = True
             if off_topic_parse is not None and off_topic_parse.off_topic:
                 # 执行层据此跳过拆分器与意图分类模型，直接受控聊天回复
@@ -1815,6 +1913,7 @@ def build_context_v1_execution_handler(
     ] | None = None,
     external: ContextV1ExternalDependencies | None = None,
     agent_prompt_store: Any | None = None,
+    sessions_store: Any | None = None,
 ) -> V2ContextV1ExecutionBridge:
     receipt = validate_context_v1_settings(settings)
     dependencies = external or ContextV1ExternalDependencies(
@@ -1853,6 +1952,7 @@ def build_context_v1_execution_handler(
             settings, "surface_asl_execution_enabled", False
         ),
         agent_prompt_store=agent_prompt_store,
+        sessions_store=sessions_store,
         # 拆分判断提前到补全问题展示前执行，仅在编排器会走拆分器时注入；
         # 多问题开关关闭时编排器不做任务规划，判断结论也没有展示意义。
         compound_judge=(

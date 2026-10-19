@@ -159,6 +159,33 @@ def test_conflicting_shared_source_is_not_first_wins():
         build_catalog_records(reseal(current),embed)
 
 
+def test_enum_without_code_falls_back_to_value_like_query_binding():
+    """2026-10-15：旧数据枚举只有 name/value 时按 value 作稳定编码。
+
+    校验（catalog_generation）与记录 ID（vector_store）必须一致回退，
+    否则发布被 CATALOG_STABLE_ID_REQUIRED 拦截或记录 ID 变成随机 uuid。
+    """
+    current=authority()
+    doc=current["documents"][0]
+    doc["dimensions"][0]["enum_list"]=[{"name":"集中配送","value":"1"},{"name":"直销","value":"3"}]
+    records,_=build_catalog_records(reseal(current),embed)
+    assert "sm81_bd205:enum:city.1" in {r.id for r in records}
+    assert "sm81_bd205:enum:city.3" in {r.id for r in records}
+    assert not any(r.id.startswith("sm81_bd205:enum:city.") and r.id not in (
+        "sm81_bd205:enum:city.1","sm81_bd205:enum:city.3") for r in records)
+
+
+def test_enum_with_neither_code_nor_value_is_still_rejected_with_dimension_context():
+    current=authority()
+    doc=current["documents"][0]
+    doc["dimensions"][0]["enum_list"]=[{"name":"未知枚举"}]
+    with pytest.raises(CatalogEvidenceError) as exc_info:
+        build_catalog_records(reseal(current),embed)
+    issue=exc_info.value.issues[0]
+    assert issue["key"]=="code" and issue["reason"]=="MISSING"
+    assert issue["dim_code"]=="city" and issue["dim_name"]=="城市"
+
+
 def test_unowned_or_opaque_dimension_is_explicitly_excluded_not_published_as_owned():
     current=authority();current["documents"][0]["dimensions"][0]["special_rules"]={"unverified":"rule"}
     records,coverage=build_catalog_records(reseal(current),embed)

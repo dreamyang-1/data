@@ -48,7 +48,32 @@ class DiscoveredContext:
     pending_digest: str | None
 
 
-def discover_context(session, *, state=None, plans=(), pending=None):
+def _trim_prior_task_table(table, budget=6000):
+    """上一轮任务表进模型上下文前的瘦身：预算内原样带上，超了先丢结果
+    采样再丢整份概要，保证不挤占候选任务等主干上下文。"""
+    encoded = json.dumps(table, ensure_ascii=False, default=str)
+    if len(encoded) <= budget:
+        return table
+    trimmed = {key: value for key, value in table.items() if key != 'tasks'}
+    trimmed['tasks'] = []
+    for row in table.get('tasks', []):
+        if not isinstance(row, dict):
+            continue
+        summary = row.get('结果概要')
+        if isinstance(summary, dict) and 'sample' in summary:
+            slim = dict(summary)
+            slim.pop('sample', None)
+            row = {**row, '结果概要': slim}
+        trimmed['tasks'].append(row)
+    encoded = json.dumps(trimmed, ensure_ascii=False, default=str)
+    if len(encoded) <= budget:
+        return trimmed
+    for row in trimmed['tasks']:
+        row.pop('结果概要', None)
+    return trimmed
+
+
+def discover_context(session, *, state=None, plans=(), pending=None, prior_task_table=None):
     """Scope restoration precedes exposure; no text/parse/relation argument."""
     current = restored_state(session, state)
     prior_plans = {}
@@ -120,6 +145,13 @@ def discover_context(session, *, state=None, plans=(), pending=None):
         candidate_tasks=candidates, candidate_count=len(candidates), pending=pending_summary,
         candidate_scope=scope, candidate_policy='ACTIVE_PENDING_THEN_RECENT_V1',
         omitted_task_count=len(eligible)-len(candidates))
+    if prior_task_table:
+        # 上一轮编排器落盘的任务表（含各任务结果概要）：给模型判断本轮是
+        # 复用上轮结果还是提取参数发新查询用。超预算时丢弃采样只留结构，
+        # 任务表不能挤掉候选任务等主干上下文
+        trimmed = _trim_prior_task_table(prior_task_table)
+        if trimmed is not None:
+            context['prior_task_table'] = trimmed
     if len(json.dumps(context, ensure_ascii=False)) > MAX_CONTEXT_CHARACTERS:
         raise ValueError('CONTEXT_SUMMARY_BUDGET_EXCEEDED')
     return DiscoveredContext(context, contract_digest(context), contract_digest(current.model_dump(mode='json')),

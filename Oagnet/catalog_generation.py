@@ -10,7 +10,10 @@ import math
 
 from catalog_release import CatalogEvidenceError, digest, prepare_release, validate_snapshot
 from dimension_scope import normalize_governed_id, project_dimension_to_domain
-from vector_store import VectorRecord, build_records_from_dsl, build_records_from_tables
+from vector_store import (
+    VectorRecord, build_records_from_dsl, build_records_from_tables,
+    enum_stable_code,
+)
 
 GENERATION_CONTRACT = "catalog-generation-v1"
 
@@ -72,9 +75,13 @@ def _dsl_inventory(document):
             raise CatalogEvidenceError("CATALOG_METRIC_OWNERSHIP_INVALID")
     for dimension in document["dimensions"]:
         code = _code(dimension, "dim_code")
+        dim_ctx = {"dim_code": code, "dim_name": dimension.get("dim_name")}
         add(f"{shared}:dim:{code}")
         for enum in dimension.get("enum_list") or []:
-            add(f"{shared}:enum:{code}.{_code(enum, 'code')}")
+            # 2026-10-15：旧数据的枚举只有 name/value（无 code），与查询期绑定
+            # （structured_binding 的 code->value 回退）对齐，value 可作稳定编码；
+            # 两者都缺失时仍拦截，并附维度上下文便于定位配置。
+            add(f"{shared}:enum:{code}.{_code({**enum, **dim_ctx, 'code': enum_stable_code(enum) or ''}, 'code')}")
         projected = project_dimension_to_domain(dimension, document)
         if projected is None:
             # A shared definition is not silently deemed an owned projection.
@@ -83,7 +90,7 @@ def _dsl_inventory(document):
         else:
             add(f"{prefix}:dim:{code}")
             for enum in projected.get("enum_list") or []:
-                add(f"{prefix}:enum:{code}.{_code(enum, 'code')}")
+                add(f"{prefix}:enum:{code}.{_code({**enum, **dim_ctx, 'code': enum_stable_code(enum) or ''}, 'code')}")
     return expected, excluded
 
 

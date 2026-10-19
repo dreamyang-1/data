@@ -301,6 +301,9 @@ class PlannerOutcome:
     single_structured: dict[str, Any] | None = None
     # 模型生成的任务名称（陈述句），缺省时展示层按规则从问题文本转换
     single_task_name: str | None = None
+    # 拆解模型输出的任务问题文本：追问复用轮带"复用上一轮查询结果"前缀
+    # 和具体参数值，展示与任务表按它判断参数提取型复用
+    single_task_question: str | None = None
     # 本次注入规范解析出的指标目录（登记名集合 + 别名映射），供归一与重试判定
     metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None
 
@@ -566,7 +569,7 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 任务拆解规则：
 1. 默认输出1个任务，任务问题即用户问题本身。
 2. 明细查询（名单/明细/清单类返回）带指标阈值条件（如“订单笔数大于5笔”“合作时长大于3个月”“销售额大于100万”）时，阈值不能作用在明细行上，拆为2个任务：任务1按该指标做分组统计（写明分组维度和指标，保留原问题的地区、产品、时间等其他筛选条件），任务2依赖任务1，任务问题写明“根据上述任务的查询结果筛选×××，不再查询数据库”。
-3. 先排名或筛选出对象、再查询这些对象的其他关系或明细时（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”），拆为2个任务：任务1排名或筛选，任务2依赖任务1并写明“根据上述任务的查询结果……”。任务2要执行新的数据库查询，问题里不要写“不再查询数据库”——该句只允许出现在基于前序结果直接计算或筛选、不再发任何新查询的任务里。
+3. 先排名或筛选出对象、再查询这些对象的其他关系或明细时（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”），拆为2个任务：任务1排名或筛选，任务2依赖任务1并写明“根据上述任务的查询结果……”。任务2要执行新的数据库查询，问题里不要写“不再查询数据库”——该句只允许出现在基于前序结果直接计算或筛选、不再发任何新查询的任务里。例外：提示上下文里的[上一轮任务表]已包含该排名/筛选结果（所需实体名单已在采样中给出）时，不适用本条——不拆分，只输出1个任务，把上一轮采样中的参数值直接写进任务问题文本并以“复用上一轮查询结果：”开头，该任务照常发起新查询。
 4. 用户明确要求分别查询多个结果再比较或合并计算时（如“分别查询今年和去年销售额，并比较同比变化”），按查询数拆任务，再加一个依赖全部前序任务的计算任务，任务问题写明“根据上述任务的查询结果……不再查询数据库”。
 5. 业务语义规范指标表中某指标的依赖指标列登记了成分指标（取值不是"无"或空）时，该指标必须按公式成分拆分：依赖指标列里的每个成分指标各一个查询任务（指标名用该成分的规范登记原名，筛选条件按规范中该成分的口径与公式规则归属，分组维度只放在需要按维度分组的成分任务上），最后再加一个计算任务，依赖全部成分任务，问题写明"根据上述任务的查询结果计算×××，不再查询数据库"。对复合指标做趋势、占比、对比等分析时同样先按成分拆分，分析口径写进成分任务与计算任务的问题文本。依赖指标列为无、或成分指标不在规范指标表内时不拆；依赖指标列为无的普通指标的趋势、占比、对比分析，以及围绕同一份数据的分析都保持1个任务。
 6. 不要把ASL、SQL、取数、校验、洞察这些内部步骤拆成任务。
@@ -838,6 +841,15 @@ class SingleQuestionPlanner:
         from app.services.general_rules import rule_section, without_rule_section
         general_rules = rule_section(semantic_context)
         semantic_context = without_rule_section(semantic_context)
+        # 上一轮任务表块不是业务语义规范：远程规范存在时上面会跳过
+        # semantic_context 的注入，追问轮的复用规则与上轮采样不能跟着
+        # 一起被丢掉，单独拆出来无条件送达
+        prior_block = ""
+        prior_marker = "[上一轮任务表]"
+        if prior_marker in semantic_context:
+            prior_start = semantic_context.index(prior_marker)
+            prior_block = semantic_context[prior_start:]
+            semantic_context = semantic_context[:prior_start].rstrip()
 
         schema = _SinglePlan.model_json_schema()
         system_content = _SINGLE_SYSTEM_PROMPT
@@ -869,6 +881,8 @@ class SingleQuestionPlanner:
                 )
         else:
             spec_for_catalog = ""
+        if prior_block:
+            system_content += "\n" + prior_block + "\n"
         system_content += general_rules
         metric_catalog = _parse_metric_catalog(spec_for_catalog)
         body = {
@@ -885,6 +899,14 @@ class SingleQuestionPlanner:
                     if retry_feedback is None
                     else question + "\n（上一轮输出校验未通过，请按下述说明修正后重新输出：\n"
                     + retry_feedback + "）"
+                ) + (
+                    # 追问轮的任务问题必须携带具体参数值：指代留在问题文本里
+                    # 会导致后续值绑定失败，这条要求放在用户消息里提高遵从度
+                    "\n（系统提示里有上一轮任务表：若本问题需要引用其中的参数"
+                    "（如实体名单），必须把采样中的具体值逐个写进任务问题文本，"
+                    "不得保留\"排名前三的经销商\"这类需要再计算的指代；"
+                    "若本问题与上一轮结果无关则忽略本说明。）"
+                    if prior_block else ""
                 )},
             ],
             "temperature": 0,
@@ -1043,6 +1065,29 @@ class SingleQuestionPlanner:
                 if cleaned is not None and cleaned != "":
                     items.append(cleaned)
             structured[key] = items
+        if intent_label == "明细查询" or (
+            intent == PrimaryIntent.DETAIL_QUERY
+            and intent_label not in _CHINESE_INTENT_LABELS
+        ):
+            # 明细查询只按展示字段出列：模型把返回列误提进指标/维度时，
+            # 迁入展示字段后再清空，避免下游丢列或误走聚合口径。
+            # 中文意图键与英文枚举冲突时以中文键为准，与下游意图回填规则一致。
+            display = structured["展示字段"]
+            known_fields = {
+                str(item.get("field") or item.get("name") or "").strip()
+                if isinstance(item, dict) else str(item).strip()
+                for item in display
+            }
+            for key in ("指标", "维度"):
+                for item in structured[key]:
+                    name = (
+                        str(item.get("name") or item.get("field") or "").strip()
+                        if isinstance(item, dict) else str(item).strip()
+                    )
+                    if name and name not in known_fields:
+                        display.append({"field": name})
+                        known_fields.add(name)
+                structured[key] = []
         time_granularity = value.get("时间粒度")
         structured["时间粒度"] = (
             time_granularity if isinstance(time_granularity, dict) else None

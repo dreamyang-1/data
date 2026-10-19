@@ -821,6 +821,7 @@ async def chat_stream(
         off_topic_flag = False
         planning_data_verdict = ""
         planning_data_operation_text = ""
+        planning_start_emitted = False
         composite_child_orderer = _CompositeChildProgressOrderer()
         latest_progress_stage = "INTENT_RECOGNITION"
         settings = request.app.state.container.settings
@@ -833,6 +834,9 @@ async def chat_stream(
                 section
                 and section not in titled_think_sections
                 and _heading_event_is_visible_summary(section, event)
+                # "正在进行任务拆分…"提示行不是节点开篇内容，
+                # 节标题仍随其后的规划块（拆分判断完成）下发
+                and event.get("progress_phase") != "V2_TASK_PLANNING_START"
             )
             if include_heading:
                 titled_think_sections.add(section)
@@ -946,12 +950,36 @@ async def chat_stream(
             tail_event.pop("task_table", None)
             return [dict(planning_event, message=pieces[0]), tail_event]
 
+        def _planning_start_event() -> dict[str, Any]:
+            return {
+                "stage": "TASK_PLANNING",
+                "status": "RUNNING",
+                "progress_phase": "V2_TASK_PLANNING_START",
+                "message": "正在进行任务拆分、任务意图分析与参数提取。",
+            }
+
+        def _with_planning_start_line(
+            events: list[dict[str, Any]],
+        ) -> list[dict[str, Any]]:
+            # "正在进行任务拆分…"提示行原先只挂在意图边界事件上补发，
+            # 部分轮次拿不到边界事件或边界事件被前端节点刷新顶掉，
+            # 展示时有时无；改为在规划块内容首次展示前固定补一条，整轮一次
+            nonlocal planning_start_emitted
+            if planning_start_emitted or not events:
+                return events
+            planning_start_emitted = True
+            return [
+                _planning_start_event(),
+                *events,
+            ]
+
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
             nonlocal question_completion_displayed
             nonlocal planning_released, presentation_scenario, composite_mode
             nonlocal latest_progress_stage, off_topic_flag
             nonlocal planning_data_verdict, planning_data_operation_text
+            nonlocal planning_start_emitted
             stage = str(event.get("stage") or "").upper()
             message_text = str(event.get("message") or "")
             if bool(event.get("off_topic")):
@@ -994,17 +1022,14 @@ async def chat_stream(
                 # but must not reopen the intent node or its heartbeat.
                 question_completion_displayed = True
                 intent_completed = True
+                # 补全问题即进入规划阶段：心跳等后续事件随规划节点展示，
+                # 提示行本身改由规划块展示前固定补发
+                latest_progress_stage = "TASK_PLANNING"
                 if off_topic_flag:
                     # 业务无关的问题由聊天模型直接回答，不亮任务规划节点
                     return [dict(event, status="COMPLETED")]
                 return [
                     dict(event, status="COMPLETED"),
-                    {
-                        "stage": "TASK_PLANNING",
-                        "status": "RUNNING",
-                        "progress_phase": "V2_TASK_PLANNING_START",
-                        "message": "正在进行任务拆分、任务意图分析与参数提取。",
-                    },
                 ]
             if stage == "TASK_PLANNING" and event.get("data_source_verdict"):
                 # 追问的数据来源结论：快照复用要说明为什么不查库，保留并
@@ -1061,7 +1086,14 @@ async def chat_stream(
                     ]
                     deferred_planning.clear()
                     planning_released = True
-                    return ordered
+                    # 提示行插在意图完结事件之后、规划块内容之前；复合轮的
+                    # 规划事件在意图完结后直达渲染、不再进扣留区，扣留区为空
+                    # 时提示行在这里先补发，否则复合轮整轮都没有这一行
+                    tail = _with_planning_start_line(ordered[1:])
+                    if not tail and not planning_start_emitted:
+                        planning_start_emitted = True
+                        tail = [_planning_start_event()]
+                    return [ordered[0], *tail]
                 pending_planning_runs = [
                     item for item in deferred_planning
                     if str(item.get("status") or "").upper() != "COMPLETED"
@@ -1070,7 +1102,10 @@ async def chat_stream(
                     deferred_planning[:] = [
                         item for item in deferred_planning if item not in pending_planning_runs
                     ]
-                    return [event, *pending_planning_runs]
+                    return [
+                        event,
+                        *_with_planning_start_line(pending_planning_runs),
+                    ]
             if (
                 composite_mode
                 and bool(event.get("is_child_task"))
@@ -1129,11 +1164,13 @@ async def chat_stream(
                         if task_details:
                             decision_parts.append(task_details)
                         planning["message"] = "\n".join(decision_parts).rstrip()
-                        ordered.extend(_split_planning_summary(planning))
+                        ordered.extend(_with_planning_start_line(
+                            _split_planning_summary(planning)
+                        ))
                     else:
-                        ordered.extend(
+                        ordered.extend(_with_planning_start_line(
                             _with_planning_verdict(deferred_planning[-1])
-                        )
+                        ))
                     deferred_planning.clear()
                     planning_released = True
                 # Completeness is expressed inside the document-defined intent
@@ -1144,7 +1181,12 @@ async def chat_stream(
                 # adapters emit ASL/SQL milestones before DATA_RETRIEVAL; release
                 # the completed planning block before the first such milestone
                 # instead of appending planning after tool output.
-                ordered = [*_with_planning_verdict(deferred_planning[-1]), event]
+                ordered = [
+                    *_with_planning_start_line(
+                        list(_with_planning_verdict(deferred_planning[-1]))
+                    ),
+                    event,
+                ]
                 deferred_planning.clear()
                 planning_released = True
                 return ordered
@@ -1181,6 +1223,10 @@ async def chat_stream(
                     candidate_progress_stage = str(
                         event.get("stage") or latest_progress_stage
                     ).strip().upper()
+                    if event.get("progress_phase") == "V2_RESOLVED_INTENT_CONTEXT_READY":
+                        # 补全问题边界事件本身不回推阶段：边界分支已把展示
+                        # 阶段推进到规划，心跳等后续事件随规划节点走
+                        candidate_progress_stage = latest_progress_stage
                     if _thinking_section(candidate_progress_stage) is not None:
                         latest_progress_stage = candidate_progress_stage
                     rendered_index = 0
@@ -1246,7 +1292,9 @@ async def chat_stream(
                     yield rendered_event
             for deferred_item in deferred_planning:
                 # 兜底释放也要过改写函数：正常轮原样透传，快照轮补任务名纠正
-                for piece in _with_planning_verdict(deferred_item):
+                for piece in _with_planning_start_line(
+                    _with_planning_verdict(deferred_item)
+                ):
                     async for rendered_event in stream_thinking(piece):
                         yield rendered_event
             deferred_planning.clear()

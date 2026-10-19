@@ -82,7 +82,8 @@ class TimeDimensionMappingTests(unittest.TestCase):
     def test_month_expression_is_shared_by_select_and_group(self):
         self.assertEqual(
             "DATE_FORMAT(order_info.pay_time, '%Y-%m')",
-            SQLTranslatorProd._apply_time_granularity("order_info.pay_time", "month"),
+            SQLTranslatorProd.__new__(SQLTranslatorProd)._apply_time_granularity(
+                "order_info.pay_time", "month"),
         )
 
     def test_physical_dimension_uses_declared_business_attribute_alias(self):

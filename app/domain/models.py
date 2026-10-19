@@ -787,6 +787,10 @@ class ChatRequest(StrictModel):
     )
     # 任务规划产出的提取结果，由编排器在进程内透传到本轮分类请求。
     _planner_extraction: PlannerExtraction | None = PrivateAttr(default=None)
+    # 单任务轮拆解模型给出的展示名与任务问题文本；任务问题带
+    # "复用上一轮查询结果"前缀和具体参数值，用于复用判定和展示。
+    _planner_task_name: str | None = PrivateAttr(default=None)
+    _planner_task_question: str | None = PrivateAttr(default=None)
     # 桥内前置判断产出的复合/单一结论（含各子问题的意图与业务域），
     # 编排器据此直接规划，避免二次判断。
     _compound_judgment: Any = PrivateAttr(default=None)
@@ -799,6 +803,25 @@ class ChatRequest(StrictModel):
     # 业务无关且原始问题命中危险词表时置位，编排器直答分支据此返回拦截
     # 话术，不再走聊天回复。
     _danger_keyword_intercept: bool = PrivateAttr(default=False)
+    # DAG 无依赖子任务标记：执行意图规范化后与父会话最近落盘查询比对指纹，
+    # 完全一致则直接复用那次的数据集，不再查库。
+    _dag_independent_task: bool = PrivateAttr(default=False)
+    _dag_root_conversation_id: str | None = PrivateAttr(default=None)
+    # 任务级复用命中后置位，DAG 执行段据此把任务表的查询标记改为复用。
+    _dag_reused_dataset: bool = PrivateAttr(default=False)
+    # 规划展示前预判可复用上一轮数据集的无依赖任务集合，执行段据此把
+    # 预判没命中的任务名前缀和查询标记纠正回实际结论。
+    _dag_reuse_predicted_tasks: set = PrivateAttr(default_factory=set)
+    # 参数提取型复用任务：入参取自上一轮结果但本轮发新查询，任务名前缀
+    # 保留，不参与"预判未命中剥前缀"的纠正。
+    _dag_reuse_param_tasks: set = PrivateAttr(default_factory=set)
+    # 会话里没有上一轮数据集引用时置 True：SNAPSHOT 判定不能没有数据
+    # 还标"复用"，规划展示据此跳过复用前缀。
+    _dag_reuse_references_empty: bool = PrivateAttr(default=False)
+    # 查询执行前（ASL 规范化之前）的指纹快照：ASL 会把中文标签改写成规范名，
+    # 落盘侧与 DAG 子任务闸口必须用同一阶段的形态才能比对。
+    _pre_asl_query_fingerprint: str | None = PrivateAttr(default=None)
+    _pre_asl_query_fingerprint_components: dict | None = PrivateAttr(default=None)
     # 桥接段精确挂起匹配时读到的挂起快照，供紧随其后的自由文本分诊复用，
     # 省一次 Redis 往返；两次读取之间没有任何写操作，结果一致。
     _v1_pending_snapshot: Any = PrivateAttr(default=None)
@@ -820,6 +843,14 @@ class ChatRequest(StrictModel):
     # 同构旧表（任务编号每轮都从task-1重来）把旧任务名串进本轮展示。
     _task_table: list[dict[str, Any]] | None = PrivateAttr(default=None)
     _task_table_message_id: str | None = PrivateAttr(default=None)
+    # 任务表跨轮传递的附属快照：本轮各任务的结果概要与数据集ID，随任务表
+    # 一起落盘，下轮识别/追问判断时作为上下文给模型。
+    _last_result_summary: dict[str, Any] | None = PrivateAttr(default=None)
+    _last_result_dataset_id: str | None = PrivateAttr(default=None)
+    # DAG 多任务时按 task_id 收集的各子任务结果概要。
+    _task_result_summaries: dict[str, Any] = PrivateAttr(default_factory=dict)
+    # 桥接段从 session store 读出的上一轮任务表，随 discover_context 给识别模型。
+    _prior_task_table: dict[str, Any] | None = PrivateAttr(default=None)
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)

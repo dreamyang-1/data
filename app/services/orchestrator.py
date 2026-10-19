@@ -38,7 +38,12 @@ from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
 from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
-from app.planning.compat import PlanningResult, plan_question, prepare_execution
+from app.planning.compat import (
+    PlanningResult,
+    plan_question,
+    prepare_execution,
+    render_prior_task_table_context,
+)
 from app.planning.task_dag import database_query_choice
 from app.planning.task_dependencies import TaskDependencySkipped, dependency_skip
 from app.intent.classifier import (
@@ -1221,9 +1226,16 @@ class DataAnalysisOrchestrator:
                         try:
                             # 核心指令里的业务语义规范段随请求传给拆分判断与提取模型，
                             # 参数角色按规范分类对齐（指标/实体/维度）。
-                            planner_semantic_context = extract_semantic_spec_section(
-                                await self._agent_prompt_text(chat)
-                            )
+                            # 追问轮把上一轮任务表一起给规划器：拆分时知道
+                            # 上轮已有什么结果，避免为已查过的口径重复拆任务
+                            planner_semantic_context = "\n".join(filter(None, (
+                                extract_semantic_spec_section(
+                                    await self._agent_prompt_text(chat)
+                                ),
+                                render_prior_task_table_context(
+                                    getattr(chat, "_prior_task_table", None)
+                                ),
+                            )))
                             with track_operation(
                                 "V1_ORCHESTRATION",
                                 "v1.task_decomposition",
@@ -1268,6 +1280,11 @@ class DataAnalysisOrchestrator:
                                         continue
                                     if "不再查询数据库" in planned_task.question:
                                         planned_task.extraction["是否查询数据库"] = "否（基于前序任务结果计算）"
+                                    elif str(planned_task.question or "").startswith("复用上一轮查询结果"):
+                                        # 参数提取型复用：入参取自上一轮结果，
+                                        # 本轮仍要发新查询，与普通新查询区分开
+                                        planned_task.extraction["是否查询数据库"] = "是（参数取自上一轮查询结果）"
+                                        _apply_sort_type(planned_task.extraction)
                                     elif planned_task.depends_on:
                                         planned_task.extraction["是否查询数据库"] = "是（依赖前序任务结果发新查询）"
                                         _apply_sort_type(planned_task.extraction)
@@ -1283,6 +1300,11 @@ class DataAnalysisOrchestrator:
                                 # 单任务展示名用拆解模型生成的陈述句名称，
                                 # 模型没给时展示层按规则从问题文本转换
                                 chat._planner_task_name = outcome.single_task_name
+                                # 任务问题文本是执行实际用的文本，复用判定
+                                # 以它为准，不依赖补全问题是否带前缀
+                                chat._planner_task_question = (
+                                    outcome.single_task_question
+                                )
                                 # 单一任务没有依赖与计算标记，参数提取里同样
                                 # 标注要查库；追问的快照复用由执行层白名单
                                 # 判定，真实路由以 DATA_RETRIEVAL 的说明为准。
@@ -1389,6 +1411,7 @@ class DataAnalysisOrchestrator:
                         structured: dict | None = None,
                         task_name: str | None = None,
                         header: str | None = None,
+                        reuse_label: bool = False,
                     ) -> str:
                         # 意图与业务域在意图识别节点按问题展示，
                         # 规划节点只保留参数提取。
@@ -1402,6 +1425,12 @@ class DataAnalysisOrchestrator:
                             (task_name or "").strip() or display_question.strip(" ：:，。"),
                             intent,
                         )
+                        if reuse_label:
+                            # 预判可复用上一轮数据集的任务：任务名带固定前缀，
+                            # 和执行期任务表的复用标记同一说法
+                            display_question = (
+                                "复用上一轮查询结果，" + display_question
+                            )
                         display_question += "。"
                         is_data_task = intent not in NO_DATA_INTENTS
                         if "不再查询数据库" in question:
@@ -1435,6 +1464,48 @@ class DataAnalysisOrchestrator:
                         if text and text[-1] not in "。！？?!":
                             text += "。"
                         return text
+
+                    # 规划展示前预判无依赖任务能否复用上一轮数据集：
+                    # 与执行期等价复用同一指纹口径，命中的任务名带复用前缀
+                    reuse_predicted_tasks: set[str] = set()
+                    if plan is not None:
+                        try:
+                            reuse_predicted_tasks = set(
+                                (await self._predict_task_dataset_reuse(
+                                    chat, identity, plan
+                                ))
+                            )
+                        except Exception:
+                            logger.info(
+                                "task reuse prediction failed message_id=%s",
+                                chat.message_id,
+                            )
+                        if (
+                            str(getattr(chat, "_model_data_source", "") or ""
+                               ).upper() == "SNAPSHOT"
+                            and not getattr(
+                                chat, "_dag_reuse_references_empty", False
+                            )
+                        ):
+                            # 追问轮识别模型已判定本轮可复用上一轮数据集
+                            # （排序修改、前端过滤、展示格式变更这类基于结果
+                            # 集的分析）：计划内查库类任务名统一加复用前缀，
+                            # 不复用的追问轮不加；会话里没有上一轮数据集时
+                            # 判定落不了地，照标会出现"标着复用实际查库"
+                            reuse_predicted_tasks = {
+                                task.task_id
+                                for task in plan.tasks
+                                if "不再查询数据库" not in task.question
+                                and task.primary_intent not in NO_DATA_INTENTS
+                            }
+                        chat._dag_reuse_predicted_tasks = set(reuse_predicted_tasks)
+                        # 规划器把入参取自上轮结果的任务问题文本标了"复用上一轮
+                        # 查询结果："前缀：登记后执行期不参与剥前缀纠正
+                        for planned_task in plan.tasks:
+                            if str(planned_task.question or "").startswith(
+                                "复用上一轮查询结果"
+                            ):
+                                chat._dag_reuse_param_tasks.add(planned_task.task_id)
 
                     if plan is not None:
                         # 复合计划带子问题分组区间：每个问题下列自己的任务，
@@ -1482,6 +1553,10 @@ class DataAnalysisOrchestrator:
                                         group_tasks[0].extraction,
                                         group_tasks[0].name,
                                         header=f"问题{group_index}：",
+                                        reuse_label=(
+                                            group_tasks[0].task_id
+                                            in reuse_predicted_tasks
+                                        ),
                                     ))
                                 else:
                                     lines = [
@@ -1498,6 +1573,10 @@ class DataAnalysisOrchestrator:
                                             list(task.parameters),
                                             task.extraction,
                                             task.name,
+                                            reuse_label=(
+                                                task.task_id
+                                                in reuse_predicted_tasks
+                                            ),
                                         ))
                                     group_blocks.append("\n".join(lines))
                             task_section = "\n\n".join(group_blocks)
@@ -1510,6 +1589,9 @@ class DataAnalysisOrchestrator:
                                     list(task.parameters),
                                     task.extraction,
                                     task.name,
+                                    reuse_label=(
+                                        task.task_id in reuse_predicted_tasks
+                                    ),
                                 )
                                 for index, task in enumerate(plan.tasks, 1)
                             )
@@ -1543,6 +1625,14 @@ class DataAnalysisOrchestrator:
                         planning_detail = "\n\n".join(sections)
                     else:
                         single_extraction = chat._planner_extraction
+                        # 参数提取型复用轮：拆解任务问题带"复用上一轮查询
+                        # 结果"前缀和具体参数值，任务名不再用拆解模型给的
+                        # name——那常写成"指定经销商"这类模糊指代，与补全
+                        # 问题对不上。前缀在任务问题文本上，补全问题不带，
+                        # 判定用 _planner_task_question
+                        single_param_reuse = str(
+                            getattr(chat, "_planner_task_question", None) or ""
+                        ).startswith("复用上一轮查询结果")
                         # 任务1就在下面，不再写"按单任务执行"这句废话
                         planning_detail = _planning_task_block(
                             1,
@@ -1562,7 +1652,11 @@ class DataAnalysisOrchestrator:
                                 if single_extraction is not None
                                 else None
                             ),
-                            getattr(chat, "_planner_task_name", None),
+                            (
+                                None
+                                if single_param_reuse
+                                else getattr(chat, "_planner_task_name", None)
+                            ),
                         )
                     if not nondata_direct:
                         # 追问的数据来源结论不再展示（意图节点已区分新问题
@@ -1575,6 +1669,12 @@ class DataAnalysisOrchestrator:
                             for task_index, planned_task in enumerate(plan.tasks):
                                 if "不再查询数据库" in planned_task.question:
                                     query_flag = "否（基于前序任务结果计算）"
+                                elif str(planned_task.question or "").startswith(
+                                    "复用上一轮查询结果"
+                                ):
+                                    # 参数提取型复用：与提取参数里同一口径，
+                                    # 依赖列仍单独体现执行顺序
+                                    query_flag = "是（参数取自上一轮查询结果）"
                                 elif planned_task.depends_on:
                                     query_flag = "是（依赖前序任务结果发新查询）"
                                 else:
@@ -1586,12 +1686,24 @@ class DataAnalysisOrchestrator:
                                     )
                                 task_table.append({
                                     "任务": planned_task.task_id,
-                                    "名称": _task_display_statement(
+                                    "名称": (
+                                        "复用上一轮查询结果，"
+                                        + _task_display_statement(
+                                            (planned_task.name or "").strip()
+                                            or planned_task.question,
+                                            task_requests[task_index].primary_intent,
+                                        ).rstrip("。")
+                                    ) if planned_task.task_id in reuse_predicted_tasks
+                                    else _task_display_statement(
                                         (planned_task.name or "").strip()
                                         or planned_task.question,
                                         task_requests[task_index].primary_intent,
                                     ).rstrip("。"),
-                                    "是否查询数据库": query_flag,
+                                    "是否查询数据库": (
+                                        "否（复用上一轮查询结果）"
+                                        if planned_task.task_id in reuse_predicted_tasks
+                                        else query_flag
+                                    ),
                                     "依赖": list(planned_task.depends_on),
                                     "执行状态": "待执行",
                                 })
@@ -1601,9 +1713,31 @@ class DataAnalysisOrchestrator:
                                 if chat._planner_extraction is not None
                                 else None
                             ) or {}
-                            task_table = [{
-                                "任务": "task-1",
-                                "名称": _task_display_statement(
+                            # 参数提取型复用的单任务轮：执行问题文本以
+                            # "复用上一轮查询结果"开头，任务表名称直接用
+                            # 任务问题文本（含具体参数值），不用模型生成的
+                            # 模糊 name；前缀统一为逗号版
+                            single_param_reuse = str(
+                                getattr(chat, "_planner_task_question", None) or ""
+                            ).startswith("复用上一轮查询结果")
+                            if single_param_reuse:
+                                single_display_name = _task_display_statement(
+                                    re.sub(
+                                        r"^复用上一轮查询结果[：:，,]?\s*",
+                                        "",
+                                        str(getattr(chat, "_planner_task_question", None) or "").strip(),
+                                    ),
+                                    (
+                                        chat._planner_extraction.intent
+                                        if chat._planner_extraction is not None
+                                        else None
+                                    ),
+                                ).rstrip("。")
+                                single_display_name = (
+                                    "复用上一轮查询结果，" + single_display_name
+                                )
+                            else:
+                                single_display_name = _task_display_statement(
                                     (getattr(chat, "_planner_task_name", None) or "").strip()
                                     or planning_question,
                                     (
@@ -1611,9 +1745,16 @@ class DataAnalysisOrchestrator:
                                         if chat._planner_extraction is not None
                                         else None
                                     ),
-                                ).rstrip("。"),
-                                "是否查询数据库": str(
-                                    single_structured.get("是否查询数据库") or "是"
+                                ).rstrip("。")
+                            task_table = [{
+                                "任务": "task-1",
+                                "名称": single_display_name,
+                                "是否查询数据库": (
+                                    "是（参数取自上一轮查询结果）"
+                                    if single_param_reuse
+                                    else str(
+                                        single_structured.get("是否查询数据库") or "是"
+                                    )
                                 ),
                                 "依赖": [],
                                 "执行状态": "待执行",
@@ -1706,6 +1847,9 @@ class DataAnalysisOrchestrator:
                     repeat_fingerprint,
                     response,
                 )
+            # 本轮结束把任务表连同各任务结果概要落盘，下轮识别/追问判断
+            # 从这里读出上一轮的任务表
+            await self._persist_conversation_task_table(chat, identity)
             logger.info(
                 "orchestration request completed message_id=%s status=%s intent=%s elapsed=%.2fs",
                 chat.message_id, stored.status, stored.intent,
@@ -3045,21 +3189,47 @@ class DataAnalysisOrchestrator:
         planned_table = getattr(chat, "_task_table", None)
         planned_message_id = getattr(chat, "_task_table_message_id", None)
         plan_task_ids = {task.task_id for task in plan.tasks}
+        plan_task_by_id = {task.task_id: task for task in plan.tasks}
         if (planned_table and planned_message_id == chat.message_id
                 and {row.get("任务") for row in planned_table} == plan_task_ids):
             task_table = [dict(row) for row in planned_table]
+            # 参数提取型复用任务在规划展示里问题文本带"复用上一轮查询结果："
+            # 前缀，规划期任务表的名称若没带上就同步补齐，避免执行期展示
+            # 和规划展示两个口径
+            for row in task_table:
+                task = plan_task_by_id.get(row.get("任务"))
+                if (
+                    task is not None
+                    and task.task_id in getattr(chat, "_dag_reuse_param_tasks", set())
+                    and not str(row.get("名称") or "").startswith("复用上一轮查询结果")
+                ):
+                    row["名称"] = "复用上一轮查询结果，" + str(row["名称"])
         else:
             task_table = [
                 {
                     "任务": task.task_id,
-                    "名称": _task_display_statement(
+                    "名称": (
+                        "复用上一轮查询结果，"
+                        if task.task_id in getattr(chat, "_dag_reuse_param_tasks", set())
+                        and task.task_id not in getattr(
+                            chat, "_dag_reuse_predicted_tasks", set()
+                        )
+                        else ""
+                    ) + _task_display_statement(
                         (task.name or "").strip() or task.question,
                         task.primary_intent,
                     ).rstrip("。"),
                     "是否查询数据库": (
-                        "否（基于前序任务结果计算）"
-                        if "不再查询数据库" in task.question
-                        else "是"
+                        "是（参数取自上一轮查询结果）"
+                        if task.task_id in getattr(chat, "_dag_reuse_param_tasks", set())
+                        and task.task_id not in getattr(
+                            chat, "_dag_reuse_predicted_tasks", set()
+                        )
+                        else (
+                            "否（基于前序任务结果计算）"
+                            if "不再查询数据库" in task.question
+                            else "是"
+                        )
                     ),
                     "依赖": list(task.depends_on),
                     "执行状态": "待执行",
@@ -3306,6 +3476,11 @@ class DataAnalysisOrchestrator:
                 )
             )
             child._business_domain_labels = chat._business_domain_labels
+            if not task.depends_on and task.task_id not in task_answers:
+                # 无依赖子任务参与等价复用判定：与父会话最近落盘查询
+                # 指纹一致时直接复用那次的数据集
+                child._dag_independent_task = True
+                child._dag_root_conversation_id = chat.conversation_id
             child._demo_execution_resolved_business_domain_ids = (
                 chat._demo_execution_resolved_business_domain_ids
             )
@@ -3369,10 +3544,52 @@ class DataAnalysisOrchestrator:
                         value = self._validate_task_output(task, value)
                         if value.status == "SAFE_FALLBACK":
                             child._dag_deferred_insight = None
+                        if getattr(child, "_dag_reused_dataset", False):
+                            # 任务级复用命中：任务表的查询标记与任务名同步改为
+                            # 复用说法，下发终态时带上新行
+                            for row in task_table:
+                                if row.get("任务") == task.task_id:
+                                    row["是否查询数据库"] = "否（复用上一轮查询结果）"
+                                    row_name = str(row.get("名称") or "")
+                                    if not row_name.startswith("复用上一轮查询结果"):
+                                        row["名称"] = (
+                                            "复用上一轮查询结果，"
+                                            + row_name.rstrip("。")
+                                        )
+                        elif (
+                            task.task_id in getattr(
+                                chat, "_dag_reuse_predicted_tasks", set()
+                            )
+                            and task.task_id not in getattr(
+                                chat, "_dag_reuse_param_tasks", set()
+                            )
+                        ):
+                            # 规划期预判可复用但执行期没命中（目录版本或
+                            # 授权范围对不上）：任务名前缀和查询标记按实际
+                            # 结论纠正回去，展示不能说一套做一套。只剥展示
+                            # 层加的逗号版前缀；规划器标注"复用上一轮查询
+                            # 结果："的参数提取型任务发新查询，前缀保留。
+                            for row in task_table:
+                                if row.get("任务") != task.task_id:
+                                    continue
+                                row_name = str(row.get("名称") or "")
+                                if row_name.startswith("复用上一轮查询结果，"):
+                                    row["名称"] = row_name[
+                                        len("复用上一轮查询结果，"):
+                                    ].rstrip("。")
+                                if row.get("是否查询数据库") == "否（复用上一轮查询结果）":
+                                    row["是否查询数据库"] = "是"
                 if child._dag_deferred_insight is not None and isinstance(value, AgentResponse):
                     deferred_insights[task.task_id] = child._dag_deferred_insight
                     if task.task_id in task_answers and value.status in {"COMPLETED", "PARTIAL_SUCCESS"}:
                         root_context.setdefault("resolved_task_questions", {})[task.task_id] = child._dag_deferred_insight.get("question", task.question)
+                task_summary = getattr(child, "_last_result_summary", None)
+                if task_summary is not None:
+                    # 各子任务的结果概要收进父会话，本轮结束时随任务表落盘
+                    chat._task_result_summaries[task.task_id] = {
+                        "summary": task_summary,
+                        "dataset_id": getattr(child, "_last_result_dataset_id", None),
+                    }
                 responses[task.task_id] = value
                 await save_checkpoint()
                 return task.task_id, value
@@ -4640,6 +4857,23 @@ class DataAnalysisOrchestrator:
                 chat._demo_execution_resolved_business_domain_ids
             ),
         )
+        # DAG 无依赖子任务先做等价复用判定：surface 直通不经过主链路的
+        # 复用闸口，指纹与本会话最近落盘查询一致时直接引用那次数据集，
+        # 避免同一查询重复查库
+        if getattr(chat, "_dag_independent_task", False):
+            reuse_result = await self._reuse_prior_dataset_for_task(request, chat)
+            if reuse_result is not None:
+                chat._dag_reused_dataset = True
+                await self.sessions.put_task_frame(request)
+                return await self._complete_query_result(
+                    chat, identity, request, reuse_result,
+                )
+        # 查询执行前快照 ASL 前形态的指纹，随数据集落盘写进 provenance；
+        # ASL 规范化会把中文标签改写成规范名，落盘后无法再还原出这一形态
+        chat._pre_asl_query_fingerprint = self._query_fingerprint(request)
+        chat._pre_asl_query_fingerprint_components = (
+            self._query_fingerprint_components(request)
+        )
         # 追问轮先试上一轮结果快照：识别模型判定可复用（或文本白名单命中）
         # 就尝试快照操作，复用不了再走 surface 查询，结论回填规划判定行。
         surface_model_data_source = getattr(chat, "_model_data_source", None)
@@ -4680,6 +4914,25 @@ class DataAnalysisOrchestrator:
                     request.source_dataset_id = snapshot_dataset_id
                     request.assumptions.append(
                         "IMMUTABLE_CONVERSATION_DATASET_REUSED"
+                    )
+                # 快照复用真发生了：任务表按实际执行刷新（选列/排序/筛行
+                # 不查库），名称加复用前缀、查询列改否、状态置完成；单任务
+                # 快照路由不进DAG执行段，不在这里刷的话轮末落盘的
+                # 还是规划时的旧表
+                snapshot_table = getattr(chat, "_task_table", None)
+                if snapshot_table:
+                    for row in snapshot_table:
+                        row_name = str(row.get("名称") or "").strip()
+                        if row_name and not row_name.startswith("复用上一轮查询结果"):
+                            row["名称"] = "复用上一轮查询结果，" + row_name.rstrip("。")
+                        row["是否查询数据库"] = "否（基于上一轮查询结果数据集直接分析）"
+                        row["执行状态"] = "已完成"
+                    await emit_progress(
+                        "TASK_STATUS",
+                        "RUNNING",
+                        "",
+                        heading_only=True,
+                        task_table=copy.deepcopy(snapshot_table),
                     )
                 await emit_progress(
                     "TASK_PLANNING",
@@ -4790,6 +5043,11 @@ class DataAnalysisOrchestrator:
         return await self._complete_query_result(chat, identity, request, result)
 
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
+        logger.info(
+            "v1 handle enter: message_id=%s conversation=%s dag_independent=%s question=%s",
+            chat.message_id, chat.conversation_id,
+            getattr(chat, "_dag_independent_task", False), chat.question[:80],
+        )
         if (
             getattr(self.settings, "surface_asl_execution_enabled", False)
             and chat._completed_question_execution
@@ -6516,6 +6774,17 @@ class DataAnalysisOrchestrator:
             for item in [*rewrite_ambiguities, *filter_semantic_ambiguities]:
                 if not item.blocking:
                     continue
+                # 依赖任务的筛选值由前序任务结果约束在执行层补值，"这三个
+                # 经销商"这类指代落不了值是预期行为；约束编译产出的
+                # expected_filter 也会包装成 context 槽位的歧义回传。凡命中
+                # 筛选/上下文槽位的歧义在有依赖约束时不拦截，否则依赖任务
+                # 永远走不到查询；指标、时间等其他槽位的歧义照常拦截
+                if (
+                    chat.dependency_constraints
+                    and {str(slot or "").strip().lower() for slot in item.affected_slots}
+                    <= {"filters", "context"}
+                ):
+                    continue
                 key = item.ambiguity_id or f"{item.type}:{item.phrase}"
                 combined_ambiguities[key] = item.model_copy(deep=True)
             request.semantic_ambiguities = list(combined_ambiguities.values())[:5]
@@ -6671,6 +6940,23 @@ class DataAnalysisOrchestrator:
             ),
         )
         request.dependency_constraints = list(chat.dependency_constraints)
+        if request.dependency_constraints:
+            # 依赖任务的筛选值由前序结果约束在执行层补值；识别层随完成问题
+            # 回传的 expected_filter(context) 歧义与筛选落值歧义对这类任务
+            # 是预期行为，进入执行前清掉，避免 ASL 绑定按缺条件拒绝。指标、
+            # 时间等其他槽位的歧义保留
+            suppressed_ambiguities = [
+                item for item in request.semantic_ambiguities
+                if not ({str(slot or "").strip().lower() for slot in item.affected_slots}
+                        <= {"filters", "context"})
+            ]
+            if len(suppressed_ambiguities) != len(request.semantic_ambiguities):
+                request.semantic_ambiguities = suppressed_ambiguities
+                request.ambiguities = [item.question for item in suppressed_ambiguities]
+                request.missing_slots = [
+                    slot for slot in request.missing_slots
+                    if slot != "semantic_ambiguity"
+                ]
         internal_assumptions = _INTERNAL_ASSUMPTIONS.get()
         request.assumptions = list(dict.fromkeys([
             *request.assumptions,
@@ -7086,6 +7372,19 @@ class DataAnalysisOrchestrator:
                 request, identity, chat.semantic_model_id
             )
             return await self._finish_terminal(request, response)
+
+        # 查询执行前快照 ASL 前形态的指纹（surface 直通路径之外的主链路
+        # 查询同样要落盘这个指纹），随后再做 DAG 独立任务的等价复用判定
+        chat._pre_asl_query_fingerprint = self._query_fingerprint(request)
+        chat._pre_asl_query_fingerprint_components = (
+            self._query_fingerprint_components(request)
+        )
+        # DAG 无依赖任务先做等价复用判定：意图规范化后的查询指纹与父会话
+        # 最近落盘查询一致时直接引用历史数据集，不再重复查库
+        if query_result is None and getattr(chat, "_dag_independent_task", False):
+            query_result = await self._reuse_prior_dataset_for_task(request, chat)
+            if query_result is not None:
+                chat._dag_reused_dataset = True
 
         if query_result is None:
             await emit_progress(
@@ -7582,9 +7881,16 @@ class DataAnalysisOrchestrator:
                 and not getattr(chat, "_dag_keep_result_dataset", False)
             )
         ):
-            dataset_id = await self._persist_query_dataset(request, query_result)
+            dataset_id = await self._persist_query_dataset(request, query_result, chat=chat)
         if dataset_id is None:
             request.assumptions.append("LATEST_RESULT_DATASET_NOT_REUSABLE")
+            if chat is not None:
+                # 单值指标/截断预览的数据集不落盘，但任务表照样要带概要，
+                # 下轮判断复用或提取参数时才知道上轮返回了什么
+                chat._last_result_summary = self._summarize_query_result(
+                    query_result.dataset
+                )
+                chat._last_result_dataset_id = None
         else:
             request.assumptions = [
                 value for value in request.assumptions
@@ -10021,8 +10327,352 @@ class DataAnalysisOrchestrator:
             return False
         return reference_domains == sorted(request.business_domain_ids)
 
+    @staticmethod
+    def _query_fingerprint_components(request: CanonicalAnalysisRequest) -> dict:
+        metric_names = [
+            metric.metric_id or metric.canonical_name or metric.input
+            for metric in request.metrics
+        ]
+        return {
+            "semantic_model_id": request.semantic_model_id,
+            "semantic_model_version": request.semantic_model_version,
+            "intent": request.primary_intent.value,
+            "metrics": metric_names,
+            "dimensions": request.dimensions,
+            "filters": request.filters,
+            "ranking_limit": request.ranking_limit,
+            "operators": [operator.value for operator in request.operators],
+        }
+
+    @classmethod
+    def _query_fingerprint(cls, request: CanonicalAnalysisRequest) -> str:
+        """查询指纹：语义模型版本、意图、指标、维度、过滤、limit 与排序算子
+        的规范化哈希。落盘数据集时写入 provenance，DAG 独立任务执行前用同一
+        函数计算比对，两个要素不同的查询不可能得到相同指纹。"""
+        return hashlib.sha256(json.dumps(
+            cls._query_fingerprint_components(request),
+            ensure_ascii=False, sort_keys=True, default=str,
+        ).encode("utf-8")).hexdigest()
+
+    async def _reuse_prior_dataset_for_task(
+        self, request: CanonicalAnalysisRequest, chat: ChatRequest
+    ) -> DataQueryResult | None:
+        """DAG 无依赖任务的等价复用：意图规范化后的查询指纹与本会话最近
+        落盘查询完全一致时，直接引用那次的数据集，不再发起新查询。任何
+        要素（指标/维度/过滤/时间/limit）不同都不会命中，宁可多查一次库
+        也不会错用旧数据。"""
+        if self.dataset_store is None:
+            logger.info("task reuse skipped: dataset store unavailable message_id=%s", chat.message_id)
+            return None
+        root_conversation = getattr(chat, "_dag_root_conversation_id", None)
+        if not root_conversation:
+            logger.info("task reuse skipped: root conversation missing message_id=%s", chat.message_id)
+            return None
+        fingerprint = self._query_fingerprint(request)
+        try:
+            references = await self.sessions.get_recent_dataset_references(
+                request.tenant_id,
+                request.user_id,
+                request.application_id,
+                root_conversation,
+                limit=self.settings.dataset_recent_limit,
+            )
+        except Exception:
+            logger.info("task reuse skipped: references unavailable conversation=%s", root_conversation)
+            return None
+        # 闸口手里的请求是 ASL 前形态（中文标签），只与落盘侧记录的
+        # pre_asl 指纹比对；ASL 后的规范名形态与它是两个阶段，不可比
+        logger.info(
+            "task reuse check: request_id=%s fingerprint=%s components=%s candidates=%s",
+            request.request_id, fingerprint[:12],
+            self._query_fingerprint_components(request),
+            [
+                {
+                    "dataset_id": item.get("dataset_id"),
+                    "pre_asl_fingerprint": next(
+                        (str(entry.get("pre_asl_query_fingerprint") or "")[:12] for entry in reversed(item.get("transformation_log", []))
+                         if isinstance(entry, dict) and entry.get("type") == "query_provenance"),
+                        None,
+                    ),
+                    "pre_asl_components": next(
+                        (entry.get("pre_asl_fingerprint_components") for entry in reversed(item.get("transformation_log", []))
+                         if isinstance(entry, dict) and entry.get("type") == "query_provenance"),
+                        None,
+                    ),
+                }
+                for item in references
+            ],
+        )
+        for item in references:
+            provenance = next(
+                (entry for entry in reversed(item.get("transformation_log", []))
+                 if isinstance(entry, dict) and entry.get("type") == "query_provenance"),
+                None,
+            )
+            if not provenance or provenance.get("pre_asl_query_fingerprint") != fingerprint:
+                continue
+            if not self._dataset_reference_matches_scope(item, request):
+                logger.info(
+                    "task reuse scope mismatch: dataset_id=%s ref_domains=%s request_domains=%s ref_scope=%s request_scope=%s",
+                    item.get("dataset_id"),
+                    item.get("business_domain_ids"),
+                    sorted(request.business_domain_ids or []),
+                    item.get("scope", {}).get("authorized_semantic_scope_fingerprint"),
+                    (
+                        request.authorized_semantic_scope.fingerprint()
+                        if request.authorized_semantic_scope is not None else None
+                    ),
+                )
+                continue
+            try:
+                reference = restore_reference(item)
+                # 子任务的 conversation 是派生的 dag-xxx-task-N，数据集落盘在
+                # 父会话（根会话）作用域下，加载必须用根会话 scope 才能通过
+                # 会话归属校验
+                loaded = await asyncio.to_thread(
+                    self.dataset_store.load_dataset,
+                    reference,
+                    current_scope=DatasetScope(
+                        request.tenant_id,
+                        request.user_id,
+                        request.application_id,
+                        root_conversation,
+                        (
+                            request.authorized_semantic_scope.fingerprint()
+                            if request.authorized_semantic_scope else ""
+                        ),
+                    ),
+                )
+            except Exception as exc:
+                # 命中的历史数据集读不出来就当没命中，走正常查询
+                logger.info(
+                    "task reuse load failed: dataset_id=%s error=%s",
+                    item.get("dataset_id"), exc,
+                )
+                continue
+            visible_columns = [
+                column for column in loaded.reference.columns
+                if not str(column).startswith("_")
+            ]
+            # 源头封顶：任务级复用同样只取 data_query_max_rows 行，
+            # 保证前端表格与展示行数不超过上限（用户 2026-10-16 要求）。
+            rows = [
+                {column: row.get(column) for column in visible_columns}
+                for row in loaded.rows[: self.settings.data_query_max_rows]
+            ]
+            dataset = Dataset(
+                columns=visible_columns,
+                rows=rows,
+                row_count=len(rows),
+                snapshot_id=loaded.reference.dataset_id,
+                data_as_of=datetime.fromisoformat(loaded.reference.data_as_of),
+                quality_status="PASS",
+                total_row_count=loaded.reference.row_count,
+                truncated=loaded.reference.row_count > len(rows),
+            )
+            request.execution_mode = "REUSE_PREVIOUS_RESULT"
+            # 复用不落新数据集，结果概要直接挂在子任务 chat 上，随任务表落盘
+            chat._last_result_summary = self._summarize_query_result(dataset)
+            chat._last_result_dataset_id = loaded.reference.dataset_id
+            await emit_progress(
+                "DATA_RETRIEVAL", "COMPLETED",
+                "本任务的查询条件与上一轮已完成的查询完全一致，直接复用该次结果，未重新查询数据库。",
+            )
+            return DataQueryResult(
+                asl={
+                    "version": "reused-dataset/1",
+                    "source_dataset_id": loaded.reference.dataset_id,
+                },
+                sql="REUSED_DATASET_NO_SQL",
+                dataset=dataset,
+                data_source_id=f"minio:{loaded.reference.dataset_id}",
+            )
+        return None
+
+    async def _predict_task_dataset_reuse(
+        self, chat: ChatRequest, identity: TrustedIdentity, plan: TaskPlan
+    ) -> dict[str, bool]:
+        """规划展示前预判无依赖任务能否复用上一轮数据集。
+
+        与 _reuse_prior_dataset_for_task 同一指纹口径：同源 _classify 装配
+        请求、同一 _query_fingerprint，只和落盘的 pre_asl 指纹比对，
+        不加载数据集。命中的任务在任务拆分展示里标"复用上一轮查询结果"；
+        执行期仍以实际复用结论为准，结论不一致时在任务表同步纠正。
+        """
+        predictions: dict[str, bool] = {}
+        if self.dataset_store is None:
+            return predictions
+        root_conversation = getattr(chat, "_dag_root_conversation_id", None) or (
+            chat.conversation_id
+        )
+        try:
+            references = await self.sessions.get_recent_dataset_references(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                root_conversation,
+                limit=self.settings.dataset_recent_limit,
+            )
+        except Exception:
+            logger.info(
+                "task reuse prediction references unavailable message_id=%s",
+                chat.message_id,
+            )
+            return predictions
+        # SNAPSHOT 判定只是模型的来源倾向，数据集真不存在时不能照标复用；
+        # 引用为空的结论留给规划展示段做前缀门控
+        chat._dag_reuse_references_empty = not bool(references)
+        if not references:
+            # 引用为空说明会话里没有上一轮查询落盘，预判必然不命中；
+            # 记录会话与身份便于排查两轮会话串号这类入口侧问题
+            logger.info(
+                "task reuse prediction references empty: message_id=%s "
+                "conversation=%s tenant=%s user=%s app=%s",
+                chat.message_id, root_conversation,
+                identity.tenant_id, identity.user_id, chat.application_id,
+            )
+            return predictions
+        for task in plan.tasks:
+            if task.depends_on:
+                # 依赖任务拿不到完整入参形态，指纹不可比，交给执行期闸口
+                continue
+            if task.primary_intent in NO_DATA_INTENTS:
+                continue
+            if "不再查询数据库" in task.question:
+                continue
+            try:
+                task_request = await self._classify(
+                    task.question,
+                    identity,
+                    chat.conversation_id,
+                    pre_resolved=True,
+                    agent_prompt=await self._agent_prompt_text(chat),
+                    planner_extraction=PlannerExtraction(
+                        intent=task.primary_intent,
+                        parameters=list(task.parameters),
+                        structured=task.extraction,
+                    ),
+                )
+            except Exception as exc:
+                logger.info(
+                    "task reuse prediction classify failed task_id=%s error=%s",
+                    task.task_id, exc,
+                )
+                continue
+            # 分类器产物不带语义模型 ID，执行期请求的模型 ID 是桥接层从
+            # chat 补的；预判指纹要和落盘指纹同口径，这里同样补齐
+            task_request.semantic_model_id = chat.semantic_model_id
+            fingerprint = self._query_fingerprint(task_request)
+            for item in references:
+                provenance = next(
+                    (entry for entry in reversed(item.get("transformation_log", []))
+                     if isinstance(entry, dict) and entry.get("type") == "query_provenance"),
+                    None,
+                )
+                if not provenance or provenance.get("pre_asl_query_fingerprint") != fingerprint:
+                    continue
+                if not self._dataset_reference_matches_scope(item, task_request):
+                    logger.info(
+                        "task reuse prediction scope mismatch task_id=%s dataset_id=%s",
+                        task.task_id, item.get("dataset_id"),
+                    )
+                    continue
+                predictions[task.task_id] = True
+                break
+        return predictions
+
+    @staticmethod
+    def _summarize_query_result(dataset) -> dict[str, Any]:
+        """把查询结果压成小份概要，随任务表落盘供下轮模型判断复用。
+
+        采样取前10行、单值截80字符，让模型能对准参数口径；总长超限
+        就把采样清掉只留行列数，避免任务表被撑大。
+        """
+        columns = [
+            str(column) for column in (dataset.columns or [])
+            if not str(column).startswith("_")
+        ]
+        sample: list[dict[str, Any]] = []
+        for row in (dataset.rows or [])[:10]:
+            sample.append(
+                {
+                    str(key): str(value)[:80]
+                    for key, value in row.items()
+                    if not str(key).startswith("_")
+                }
+            )
+        summary: dict[str, Any] = {
+            "columns": columns[:12],
+            "row_count": len(dataset.rows or []),
+        }
+        if sample:
+            encoded = json.dumps(sample, ensure_ascii=False, default=str)
+            if len(encoded) <= 3000:
+                summary["sample"] = sample
+        return summary
+
+    async def _persist_conversation_task_table(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> None:
+        """本轮结束时把任务表连同结果概要落盘，供下轮识别/追问判断使用。"""
+        try:
+            table = getattr(chat, "_task_table", None)
+            if not table:
+                logger.info(
+                    "task table persist skipped: no table message_id=%s "
+                    "has_table=%s summaries=%s last_summary=%s",
+                    chat.message_id,
+                    bool(getattr(chat, "_task_table", None)),
+                    bool(getattr(chat, "_task_result_summaries", None)),
+                    bool(getattr(chat, "_last_result_summary", None)),
+                )
+                return
+            summaries = getattr(chat, "_task_result_summaries", {}) or {}
+            payload = {
+                "message_id": chat.message_id,
+                # ChatRequest 没有 rewritten_question，改写后的问题在
+                # original_question（修订重问场景）或 question 本身
+                "question": (
+                    getattr(chat, "original_question", None) or chat.question or ""
+                )[:500],
+                "tasks": [],
+            }
+            for row in table:
+                if not isinstance(row, dict):
+                    continue
+                task_id = str(row.get("任务") or "")
+                entry = {
+                    key: row.get(key)
+                    for key in ("任务", "名称", "是否查询数据库", "执行状态")
+                    if row.get(key) is not None
+                }
+                summary = summaries.get(task_id)
+                if summary:
+                    entry["结果概要"] = summary.get("summary")
+                    entry["数据集ID"] = summary.get("dataset_id")
+                payload["tasks"].append(entry)
+            # 兜底：单任务轮没有走 DAG 收集时，把本轮最后一次查询的概要
+            # 挂到唯一任务行上，保证每个查过库的任务都带结果概要
+            if not summaries:
+                last_summary = getattr(chat, "_last_result_summary", None)
+                if last_summary and payload["tasks"]:
+                    payload["tasks"][-1]["结果概要"] = last_summary
+                    payload["tasks"][-1]["数据集ID"] = getattr(
+                        chat, "_last_result_dataset_id", None
+                    )
+            await self.sessions.put_task_table(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+                payload,
+            )
+        except Exception as exc:
+            logger.warning("failed to persist conversation task table: %s", exc)
+
     async def _persist_query_dataset(
-        self, request: CanonicalAnalysisRequest, query_result: DataQueryResult
+        self, request: CanonicalAnalysisRequest, query_result: DataQueryResult,
+        chat: ChatRequest | None = None,
     ) -> str | None:
         if self.dataset_store is None:
             return None
@@ -10039,20 +10689,20 @@ class DataAnalysisOrchestrator:
                     AnalysisOperator.SORT,
                 )
             )
-            query_fingerprint = hashlib.sha256(json.dumps({
-                "semantic_model_id": request.semantic_model_id,
-                "semantic_model_version": request.semantic_model_version,
-                "intent": request.primary_intent.value,
-                "metrics": metric_names,
-                "dimensions": request.dimensions,
-                "filters": request.filters,
-                "ranking_limit": request.ranking_limit,
-                "operators": [operator.value for operator in request.operators],
-            }, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+            query_fingerprint = self._query_fingerprint(request)
             provenance = {
                 "type": "query_provenance",
                 "source_truncated": query_result.dataset.truncated,
                 "query_fingerprint": query_fingerprint,
+                "fingerprint_components": self._query_fingerprint_components(request),
+                # ASL 前形态的指纹与组成：DAG 子任务闸口只能拿到 ASL 前
+                # 形态的请求，落盘侧必须留同阶段形态才能比对
+                "pre_asl_query_fingerprint": getattr(
+                    chat, "_pre_asl_query_fingerprint", None
+                ),
+                "pre_asl_fingerprint_components": getattr(
+                    chat, "_pre_asl_query_fingerprint_components", None
+                ),
                 "semantic_model_version": request.semantic_model_version,
                 "ranked": ranked,
                 "ordered_by": metric_names if ranked else [],
@@ -10084,6 +10734,12 @@ class DataAnalysisOrchestrator:
             await self.sessions.put_dataset_reference(
                 reference.to_dict(), recent_limit=self.settings.dataset_recent_limit
             )
+            if chat is not None:
+                # 任务表落盘用的结果概要：下轮识别/追问判断时随任务表给模型
+                chat._last_result_summary = self._summarize_query_result(
+                    query_result.dataset
+                )
+                chat._last_result_dataset_id = reference.dataset_id
             return reference.dataset_id
         except Exception as exc:
             # The query result is still usable for the current response. Degrade
@@ -12439,6 +13095,22 @@ class DataAnalysisOrchestrator:
         traces = [trace for _, trace in decisions]
         allowed_slots = {trace.blocking_slot for trace in traces if trace.decision == 'ASK'}
         if not allowed_slots:
+            # 放行不了任何澄清问题时的证据：看缺了什么槽位、为什么不让问
+            logger.warning(
+                "clarification not allowed: request_id=%s source_stage=%s missing_slots=%s "
+                "traces=%s assumptions=%s ambiguities=%s dependency_constraints=%s",
+                request.request_id, source_stage, request.missing_slots,
+                [(t.blocking_slot, str(t.decision), t.already_asked) for t in traces],
+                request.assumptions[:6],
+                [
+                    (item.type, item.phrase, list(item.affected_slots), item.ambiguity_id)
+                    for item in request.semantic_ambiguities
+                ],
+                [
+                    (c.source_task_id, c.source_column)
+                    for c in (request.dependency_constraints or ())
+                ],
+            )
             response = self._fallback(request, '该问题已在当前待确认任务中提出，原选项继续保留。' if any(t.already_asked for t in traces) else '当前语义目录或执行服务尚未提供足够依据，系统无法安全继续处理。')
             if source_stage == 'STRUCTURED_ASL_BINDING' and not any(t.already_asked for t in traces):
                 # 最终输出用口语化总结说明原因，不复述内部校验原文

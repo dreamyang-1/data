@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 
 import httpx
@@ -15,6 +16,8 @@ from app.observability.langfuse_client import trace_generation
 from .recognition_slot_repair import (
     SLOT_NAME_RULES, SlotNameCorrections, apply_slot_names, correction_schema, repairable_slot_names,
 )
+
+logger = logging.getLogger(__name__)
 
 
 _DIAGNOSTIC_PATH_LIMIT = 16
@@ -396,7 +399,21 @@ class RecognitionModelClient:
                 timing.set_attribute('v2_schema_schema_path', json.dumps(list(exc.schema_path)))
                 timing.set_attribute('v2_schema_validator', exc.validator or '')
             raise
-        except httpx.HTTPError:
+        except httpx.HTTPStatusError as exc:
+            # 状态码和响应片段能直接区分模型名错误、鉴权失效和限流
+            logger.warning(
+                "intent model HTTP error at stage %s: status=%s body=%s",
+                stage,
+                exc.response.status_code,
+                exc.response.text[:200],
+            )
+            raise RecognitionFailure('V2_MODEL_TRANSPORT_FAILURE') from None
+        except httpx.HTTPError as exc:
+            logger.warning(
+                "intent model transport error at stage %s: %r",
+                stage,
+                exc,
+            )
             raise RecognitionFailure('V2_MODEL_TRANSPORT_FAILURE') from None
         except (ValueError, TypeError, KeyError, IndexError):
             raise RecognitionFailure('V2_MODEL_OUTPUT_INVALID') from None

@@ -767,6 +767,26 @@ def _build_dim_text(dim: dict) -> str:
     )
 
 
+def enum_stable_code(enum) -> str | None:
+    """枚举值稳定编码：code 缺失时回退 value（与查询期绑定行为一致）。
+
+    旧数据（语义建模早期版本）的枚举只有 name/value；目录发布校验
+    （catalog_generation）与记录 ID 生成必须使用同一编码，否则会触发
+    COVERAGE_MISMATCH 或随机 uuid ID。code 与 value 均缺失时返回 None，
+    由调用方决定拦截方式。
+    """
+    if not isinstance(enum, dict):
+        return None
+    for key in ("code", "value"):
+        raw = enum.get(key)
+        if raw is None:
+            continue
+        text = str(raw).strip()
+        if text:
+            return text
+    return None
+
+
 def _build_enum_text(enum: dict) -> str:
     """枚举值向量化字段: name"""
     return _join_parts(enum.get("name"))
@@ -934,7 +954,9 @@ def build_records_from_dsl(doc: dict, embed_fn, *, vectorizer=None) -> list[Vect
             scope_bd_name = "(跨域共享)"
         elif kind == "enum":
             parent = ctx.get("dim_code") or "unknown"
-            enum_code = obj.get("code") or uuid.uuid4().hex[:8]
+            # 2026-10-15：code 缺失回退 value（与 catalog_generation 校验、
+            # structured_binding 查询期绑定一致），不再用随机 uuid 破坏覆盖校验
+            enum_code = enum_stable_code(obj) or uuid.uuid4().hex[:8]
             rid = f"{sm_only_prefix}:enum:{parent}.{enum_code}"
             meta = {
                 **obj,

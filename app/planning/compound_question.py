@@ -1092,6 +1092,14 @@ class CompoundQuestionJudge:
         from app.services.general_rules import rule_section, without_rule_section
         general_rules = rule_section(semantic_context)
         semantic_context = without_rule_section(semantic_context)
+        # 上一轮任务表块不是业务语义规范：远程规范存在时不能跟着
+        # semantic_context 一起被跳过，追问轮判断需要看到上轮结果
+        prior_block = ""
+        prior_marker = "[上一轮任务表]"
+        if prior_marker in semantic_context:
+            prior_start = semantic_context.index(prior_marker)
+            prior_block = semantic_context[prior_start:]
+            semantic_context = semantic_context[:prior_start].rstrip()
 
         schema = _JudgeResult.model_json_schema()
         system_content = _JUDGE_SYSTEM_PROMPT
@@ -1113,6 +1121,8 @@ class CompoundQuestionJudge:
                 "\n业务语义规范（仅用于识别需要按规范拆分的复合指标与业务对象）：\n"
                 + semantic_context + "\n"
             )
+        if prior_block:
+            system_content += "\n" + prior_block + "\n"
         system_content += general_rules
         body = {
             "model": self.settings.intent_model_name,
@@ -1511,6 +1521,9 @@ class CompoundQuestionRouter:
                 ),
                 single_task_name=(
                     first.name if first is not None else None
+                ),
+                single_task_question=(
+                    first.question if first is not None else None
                 ),
                 metric_catalog=decomposition.metric_catalog,
             )

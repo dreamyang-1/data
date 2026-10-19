@@ -651,12 +651,42 @@ class TurnAdmissionGate:
         explicit_query_object = current.entity or (
             object_candidates[-1] if object_candidates else None
         )
-        if explicit_query_object and (
-            explicit_query_object in compact
-            or any(
-                marker in compact
-                for marker in ("名单", "清单", "明细", "哪些", "列表", "排名", "排行", "排序")
-            )
+        # 显式查询对象必须有原句原词依据。entity 是识别/规划层给的规范名，
+        # 原句里没出现时，"排名/明细/名单"这类泛用词不能倒推成用户显式指定
+        # 了这个对象——否则"这三家经销商主要销售什么产品明细"会把识别层带
+        # 出来的"销售订单"钉成显式对象，下游合同比对把 ASL 正常选的"商品"
+        # 误判成丢条件。同理，句子里同时出现两类及以上业务对象（如"经销商
+        # 主要销售的产品"里经销商和产品都在场）时主对象由 ASL 按问题语义
+        # 选定，钉任何一个单值都会把合法选择误判成丢条件
+        object_family_markers = (
+            ("经销商", "供应商"),
+            ("商品", "产品", "货品"),
+            ("医院",),
+            ("客户", "顾客"),
+            ("门店",),
+            ("业务员", "销售员", "销售人员"),
+            ("销售订单", "订单"),
+        )
+        # "销售订单总金额/含税销售总额"这类指标措辞里带对象词，先剔除
+        # 再数对象族，否则"医院的销售订单总金额"会被误判成双对象
+        family_compact = re.sub(
+            r"销售订单总金额|含税销售总额|销售总金额|订单总金额|销售金额"
+            r"|订单金额|销售额|含税金额|总金额|回款金额|销售数量|订单数量"
+            r"|销售笔数|订单数|数量|笔数",
+            "", compact,
+        )
+        object_family_count = sum(
+            1 for markers in object_family_markers
+            if any(marker in family_compact for marker in markers)
+        )
+        if (
+            explicit_query_object
+            and explicit_query_object in compact
+            and object_family_count <= 1
+            and len(object_candidates) <= 1
+            and len(
+                {str(mention or "").strip() for mention in current.semantic_entity_mentions}
+            ) <= 1
         ):
             put(
                 explicit,

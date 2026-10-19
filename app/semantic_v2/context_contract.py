@@ -31,16 +31,27 @@ class ContextProposal(StrictModel):
         '与已绑定业务域无关的生活类求助）时输出 true，此时 relation 必须是 '
         'NEW_TASK，系统会跳过任务规划直接回答。与业务数据、已绑定业务域或'
         '历史任务沾边的问题一律输出 false。'))
+    off_topic_kind: Literal['GREETING', 'OTHER'] | None = Field(default=None, description=(
+        '仅 off_topic 为 true 时输出：问候、寒暄、询问智能体身份等日常交流'
+        '输出 GREETING；天气、常识问答、生活类求助等其他无关内容输出 OTHER。'
+        'off_topic 为 false 时输出 null。'))
     data_source: Literal['SNAPSHOT', 'NEW_QUERY'] | None = Field(default=None, description=(
         '仅 relation 不是 NEW_TASK 的追问轮输出，判断本轮要的数据能否直接来自'
         '上一轮查询的结果：只是选列、筛行、排序、取前N，或对上一轮已有数字做'
         '简单对比计算时输出 SNAPSHOT；需要上一轮没有的新指标、新维度、新粒度、'
-        '新时间范围或新关联数据时输出 NEW_QUERY。在上一轮任务基础上补充条数'
+        '新时间范围或新关联数据时输出 NEW_QUERY。SNAPSHOT 只适用于上轮结果列'
+        '已经能直接回答的操作（改排序、取前N、按值筛行、换展示格式）；追问里'
+        '指代的对象来自上轮（如"这三家"），但要查的信息不在上轮结果的列里'
+        '（如上轮只有经销商和金额，本轮问"主要销售什么产品"需要商品明细），'
+        '必须输出 NEW_QUERY，参数从上轮结果取。在上一轮任务基础上补充条数'
         '限制（如上一轮统计了各经销商的含税销售总额，本轮说"取排名前5的"'
         '"只看前5条"）或调整排序方向，数据本身没有新增，属于复用上一轮结果集'
         '直接得出，输出 SNAPSHOT，不要当作修改任务条件发新查询。判定方法是拿本轮要的数据逐项'
         '对照 task_context 里上一轮任务的指标、维度、字段和时间，上一轮结果里'
-        '没有的数据不能凭空判定可复用。拿不准一律输出 NEW_QUERY。relation 为 '
+        '没有的数据不能凭空判定可复用。task_context.prior_task_table 是上一轮'
+        '编排器的任务表，tasks 里每个查过库的任务带结果概要（列名、行数、前'
+        '10行采样），'
+        '判断能否复用或需要提取哪些参数发新查询时优先对照这份概要。拿不准一律输出 NEW_QUERY。relation 为 '
         'NEW_TASK 或 null 时输出 null。'))
     snapshot_operation: dict[str, Any] | None = Field(default=None, description=(
         'data_source 为 SNAPSHOT 时必填，说明如何用上一轮结果直接得出本轮答案。'

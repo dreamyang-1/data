@@ -112,7 +112,7 @@ def test_planning_layout_is_shared_by_single_composite_and_clarification(
     content = thinking_content(events, "TASK_PLANNING", status="COMPLETED")
     assert "规划调用：" not in content
     assert "规划链路：" not in content
-    decision = content.split("问题1：", 1)[0] if "问题1：" in content else content
+    decision = content.split("任务1：", 1)[0] if "任务1：" in content else content
     assert "业务域：" not in decision
     if clarifying:
         assert "当前任务参数不完整，暂停子任务拆分。" in decision
@@ -781,6 +781,50 @@ def test_default_thinking_text_uses_one_character_every_30ms():
         ].default
         == 0.03
     )
+
+
+@pytest.mark.parametrize("with_boundary", [True, False])
+def test_planning_start_line_emitted_once_before_planning_block(with_boundary):
+    """拆分启动提示行固定随规划块下发：有意图边界事件和没有边界事件的
+    轮次（如复合追问路由）都必须恰好出现一次，且在规划块内容之前。"""
+    app = build_test_app(runtime_mode="V1", thinking_stream_heartbeat_seconds=0.05)
+
+    class PlanningOnlyWorkflow:
+        async def ainvoke(self, state):
+            if with_boundary:
+                await emit_progress(
+                    "INTENT_RECOGNITION", "RUNNING", "补全后的问题：查询销售额。",
+                    progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+                )
+            await emit_progress("TASK_PLANNING", "RUNNING", "正在判断是否拆分。")
+            await emit_progress("TASK_PLANNING", "COMPLETED", "拆分判断完成。\n任务1：查询销售额")
+            await emit_progress(
+                "INTENT_RECOGNITION", "COMPLETED", "参数提取：销售额",
+                is_composite=not with_boundary,
+                presentation_scenario="ANALYTIC",
+            )
+            await emit_progress("COMPLETENESS_CHECK", "COMPLETED", "参数校验完成")
+            await emit_progress("FINAL_OUTPUT", "COMPLETED", "结果已就绪")
+            return {"response": AgentResponse(
+                request_id=uuid4(), conversation_id=state["chat"].conversation_id,
+                status="COMPLETED", intent=PrimaryIntent.METRIC_QUERY, answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", PlanningOnlyWorkflow())
+        response = client.post("/agent_chat/stream", json={
+            "semantic_model_id": 81, "application_id": "app1",
+            "conversation_id": f"planning-start-line-{with_boundary}",
+            "message_id": "m1", "question": "查询销售额",
+        })
+    assert response.status_code == 200
+    events = [json.loads(b.removeprefix("data: ")) for b in response.text.strip().split("\n\n")]
+    text = "".join(
+        e.get("content", "") for e in events
+        if e.get("type") == "message_chunk" and e.get("meta", {}).get("stage") == "TASK_PLANNING"
+    )
+    assert text.count("正在进行任务拆分、任务意图分析与参数提取。") == 1
+    assert text.index("正在进行任务拆分、任务意图分析与参数提取。") < text.index("拆分判断完成。")
 
 
 def test_character_pacing_does_not_block_background_execution():

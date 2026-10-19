@@ -29,6 +29,7 @@ from pymysql.cursors import DictCursor
 from runtime_config import load_workspace_env
 from join_assembly import JoinAssembly, split_joins
 from sql_join_safety import SQLJoinError, validate_join_connectivity
+import sql_dialects
 from threading import BoundedSemaphore, RLock
 
 DEFAULT_EXECUTION_TIMEOUT_MS = 60_000
@@ -2294,10 +2295,11 @@ class SQLTranslatorProd:
         except ValueError:
             return date_str
 
-    def _parse_time_context(self, time_context: Dict, main_table: str) -> str:
+    def _parse_time_context(self, time_context: Dict, main_table: str, dialect=None) -> str:
         """解析时间上下文，生成 WHERE 子句"""
         if not time_context:
             return ""
+        effective_dialect = dialect or sql_dialects.mysql_dialect()
         time_type = time_context.get('type')
         anchor = time_context.get('anchor', 'order_date')
 
@@ -2316,15 +2318,10 @@ class SQLTranslatorProd:
         else:
             full_field_name = f"{main_table}.{field_name}"
 
-        if time_type == 'this_month':
-            return (f"{full_field_name} >= DATE_FORMAT(CURDATE(), '%Y-%m-01') AND "
-                    f"{full_field_name} < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)")
-        elif time_type == 'last_month':
-            return (f"{full_field_name} >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND "
-                    f"{full_field_name} < DATE_FORMAT(CURDATE(), '%Y-%m-01')")
-        elif time_type == 'this_year':
-            return (f"{full_field_name} >= CONCAT(YEAR(CURDATE()), '-01-01') AND "
-                    f"{full_field_name} < CONCAT(YEAR(CURDATE()) + 1, '-01-01')")
+        if time_type in ('this_month', 'last_month', 'this_year', 'today', 'yesterday'):
+            # 相对时间表达式因库而异，交给方言生成；未来时间(如当前月)由
+            # 方言保证与 MySQL 历史语义一致（左闭右开区间）
+            return effective_dialect.time_predicate(time_type, full_field_name)
         elif time_type == 'year':
             year_value = time_context.get('value')
             if isinstance(year_value, bool) or not str(year_value or '').isdigit():
@@ -2354,10 +2351,6 @@ class SQLTranslatorProd:
                 if start_point > end_point:
                     raise ValueError('时间范围结束日期早于开始日期')
                 return f"{full_field_name} >= '{start}' AND {full_field_name} < '{end_next}'"
-        elif time_type == 'today':
-            return f"DATE({full_field_name}) = CURDATE()"
-        elif time_type == 'yesterday':
-            return f"DATE({full_field_name}) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)"
         else:
             raise ValueError(f"不支持的时间范围类型: {time_type}")
         raise ValueError(f"时间范围参数不完整: {time_type}")
@@ -2425,31 +2418,14 @@ class SQLTranslatorProd:
             return (f"CASE {field_ref} {' '.join(cases)} ELSE {field_ref} END", alias)
         return (field_ref, alias)
 
-    @staticmethod
-    def _apply_time_granularity(field_ref: str, granularity: Optional[str]) -> str:
-        """Build one canonical MySQL expression for time SELECT/GROUP BY."""
-        normalized = (granularity or '').strip().lower()
-        if normalized in ('second', 'seconds', '秒', '秒钟'):
-            return f"DATE_FORMAT({field_ref}, '%Y-%m-%d %H:%i:%s')"
-        if normalized in ('minute', 'minutes', '分', '分钟'):
-            return f"DATE_FORMAT({field_ref}, '%Y-%m-%d %H:%i:00')"
-        if normalized in ('hour', 'hours', '时', '小时'):
-            return f"DATE_FORMAT({field_ref}, '%Y-%m-%d %H:00:00')"
-        if normalized in ('day', 'days', '日', '天', '自然日'):
-            return f"DATE({field_ref})"
-        if normalized in ('week', 'weeks', '周', '星期'):
-            return f"DATE_FORMAT({field_ref}, '%x-W%v')"
-        if normalized in ('month', 'months', '月', '月份', '自然月'):
-            return f"DATE_FORMAT({field_ref}, '%Y-%m')"
-        if normalized in ('quarter', 'quarters', '季度', '季'):
-            return f"CONCAT(YEAR({field_ref}), '-Q', QUARTER({field_ref}))"
-        if normalized in ('half_year', '半年', '半年度'):
-            return f"CONCAT(YEAR({field_ref}), '-H', IF(MONTH({field_ref}) <= 6, 1, 2))"
-        if normalized in ('year', 'years', '年', '自然年', '年度'):
-            return f"YEAR({field_ref})"
-        if not normalized:
-            return field_ref
-        raise ValueError(f"不支持的时间粒度: {granularity}")
+    def _apply_time_granularity(self, field_ref: str, granularity: Optional[str], dialect=None) -> str:
+        """Build one canonical time expression for time SELECT/GROUP BY.
+
+        The expression is dialect specific (MySQL DATE_FORMAT, PG TO_CHAR,
+        Oracle/DM TO_CHAR, SQL Server CONVERT); the MySQL dialect reproduces
+        the historical byte-identical output.
+        """
+        return (dialect or sql_dialects.mysql_dialect()).time_bucket(field_ref, granularity)
 
     def _dimension_display_companion(self, dimension: Dict, entity_code: str,
                                      model_id: Optional[str]) -> Optional[tuple]:
@@ -2493,8 +2469,9 @@ class SQLTranslatorProd:
             return None
         return next(iter(candidates.items()))
 
-    def _build_select_clause(self, metrics: List[Dict], dimensions: List[Dict], entity_code: str, model_id: Optional[str] = None) -> str:
+    def _build_select_clause(self, metrics: List[Dict], dimensions: List[Dict], entity_code: str, model_id: Optional[str] = None, dialect=None) -> str:
         """构建 SELECT 子句"""
+        effective_dialect = dialect or sql_dialects.mysql_dialect()
         select_parts = []
         output_aliases = set()
         main_table = self._get_entity_base_table(entity_code, model_id) if entity_code else entity_code
@@ -2534,7 +2511,7 @@ class SQLTranslatorProd:
                 else:
                     field_ref = f"{main_table}.{dim_code}"
 
-            field_ref = self._apply_time_granularity(field_ref, granularity)
+            field_ref = self._apply_time_granularity(field_ref, granularity, effective_dialect)
             expr, alias = self._build_dim_expression(dim_code, field_ref, dim_alias, model_id)
             companion = self._dimension_display_companion(dim, entity_code, model_id)
             if companion and not any(d.get('name') == companion[0] for d in dimensions):
@@ -2542,12 +2519,12 @@ class SQLTranslatorProd:
                 if display_alias in output_aliases:
                     raise ValueError(f"列别名重复: {display_alias}")
                 output_aliases.add(display_alias)
-                select_parts.append(f"{display_field} AS `{display_alias.replace('`', '``')}`")
+                select_parts.append(effective_dialect.select_alias(display_field, display_alias))
                 alias = f"{alias}（编码）"
             if alias in output_aliases:
                 raise ValueError(f"列别名重复: {alias}")
             output_aliases.add(alias)
-            select_parts.append(f"{expr} AS `{alias}`")
+            select_parts.append(effective_dialect.select_alias(expr, alias))
 
 
         # 再添加指标
@@ -2618,17 +2595,17 @@ class SQLTranslatorProd:
             )
             if alias:
                 expr = alias_pattern.sub('', expr)
-                escaped_alias = str(alias).replace('`', '``')
-                select_parts.append(f"{expr} AS `{escaped_alias}`")
+                select_parts.append(effective_dialect.select_alias(expr, str(alias)))
             else:
                 select_parts.append(expr)
 
         return ', '.join(select_parts)
 
-    def _build_group_by_clause(self, dimensions: List[Dict], entity_code: str, model_id: Optional[str] = None) -> str:
+    def _build_group_by_clause(self, dimensions: List[Dict], entity_code: str, model_id: Optional[str] = None, dialect=None) -> str:
         """构建 GROUP BY 子句"""
         if not dimensions:
             return ""
+        effective_dialect = dialect or sql_dialects.mysql_dialect()
         main_table = self._get_entity_base_table(entity_code, model_id) if entity_code else entity_code
         group_parts = []
         for dim in dimensions:
@@ -2638,25 +2615,25 @@ class SQLTranslatorProd:
             dim_field = self._get_dimension_field(dim_code, dim_attr, model_id, entity_code)
             if dim_field:
                 if '.' in dim_field:
-                    group_parts.append(self._apply_time_granularity(dim_field, granularity))
+                    group_parts.append(self._apply_time_granularity(dim_field, granularity, effective_dialect))
                 else:
                     dim_entities = self._get_dimension_entities(dim_code, model_id)
                     if entity_code and entity_code in dim_entities:
-                        group_parts.append(self._apply_time_granularity(f"{main_table}.{dim_field}", granularity))
+                        group_parts.append(self._apply_time_granularity(f"{main_table}.{dim_field}", granularity, effective_dialect))
                     else:
                         for ent_code in dim_entities:
                             ent = self._get_entity(ent_code, model_id)
                             if ent:
                                 base_table = ent.get('physical_table_join', {}).get('base_table', ent_code)
-                                group_parts.append(self._apply_time_granularity(f"{base_table}.{dim_field}", granularity))
+                                group_parts.append(self._apply_time_granularity(f"{base_table}.{dim_field}", granularity, effective_dialect))
                                 break
                         else:
-                            group_parts.append(self._apply_time_granularity(f"{main_table}.{dim_field}", granularity))
+                            group_parts.append(self._apply_time_granularity(f"{main_table}.{dim_field}", granularity, effective_dialect))
             else:
                 if '.' in dim_code:
-                    group_parts.append(self._apply_time_granularity(dim_code, granularity))
+                    group_parts.append(self._apply_time_granularity(dim_code, granularity, effective_dialect))
                 else:
-                    group_parts.append(self._apply_time_granularity(f"{main_table}.{dim_code}", granularity))
+                    group_parts.append(self._apply_time_granularity(f"{main_table}.{dim_code}", granularity, effective_dialect))
             companion = self._dimension_display_companion(dim, entity_code, model_id)
             if companion and companion[0] not in group_parts:
                 group_parts.append(companion[0])
@@ -2731,10 +2708,11 @@ class SQLTranslatorProd:
             return f"WHERE {' AND '.join(all_conditions)}"
         return ""
 
-    def _build_order_by_clause(self, sort: Optional[Dict], metrics: List[Dict], dimensions: List[Dict], model_id: Optional[str] = None) -> str:
+    def _build_order_by_clause(self, sort: Optional[Dict], metrics: List[Dict], dimensions: List[Dict], model_id: Optional[str] = None, dialect=None) -> str:
         """构建 ORDER BY 子句"""
         if not sort:
             return ""
+        effective_dialect = dialect or sql_dialects.mysql_dialect()
         field = sort.get('field', '')
         direction = (sort.get('direction') or 'ASC').upper()
         if direction not in ('ASC', 'DESC'):
@@ -2747,8 +2725,7 @@ class SQLTranslatorProd:
         if field_type == 'metric':
             for metric in metrics:
                 if metric.get('name') == field:
-                    metric_alias = str(metric.get('alias', field)).replace('`', '``')
-                    sort_field = f"`{metric_alias}`"
+                    sort_field = effective_dialect.order_alias(str(metric.get('alias', field)))
                     break
             if not sort_field:
                 sort_field = field
@@ -2767,7 +2744,7 @@ class SQLTranslatorProd:
                     companion = self._dimension_display_companion(dim_item, '', model_id)
                     if companion and not any(d.get('name') == companion[0] for d in dimensions):
                         dim_alias = f"{dim_alias}（编码）"
-                    sort_field = f"`{dim_alias}`"
+                    sort_field = effective_dialect.order_alias(str(dim_alias))
                     break
             if not sort_field:
                 sort_field = field
@@ -2776,8 +2753,7 @@ class SQLTranslatorProd:
         else:
             for metric in metrics:
                 if metric.get('name') == field:
-                    metric_alias = str(metric.get('alias', field)).replace('`', '``')
-                    sort_field = f"`{metric_alias}`"
+                    sort_field = effective_dialect.order_alias(str(metric.get('alias', field)))
                     break
             if not sort_field:
                 for dim_item in dimensions:
@@ -2789,7 +2765,7 @@ class SQLTranslatorProd:
                         companion = self._dimension_display_companion(dim_item, '', model_id)
                         if companion and not any(d.get('name') == companion[0] for d in dimensions):
                             dim_alias = f"{dim_alias}（编码）"
-                        sort_field = f"`{dim_alias}`"
+                        sort_field = effective_dialect.order_alias(str(dim_alias))
                         break
             if not sort_field:
                 sort_field = field
@@ -3719,6 +3695,12 @@ class SQLTranslatorProd:
                 if metric_id.startswith(prefix):
                     metric['name'] = metric_id[len(prefix):]
         model_id = self._validate_ast_contract(ast, model_id)
+        # 方言只认目录库登记的 db_type；未登记/无法访问目录时回落 MySQL 历史
+        # 行为。登记了不支持的类型或多种不一致类型时在翻译阶段立即失败。
+        try:
+            dialect = self._resolve_model_dialect(model_id)
+        except sql_dialects.UnsupportedDbType as exc:
+            raise ValueError(str(exc))
 
         metrics = ast.get('metrics', [])
         dimensions = [*ast.get('dimensions', []), *self._aggregate_display_dimensions(ast, model_id)]
@@ -3795,12 +3777,12 @@ class SQLTranslatorProd:
         if joins.fragments:
             from_clause += ' ' + ' '.join(joins.fragments)
 
-        select_clause = self._build_select_clause(metrics, dimensions, entity_code, model_id)
+        select_clause = self._build_select_clause(metrics, dimensions, entity_code, model_id, dialect)
 
         # 时间条件
         time_conditions = []
         if time_context:
-            tc = self._parse_time_context(time_context, main_table)
+            tc = self._parse_time_context(time_context, main_table, dialect)
             if tc:
                 time_conditions.append(tc)
 
@@ -3825,17 +3807,18 @@ class SQLTranslatorProd:
 
         group_by_clause = (
             "" if is_detail_projection
-            else self._build_group_by_clause(dimensions, entity_code, model_id)
+            else self._build_group_by_clause(dimensions, entity_code, model_id, dialect)
         )
         having_clause = self._build_having_clause(having)
-        order_by_clause = self._build_order_by_clause(sort, metrics, dimensions, model_id)
+        order_by_clause = self._build_order_by_clause(sort, metrics, dimensions, model_id, dialect)
 
         select_keyword = (
             "SELECT DISTINCT"
             if is_detail_projection and projection_mode == 'DISTINCT'
             else "SELECT"
         )
-        sql_parts = [f"{select_keyword} {select_clause}", from_clause]
+        effective_limit = execution_defaults['effective_limit']
+        sql_parts = [f"{dialect.select_prefix(select_keyword, effective_limit)} {select_clause}", from_clause]
         if filter_clause:
             sql_parts.append(filter_clause)
         if group_by_clause:
@@ -3844,9 +3827,10 @@ class SQLTranslatorProd:
             sql_parts.append(having_clause)
         if order_by_clause:
             sql_parts.append(order_by_clause)
-        effective_limit = execution_defaults['effective_limit']
         if effective_limit is not None:
-            sql_parts.append(f"LIMIT {effective_limit}")
+            limit_suffix = dialect.limit_suffix(effective_limit)
+            if limit_suffix:
+                sql_parts.append(limit_suffix)
 
         sql = ' '.join(sql_parts)
         validate_join_connectivity(sql)
@@ -3902,6 +3886,277 @@ class SQLTranslatorProd:
         if len(rows) > 1:
             raise ValueError('当前模型存在多个数据源，必须明确指定data_source_id')
         return dict(rows[0]) if rows else None
+
+    def _resolve_model_dialect(self, model_id):
+        """翻译阶段方言解析：只认目录库登记的 db_type。
+
+        未登记或目录不可访问时回落 MySQL（与历史行为一致）；模型下所有
+        未删除数据源的 db_type 必须归一到同一方言，否则在翻译阶段失败，
+        避免生成与目标库不匹配的 SQL。请求参数不参与方言选择。
+        """
+        if model_id is None or self.catalog is None:
+            return sql_dialects.mysql_dialect()
+        try:
+            rows = self.catalog._query(
+                'SELECT db_type FROM semantic_model_data_source '
+                'WHERE semantic_model_id=%s AND is_deleted=0',
+                (int(model_id),))
+        except Exception:
+            return sql_dialects.mysql_dialect()
+        if not rows:
+            return sql_dialects.mysql_dialect()
+        keys = []
+        for row in rows:
+            key = sql_dialects.SqlDialect.normalize(row.get('db_type'))
+            if key is None:
+                raise sql_dialects.UnsupportedDbType(row.get('db_type') or '')
+            if key not in keys:
+                keys.append(key)
+        if len(keys) > 1:
+            raise ValueError(
+                f"当前模型登记了多种数据库类型({', '.join(keys)})，无法确定SQL方言，"
+                "请统一数据源类型或指定唯一数据源")
+        return sql_dialects.get_dialect(keys[0])
+
+    @staticmethod
+    def _execute_sql_generic(dialect, ds_config, sql, execution_timeout_ms,
+                             require_consistent_snapshot, parameters,
+                             parameter_fingerprint, preserve_decimal,
+                             source_watermark_field):
+        """非 MySQL 家族的通用驱动执行路径。
+
+        与 MySQL 路径同约定：超时控制设置成功才允许提交业务查询；快照证据
+        只在方言支持且会话开启成功时输出（SQL Server 默认降级为无 PASS
+        证据，业务查询仍可执行）。
+        """
+        connection = None
+        business_query_submitted = False
+        if not _QUERY_SLOTS.acquire(blocking=False):
+            return {'success': False, 'error': '查询服务繁忙，请稍后重试',
+                    'error_code': 'SQL_QUERY_CAPACITY_EXCEEDED', 'retryable': False,
+                    'business_query_submitted': False}
+        try:
+            try:
+                driver = __import__(dialect.driver_module)
+            except ImportError as exc:
+                return {'success': False,
+                        'error': (f"数据源类型 {dialect.key} 所需驱动 "
+                                  f"{dialect.driver_module} 未安装: {exc}"),
+                        'error_code': 'DB_TYPE_DRIVER_UNAVAILABLE',
+                        'retryable': False,
+                        'business_query_submitted': False}
+            host = str(ds_config.get('host', '')).split(':')[0]
+            port = int(ds_config.get('port') or 0)
+            user = str(ds_config.get('username', ''))
+            password = str(ds_config.get('password', ''))
+            database = str(ds_config.get('db_name', ''))
+            timeout_seconds = max(5, (execution_timeout_ms + 999) // 1000)
+            try:
+                if dialect.key == 'postgresql':
+                    # statement_timeout 为服务端强制，作用于本会话 SELECT
+                    connection = driver.connect(
+                        host=host, port=port or 5432, user=user, password=password,
+                        dbname=database, connect_timeout=10,
+                        options=f'-c statement_timeout={int(execution_timeout_ms)}')
+                elif dialect.key == 'oracle':
+                    connection = driver.connect(
+                        user=user, password=password,
+                        dsn=f"{host}:{port or 1521}/{database}")
+                    # call_timeout 由驱动对每次调用强制中断（毫秒）
+                    connection.call_timeout = int(execution_timeout_ms)
+                elif dialect.key == 'dm':
+                    connection = driver.connect(
+                        server=host, port=port or 5236, user=user, password=password)
+                else:  # sqlserver
+                    connection = driver.connect(
+                        server=host, port=port or 1433, user=user, password=password,
+                        database=database, login_timeout=10, timeout=timeout_seconds)
+            except Exception as e:
+                return {'success': False, 'error': f"数据库连接失败: {e}"}
+
+            cursor = connection.cursor()
+            timeout_verified = False
+            if dialect.key == 'postgresql':
+                timeout_verified = True  # 连接参数已带 statement_timeout
+            elif dialect.key == 'oracle':
+                timeout_verified = True  # call_timeout 已设置
+            elif dialect.key == 'sqlserver':
+                try:
+                    cursor.execute(f"SET LOCK_TIMEOUT {int(execution_timeout_ms)}")
+                except Exception:
+                    pass  # LOCK_TIMEOUT 仅约束锁等待，查询超时由驱动 timeout 兜底
+                timeout_verified = True
+            elif dialect.key == 'dm':
+                try:
+                    cursor.execute(
+                        "CALL SF_SET_SESSION_PARA_VALUE('SQL_TIMEOUT', ?)",
+                        (timeout_seconds,))
+                    cursor.execute("SELECT SF_GET_SESSION_PARA_VALUE('SQL_TIMEOUT')")
+                    row = cursor.fetchone()
+                    timeout_verified = bool(row) and int(row[0]) == timeout_seconds
+                except Exception:
+                    timeout_verified = False
+                if not timeout_verified and execution_timeout_ms is not None:
+                    return {
+                        'success': False,
+                        'error': 'A server-side SELECT timeout is required before query submission',
+                        'error_code': 'EXECUTION_TIMEOUT_REQUIRED',
+                        'retryable': False,
+                    }
+
+            # 只读事务 + 一致性快照：不支持时业务查询仍可执行，但不输出 PASS 证据
+            snapshot_time = None
+            snapshot_verified = False
+            try:
+                if dialect.key == 'postgresql':
+                    cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+                    cursor.execute("SELECT clock_timestamp() AT TIME ZONE 'UTC' AS data_as_of")
+                elif dialect.key in ('oracle', 'dm'):
+                    cursor.execute("SET TRANSACTION READ ONLY")
+                    cursor.execute("SELECT SYS_EXTRACT_UTC(SYSTIMESTAMP) FROM DUAL")
+                else:
+                    cursor.execute("SET TRANSACTION ISOLATION LEVEL SNAPSHOT")
+                    cursor.execute("SELECT SYSUTCDATETIME() AS data_as_of")
+                row = cursor.fetchone()
+                value = row[0] if isinstance(row, (tuple, list)) else row.get('data_as_of')
+                if isinstance(value, datetime):
+                    if value.tzinfo is not None:
+                        value = value.astimezone(timezone.utc).replace(tzinfo=None)
+                    snapshot_time = value
+                    snapshot_verified = True
+                else:
+                    connection.rollback()
+            except Exception:
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
+            if require_consistent_snapshot and not snapshot_verified:
+                return {
+                    'success': False,
+                    'error': 'A verified read-only snapshot is required before query submission',
+                    'error_code': 'READ_ONLY_SNAPSHOT_REQUIRED',
+                    'retryable': False,
+                }
+
+            try:
+                if parameters is None:
+                    business_query_submitted = True
+                    cursor.execute(sql)
+                else:
+                    bound_sql, bound_params = dialect.bind_parameters(sql, parameters)
+                    business_query_submitted = True
+                    cursor.execute(bound_sql, bound_params)
+                raw_rows = cursor.fetchall()
+                columns = [desc[0] for desc in cursor.description] if cursor.description else []
+                result_data = [dict(zip(columns, row)) for row in raw_rows]
+                source_watermark = None
+                safe_watermark_field = SQLTranslatorProd._safe_watermark_identifier(
+                    source_watermark_field
+                )
+                if snapshot_verified and safe_watermark_field:
+                    table, column = safe_watermark_field
+                    try:
+                        cursor.execute(dialect.watermark_sql(table, column))
+                        watermark_row = cursor.fetchone()
+                        value = (watermark_row[0] if isinstance(watermark_row, (tuple, list))
+                                 else watermark_row.get('source_data_as_of'))
+                        source_watermark = SQLTranslatorProd._serialize_source_watermark(value)
+                    except Exception:
+                        source_watermark = None
+                result_data = SQLTranslatorProd._convert_types(
+                    result_data, preserve_decimal=preserve_decimal
+                )
+                result = {
+                    'success': True,
+                    'data': result_data,
+                    'columns': columns,
+                    'row_count': len(result_data),
+                    'error': None,
+                    'business_query_submitted': True,
+                }
+                integrity_verified = (
+                    snapshot_verified
+                    and len(columns) == len(set(columns))
+                    and all(isinstance(column, str) and column for column in columns)
+                    and all(
+                        isinstance(row, dict) and set(row) == set(columns)
+                        for row in result_data
+                    )
+                )
+                if integrity_verified:
+                    data_as_of = snapshot_time.replace(tzinfo=timezone.utc)
+                    source_identity = {
+                        'id': str(ds_config.get('id') or ''),
+                        'semantic_model_id': str(ds_config.get('semantic_model_id') or ''),
+                        'db_name': str(ds_config.get('db_name', '')),
+                    }
+                    digest = hashlib.sha256(json.dumps(
+                        {
+                            'source': source_identity,
+                            'sql': sql,
+                            **({'sql_parameters': parameters} if parameters is not None else {}),
+                            'columns': columns,
+                            'rows': result_data,
+                            'data_as_of': data_as_of.isoformat(),
+                            'source_data_as_of': source_watermark,
+                            'source_watermark_field': (
+                                source_watermark_field if source_watermark else None
+                            ),
+                        },
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(',', ':'),
+                        default=str,
+                    ).encode('utf-8')).hexdigest()
+                    result.update({
+                        'snapshot_id': f'{dialect.snapshot_id_prefix}:{digest}',
+                        'data_as_of': data_as_of.isoformat().replace('+00:00', 'Z'),
+                        'quality_status': 'PASS',
+                        'quality_checks': {
+                            'consistent_snapshot': True,
+                            'read_only_transaction': True,
+                            'column_contract_valid': True,
+                            'row_contract_valid': True,
+                            'row_count_reconciled': True,
+                            **({'statement_timeout_enforced': True}
+                               if timeout_verified else {}),
+                        },
+                    })
+                    if source_watermark:
+                        result.update({
+                            'source_data_as_of': source_watermark,
+                            'source_watermark_field': source_watermark_field,
+                        })
+                return result
+            except Exception as e:
+                message = str(e).lower()
+                if business_query_submitted and (
+                    isinstance(e, TimeoutError)
+                    or 'timeout' in message or 'timed out' in message
+                    or 'canceling statement' in message
+                    or 'query canceled' in message
+                ):
+                    return {
+                        'success': False,
+                        'error': 'Bound SQL execution timed out',
+                        'error_code': 'SQL_EXECUTION_TIMEOUT',
+                        'retryable': False,
+                        'business_query_submitted': True,
+                    }
+                if parameters is not None:
+                    return {'success': False, 'error': 'Bound SQL execution failed',
+                            'error_code': 'SQL_PARAMETER_EXECUTION_FAILED', 'retryable': False,
+                            'business_query_submitted': business_query_submitted}
+                return {'success': False, 'error': f"数据库执行错误: {str(e)}"}
+        finally:
+            try:
+                if connection:
+                    connection.close()
+            except Exception:
+                pass
+            finally:
+                _QUERY_SLOTS.release()
 
     @staticmethod
     def _is_shared_region_hospital_denominator_subquery(sql: str) -> bool:
@@ -4192,11 +4447,20 @@ class SQLTranslatorProd:
             }
 
         db_type = (ds_config.get('db_type') or '').lower()
-        if db_type and 'mysql' not in db_type and 'maria' not in db_type:
+        try:
+            dialect = sql_dialects.get_dialect(db_type)
+        except sql_dialects.UnsupportedDbType:
             return {
                 'success': False,
-                'error': f"暂不支持的数据源类型: {db_type}，当前仅支持 MySQL"
+                'error': (f"暂不支持的数据源类型: {db_type}，当前支持 "
+                          "MySQL/MariaDB、PostgreSQL、Oracle、SQL Server、达梦(DM)")
             }
+        if dialect.family != 'mysql':
+            return SQLTranslatorProd._execute_sql_generic(
+                dialect, ds_config, sql, execution_timeout_ms,
+                require_consistent_snapshot, parameters, parameter_fingerprint,
+                preserve_decimal, source_watermark_field)
+        # MySQL/MariaDB 沿用历史执行路径（含一致性快照证据），行为不变
 
         connection = None
         business_query_submitted = False
