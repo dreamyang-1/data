@@ -1,0 +1,148 @@
+{
+  "base_commit": "56ebf6b5eb242245ab96395822f0123fa021fd80",
+  "service_commits": [
+    {
+      "service": "Agent",
+      "commit": "b90587e18c9547853eabfc5f92d4baa98451e42f",
+      "files": [
+        "app/domain/semantic_description.py",
+        "tests/test_semantic_description.py",
+        "tests/test_synced_semantic_description.py"
+      ]
+    },
+    {
+      "service": "Oagnet",
+      "commit": "8867f104d6a73722fcf58dba14c475c2c474bfa6",
+      "files": [
+        "Oagnet/agent.py",
+        "Oagnet/tests/test_structured_binding.py",
+        "Oagnet/tests/test_question_asl_recovery.py"
+      ]
+    },
+    {
+      "service": "SQL",
+      "commit": "55a44205862fdc6026a5cfd58cffb201c1ea4834",
+      "files": [
+        "sql-translator/sql_translator_prod.py",
+        "sql-translator/test_projected_metric_having.py"
+      ]
+    }
+  ],
+  "foundation_commit": "5561ad682be3dca8f04bf857efc831e605ebfcce",
+  "files": [
+    {
+      "path": "app/domain/semantic_description.py",
+      "sha256": "a56534fb5817f751a86b0656fcba459b41ca675ff8e61a1118034a976369564c"
+    },
+    {
+      "path": "tests/test_semantic_description.py",
+      "sha256": "ab734b82edf9c81df7ea126db16e8bcfc5c8304000bf025acc58b04910c5918c"
+    },
+    {
+      "path": "tests/test_synced_semantic_description.py",
+      "sha256": "5af4ba61f08da62f433c74af246c10bb4f80347a8183b70938c6c81c154e53d0"
+    },
+    {
+      "path": "Oagnet/agent.py",
+      "sha256": "2cfef5fa9da8ea78cee9c8eb67efd120eb58a6fd74cf5bb2ec5c77839aab779d"
+    },
+    {
+      "path": "Oagnet/tests/test_structured_binding.py",
+      "sha256": "585fb06411a7b5b4442e331929f38453499c7cb1817292e8e7bf04f96e5e55d6"
+    },
+    {
+      "path": "Oagnet/tests/test_question_asl_recovery.py",
+      "sha256": "a907262163dd2a60a3e13ed045196d4919294d70ac8c8fb20fea06b32dc78371"
+    },
+    {
+      "path": "sql-translator/sql_translator_prod.py",
+      "sha256": "84acef691fe72e11dc38a5c3c37465b560de442bfa830ee80618f26d1f448a12"
+    },
+    {
+      "path": "sql-translator/test_projected_metric_having.py",
+      "sha256": "99edd698ad3ac97e0858633711ee61d513f99f69f43cc077ff5b12b52a40560a"
+    },
+    {
+      "path": "app/adapters/http.py",
+      "sha256": "aab8999e5c17baf776a085d900f6daa61b527649436666cabc1faf1f318386c0"
+    },
+    {
+      "path": "app/analysis/interpretation.py",
+      "sha256": "02555108c9fb8d08b656bfab9d288b49fca4e431448e5cfccd180e8e7bd980b5"
+    },
+    {
+      "path": "app/services/intent_asl_contract.py",
+      "sha256": "c874282eb443922fbed33904f7e1ca91dbceb9cea09cc91abe69a92ed54d56b5"
+    },
+    {
+      "path": "app/services/orchestrator.py",
+      "sha256": "fb2594cbac77d5d9840671df0b08090a8370fe4cc5f0fbd5ae78bfaae237a47e"
+    },
+    {
+      "path": "tests/test_dependency_reference_handoff.py",
+      "sha256": "293ae943f9157684f8bd1f3af1f6a46b837a674fc2208f61f67cad29c32384e2"
+    },
+    {
+      "path": "tests/test_trend_task_completion.py",
+      "sha256": "b977ff695a226865c8eeb84a1620f4bf2a4f79f52d6d6fdf7360da76214a5fc3"
+    }
+  ],
+  "runtime": [
+    {
+      "service": "Agent",
+      "path": "app/domain/semantic_description.py",
+      "sha256": "a56534fb5817f751a86b0656fcba459b41ca675ff8e61a1118034a976369564c",
+      "candidate_matches": true,
+      "workspace_matches": true
+    },
+    {
+      "service": "Agent",
+      "path": "app/adapters/http.py",
+      "sha256": "aab8999e5c17baf776a085d900f6daa61b527649436666cabc1faf1f318386c0",
+      "candidate_matches": true,
+      "workspace_matches": true
+    },
+    {
+      "service": "Agent",
+      "path": "app/analysis/interpretation.py",
+      "sha256": "02555108c9fb8d08b656bfab9d288b49fca4e431448e5cfccd180e8e7bd980b5",
+      "candidate_matches": true,
+      "workspace_matches": true
+    },
+    {
+      "service": "Agent",
+      "path": "app/services/intent_asl_contract.py",
+      "sha256": "c874282eb443922fbed33904f7e1ca91dbceb9cea09cc91abe69a92ed54d56b5",
+      "candidate_matches": true,
+      "workspace_matches": true
+    },
+    {
+      "service": "Agent",
+      "path": "app/services/orchestrator.py",
+      "sha256": "fb2594cbac77d5d9840671df0b08090a8370fe4cc5f0fbd5ae78bfaae237a47e",
+      "candidate_matches": true,
+      "workspace_matches": true
+    },
+    {
+      "service": "Oagnet",
+      "path": "Oagnet/agent.py",
+      "sha256": "2cfef5fa9da8ea78cee9c8eb67efd120eb58a6fd74cf5bb2ec5c77839aab779d",
+      "candidate_matches": true,
+      "workspace_matches": true
+    },
+    {
+      "service": "SQL",
+      "path": "sql-translator/sql_translator_prod.py",
+      "sha256": "84acef691fe72e11dc38a5c3c37465b560de442bfa830ee80618f26d1f448a12",
+      "candidate_matches": true,
+      "workspace_matches": true
+    }
+  ],
+  "protected_contracts": [
+    "existing intent fields",
+    "existing planner rules and other authors changes",
+    "current semantic scope and read-only execution",
+    "existing ASL/SQL rules outside the proved defects"
+  ],
+  "release_receipt_recorded": false
+}

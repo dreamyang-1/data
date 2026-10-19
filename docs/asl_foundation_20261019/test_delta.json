@@ -1,0 +1,107 @@
+{
+  "comparison": {
+    "Agent": {
+      "baseline_counts": {
+        "passed": 5069,
+        "failed": 269
+      },
+      "final_counts": {
+        "passed": 5083,
+        "failed": 255
+      },
+      "baseline_collection_errors": [
+        "tests/test_bound_result_operations.py",
+        "tests/test_declared_calculation_planning.py"
+      ],
+      "final_collection_errors": [
+        "tests/test_bound_result_operations.py",
+        "tests/test_declared_calculation_planning.py"
+      ],
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [
+        "tests/test_dependency_reference_handoff.py::test_materialized_reference_does_not_become_an_extra_business_filter[\\u590d\\u7528\\u4e0a\\u4e00\\u8f6e\\u67e5\\u8be2\\u7ed3\\u679c\\uff1a2025\\u5e74\\u9500\\u552e\\u989d\\u6700\\u9ad8\\u7684\\u7ecf\\u9500\\u5546\\u540d\\u79f0]",
+        "tests/test_dependency_reference_handoff.py::test_materialized_reference_does_not_become_an_extra_business_filter[value1]",
+        "tests/test_dependency_reference_handoff.py::test_mixed_named_selection_keeps_the_named_part",
+        "tests/test_dependency_reference_handoff.py::test_resolved_reference_is_not_rebound_as_a_separate_named_entity",
+        "tests/test_dependency_reference_handoff.py::test_child_declared_period_does_not_conflict_with_stale_all_history_marker[2025\\u5e74-REQUIRED]",
+        "tests/test_synced_semantic_description.py::test_active_model_reads_actual_sync_document_without_registered_url[None]",
+        "tests/test_synced_semantic_description.py::test_active_model_reads_actual_sync_document_without_registered_url[]",
+        "tests/test_synced_semantic_description.py::test_active_model_reads_actual_sync_document_without_registered_url[  ]",
+        "tests/test_synced_semantic_description.py::test_missing_sync_file_remains_unavailable_without_other_content[404]",
+        "tests/test_synced_semantic_description.py::test_missing_sync_file_remains_unavailable_without_other_content[500]",
+        "tests/test_synced_semantic_description.py::test_sync_reads_remain_fresh_and_model_specific",
+        "tests/test_synced_semantic_description.py::test_full_sync_document_reaches_actual_planning_model",
+        "tests/test_trend_task_completion.py::test_monthly_query_with_one_large_change_finishes_with_grounded_insight[values0]",
+        "tests/test_trend_task_completion.py::test_monthly_query_with_one_large_change_finishes_with_grounded_insight[values1]"
+      ],
+      "added": [],
+      "removed": [],
+      "stale_test_renames": {}
+    },
+    "Oagnet": {
+      "baseline_counts": {
+        "passed": 1820,
+        "failed": 33
+      },
+      "final_counts": {
+        "passed": 1827,
+        "failed": 26
+      },
+      "baseline_collection_errors": [],
+      "final_collection_errors": [],
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [
+        "tests/test_question_asl_recovery.py::test_missing_extraction_can_generate_from_completed_question",
+        "tests/test_question_asl_recovery.py::test_provisional_grain_error_does_not_block_question_generation",
+        "tests/test_question_asl_recovery.py::test_recovery_retains_confirmed_caller_constraints",
+        "tests/test_question_asl_recovery.py::test_question_generation_receives_existing_analysis_requirements",
+        "tests/test_question_asl_recovery.py::test_registered_scalar_metric_threshold_uses_full_catalog_formula[total_hospitals_in_region]",
+        "tests/test_question_asl_recovery.py::test_registered_scalar_metric_threshold_uses_full_catalog_formula[\\u533a\\u57df\\u5168\\u90e8\\u533b\\u9662\\u603b\\u6570]",
+        "tests/test_question_asl_recovery.py::test_registered_scalar_metric_threshold_uses_full_catalog_formula[TIMESTAMPDIFF(MONTH,hospital.first_order_date,CURRENT_DATE)]"
+      ],
+      "added": [],
+      "removed": [],
+      "stale_test_renames": {
+        "tests/test_structured_binding.py::test_original_question_cannot_reach_retrieval_or_model": "tests/test_structured_binding.py::test_completed_question_reaches_original_scoped_generator",
+        "tests/test_structured_binding.py::test_missing_extraction_never_falls_back": "tests/test_structured_binding.py::test_missing_extraction_and_unavailable_generator_remain_unresolved"
+      }
+    },
+    "SQL": {
+      "baseline_counts": {
+        "passed": 680,
+        "failed": 30
+      },
+      "final_counts": {
+        "passed": 684,
+        "failed": 26
+      },
+      "baseline_collection_errors": [],
+      "final_collection_errors": [],
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [
+        "sql-translator/test_projected_metric_having.py::test_registered_scalar_metric_having_uses_its_selected_alias[cooperation=TIMESTAMPDIFF(MONTH,dealer.first_order_date,CURRENT_DATE)]",
+        "sql-translator/test_projected_metric_having.py::test_registered_scalar_metric_having_uses_its_selected_alias[TIMESTAMPDIFF(MONTH, dealer.first_order_date, CURRENT_DATE)]",
+        "sql-translator/test_projected_metric_having.py::test_projected_having_is_executable_and_preserves_threshold",
+        "sql-translator/test_projected_metric_having.py::test_unrelated_having_and_non_mysql_dialects_are_preserved"
+      ],
+      "added": [],
+      "removed": [],
+      "stale_test_renames": {}
+    }
+  },
+  "critical": {
+    "Agent": {
+      "passed": 97
+    },
+    "Oagnet": {
+      "passed": 100
+    },
+    "SQL": {
+      "passed": 34
+    }
+  },
+  "critical_total_passed": 231,
+  "all_full_suites_green": false,
+  "new_regressions": 0,
+  "new_collection_errors": 0
+}
