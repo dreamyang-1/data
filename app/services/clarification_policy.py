@@ -128,6 +128,8 @@ def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source
     if slot == 'task_answer_mapping':
         reason = 'USER_REFERENCE_AMBIGUITY'
     system_repair = False
+    if any((item.ambiguity_id or '').startswith('PLANNER_METRIC_THRESHOLD_') for item in ambiguities):
+        reason,is_user,system_repair='SYSTEM_FAILURE',False,True
     if slot == 'fields':
         reason, is_user = 'CATALOG_GOVERNANCE_GAP', False
     elif not is_user:

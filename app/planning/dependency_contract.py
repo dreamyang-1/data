@@ -7,6 +7,7 @@ scope are actually present in the predecessor contract.
 from __future__ import annotations
 
 import re
+import copy
 from typing import Any
 
 
@@ -53,6 +54,69 @@ def structured_query_changed(target: dict | None, sources: list[dict | None]) ->
             continue
         return False
     return True
+
+
+def dependency_selection_complete(reference, loaded_row_count, source_extraction):
+    """A declared Top N is the complete selected set, never the whole population."""
+    from minio_followup_store import dataset_source_complete
+    if dataset_source_complete(reference,loaded_row_count):
+        return True
+    spec=(source_extraction or {}).get('结果操作') or {}
+    planned=spec.get('operation')
+    log=list(reference.transformation_log)
+    if not isinstance(planned,dict) or not log or not reference.parent_dataset_ids:
+        return False
+    actual=copy.deepcopy(log[-1])
+    actual.pop('input_binding',None)
+    if actual!=planned:
+        return False
+    steps=planned.get('operations',[]) if planned.get('type')=='pipeline' else [planned]
+    if not any(step.get('type') in {'limit','sort_limit','extrema'} for step in steps):
+        return False
+    # Prove source population coverage independently of this exact, recorded
+    # final selection. Earlier truncations/limits remain disqualifying.
+    proof=reference.to_dict()
+    proof['transformation_log']=log[:-1]
+    return dataset_source_complete(proof,loaded_row_count)
+
+
+def reuse_dependency_rankings(plan):
+    """Rank an identical complete predecessor query locally, without re-querying its population."""
+    from app.domain.models import PrimaryIntent
+    from app.planning.task_dag import database_query_choice
+    indexed={task.task_id:task for task in plan.tasks}
+    tasks=[]
+    for task in plan.tasks:
+        target=task.extraction or {}
+        source=indexed.get(task.depends_on[0]) if len(task.depends_on)==1 else None
+        prior=(source.extraction or {}) if source else {}
+        exact=bool(prior and projection(target) and all((target.get(key) or [])==(prior.get(key) or [])
+            for key in ('实体','指标','维度','展示字段','过滤条件')) and target.get('时间粒度')==prior.get('时间粒度'))
+        derived=bool(re.search(r'增长|环比|同比|平均|占比|差额',str(target.get('输出要求') or '')))
+        if (not exact or derived or prior.get('限制') is not None or database_query_choice(target) is False
+                or target.get('结果操作') or task.primary_intent not in {PrimaryIntent.METRIC_QUERY,PrimaryIntent.DETAIL_QUERY}):
+            tasks.append(task);continue
+        steps=[]
+        available={name for _,name in projection(prior)}
+        invalid_sort=len(target.get('排序') or [])>1
+        for item in target.get('排序') or []:
+            if not isinstance(item,dict) or item.get('field') not in available or item.get('order') not in {'asc','desc'}:
+                invalid_sort=True;break
+            steps.append({'type':'sort','field':item['field'],'descending':item['order']=='desc'})
+        if invalid_sort:
+            tasks.append(task);continue
+        limit=target.get('限制')
+        if type(limit) is int and 1<=limit<=10_000:
+            steps.append({'type':'limit','count':limit})
+        if not steps:
+            tasks.append(task);continue
+        extraction=copy.deepcopy(target)
+        extraction.update({'意图':'指标计算','是否查询数据库':'否',
+            '结果操作':{'source_task_id':source.task_id,
+                'operation':steps[0] if len(steps)==1 else {'type':'pipeline','operations':steps}}})
+        tasks.append(task.model_copy(update={'question':'根据前序任务的完整结果'+task.question+'，不再查询数据库',
+            'extraction':extraction,'primary_intent':PrimaryIntent.COMPARISON_ANALYSIS}))
+    return plan.model_copy(update={'tasks':tasks})
 
 
 def sql_column_bindings(sql: str, columns: list[str]) -> dict[str, str]:

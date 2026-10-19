@@ -1810,13 +1810,16 @@ def test_missing_parameter_stream_uses_document_clarification_section_format():
     assert completed["status"] == "NEEDS_CLARIFICATION"
     assert "#### ◉ 意图识别" in thinking
     assert "用户原始问句：统计经销商" in thinking
-    assert "#### 2、任务拆分与规划" in thinking
+    # STALE_TEST(2026-10-19): root AGENTS.md freezes the six public nodes,
+    # including truthful skipped nodes when clarification interrupts execution.
+    assert "#### ◉ 任务拆分与规划" in thinking
     assert "当前任务参数不完整，暂停子任务拆分" in thinking
-    assert "#### 3、调研执行" in thinking
+    assert "#### ◉ 调度执行" in thinking
     assert "跳过所有工具调用，无工具发起请求" in thinking
-    assert "#### 4、结果生成" in thinking
+    assert "#### ◉ 结果校验" in thinking
     assert "等待用户补充参数后再继续处理" in thinking
-    assert "#### 5、最终输出" in thinking
+    assert "#### ◉ 数据洞察分析" in thinking
+    assert "#### ◉ 最终输出" in thinking
     assert "#### ◉ 输出总结" not in thinking
     assert not any(
         event.get("meta", {}).get("stage") == "DATA_RETRIEVAL"

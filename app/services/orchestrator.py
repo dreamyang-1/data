@@ -1049,7 +1049,8 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     async def _emit_cached_progress(response: AgentResponse) -> None:
-        if response.status not in {'COMPLETED', 'PARTIAL_SUCCESS'} or response.intent in NO_DATA_INTENTS | METADATA_INTENTS:
+        if response.status not in {'COMPLETED', 'PARTIAL_SUCCESS'} or (
+                response.execution_shape!='COMPOSITE' and response.intent in NO_DATA_INTENTS | METADATA_INTENTS):
             return
         for stage, message in (
             ('INTENT_RECOGNITION', '已核对本次请求，命中当前会话及授权范围内的已完成结果。'),
@@ -1304,6 +1305,7 @@ class DataAnalysisOrchestrator:
                             # 追问轮把上一轮任务表一起给规划器：拆分时知道
                             # 上轮已有什么结果，避免为已查过的口径重复拆任务
                             planner_semantic_context = "\n".join(filter(None, (
+                                chat._planning_catalog_context,
                                 extract_semantic_spec_section(
                                     await self._agent_prompt_text(chat)
                                 ),
@@ -1389,7 +1391,7 @@ class DataAnalysisOrchestrator:
                         except (TaskBudgetExceeded, TaskInputBindingError) as exc:
                             planning_block = AgentResponse(
                                 request_id=uuid4(), conversation_id=chat.conversation_id,
-                                status="SAFE_FALLBACK", intent=PrimaryIntent.CHAT,
+                                status="SAFE_FALLBACK", intent=PrimaryIntent.METRIC_QUERY,
                                 intent_source="TASK_PLANNER", error_code=("TASK_BUDGET_EXCEEDED"
                                     if isinstance(exc, TaskBudgetExceeded) else "TASK_INPUT_BINDING_INVALID"),
                                 answer=str(exc), reliability=ReliabilityReport(level="FAIL", score=0,
@@ -1936,6 +1938,13 @@ class DataAnalysisOrchestrator:
                 )
             # 本轮结束把任务表连同各任务结果概要落盘，下轮识别/追问判断
             # 从这里读出上一轮的任务表
+            if len(chat._task_table or [])==1 and not response.task_results:
+                terminal={'COMPLETED':'已完成','PARTIAL_SUCCESS':'部分完成','NEEDS_CLARIFICATION':'待补充',
+                    'SAFE_FALLBACK':'已失败','FAILED':'已失败'}.get(response.status)
+                if terminal and chat._task_table[0].get('执行状态')!=terminal:
+                    chat._task_table[0]['执行状态']=terminal
+                    await emit_progress('TASK_STATUS',response.status,'',heading_only=True,
+                        task_table=copy.deepcopy(chat._task_table))
             await self._persist_conversation_task_table(chat, identity)
             logger.info(
                 "orchestration request completed message_id=%s status=%s intent=%s elapsed=%.2fs",
@@ -2679,8 +2688,9 @@ class DataAnalysisOrchestrator:
                 current_scope=expected_scope,
             )
             rows = tuple(dict(row) for row in loaded.rows)
-            from minio_followup_store import dataset_source_complete
-            if not dataset_source_complete(reference, len(rows)) or not rows or len(rows) > 1000:
+            from app.planning.dependency_contract import dependency_selection_complete
+            if not dependency_selection_complete(reference, len(rows),
+                    (source_extractions or {}).get(dependency_id)) or not rows or len(rows) > 1000:
                 raise DependencyConstraintError("DEPENDENCY_SOURCE_DATASET_INCOMPLETE_OR_TOO_LARGE")
             column = self._select_dependency_column(
                 task.question, reference.columns, rows,
@@ -5261,6 +5271,16 @@ class DataAnalysisOrchestrator:
                 admission_question, identity, chat.conversation_id
             )
         self._apply_dag_structured_query_shape(raw_rule_request, chat._planner_extraction)
+        dag_original_question=None
+        if ("DAG_BOUND_STRUCTURED_QUERY" in _INTERNAL_ASSUMPTIONS.get()
+                and chat.dependency_constraints and chat._planner_extraction is not None):
+            # The predecessor has already resolved “that dealer” to an exact
+            # ID constraint. Re-parsing the prerequisite prose can invent a
+            # literal name filter (e.g. hospital name = “that dealer”). Admit
+            # this typed child query; the original question stays on its DAG.
+            dag_original_question=chat.question
+            admission_question=raw_rule_request.rewritten_question
+            chat=chat.model_copy(deep=True,update={'question':admission_question})
         bind_authorized_scope(
             raw_rule_request,
             chat.authorized_semantic_scope,
@@ -7028,6 +7048,8 @@ class DataAnalysisOrchestrator:
                 ),
             ]))
             canonical_question = request.rewritten_question or canonical_question
+            if dag_original_question:
+                request.original_question=dag_original_question
         turn_decision.context_after = self.turn_admission_gate.context_snapshot(request)
         turn_decision.context_conflicts = (
             self.turn_admission_gate.validate_context_consistency(
@@ -8444,6 +8466,9 @@ class DataAnalysisOrchestrator:
                 analysis_warning = f"查询已成功；本次未计算扩展分析：{exc}。已保留查询结果，不需要重复提供已有条件。"
                 analysis_output = None
             if analysis_output is not None:
+                period_extremum=analysis_output.facts.get('period_extremum')
+                if isinstance(period_extremum,dict) and period_extremum.get('complete') is False:
+                    analysis_warning='查询已成功，但部分月份缺少本期或比较基期；当前极值只覆盖可比较月份，不能代表完整请求范围。'
                 structured_analysis = self.insight_interpreter.interpret(
                     request, analysis_output
                 )
@@ -13257,6 +13282,8 @@ class DataAnalysisOrchestrator:
 
     @classmethod
     def _plain_binding_failure_answer(cls, request: CanonicalAnalysisRequest) -> str:
+        if any((item.ambiguity_id or '').startswith('PLANNER_METRIC_THRESHOLD_') for item in request.semantic_ambiguities):
+            return '本次查询尚未执行：系统未能把指标阈值转换为可执行的筛选任务。已保留原问题，需修复任务规划后继续，您无需重复说明已明确的阈值。'
         reasons = "；".join(cls._plain_binding_failure_reasons(request))
         return (
             f"本次查询没有执行，原因是：{reasons}。\n"
@@ -13311,6 +13338,8 @@ class DataAnalysisOrchestrator:
                 # 最终输出用口语化总结说明原因，不复述内部校验原文
                 # （校验细节保留在歧义与决策轨迹里供排查）。
                 response.answer = self._plain_binding_failure_answer(request)
+                if any((item.ambiguity_id or '').startswith('PLANNER_METRIC_THRESHOLD_') for item in request.semantic_ambiguities):
+                    await emit_progress('ASL_GENERATION','FAILED',response.answer)
             response.clarification_decision_traces = traces
             return response
         # Keep unresolved slots in state, but never ask the same pending

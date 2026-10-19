@@ -817,6 +817,7 @@ async def chat_stream(
         planning_released = False
         presentation_scenario = "ANALYTIC"
         titled_think_sections: set[str] = set()
+        last_task_table: list[dict[str, Any]] = []
         composite_mode = False
         off_topic_flag = False
         planning_data_verdict = ""
@@ -828,6 +829,9 @@ async def chat_stream(
         heartbeat_interval = settings.thinking_stream_heartbeat_seconds
 
         def render_thinking(event: dict[str, Any]) -> list[str]:
+            nonlocal last_task_table
+            if event.get('task_table') and not event.get('is_child_task'):
+                last_task_table=[dict(row) for row in event['task_table']]
             stage = str(event.get("stage") or "processing").strip().upper()
             section = _thinking_section(stage)
             include_heading = bool(
@@ -1310,6 +1314,24 @@ async def chat_stream(
                 else presentation_scenario
             )
             presentation_scenario = response_scenario
+            if len(last_task_table)==1 and not response.task_results:
+                terminal={'COMPLETED':'已完成','PARTIAL_SUCCESS':'部分完成',
+                    'NEEDS_CLARIFICATION':'待补充','SAFE_FALLBACK':'已失败','FAILED':'已失败'}.get(response.status)
+                if terminal and last_task_table[0].get('执行状态')!=terminal:
+                    table=[{**last_task_table[0],'执行状态':terminal}]
+                    async for rendered_event in stream_thinking({'stage':'TASK_STATUS','status':response.status,
+                        'message':'','heading_only':True,'task_table':table}):
+                        yield rendered_event
+            if (response_scenario!='CHAT' and titled_think_sections
+                    and (response.execution_shape=='COMPOSITE' or response.intent not in {
+                        PrimaryIntent.CHAT,PrimaryIntent.CAPABILITY_HELP,PrimaryIntent.OUT_OF_SCOPE})):
+                sequence=[('intent','INTENT_RECOGNITION'),('planning','TASK_PLANNING'),
+                    ('execution','ASL_GENERATION'),('validation','RELIABILITY_CHECK'),('insight','INSIGHT_ANALYSIS')]
+                last_opened=max((index for index,(section,_) in enumerate(sequence) if section in titled_think_sections),default=-1)
+                for section,stage in sequence[last_opened+1:]:
+                    async for rendered_event in stream_thinking({'stage':stage,'status':'SKIPPED',
+                        'message':'等待补充信息，本环节尚未执行。' if response.status=='NEEDS_CLARIFICATION' else '未取得执行所需的前置结果，本环节尚未执行。'}):
+                        yield rendered_event
             if (response_scenario in {"CHAT", "CLARIFICATION"} or response.execution_shape == "COMPOSITE"
                     or response.intent not in {PrimaryIntent.CHAT, PrimaryIntent.CAPABILITY_HELP, PrimaryIntent.OUT_OF_SCOPE}):
                 async for rendered_event in stream_thinking({
@@ -1655,8 +1677,8 @@ def _thinking_section(stage: str) -> str | None:
         "EXTERNAL_SEARCH": "execution",
         "RELIABILITY_CHECK": "validation",
         "INSIGHT_ANALYSIS": "insight",
-        "CLARIFICATION_EXECUTION": "clarification_execution",
-        "CLARIFICATION_RESULT": "clarification_result",
+        "CLARIFICATION_EXECUTION": "execution",
+        "CLARIFICATION_RESULT": "validation",
         "FINAL_OUTPUT": "final_output",
     }.get(stage)
 
@@ -1908,10 +1930,10 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
     if normalized_scenario == "CLARIFICATION":
         scenario_titles = {
             "intent": "#### ◉ 意图识别",
-            "planning": "#### 2、任务拆分与规划",
-            "clarification_execution": "#### 3、调研执行",
-            "clarification_result": "#### 4、结果生成",
-            "final_output": "#### 5、最终输出",
+            "planning": "#### ◉ 任务拆分与规划",
+            "clarification_execution": "#### ◉ 调度执行",
+            "clarification_result": "#### ◉ 结果校验",
+            "final_output": "#### ◉ 最终输出",
         }
         if section in scenario_titles:
             return scenario_titles[section]

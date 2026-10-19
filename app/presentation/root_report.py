@@ -125,6 +125,23 @@ def render_root_report(
     table. Independent outputs stay independent; failed branches remain visible.
     """
     final = final or {}
+    question_ids=list(dict.fromkeys(item.get('question_id') for item in materials if item.get('question_id')))
+    if len(question_ids)>1:
+        sections, selected_ids = [], []
+        for index,question_id in enumerate(question_ids):
+            group=[item for item in materials if item.get('question_id')==question_id]
+            original=next((item.get('original_question') for item in group if item.get('original_question')),group[0].get('question') or '业务问题')
+            group_ids={item['task_id'] for item in group}
+            # A global synthesis paragraph cannot be attributed to one question.
+            # Keep table selection advice, while each answer uses its own facts.
+            advice={key:final[key] for key in ('result_titles',) if key in final}
+            advice['result_task_ids']=[task_id for task_id in final.get('result_task_ids') or [] if task_id in group_ids]
+            answer, selected=render_root_report(original,group,advice)
+            sections.append(f'### 问题{index+1}：{original}\n\n{answer}')
+            selected_ids.extend(selected)
+        overview=brief_summary(final.get('overview'),limit=400,max_sentences=5)
+        prefix=('分析结果如下：\n\n'+overview if overview else '查询结果如下：') if selected_ids else ''
+        return '\n\n'.join(filter(None,[prefix,*sections])),selected_ids
     available = [item for item in materials if item["status"] in {"COMPLETED", "PARTIAL_SUCCESS"}]
     if not available:
         # No completed output: all terminal failure kinds bypass insight
@@ -237,7 +254,7 @@ def apply_requested_root_charts(question, materials, selected_ids, render):
             continue
         facts = item.get('facts') or {}
         data = facts.get('query_data') or {}
-        requested, notes = requested_chart_specs(question, data.get('columns') or [],
+        requested, notes = requested_chart_specs(item.get('original_question') or question, data.get('columns') or [],
             data.get('rows') or [], facts)
         if requested is None:
             continue
