@@ -27,7 +27,9 @@ ORIGINAL = '筛选出2025年订单平均金额最高的前五位销售人员，�
 ])
 async def test_original_and_three_similar_deliver_real_ranked_artifacts(question, operation_question, field, descending, count):
     store = _ResultStore()
-    scope = DatasetScope(tenant_id='tenant', user_id='user', application_id='app', conversation_id='test')
+    chat = ChatRequest(semantic_model_id=81, application_id='app', conversation_id='test', message_id=str(uuid4()), question=question)
+    scope = DatasetScope(tenant_id='tenant', user_id='user', application_id='app', conversation_id='test',
+        authorized_semantic_scope_fingerprint=chat.authorized_semantic_scope.fingerprint())
     rows = [{'姓名':'同名', '人员（编码）':f'{i:03}', '所属公司':f'公司{i%3}',
              '含税销售总额':float(i*i*100), '订单笔数':i} for i in range(1,25)]
     reference = store.save_dataset(scope=scope, columns=list(rows[0]), rows=rows, snapshot_id='',
@@ -38,7 +40,6 @@ async def test_original_and_three_similar_deliver_real_ranked_artifacts(question
     service.sessions = SimpleNamespace(put_dataset_reference=AsyncMock())
     service._latest_task_dataset_reference = AsyncMock(return_value=reference.to_dict())
     service.chat_responder = SimpleNamespace(respond=AsyncMock(side_effect=AssertionError('不得用模型文字计算')))
-    chat = ChatRequest(semantic_model_id=81, application_id='app', conversation_id='test', message_id=str(uuid4()), question=question)
     task = AtomicTask(task_id='final', question=operation_question, depends_on=['source'])
     result = await service._respond_pure_computation(chat, TrustedIdentity(tenant_id='tenant', user_id='user'), task, {})
     assert result.status == 'COMPLETED'

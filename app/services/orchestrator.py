@@ -2582,7 +2582,8 @@ class DataAnalysisOrchestrator:
                 current_scope=expected_scope,
             )
             rows = tuple(dict(row) for row in loaded.rows)
-            if reference.row_count != len(rows) or not rows or len(rows) > 1000:
+            from minio_followup_store import dataset_source_complete
+            if not dataset_source_complete(reference, len(rows)) or not rows or len(rows) > 1000:
                 raise DependencyConstraintError("DEPENDENCY_SOURCE_DATASET_INCOMPLETE_OR_TOO_LARGE")
             column = self._select_dependency_column(
                 task.question, reference.columns, rows,
@@ -2715,6 +2716,7 @@ class DataAnalysisOrchestrator:
         conversation_id: str,
         *,
         exclude_source_type: str | None = None,
+        dataset_id: str | None = None,
     ) -> dict[str, Any] | None:
         """取任务会话里最近落盘的结果集引用；子任务响应不一定携带dataset_id。"""
         raw_items = await self.sessions.get_recent_dataset_references(
@@ -2722,6 +2724,8 @@ class DataAnalysisOrchestrator:
             conversation_id, limit=self.settings.dataset_recent_limit,
         )
         for item in raw_items:
+            if dataset_id is not None and item.get("dataset_id") != dataset_id:
+                continue
             if exclude_source_type and item.get("source_type") == exclude_source_type:
                 continue
             return item
@@ -2789,17 +2793,21 @@ class DataAnalysisOrchestrator:
         fallback = self._pure_computation_unavailable(chat)
         if self.dataset_store is None:
             return fallback
+        from app.services.computation_delivery import bind_division, numeric_value
+        from app.services.query_identity import source_quality
+        from minio_followup_store import dataset_source_complete
         references = []
         for dependency_id in task.depends_on:
             dependency_conversation = conversation_by_task.get(
                 dependency_id, chat.conversation_id
             )
+            dependency_response = (responses or {}).get(dependency_id)
             raw = await self._latest_task_dataset_reference(
                 identity, chat, dependency_conversation,
+                dataset_id=getattr(dependency_response, "dataset_id", None),
             )
             if raw is None:
                 # 结果被截断的任务不落盘，全量数据在SQL导出的XLSX里，导入后重试
-                dependency_response = (responses or {}).get(dependency_id)
                 result_file_url = getattr(dependency_response, "result_file_url", None)
                 if result_file_url:
                     raw = await self._import_dependency_result_file(
@@ -2813,81 +2821,49 @@ class DataAnalysisOrchestrator:
                 return fallback
             source = restore_reference(raw)
             try:
+                expected_scope = DatasetScope(
+                    tenant_id=identity.tenant_id, user_id=identity.user_id,
+                    application_id=chat.application_id, conversation_id=dependency_conversation,
+                    authorized_semantic_scope_fingerprint=chat.authorized_semantic_scope.fingerprint(),
+                )
                 loaded = await asyncio.to_thread(
                     self.dataset_store.load_dataset,
                     source,
-                    current_scope=source.scope,
+                    current_scope=expected_scope,
                 )
+                if (not dataset_source_complete(source, len(loaded.rows))
+                        or source_quality(source) == "FAIL"
+                        or source.semantic_model_id not in (None, chat.semantic_model_id)):
+                    raise ValueError("计算输入不完整、质量失败或模型不匹配")
             except Exception as exc:
                 logger.warning("pure computation source load failed: %s", exc)
                 return fallback
             references.append((source, loaded.rows))
         single_rows = [item for item in references if item[0].row_count == 1]
         multi_rows = [item for item in references if item[0].row_count > 1]
-        if len(references) == 1 or (not single_rows and len(multi_rows) == len(references)):
+        if len(references) == 1 or (references and not single_rows and len(multi_rows) == len(references)):
             return await self._respond_dataset_computation(chat, identity, task, references)
-        if len(single_rows) != 1 or not multi_rows:
-            logger.warning(
-                "pure computation fallback: unexpected dataset shape %s",
-                [(item[0].row_count, item[0].columns) for item in references],
-            )
-            return fallback
-        denominator_reference, denominator_rows = single_rows[0]
-        denominator = next(
-            (
-                float(value) for value in denominator_rows[0].values()
-                if isinstance(value, (int, float))
-                or (isinstance(value, str) and value.replace(".", "", 1).isdigit())
-            ),
-            0.0,
-        )
-        if denominator <= 0:
-            logger.warning("pure computation fallback: denominator %s", denominator)
-            return fallback
-        numerator_reference, numerator_rows = max(multi_rows, key=lambda item: item[0].row_count)
-        # 导出文件里可能带 _sheet_name 这类内部列，计算与落盘前剔除
-        data_columns = [
-            column for column in numerator_reference.columns if column != "_sheet_name"
-        ]
-        metric_column = next(
-            (
-                column for column in reversed(data_columns)
-                if all(
-                    isinstance(row.get(column), (int, float))
-                    or (isinstance(row.get(column), str) and row.get(column).replace(".", "", 1).isdigit())
-                    for row in numerator_rows
-                    if row.get(column) is not None
-                )
-                and any(row.get(column) is not None for row in numerator_rows)
-            ),
-            None,
-        )
-        if metric_column is None:
-            logger.warning(
-                "pure computation fallback: no numeric column in %s",
-                numerator_reference.columns,
-            )
-            return fallback
-        coverage_name = next(
-            (
-                word for word in ("区域医院覆盖率", "覆盖率", "占比", "比例")
-                if word in task.question
-            ),
-            "覆盖率",
-        )
+        try:
+            binding = bind_division(task, references)
+        except ValueError as exc:
+            logger.warning("pure computation binding unavailable: %s", exc)
+            return self._pure_computation_unavailable(chat, reason=str(exc))
+        numerator_reference, numerator_rows = binding.numerator, binding.numerator_rows
+        denominator_reference = binding.denominator
+        denominator = binding.denominator_value
+        metric_column, coverage_name = binding.numerator_column, binding.result_column
+        data_columns = [column for column in numerator_reference.columns if not column.startswith("_")]
+        def display_value(ratio):
+            return f"{ratio * 100:.2f}%" if binding.percentage else float(ratio)
         computed: list[tuple[dict[str, Any], float]] = []
         for row in numerator_rows:
-            raw_value = row.get(metric_column) or 0
-            try:
-                ratio = float(raw_value) / denominator
-            except (TypeError, ValueError):
-                ratio = 0.0
+            ratio = numeric_value(row[metric_column]) / denominator
             computed.append((row, ratio))
         computed.sort(key=lambda item: item[1], reverse=True)
         coverage_rows = [
             {
                 **{key: value for key, value in row.items() if key in data_columns},
-                coverage_name: f"{ratio * 100:.2f}%",
+                coverage_name: display_value(ratio),
             }
             for row, ratio in computed
         ]
@@ -2913,6 +2889,8 @@ class DataAnalysisOrchestrator:
                 transformation_log=({
                     "type": "derive",
                     "operation": f"{metric_column} / {denominator:g}",
+                    "input_binding": binding.evidence(),
+                    "source_quality_status": "PASS" if all(source_quality(ref) == "PASS" for ref, _ in references) else "WARN",
                     "source_truncated": False,
                 },),
                 ttl_seconds=self.settings.dataset_ttl_seconds,
@@ -2930,7 +2908,7 @@ class DataAnalysisOrchestrator:
             subject = subject.replace(phrase, "")
         subject = subject.strip(" ：:，。")
         top_parts = "、".join(
-            f"{row.get(data_columns[0])} {ratio * 100:.2f}%"
+            f"{row.get(data_columns[0])} {display_value(ratio)}"
             for row, ratio in computed[:3]
         )
         answer = (
@@ -2950,13 +2928,14 @@ class DataAnalysisOrchestrator:
             "facts": {**QwenAnalysisSynthesizer._bounded({
                 "computation": {
                     "operation": f"{metric_column} / {denominator:g}",
-                    "denominator": denominator,
+                    "denominator": float(denominator),
+                    "input_binding": binding.evidence(),
                     "row_count": reference.row_count,
                     "zero_count": zero_count,
                     "top": [
                         {
                             **{column: row.get(column) for column in data_columns},
-                            coverage_name: f"{ratio * 100:.2f}%",
+                            coverage_name: display_value(ratio),
                         }
                         for row, ratio in computed[:10]
                     ],
@@ -2977,12 +2956,13 @@ class DataAnalysisOrchestrator:
             # The computed artifact is the deliverable, not the input workbooks.
             dataset_id=reference.dataset_id,
             reliability=ReliabilityReport(
-                level="HIGH",
-                score=1.0,
+                level="HIGH" if all(source_quality(ref) == "PASS" for ref, _ in references) else "MEDIUM",
+                score=1.0 if all(source_quality(ref) == "PASS" for ref, _ in references) else 0.7,
                 gates={
                     "no_data_claim": True,
                     "deterministic_computation": True,
                     "denominator_positive": True,
+                    "source_quality_confirmed": all(source_quality(ref) == "PASS" for ref, _ in references),
                 },
             ),
             evidence=[EvidenceItem(
@@ -2991,6 +2971,7 @@ class DataAnalysisOrchestrator:
                 source_ref=reference.dataset_id,
                 payload={
                     "operation": f"{metric_column} / {denominator:g}",
+                    "input_binding": binding.evidence(),
                     "row_count": reference.row_count,
                     "preview": coverage_rows[:20],
                 },
@@ -2998,7 +2979,7 @@ class DataAnalysisOrchestrator:
         )
 
     @staticmethod
-    def _pure_computation_unavailable(chat: ChatRequest) -> AgentResponse:
+    def _pure_computation_unavailable(chat: ChatRequest, *, reason: str | None = None) -> AgentResponse:
         """No artifact means no successful calculation, irrespective of prose."""
         return AgentResponse(
             request_id=uuid4(),
@@ -3006,7 +2987,7 @@ class DataAnalysisOrchestrator:
             status="FAILED",
             intent=PrimaryIntent.CHAT,
             intent_source="TASK_PLANNER",
-            answer="计算未完成，暂未获得可用的计算结果。",
+            answer=f"计算未完成：{reason}。" if reason else "计算未完成，暂未获得可用的计算结果。",
             reliability=ReliabilityReport(
                 level="FAIL",
                 score=0,
@@ -3020,6 +3001,7 @@ class DataAnalysisOrchestrator:
     async def _respond_dataset_computation(self, chat, identity, task, references):
         """Execute bounded dataset operations and publish the exact final artifact."""
         from app.services.computation_delivery import aligned_input, computation_material
+        from app.services.query_identity import source_quality
         from minio_followup_store import dataset_source_complete
         try:
             if not all(dataset_source_complete(ref, len(rows)) and len(rows) == ref.row_count
@@ -3056,8 +3038,11 @@ class DataAnalysisOrchestrator:
             return AgentResponse(request_id=uuid4(), conversation_id=chat.conversation_id,
                 status='COMPLETED', intent=PrimaryIntent.CHAT, intent_source='TASK_DAG_COMPUTATION',
                 answer=chat._dag_deferred_insight['summary'], dataset_id=result.reference.dataset_id,
-                reliability=ReliabilityReport(level='HIGH', score=1,
-                    gates={'deterministic_computation':True,'full_result':True}),
+                reliability=ReliabilityReport(
+                    level='HIGH' if all(source_quality(ref) == 'PASS' for ref, _ in references) else 'MEDIUM',
+                    score=1 if all(source_quality(ref) == 'PASS' for ref, _ in references) else 0.7,
+                    gates={'deterministic_computation':True,'full_result':True,
+                           'source_quality_confirmed':all(source_quality(ref) == 'PASS' for ref, _ in references)}),
                 evidence=[EvidenceItem(evidence_id='derived-computation', kind='ANALYSIS_RESULT',
                     source_ref=result.reference.dataset_id, payload={'operation':operation,
                     'row_count':len(loaded.rows),'preview':list(loaded.rows[:20])})])
@@ -4839,6 +4824,8 @@ class DataAnalysisOrchestrator:
             PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
         }:
             return None
+        if chat._planner_extraction is not None:
+            request._planner_extraction = chat._planner_extraction
         self._apply_explicit_projection_mode(request, chat._planner_extraction)
         request.application_id = chat.application_id
         if not supplied_request:
@@ -7375,6 +7362,8 @@ class DataAnalysisOrchestrator:
 
         # 查询执行前快照 ASL 前形态的指纹（surface 直通路径之外的主链路
         # 查询同样要落盘这个指纹），随后再做 DAG 独立任务的等价复用判定
+        if chat._planner_extraction is not None:
+            request._planner_extraction = chat._planner_extraction
         chat._pre_asl_query_fingerprint = self._query_fingerprint(request)
         chat._pre_asl_query_fingerprint_components = (
             self._query_fingerprint_components(request)
@@ -10329,26 +10318,12 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _query_fingerprint_components(request: CanonicalAnalysisRequest) -> dict:
-        metric_names = [
-            metric.metric_id or metric.canonical_name or metric.input
-            for metric in request.metrics
-        ]
-        return {
-            "semantic_model_id": request.semantic_model_id,
-            "semantic_model_version": request.semantic_model_version,
-            "intent": request.primary_intent.value,
-            "metrics": metric_names,
-            "dimensions": request.dimensions,
-            "filters": request.filters,
-            "ranking_limit": request.ranking_limit,
-            "operators": [operator.value for operator in request.operators],
-        }
+        from app.services.query_identity import query_identity
+        return query_identity(request)
 
     @classmethod
     def _query_fingerprint(cls, request: CanonicalAnalysisRequest) -> str:
-        """查询指纹：语义模型版本、意图、指标、维度、过滤、limit 与排序算子
-        的规范化哈希。落盘数据集时写入 provenance，DAG 独立任务执行前用同一
-        函数计算比对，两个要素不同的查询不可能得到相同指纹。"""
+        """Versioned effective-query identity shared by prediction and execution."""
         return hashlib.sha256(json.dumps(
             cls._query_fingerprint_components(request),
             ensure_ascii=False, sort_keys=True, default=str,
@@ -10361,6 +10336,10 @@ class DataAnalysisOrchestrator:
         落盘查询完全一致时，直接引用那次的数据集，不再发起新查询。任何
         要素（指标/维度/过滤/时间/limit）不同都不会命中，宁可多查一次库
         也不会错用旧数据。"""
+        from app.services.query_identity import requires_fresh_query, source_quality
+        from minio_followup_store import dataset_source_complete
+        if requires_fresh_query(chat, request):
+            return None
         if self.dataset_store is None:
             logger.info("task reuse skipped: dataset store unavailable message_id=%s", chat.message_id)
             return None
@@ -10450,6 +10429,11 @@ class DataAnalysisOrchestrator:
                     item.get("dataset_id"), exc,
                 )
                 continue
+            if not dataset_source_complete(loaded.reference, len(loaded.rows)):
+                continue
+            quality = source_quality(loaded.reference)
+            if quality == "FAIL":
+                continue
             visible_columns = [
                 column for column in loaded.reference.columns
                 if not str(column).startswith("_")
@@ -10466,7 +10450,7 @@ class DataAnalysisOrchestrator:
                 row_count=len(rows),
                 snapshot_id=loaded.reference.dataset_id,
                 data_as_of=datetime.fromisoformat(loaded.reference.data_as_of),
-                quality_status="PASS",
+                quality_status=quality,
                 total_row_count=loaded.reference.row_count,
                 truncated=loaded.reference.row_count > len(rows),
             )
@@ -10499,7 +10483,10 @@ class DataAnalysisOrchestrator:
         不加载数据集。命中的任务在任务拆分展示里标"复用上一轮查询结果"；
         执行期仍以实际复用结论为准，结论不一致时在任务表同步纠正。
         """
+        from app.services.query_identity import requires_fresh_query
         predictions: dict[str, bool] = {}
+        if requires_fresh_query(chat):
+            return predictions
         if self.dataset_store is None:
             return predictions
         root_conversation = getattr(chat, "_dag_root_conversation_id", None) or (
@@ -10533,6 +10520,8 @@ class DataAnalysisOrchestrator:
             )
             return predictions
         for task in plan.tasks:
+            if requires_fresh_query(chat, question=task.question):
+                continue
             if task.depends_on:
                 # 依赖任务拿不到完整入参形态，指纹不可比，交给执行期闸口
                 continue
@@ -10561,7 +10550,8 @@ class DataAnalysisOrchestrator:
                 continue
             # 分类器产物不带语义模型 ID，执行期请求的模型 ID 是桥接层从
             # chat 补的；预判指纹要和落盘指纹同口径，这里同样补齐
-            task_request.semantic_model_id = chat.semantic_model_id
+            bind_authorized_scope(task_request, chat.authorized_semantic_scope,
+                execution_resolved_business_domain_ids=chat._demo_execution_resolved_business_domain_ids)
             fingerprint = self._query_fingerprint(task_request)
             for item in references:
                 provenance = next(
@@ -10576,6 +10566,11 @@ class DataAnalysisOrchestrator:
                         "task reuse prediction scope mismatch task_id=%s dataset_id=%s",
                         task.task_id, item.get("dataset_id"),
                     )
+                    continue
+                from minio_followup_store import dataset_source_complete
+                if (not isinstance(item.get("row_count"), int)
+                        or not dataset_source_complete(item, item["row_count"])
+                        or provenance.get("source_quality_status") == "FAIL"):
                     continue
                 predictions[task.task_id] = True
                 break
@@ -10693,6 +10688,10 @@ class DataAnalysisOrchestrator:
             provenance = {
                 "type": "query_provenance",
                 "source_truncated": query_result.dataset.truncated,
+                "source_quality_status": query_result.dataset.quality_status,
+                "source_total_row_count": query_result.dataset.total_row_count,
+                "source_row_count": query_result.dataset.row_count,
+                "source_data_as_of": query_result.dataset.data_as_of.isoformat(),
                 "query_fingerprint": query_fingerprint,
                 "fingerprint_components": self._query_fingerprint_components(request),
                 # ASL 前形态的指纹与组成：DAG 子任务闸口只能拿到 ASL 前

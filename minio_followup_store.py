@@ -178,6 +178,15 @@ def dataset_source_complete(reference: DatasetReference | Mapping[str, Any], loa
         if any(key in operation and operation[key] is not False for key in ('truncated', 'source_truncated')):
             return False
         kind = str(operation.get('type') or '').lower()
+        if kind == 'query_provenance' and operation.get('source_total_row_count') is not None:
+            total = operation['source_total_row_count']
+            # Derived filters/aggregates retain root provenance. Compare the
+            # root's loaded count, not the smaller derived result's row count.
+            source_count = operation.get('source_row_count')
+            if source_count is None and not value.get('parent_dataset_ids'):
+                source_count = value.get('row_count')
+            if type(total) is not int or (source_count is not None and total != source_count):
+                return False
         if kind == 'pipeline':
             steps = operation.get('operations')
             return isinstance(steps, list) and bool(steps) and all(complete(step) for step in steps)
