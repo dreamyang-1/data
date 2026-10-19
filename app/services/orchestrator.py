@@ -44,7 +44,7 @@ from app.planning.compat import (
     prepare_execution,
     render_prior_task_table_context,
 )
-from app.planning.task_dag import database_query_choice
+from app.planning.task_dag import TaskBudgetExceeded, TaskInputBindingError, database_query_choice
 from app.planning.task_dependencies import TaskDependencySkipped, dependency_skip
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
@@ -1197,6 +1197,7 @@ class DataAnalysisOrchestrator:
                 )
             else:
                 plan = None
+                planning_block = None
                 # 语义识别已判成业务无关的问题，拆分器不再调度，直接落 _handle 走聊天回复
                 off_topic_direct = bool(getattr(chat, "_v2_off_topic", False))
                 if self.settings.multi_question_enabled and self.task_planner is not None and not off_topic_direct:
@@ -1311,14 +1312,24 @@ class DataAnalysisOrchestrator:
                                 if outcome.single_extraction.structured is not None:
                                     outcome.single_extraction.structured["是否查询数据库"] = "是"
                                     _apply_sort_type(outcome.single_extraction.structured)
+                        except (TaskBudgetExceeded, TaskInputBindingError) as exc:
+                            planning_block = AgentResponse(
+                                request_id=uuid4(), conversation_id=chat.conversation_id,
+                                status="SAFE_FALLBACK", intent=PrimaryIntent.CHAT,
+                                intent_source="TASK_PLANNER", error_code=("TASK_BUDGET_EXCEEDED"
+                                    if isinstance(exc, TaskBudgetExceeded) else "TASK_INPUT_BINDING_INVALID"),
+                                answer=str(exc), reliability=ReliabilityReport(level="FAIL", score=0,
+                                    gates={"task_plan_executable":False, "business_query_executed":False}))
+                            await emit_progress("TASK_PLANNING", "FAILED", str(exc))
                         except TaskPlanningError as exc:
                             logger.warning("multi-question plan rejected: %s", exc)
                     # 拆分模型判成闲聊/超范围的单任务不亮规划节点，
                     # 拆分结束后直接走受控聊天回复
                     nondata_direct = (
-                        plan is None
+                        planning_block is not None or (plan is None
                         and chat._planner_extraction is not None
                         and chat._planner_extraction.intent in NO_DATA_INTENTS
+                        )
                     )
                     if plan is not None:
                         task_requests = []
@@ -1771,7 +1782,9 @@ class DataAnalysisOrchestrator:
                             task_count=len(plan.tasks) if plan is not None else 1,
                             task_table=task_table,
                         )
-                if (confirmed_pending_choice is not None and plan is None
+                if planning_block is not None:
+                    response = planning_block
+                elif (confirmed_pending_choice is not None and plan is None
                         and self.settings.surface_asl_execution_enabled
                         and chat._planner_extraction is not None
                         and chat._planner_extraction.structured is not None):
@@ -2841,7 +2854,8 @@ class DataAnalysisOrchestrator:
             references.append((source, loaded.rows))
         single_rows = [item for item in references if item[0].row_count == 1]
         multi_rows = [item for item in references if item[0].row_count > 1]
-        if len(references) == 1 or (references and not single_rows and len(multi_rows) == len(references)):
+        if not (task.extraction or {}).get('计算绑定') and (
+                len(references) == 1 or (references and not single_rows and len(multi_rows) == len(references))):
             return await self._respond_dataset_computation(chat, identity, task, references)
         try:
             binding = bind_division(task, references)
@@ -3337,7 +3351,8 @@ class DataAnalysisOrchestrator:
             pure_computation = bool(
                 task.depends_on and task_query_choice is not True
                 and ("不再查询数据库" in task.question
-                     or task_query_choice is False and len(task.depends_on) > 1)
+                     or task_query_choice is False and (
+                         len(task.depends_on) > 1 or (task.extraction or {}).get('计算绑定')))
             )
             # A declared local computation consumes data, not a database
             # entity query. Display aliases in predecessor prose cannot turn
@@ -4863,7 +4878,7 @@ class DataAnalysisOrchestrator:
         )
         # 追问轮先试上一轮结果快照：识别模型判定可复用（或文本白名单命中）
         # 就尝试快照操作，复用不了再走 surface 查询，结论回填规划判定行。
-        surface_model_data_source = getattr(chat, "_model_data_source", None)
+        surface_model_data_source = self._execution_data_source(chat, request)
         if (
             surface_model_data_source == "NEW_QUERY"
             and request.source_dataset_id is None
@@ -7098,7 +7113,7 @@ class DataAnalysisOrchestrator:
         # operation before applying fresh-query completeness requirements.
         query_result: DataQueryResult | None = None
         dataset_id: str | None = None
-        model_data_source = getattr(chat, "_model_data_source", None)
+        model_data_source = self._execution_data_source(chat, request)
         logger.info(
             "followup data-source route: source=%s op=%s control=%s dataset_id=%s question=%s",
             model_data_source,

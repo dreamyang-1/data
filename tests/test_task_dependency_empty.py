@@ -10,7 +10,7 @@ from app.adapters import build_mock_adapters
 from app.analysis.synthesis import SynthesisClaim, SynthesisOutput
 from app.config import Settings
 from app.domain.models import AgentResponse, AtomicTask, ChatRequest, EvidenceItem, PrimaryIntent, TaskPlan, TrustedIdentity
-from app.planning import MultiQuestionPlanner
+from app.planning import CompoundQuestionRouter
 from app.planning.task_dependencies import TaskDependencySkipped, confirmed_empty_result, dependency_skip
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.progress import progress_scope
@@ -70,7 +70,7 @@ def service_fixture(source_result, plan, *, synthesize=False):
     synthesis = SimpleNamespace(synthesize_combined=AsyncMock(return_value=("整体分析", SynthesisOutput(claims=[SynthesisClaim(statement="前置查询未返回匹配数据。")], final_answer={"overview": "前置查询未返回匹配数据。"}))))
     service = DataAnalysisOrchestrator(settings=settings, classifier=Classifier(),
         adapters=build_mock_adapters(), sessions=InMemorySessionStore(7200, 7200),
-        task_planner=MultiQuestionPlanner(settings), analysis_synthesizer=synthesis if synthesize else None)
+        task_planner=CompoundQuestionRouter(settings), analysis_synthesizer=synthesis if synthesize else None)
     calls = []
 
     async def handle_child(chat, identity):

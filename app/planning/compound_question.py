@@ -28,9 +28,12 @@ from app.planning.task_dag import (
     QuestionDecomposition,
     SingleQuestionPlanner,
     TaskPlanningError,
+    TaskBudgetExceeded,
+    TaskInputBindingError,
     _normalize_metric_name,
     _strip_json_fences,
     database_query_choice,
+    materialize_computation_binding,
 )
 
 
@@ -87,7 +90,7 @@ class CompoundJudgmentEntry:
     intent: str | None = None
     business_domain: str | None = None
     expected_output: str | None = None
-    # 规则兜底拆分可能带任务依赖；模型判断的子问题完全独立，不使用该字段
+    # 问题级依赖，后续映射到前问题的实际交付任务，而非任务数组下标。
     depends_on: tuple[int, ...] = ()
 
 
@@ -142,6 +145,8 @@ class _JudgeTask(BaseModel):
         max_length=300,
         description="Short independently verifiable business deliverable",
     )
+    depends_on: list[int] = Field(default_factory=list, max_length=4,
+        description="消费前面问题的结果时填写从0开始的问题下标；无数据依赖填写[]，不是任务下标")
 
 
 class _JudgeResult(BaseModel):
@@ -165,7 +170,7 @@ class _JudgeResult(BaseModel):
     analyze_summary: str | None = Field(
         default=None,
         max_length=200,
-        description="仅拆分时必填；一句话向用户说明子问题结构，子问题相互独立可并行，用“问题N”指代",
+        description="仅拆分时必填；一句话说明各问题的交付及依赖或并行关系，用“问题N”指代",
     )
     split_reason_code: str | None = Field(
         default=None,
@@ -178,18 +183,18 @@ class _JudgeResult(BaseModel):
 
 _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输出符合JSON Schema的JSON，不回答用户问题，不调用工具。
 
-你的职责：判断用户问题是一个可单独验收的业务目标（单一问题），还是多个完全独立、需要分别交付的业务目标（复合问题）；同时对每个问题（或单一问题本身）识别问题意图和所属业务域。不做参数提取，不做执行层的任务拆解，这些由后续环节完成。
+你的职责：判断用户问题是一个可单独验收的业务目标（单一问题），还是多个需要分别交付的业务目标（复合问题）；同时对每个问题识别问题意图和所属业务域。不做参数提取和问题内部的任务拆解，这些由后续环节完成。
 
-复合问题的判定标准：多个业务目标完全独立，各自都能单独验收，互相不消费对方的结果。只要其中一个目标需要使用另一个目标返回的名单、范围、排名或计算结果，就说明它们共同构成一个业务目标，属于单一问题，由后续任务拆解环节处理，不在这里拆分。
+复合问题的判定标准：有多个需要分别交付且可单独验收的业务目标。分别验收不等于数据独立；如一个目标消费另一目标的名单、范围或结果，保留depends_on问题级依赖。仅共同完成同一个交付目标的排名、查明细、计算等步骤仍是单一问题，交给后续任务拆解。
 
 你的输出描述业务任务边界，不描述底层技术步骤。不要把ASL、SQL、取数、校验或洞察这些内部步骤当成业务目标。
 
 先在内部完成以下判断，但不要输出推理过程：
 1. 提取每个业务目标的动作、指标、返回对象或展示字段、分组维度、筛选值、时间范围与粒度、排序数量、分析或交付要求。
-2. 判断每项目标能否形成可单独验收的答案或数据集；再判断目标之间是否完全独立。
+2. 判断每项目标能否形成分别交付的答案或数据集；再判断是否消费其他目标的结果。
 3. 按判断结果输出：
    - split=false：只有一个可验收业务目标，sub_questions必须为空，intent/business_domain描述整个问题。
-   - split=true：2到5个完全独立的子问题，每个子问题各自输出intent和business_domain。
+   - split=true：2到5个分别交付的子问题，各自输出intent、business_domain和depends_on。
 
 数据分析任务边界：
 1. 同一业务对象、筛选范围和结果粒度下的多个指标、多个展示字段或多个分组维度，通常可由一份ASL和一个数据集承载，属于一个子问题。例如“按月统计今年上海市销售额和订单笔数”“查询产品名称、规格型号和生产厂家”均为split=false。
@@ -198,7 +203,7 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 4. 同一语义属性下互斥且业务口径不同的分类分支，需要分别返回时应拆分。例如“主要适用科室”和“次要适用科室”是两个并行子问题；“所有适用科室”仍是一个子问题。
 5. 多个筛选值本身不等于多个子问题。例如“分析费森尤斯产品在上海市和江苏省的销售趋势”可在同一数据集中按地区展示，属于一个子问题；只有用户明确要求分别形成独立结果时才拆分。
 6. 两个完整查询即使只用句号、逗号或口语连接，也要按真实目标拆分，不能依赖“另外、同时、以及”等固定连接词。
-7. 依赖式目标组合不属于复合问题：排名后再查询入选对象的关系或明细（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”）、分别查询多个结果再比较合并（如“分别查询今年和去年销售额，并比较同比变化”）、明细查询带指标阈值条件（如“订单笔数大于5笔的经销商名单”）都输出split=false，由后续任务拆解环节处理。
+7. 为同一个交付目标服务的依赖步骤不另拆问题：排名后查入选对象明细、分别取两个期间后比较、明细带指标阈值等通常split=false，由后续任务拆解；明确要求另行交付的业务目标才拆问题并保留依赖。
 8. 规范指标层级中登记的指标（包括业务语义由其他指标运算合成的复合口径指标，如覆盖率、平均每单金额）可直接作为一个查询目标执行，输出split=false；不得按其依赖指标拆成多个查询加计算。
 9. 指标说法与规范指标层级比对后分两种情况：说法由规范内指标派生（对规范内指标求增长率、均值、占比、排名、最高最低等派生口径），按正常问题处理不拆分；说法与规范内任何指标都无关、也无法由规范内指标派生时，同样不拆分（后续环节会按指标口径解释处理）。判断是否“无法派生”按业务语义判断，不要求字面上包含指标名：围绕规范内实体或业务对象的度量（数量、金额、快慢、高低、升降、排名）提出的说法，都可由该业务对象在规范内的指标派生；只有规范中连对应业务对象的度量都不存在的纯概念词，才属于无法派生。
 10. “前N名销售人员以及所属公司”等同一对象的唯一关联属性，不是额外的分组目标；把关联属性保留在查询的展示字段中。任何用户要求返回的属性不得遗漏。
@@ -211,8 +216,9 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 子问题生成规则：
 1. 每个子问题必须是自然、完整、可独立理解和执行的业务问题。补全原句中对该子问题生效的产品、地区、指标、时间、筛选、排序及排除条件，不保留只有“另一个、上述条件”等内容的空泛指代。
 2. 只允许复用用户原文明确提供的事实和共享条件；不得创造指标、日期、数量、业务对象、筛选值、口径或数据库字段，不负责替用户消除业务歧义。
-3. 子问题之间完全独立，不互相消费结果。保持用户目标的原始顺序，不重复、不遗漏，子问题总数为2到5。若无需拆分，split输出false且sub_questions输出空数组。
-4. 拆分时analyze_summary必填：一句面向用户的话说明子问题结构，子问题相互独立可并行，用“问题N”指代，不描述内部技术步骤。
+3. 保持目标原始顺序，不重复不遗漏。depends_on只引用前面的有效问题下标，不能引用自己、后面的问题或任务下标。无依赖时可并行。无需拆分则split=false且sub_questions=[]。
+4. analyze_summary说明各问题的交付和真实依赖，用“问题N”指代，不描述内部技术步骤。
+5. 条件逐题归属。某题独有的年份、地区、对象或指标不能因为只出现一次就传播给其他题；只有明确公共前缀或共享说明才继承公共条件。
 
 判定示例：
 - “查询空心纤维血液透析器合作的经销商名单。查询外周插管中心静脉导管合作的医院名单。” → split=true，两个并行子问题，均补全各自产品和返回对象。
@@ -581,6 +587,8 @@ def _report_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
                     task_id=f"task-{len(tasks) + 1}", question=task_text,
                 ))
         if len(tasks) >= 2:
+            if len(tasks) > max_tasks:
+                raise TaskBudgetExceeded(f"报告需要{len(tasks)}项任务，超过{max_tasks}项上限；请分批提交")
             return TaskPlan(
                 tasks=tasks,
                 planner="DETERMINISTIC_RULE",
@@ -621,7 +629,8 @@ def _report_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
         r"(?:天|日|周|个月|月|季度|年)|本(?:周|月|季度|年)|上(?:周|月|季度|年)",
         question,
     )
-    selected = selected[:max_tasks]
+    if len(selected) > max_tasks:
+        raise TaskBudgetExceeded(f"报告需要{len(selected)}项任务，超过{max_tasks}项上限；请分批提交")
     for index, match in enumerate(selected):
         end = selected[index + 1].start() if index + 1 < len(selected) else len(body)
         facet = body[match.start():end].strip(" ，,；;、和及与")
@@ -719,6 +728,8 @@ def _inline_dependent_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
         return None
     if not all(_has_action(piece) for piece in pieces[1:]):
         return None
+    if len(pieces) > max_tasks:
+        raise TaskBudgetExceeded(f"本轮需要{len(pieces)}项任务，超过{max_tasks}项上限；请分批提交")
     shared_identifiers = _business_identifiers(question)
     for index in range(1, len(pieces)):
         for identifier in shared_identifiers:
@@ -736,7 +747,7 @@ def _inline_dependent_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
             question=piece,
             depends_on=[] if index == 0 else [f"task-{index}"],
         )
-        for index, piece in enumerate(pieces[:max_tasks])
+        for index, piece in enumerate(pieces)
     ]
     return TaskPlan(tasks=tasks, planner="DETERMINISTIC_RULE")
 
@@ -783,17 +794,30 @@ def _rule_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
     )
     if not shared_periods and explicit_periods:
         shared_periods = list(dict.fromkeys(explicit_periods))
-    for index, piece in enumerate(actionable[:max_tasks]):
+    if len(actionable) > max_tasks:
+        raise TaskBudgetExceeded(
+            f"本轮包含{len(actionable)}个业务问题，超过{max_tasks}个问题的规划上限；请分批提交，本轮未执行查询")
+    # Only an explicit header is shared across independent questions. A sole
+    # year/metric inside one full clause does not become a global condition.
+    common_prefix = pieces[0] if pieces and not _has_action(pieces[0]) else ""
+    header = re.match(r'^([^：:]{1,80})[：:]', normalized)
+    if header and not _has_action(header[1]):
+        common_prefix = header[1]
+    for index, piece in enumerate(actionable):
         dependency = (
             [f"task-{index}"]
             if index > 0 and _depends_on_previous(piece)
             else []
         )
         enriched = piece
-        if len(shared_metrics) == 1 and shared_metrics[0] not in enriched:
-            enriched += f"，指标为{shared_metrics[0]}"
-        if len(shared_periods) == 1 and shared_periods[0] not in enriched:
-            enriched += f"，时间范围为{shared_periods[0]}"
+        elliptical_analysis = bool(index and re.fullmatch(r'(?:分析|查看|展示)(?:趋势|走势)', piece))
+        inheritance_source = tasks[-1].question if dependency or elliptical_analysis else common_prefix
+        inherited_metrics = [metric for metric in shared_metrics if metric in inheritance_source]
+        inherited_periods = [period for period in shared_periods if period in inheritance_source]
+        if len(inherited_metrics) == 1 and inherited_metrics[0] not in enriched:
+            enriched += f"，指标为{inherited_metrics[0]}"
+        if len(inherited_periods) == 1 and inherited_periods[0] not in enriched:
+            enriched += f"，时间范围为{inherited_periods[0]}"
         tasks.append(
             AtomicTask(
                 task_id=f"task-{index + 1}",
@@ -1174,6 +1198,8 @@ class CompoundQuestionJudge:
             )
         if len(result.sub_questions) < 2:
             raise ValueError("compound decision must contain at least two sub questions")
+        if any(not 0 <= dep < index for index, item in enumerate(result.sub_questions) for dep in item.depends_on):
+            raise ValueError("问题依赖必须引用前面的有效问题")
         entries = tuple(
             CompoundJudgmentEntry(
                 question=item.question.strip(),
@@ -1185,6 +1211,7 @@ class CompoundQuestionJudge:
                     if item.expected_output and item.expected_output.strip()
                     else None
                 ),
+                depends_on=tuple(dict.fromkeys(item.depends_on)),
             )
             for item in result.sub_questions
         )
@@ -1233,10 +1260,20 @@ class CompoundTaskPlanner:
             )
             for entry in judgment.entries
         ))
+        total_tasks = sum(max(1, len(item.tasks)) for item in decompositions)
+        if total_tasks > 12:
+            raise TaskBudgetExceeded(
+                f"本轮规划需要{total_tasks}项任务，超过12项执行上限；请分批提交，本轮未执行查询"
+            )
         tasks: list[AtomicTask] = []
         question_groups: list[QuestionTaskGroup] = []
-        for entry, decomposition in zip(judgment.entries, decompositions):
+        group_outputs: list[list[str]] = []
+        for group_index, (entry, decomposition) in enumerate(zip(judgment.entries, decompositions)):
             offset = len(tasks)
+            if any(type(dep) is not int or not 0 <= dep < group_index for dep in entry.depends_on):
+                raise TaskInputBindingError("问题依赖必须引用排在其前面的有效问题")
+            external_inputs = list(dict.fromkeys(
+                task_id for dep in entry.depends_on for task_id in group_outputs[dep]))
             entry_tasks = decomposition.tasks
             if not entry_tasks:
                 # 提取模型不可用时按单任务兜底，任务无提取参数
@@ -1244,22 +1281,19 @@ class CompoundTaskPlanner:
                     DecomposedTask(question=entry.question),
                 )
             for local_index, task in enumerate(entry_tasks):
+                if any(type(dep) is not int or not 0 <= dep < local_index for dep in task.depends_on):
+                    raise TaskInputBindingError("组内任务依赖必须引用排在其前面的有效任务")
                 task_question = task.question or entry.question
                 expected_output = task.expected_output or entry.expected_output
                 if expected_output is None and "不再查询数据库" in task_question:
                     expected_output = (
                         "、".join(declared_calculation_targets(task_question)) or None
                     )
-                if len(entry_tasks) == 1 and entry.depends_on:
-                    # 规则兜底的判断可能带子问题级依赖，单任务时直接映射
-                    depends_on = [
-                        f"task-{dep + 1}" for dep in entry.depends_on
-                        if 0 <= dep < offset
-                    ]
-                else:
-                    depends_on = [
-                        f"task-{offset + dep + 1}" for dep in task.depends_on
-                    ]
+                depends_on = [f"task-{offset + dep + 1}" for dep in task.depends_on]
+                # External results feed group entry tasks. Local descendants
+                # retain their own dataflow instead of receiving wrong indices.
+                if not task.depends_on:
+                    depends_on = list(external_inputs)
                 tasks.append(AtomicTask(
                     task_id=f"task-{offset + local_index + 1}",
                     question=task_question.strip(),
@@ -1267,7 +1301,8 @@ class CompoundTaskPlanner:
                     depends_on=depends_on,
                     expected_output=expected_output,
                     parameters=list(task.parameters),
-                    extraction=task.structured,
+                    extraction=materialize_computation_binding(task.structured,
+                        task_index=local_index, task_offset=offset, dependencies=depends_on),
                     primary_intent=task.intent or decomposition.intent,
                 ))
             question_groups.append(QuestionTaskGroup(
@@ -1276,6 +1311,9 @@ class CompoundTaskPlanner:
                 task_offset=offset,
                 task_count=len(entry_tasks),
             ))
+            consumed = {dep for task in entry_tasks for dep in task.depends_on}
+            group_outputs.append([f"task-{offset + index + 1}" for index in range(len(entry_tasks))
+                                  if index not in consumed])
         plan = TaskPlan(
             tasks=tasks,
             planner=(
@@ -1290,38 +1328,6 @@ class CompoundTaskPlanner:
             question_groups=question_groups,
             compound_metrics=_compound_metrics_in_decompositions(decompositions),
         )
-        if len(tasks) > 12:
-            # 子问题数×每题任务数超出计划上限时按子问题截断，
-            # 剩余子问题让用户分轮提问，不能让整轮规划直接失败
-            keep_entries = 0
-            kept = 0
-            for group in question_groups:
-                if kept + group.task_count > 12:
-                    break
-                keep_entries += 1
-                kept += group.task_count
-            if keep_entries < 2:
-                raise TaskPlanningError(
-                    "复合问题拆分后的任务数超出执行上限，请减少问题中的业务目标后重试"
-                )
-            tasks = tasks[:kept]
-            question_groups = question_groups[:keep_entries]
-            plan = TaskPlan(
-                tasks=tasks,
-                planner=(
-                    "STRUCTURED_MODEL"
-                    if judgment.judge_source == "STRUCTURED_MODEL"
-                    else "DETERMINISTIC_RULE"
-                ),
-                split_reason_code=judgment.split_reason_code or "UNSPECIFIED",
-                shared_conditions=list(dict.fromkeys(judgment.shared_conditions)),
-                analyze_summary=(
-                    (judgment.analyze_summary or "")
-                    + f"；任务数超出上限，本轮仅执行前{keep_entries}个子问题，其余请分开提问"
-                ),
-                final_deliverable=judgment.final_deliverable,
-                question_groups=question_groups,
-            )
         validate_plan(plan, source_question=source_question)
         self._reject_metric_substitution(plan, source_question)
         return plan
@@ -1399,7 +1405,8 @@ def judgment_display_section(judgment: CompoundJudgment | None) -> str:
         if annotation:
             return f"{annotation}。"
         return ""
-    lines = [f"问题拆分为{len(judgment.entries)}个独立子问题："]
+    qualifier = "业务" if any(entry.depends_on for entry in judgment.entries) else "独立"
+    lines = [f"问题拆分为{len(judgment.entries)}个{qualifier}子问题："]
     lines.extend(
         f"问题{index}：{_subquestion_statement(entry)}"
         for index, entry in enumerate(judgment.entries, 1)
@@ -1537,7 +1544,9 @@ class CompoundQuestionRouter:
                 depends_on=[f"task-{dep + 1}" for dep in task.depends_on],
                 expected_output=task.expected_output,
                 parameters=list(task.parameters),
-                extraction=task.structured,
+                extraction=materialize_computation_binding(task.structured,
+                    task_index=index, task_offset=0,
+                    dependencies=[f"task-{dep + 1}" for dep in task.depends_on]),
                 primary_intent=task.intent or decomposition.intent,
             )
             for index, task in enumerate(decomposition.tasks)

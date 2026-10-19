@@ -10,6 +10,7 @@
 """
 
 import json
+import copy
 import logging
 import re
 from dataclasses import dataclass
@@ -500,6 +501,39 @@ class TaskPlanningError(RuntimeError):
     pass
 
 
+class TaskBudgetExceeded(TaskPlanningError):
+    """A recognized plan cannot fit; do not silently execute a smaller query."""
+
+
+class TaskInputBindingError(TaskPlanningError):
+    """An accepted task graph has no valid input binding; no query fallback."""
+
+
+def materialize_computation_binding(extraction, *, task_index, task_offset, dependencies):
+    """Translate local operand references after global task IDs are assigned."""
+    if not extraction or '计算绑定' not in extraction:
+        return extraction
+    result = copy.deepcopy(extraction)
+    spec = result['计算绑定']
+    if (not isinstance(spec, dict) or spec.get('operation') != 'divide'
+            or database_query_choice(result) is not False
+            or spec.get('format') not in ('number', 'percent')
+            or not isinstance(spec.get('result_field'), str) or not spec['result_field'].strip()):
+        raise TaskInputBindingError('计算绑定必须声明受控除法、输出字段、格式及不查询数据库')
+    for role in ('numerator', 'denominator'):
+        operand = spec.get(role)
+        if not isinstance(operand, dict) or not isinstance(operand.get('column'), str) or not operand['column'].strip():
+            raise TaskInputBindingError('计算绑定缺少输入字段')
+        index = operand.get('source_task_index')
+        if type(index) is not int or not 0 <= index < task_index:
+            raise TaskInputBindingError('计算绑定必须引用本问题的前序任务')
+        task_id = f'task-{task_offset + index + 1}'
+        if task_id not in dependencies:
+            raise TaskInputBindingError('计算绑定的来源未登记为任务依赖')
+        spec[role] = {'source_task_id':task_id, 'column':operand['column'].strip()}
+    return result
+
+
 _EXTRACTION_SCHEMA_DESCRIPTION = (
     "结构化提取JSON，严格按系统提示词中的结构化提取规范输出，"
     "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重/是否查询数据库；"
@@ -574,6 +608,7 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 5. 业务语义规范指标表中某指标的依赖指标列登记了成分指标（取值不是"无"或空）时，该指标必须按公式成分拆分：依赖指标列里的每个成分指标各一个查询任务（指标名用该成分的规范登记原名，筛选条件按规范中该成分的口径与公式规则归属，分组维度只放在需要按维度分组的成分任务上），最后再加一个计算任务，依赖全部成分任务，问题写明"根据上述任务的查询结果计算×××，不再查询数据库"。对复合指标做趋势、占比、对比等分析时同样先按成分拆分，分析口径写进成分任务与计算任务的问题文本。依赖指标列为无、或成分指标不在规范指标表内时不拆；依赖指标列为无的普通指标的趋势、占比、对比分析，以及围绕同一份数据的分析都保持1个任务。
 6. 不要把ASL、SQL、取数、校验、洞察这些内部步骤拆成任务。
 7. 每个任务都要输出name字段：任务名称是"动词+业务指标+过滤条件"的陈述句（如"统计2025年上海市各经销商的含税销售总额""计算2025年上海市平均每单销售金额""查询订单笔数大于5笔的经销商名单"），用规范登记的指标、维度或实体名概括任务要得到的业务结果，不得照抄用户问题原文，不得出现"是多少""有哪些"等疑问词，结尾不加标点；计算任务的name直接写"计算×××"，不用带"根据上述任务的查询结果"前缀。
+8. 计算任务必须明确操作、来源和字段，不能只写“计算上述结果”。多个结果间以明确单值为分母的除法，可在extraction添加可选“计算绑定”：{"operation":"divide","numerator":{"source_task_index":0,"column":"前序实际输出的分子列名"},"denominator":{"source_task_index":1,"column":"前序实际输出的单值分母列名"},"result_field":"计算结果名称","format":"percent或number"}；来源下标从0开始且必须登记在depends_on中，此任务“是否查询数据库”为“否”。字段及公式来自用户或登记口径，不猜字段ID。其他已有结果操作写明具体操作和输入字段；口径不明确保留待确认，不能创造公式或缺月补零策略。
 
 意图判断规则（问题级intent字段）：
 1. 从下列意图枚举中选一个最贴合问题目标的取值，只输出枚举名本身。不需要查询业务数据的问题（闲聊、超出业务范围）按实际选CHAT或OUT_OF_SCOPE，extraction输出null。
@@ -1106,4 +1141,6 @@ class SingleQuestionPlanner:
         structured["是否查询数据库"] = (
             "是" if query_choice is True else "否" if query_choice is False else None
         )
+        if isinstance(value.get('计算绑定'), dict):
+            structured['计算绑定'] = copy.deepcopy(value['计算绑定'])
         return structured
