@@ -55,3 +55,16 @@ def test_all_failed_cross_question_successor_keeps_its_undelivered_status():
     answer, selected = render_root_report('分别交付甲与乙',items,None)
     assert not selected
     assert '甲问题的完整业务目标' in answer and '乙问题的完整业务目标' in answer
+
+
+def test_ranked_object_remains_visible_when_the_same_question_also_requests_its_details():
+    plan=TaskPlan(planner='STRUCTURED_MODEL',tasks=[
+        AtomicTask(task_id='who',question='查询续费金额最高的组织',extraction={'是否查询数据库':'是'}),
+        AtomicTask(task_id='details',question='查询该组织的合同',depends_on=['who'],extraction={'是否查询数据库':'是'})])
+    results=[TaskExecutionResult(task_id=task.task_id,question=task.question,status='COMPLETED',answer='已查询') for task in plan.tasks]
+    materials=collect_root_materials(plan,results,{}, {
+        'who':{'presentation':{'table':'| 组织名称 | 续费金额 |\n| --- | --- |\n| 甲组织 | 1000 |'}},
+        'details':{'presentation':{'table':'| 合同名称 |\n| --- |\n| 合同A |'}}})
+    answer,selected=render_root_report('续费金额最高的组织是谁？有哪些合同？',materials,{'result_task_ids':['details']})
+    assert '甲组织' in answer and '合同A' in answer
+    assert selected==['who','details']

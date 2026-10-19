@@ -47,7 +47,7 @@ def validate_result_operation(operation):
 def materialize_declared_result_operation(decomposition):
     """Publish a query and its declared postprocessing as separate tasks."""
     from app.domain.models import PrimaryIntent
-    from app.planning.task_dag import DecomposedTask, database_query_choice, TaskInputBindingError
+    from app.planning.task_dag import DecomposedTask, database_query_choice, TaskInputBindingError, extraction_to_parameters
     if len(decomposition.tasks) != 1:
         return decomposition
     task = decomposition.tasks[0]
@@ -92,12 +92,18 @@ def materialize_declared_result_operation(decomposition):
         from app.services.period_computation import comparison_query_range
         time_range=comparison_query_range(steps[0])
         query['时间粒度']={'unit':'月','time_range':time_range,'anchor':None}
-        question=f'{question}（取数含比较基期，月度输入范围{time_range}，最终增长区间按后续计算任务执行）'
+        # Absolute dates are trusted compiler output, not model-authored user
+        # conditions. Show them in typed parameters and keep the original
+        # question eligible for the existing anti-invention grounding guard.
+        question=f'{question}（取数含比较基期，最终增长统计月份不变）'
     compute = DecomposedTask(question=f'根据上述任务的查询结果完成{task.expected_output or task.name or "结果计算"}，不再查询数据库',
         name='计算查询结果',depends_on=(0,),expected_output=task.expected_output,
         intent=PrimaryIntent.COMPARISON_ANALYSIS,structured={'意图':'指标计算','是否查询数据库':'否',
         '结果操作':{'source_task_index':0,'operation':copy.deepcopy(spec['operation'])}})
-    return replace(decomposition,tasks=(replace(task,structured=query,question=question),compute))
+    names=[item.get('name') if isinstance(item,dict) else item for item in query.get('指标',[])]
+    name=('统计'+'、'.join(value for value in names if isinstance(value,str))+'计算输入')[:60]
+    return replace(decomposition,tasks=(replace(task,structured=query,question=question,
+        name=name,parameters=tuple(extraction_to_parameters(query)),expected_output='供后续计算使用的原始指标与分组数据'),compute))
 
 
 def declared_division(extraction):

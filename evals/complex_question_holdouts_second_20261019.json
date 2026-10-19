@@ -1,0 +1,11 @@
+{
+  "purpose": "第二批改写，在本轮功能修复后冻结；独立记录首次输出，不将调试后重跑冒充未见验收",
+  "cases": [
+    {"family_id":"Q1_ORDER_AVERAGE_AMOUNT","question":"把2025年上海市销售订单的金额摊到每一笔订单上，平均一笔是多少？"},
+    {"family_id":"Q2_MONTHLY_ORDERS_AND_COVERAGE","question":"请分别给我2025年逐月的订单笔数，以及上海地区各经销商的区域医院覆盖率。"},
+    {"family_id":"Q3_HOSPITAL_DEPARTMENT_ORDER_RANK","question":"2025年9月上海地区医院中，消化内科订单笔数最高的是哪一家？"},
+    {"family_id":"Q4_SUPPLIER_RECENT_ORDER_GROWTH","question":"想看看近期订单笔数增长率领先的几家供应商。"},
+    {"family_id":"Q5_TOP_SALESPERSON_THEN_PRODUCTS","question":"上海交通大学医学院附属新华医院在2025年9月的销售订单，谁的销售金额排名第一？请再列出这位销售员当月向这家医院销售的产品。"},
+    {"family_id":"Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH","question":"每个经销商最近12个月销量的月度增长率，平均下来分别是多少？"}
+  ]
+}

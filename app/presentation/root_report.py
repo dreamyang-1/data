@@ -103,12 +103,16 @@ def _same_question_dependency(item, materials):
 def _required_question_outputs(available):
     """Successful terminal outputs are relative to each original question.
 
-    A cross-question consumer does not erase its supplier's deliverable. Raw
-    legacy material without question ownership keeps its previous selection.
+    A cross-question consumer does not erase its supplier's deliverable. A new
+    query also keeps the object/result that established its business scope;
+    local computation can supersede raw operands. Legacy untyped material
+    keeps its previous selection.
     """
+    from app.planning.task_dag import database_query_choice
     indexed = {item['task_id']:item for item in available}
     consumed = {dep for item in available for dep in item.get('depends_on', [])
-                if item.get('question_id') and indexed.get(dep, {}).get('question_id') == item['question_id']}
+                if item.get('question_id') and indexed.get(dep, {}).get('question_id') == item['question_id']
+                and database_query_choice(item.get('structured_parameters')) is not True}
     return [item for item in available if item.get('question_id') and item['task_id'] not in consumed]
 
 

@@ -33,7 +33,27 @@ def bound_dataset_operation(task, references):
         raise ValueError('结果操作的数据集与实际输出不一致')
     operation = copy.deepcopy(spec.get('operation'))
     columns = source.columns
+    proof=next((item.get('calculation_columns') or {} for item in reversed(source.transformation_log)
+        if isinstance(item,dict) and item.get('type')=='query_provenance'),{})
+    binding={'source_task_id':spec['source_task_id'],'dataset_id':source.dataset_id}
     for step in validate_result_operation(operation):
+        if step['type']=='monthly_growth':
+            declared=step.get('period_field')
+            if declared not in columns:
+                candidates=[name for name in proof.get('month',[]) if name in columns]
+                if len(candidates)!=1:
+                    raise ValueError('月度计算缺少唯一的已验证月份输出列')
+                step['period_field']=candidates[0]
+                binding['period_column']={'declared':declared,'actual':candidates[0]}
+            groups=[]
+            for name in step.get('group_by',[]):
+                actual=proof.get('dimension_identity',{}).get(name,name)
+                if actual not in columns:
+                    raise ValueError('月度计算缺少已绑定分组身份列')
+                groups.append(actual)
+            binding['group_columns']=[{'declared':name,'actual':actual}
+                for name,actual in zip(step.get('group_by',[]),groups)]
+            step['group_by']=groups
         if not rows and step['type'] in {'derive','aggregate','extrema','extrema_difference'}:
             raise ValueError('计算来源为空，不能宣称已生成数值')
         if step['type'] == 'derive':
@@ -48,7 +68,7 @@ def bound_dataset_operation(task, references):
                     for row in rows:
                         numeric_value(row.get(item.get('field')))
         columns, rows = apply_followup_operation(columns, rows, step)
-    operation['input_binding'] = {'source_task_id':spec['source_task_id'],'dataset_id':source.dataset_id}
+    operation['input_binding'] = binding
     return operation
 
 

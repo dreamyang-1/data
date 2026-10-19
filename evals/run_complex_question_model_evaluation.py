@@ -45,6 +45,8 @@ def catalog_context(snapshot, rules):
                           for a in entity.get('attributes', [])]
             lines.append('| ' + ' | '.join(text(value) for value in (
                 entity.get('entity_name'),entity.get('entity_alias'),entity.get('business_definition'),attributes)) + ' |')
+            if entity.get('relations'):
+                lines.append('目录关系（' + text(entity.get('entity_name')) + '）：' + text(entity['relations']))
         lines += ['| 维度 | 同义词 | 业务定义 |', '| --- | --- | --- |']
         for dimension in document.get('dimensions', []):
             lines.append('| ' + ' | '.join(text(dimension.get(key)) for key in ('dim_name','synonyms','business_definition')) + ' |')
@@ -84,6 +86,10 @@ async def run(args):
     context=catalog_context(snapshot,platform['rules'])
     seed=json.loads(args.seeds.read_text(encoding='utf8'))
     cases=cases_from_seed(seed,args.originals_only)
+    if args.holdouts_only:
+        if not args.holdouts:
+            raise SystemExit('--holdouts-only requires --holdouts')
+        cases=[]
     if args.holdouts:
         cases += [{**case,'case_id':f"{case['family_id']}:holdout",'kind':'holdout'}
                   for case in json.loads(args.holdouts.read_text(encoding='utf8'))['cases']]
@@ -91,6 +97,10 @@ async def run(args):
         cases=[case for case in cases if case['family_id'] in args.family_id]
         if not cases:
             raise SystemExit('No cases match the requested families')
+    if args.case_id:
+        cases=[case for case in cases if case['case_id'] in args.case_id]
+        if not cases:
+            raise SystemExit('No cases match the requested case IDs')
     if args.limit:
         cases=cases[:args.limit]
     settings=Settings().model_copy(update={'env':'test','multi_question_model_enabled':True})
@@ -102,13 +112,16 @@ async def run(args):
     identity={'scope':snapshot['scope'],'catalog_version':snapshot['catalog_version'],
         'context_sha256':digest(context),'rules_sha256':digest(args.rules.read_bytes()),
         'seed_sha256':digest(args.seeds.read_bytes()),'model':settings.intent_model_name,
+        'holdouts_sha256':digest(args.holdouts.read_bytes()) if args.holdouts else None,
         'model_endpoint_hash':digest(settings.intent_model_base_url),'temperature':0,'enable_thinking':False,
         'reference_time':'2026-10-19 Asia/Shanghai','history':[],'pending':None,
         'data_watermark':'NO_BUSINESS_DATA_QUERIED; downstream deterministic fixtures are evaluated separately',
         'production_session_writes':0,'business_database_calls':0,'semantic_catalog_mutations':0,
         'code_hashes':{name:digest((ROOT/name).read_bytes()) for name in (
             'app/planning/compound_question.py','app/planning/task_dag.py','app/planning/calculation_bindings.py',
-            'app/planning/structured_extraction_prompt.txt','evals/run_complex_question_model_evaluation.py')}}
+            'app/planning/structured_extraction_prompt.txt','app/services/orchestrator.py',
+            'app/services/computation_delivery.py','app/services/period_computation.py','app/services/query_output_bindings.py',
+            'minio_followup_store.py','evals/run_complex_question_model_evaluation.py')}}
     (args.output/'identity.json').write_text(json.dumps(identity,ensure_ascii=False,indent=2),encoding='utf8')
     (args.output/'frozen-inputs.json').write_text(json.dumps(cases,ensure_ascii=False,indent=2),encoding='utf8')
     # Every planner use sees this same frozen availability decision. No live
@@ -142,7 +155,8 @@ async def run(args):
             # persist request headers, credentials or business query results.
             if response.status_code==200:
                 payload=json.loads(body)
-                record={'case_id':CURRENT_CASE.get(),'choices':payload.get('choices',[])}
+                record={'case_id':CURRENT_CASE.get(),'request_sha256':digest(request.content),
+                        'choices':payload.get('choices',[])}
                 target=args.output/f'model-response-{len(calls):04d}.json'
                 target.write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf8')
             # aread() already decoded content-encoding; the replacement response
@@ -169,6 +183,7 @@ async def run(args):
                 from app.planning.task_dag import TaskPlanningError
                 if isinstance(exc,TaskPlanningError):
                     result['planning_error']=str(exc)
+                    result['evaluation_status']='PLANNING_BLOCKED'
             finally:
                 CURRENT_CASE.reset(token)
             result['elapsed_seconds']=round(time.monotonic()-started,3)
@@ -192,6 +207,8 @@ if __name__=='__main__':
     p.add_argument('--seeds',type=Path,default=ROOT/'evals/complex_question_semantic_families_20261019.json')
     p.add_argument('--holdouts',type=Path)
     p.add_argument('--family-id',action='append',default=[])
+    p.add_argument('--case-id',action='append',default=[])
+    p.add_argument('--holdouts-only',action='store_true')
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--originals-only',action='store_true')
     p.add_argument('--limit',type=int)

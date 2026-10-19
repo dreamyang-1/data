@@ -79,3 +79,35 @@ def test_missing_model_dates_are_compiled_from_explicit_complete_natural_months(
     result=resolve_monthly_window(spec,'最近12个完整自然月')
     assert (result['period_start'],result['period_end'])==('2025-10','2026-09')
     assert resolve_monthly_window(spec,'近12个月') is None  # rolling != full calendar months
+
+
+def test_growth_ranking_sorts_percentages_numerically_after_calculation():
+    pipeline={'type':'pipeline','operations':[operation(),
+        {'type':'sort_limit','field':'平均增速','descending':True,'count':1}]}
+    _,ranked=apply_followup_operation(['组织编码','月份','数量'],rows(),pipeline)
+    assert ranked==[{'组织编码':'B','平均增速':'100.00%'}]
+
+
+@pytest.mark.asyncio
+async def test_compiled_comparison_base_passes_the_real_router_grounding_guard():
+    from unittest.mock import AsyncMock
+    from app.domain.models import PrimaryIntent
+    from app.planning.compound_question import CompoundQuestionRouter,CompoundJudgment
+    from app.planning.task_dag import SingleQuestionPlanner,QuestionDecomposition,DecomposedTask
+    agent=service()
+    planner=SingleQuestionPlanner(agent.settings.model_copy(update={'intent_model_enabled':True,
+        'multi_question_model_enabled':True,'intent_model_api_key':'test'}))
+    question='统计各组织最近12个完整自然月数量月环比增长率的算术平均'
+    spec={**operation(),'period_start':None,'period_end':None}
+    planner._model_decompose=AsyncMock(return_value=QuestionDecomposition(intent=PrimaryIntent.METRIC_QUERY,
+        tasks=(DecomposedTask(question=question,intent=PrimaryIntent.METRIC_QUERY,structured={
+            '指标':[{'name':'数量'}],'维度':['组织编码'],'是否查询数据库':'是',
+            '时间粒度':{'unit':'月','time_range':'最近12个完整自然月'},'结果操作':{'operation':spec}}),)))
+    router=CompoundQuestionRouter(planner.settings);router._single=planner
+    result=await router.plan_with_judgment(CompoundJudgment(is_compound=False),question)
+    assert result.plan is not None
+    assert len(result.plan.tasks)==2
+    query,compute=result.plan.tasks
+    assert '比较基期' in query.question
+    assert any('时间范围' in value and '至' in value for value in query.parameters)
+    assert compute.extraction['结果操作']['operation']['period_start'] is not None

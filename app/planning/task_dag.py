@@ -98,7 +98,10 @@ _EXTRACTION_ROLE_GUIDANCE = """
 名称条件保留业务名称字段和用户原值；不能因为目录只在医院/经销商下列出“关联省份ID”就把上海填进ID。
 地区名称用field=省份名称或城市名称并单独标明所属业务entity，名称到外键编码的转换交给ASL按已发布关系完成。
 同理，公司名称、商品名称等不能填到关联编码字段；只有用户明确给出编码时才提取编码条件，不猜测编码。
-医院的消化内科、呼吸内科等临床科室属于科室实体（field=科室名称），不是销售订单的业务科室/业务组织；只有原文明确要求企业业务组织时才提取业务科室条件。
+科室条件按当前目录关系及已确认业务口径提取，不把科室名称一律解释为医院临床开单科室。
+当前业务已确认：医院某科室的订单按商品适用科室筛选；目录登记商品适用关系时，使用科室实体的科室名称条件，经商品适用关系筛选订单，保留商品/商品科室关联的角色，不使用销售订单的业务科室替代。订单笔数仍按订单去重，不能因商品科室多对多关联而重复计数。
+用户明确指定销售订单业务科室时保留该字段；明确指定医院临床开单/收货科室且目录无相应关系时保留待确认，不能用商品适用科室冒充。最终字段、值及关系绑定交给当前授权范围内的ASL。
+业务对象标准化只允许原名或目录明示的同义词关系。原文对象未登记或没有对应同义词时，实体/维度参数保留该对象原词，交给ASL确认；不能因为相近对象可以查到数据就替换原对象。对象缺少绑定不等于闲聊或指标口径解释。增长排序还必须保留用户明确的基础度量，数量、金额不能互相替换。
 """
 
 
@@ -129,7 +132,7 @@ def _ground_location_owners(extraction: dict[str, Any] | None, question: str) ->
                 place, entity = re.escape(value.strip()), re.escape(owner)
                 if re.search(entity + r'(?:的)?(?:所在地|所在省份|所在城市|所在地区|省份|城市)'
                              + r'(?:为|是|在|等于|=|：|:)?\s*' + place, question) or re.search(
-                                 place + r'(?:市|省)?(?:的)?(?:各个|各家|所有|每个|每家|各)?' + entity,
+                                 place + r'(?:市|省|地区|区域)?(?:的)?(?:各个|各家|所有|每个|每家|各)?' + entity,
                                  question):
                     owners.add(owner)
         if len(owners) == 1:
@@ -642,7 +645,7 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 任务拆解规则：
 1. 默认输出1个任务，任务问题即用户问题本身。
 2. 明细查询（名单/明细/清单类返回）带指标阈值条件（如“订单笔数大于5笔”“合作时长大于3个月”“销售额大于100万”）时，阈值不能作用在明细行上，拆为2个任务：任务1按该指标做分组统计（写明分组维度和指标，保留原问题的地区、产品、时间等其他筛选条件），任务2依赖任务1，任务问题写明“根据上述任务的查询结果筛选×××，不再查询数据库”。
-3. 先排名或筛选出对象、再查询这些对象的其他关系或明细时（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”），拆为2个任务：任务1排名或筛选，任务2依赖任务1并写明“根据上述任务的查询结果……”。任务2要执行新的数据库查询，问题里不要写“不再查询数据库”——该句只允许出现在基于前序结果直接计算或筛选、不再发任何新查询的任务里。例外：提示上下文里的[上一轮任务表]已包含该排名/筛选结果（所需实体名单已在采样中给出）时，不适用本条——不拆分，只输出1个任务，把上一轮采样中的参数值直接写进任务问题文本并以“复用上一轮查询结果：”开头，该任务照常发起新查询。
+3. 先排名或筛选出对象、再查询这些对象的其他关系或明细时（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”），拆为2个任务：任务1排名或筛选，任务2依赖任务1并写明“根据上述任务的查询结果……”。任务2要执行新的数据库查询，问题里不要写“不再查询数据库”——该句只允许出现在基于前序结果直接计算或筛选、不再发任何新查询的任务里。上一轮已完成排名时可沿用经验证的完整数据集及结构化依赖约束，不重复计算；上一轮任务表的采样仅供理解，不得把采样值写成完整对象名单或完整查询过滤条件。
 4. 用户明确要求分别查询多个结果再比较或合并计算时（如“分别查询今年和去年销售额，并比较同比变化”），按查询数拆任务，再加一个依赖全部前序任务的计算任务，任务问题写明“根据上述任务的查询结果……不再查询数据库”。
 5. 业务语义规范指标表中某指标的依赖指标列登记了成分指标（取值不是"无"或空）时，该指标必须按公式成分拆分：依赖指标列里的每个成分指标各一个查询任务（指标名用该成分的规范登记原名，筛选条件按规范中该成分的口径与公式规则归属，分组维度只放在需要按维度分组的成分任务上），最后再加一个计算任务，依赖全部成分任务，问题写明"根据上述任务的查询结果计算×××，不再查询数据库"。对复合指标做趋势、占比、对比等分析时同样先按成分拆分，分析口径写进成分任务与计算任务的问题文本。依赖指标列为无、或成分指标不在规范指标表内时不拆；依赖指标列为无的普通指标的趋势、占比、对比分析，以及围绕同一份数据的分析都保持1个任务。
 6. 不要把ASL、SQL、取数、校验、洞察这些内部步骤拆成任务。
@@ -651,6 +654,7 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 9. 对同一份结果的多步计算，extraction可声明“结果操作”：{"source_task_index":0,"operation":{"type":"pipeline","operations":[{"type":"derive","operator":"divide","left_field":"分子列","right_field":"分母列","result_field":"逐行比值"},{"type":"aggregate","group_by":[],"aggregations":[{"field":"逐行比值","function":"avg","alias":"平均比值"}]}]}}。计算任务须不查库且只依赖这一份结果。source_task_index从0开始引用前序任务。单查询也可把不含source_task_index的“结果操作”放在该查询extraction，系统会在执行前补成查询→计算两任务。pipeline最多5步、不嵌套；仅支持既有derive四则、aggregate的count/sum/avg/min/max及filter/select/sort/sort_limit/limit/extrema/extrema_difference。字段使用查询实际输出名称，禁止代码、SQL或任意表达式。先比值再平均与先汇总再相除必须按原问顺序；登记普通指标直接查询无需结果操作。不确定增长算法时保留待确认，不把原始月度数表声称为增长率。
 10. 月度平均增长计算可用结果操作{"type":"monthly_growth","field":"原始数量列","period_field":"月份列","group_by":["对象编码列"],"method":"arithmetic或compound","period_start":"YYYY-MM","period_end":"YYYY-MM","result_field":"平均月度增长率","format":"percent"}。period_start/end是目标增长月份，取数必须另含前一个月比较基期；单查询声明该操作时系统自动扩展基期并在计划中展示。arithmetic为逐月环比的算术平均，compound为期末/基期的月数次方根减1；缺月、重复月、零基数不能擅自跳过或补零。方法、统计窗口或比较方式在原问与规范均未明确时，extraction添加“计算待确认”：{"question":"明确缺少的口径及其影响","candidates":["有业务含义的选项一","选项二"],"affected_slots":["analysis_method或analysis_window"]}；候选可为空而由用户补充。保留原问题、已知指标和条件，系统会先澄清，不得仅查询原始指标后假装派生计算完成。用户已明确或规范已有算法时直接执行，不重复询问。
 11. JSON Schema中的任务postprocess和clarification是上述执行合同的优先输出位置：postprocess放结果操作，clarification放尚缺的计算口径；无需重复塞进extraction。postprocess与clarification不可同时填写。只有已登记普通指标可直接查询；没有登记公式的平均增长率不能仅填写原始数量指标和输出要求。口径缺失时保留原问，用clarification先确认。
+12. 澄清候选也受执行能力约束。平均方法或窗口未明确时，先询问缺少的方法或窗口，不能擅自预设算术平均再只问数据清洗。当前月度增长执行器要求完整月序列、唯一月份及非零基期；跳过缺月、补零、忽略零基数均不是可选策略，不得出现在候选中。复合平均也不能规避本执行器的完整性校验。尚未取数时不要假定存在缺月或零基数；实际取数发现此类质量问题时明确说明无法计算，不把无法执行的处理方式包装成已支持选项。
 
 意图判断规则（问题级intent字段）：
 1. 从下列意图枚举中选一个最贴合问题目标的取值，只输出枚举名本身。不需要查询业务数据的问题（闲聊、超出业务范围）按实际选CHAT或OUT_OF_SCOPE，extraction输出null。
@@ -696,6 +700,7 @@ class SingleQuestionPlanner:
         """问题级入口：任务拆解 + 逐任务意图识别与参数提取，带一次纠错重试。"""
         retry_feedback: str | None = None
         last_result = QuestionDecomposition()
+        rejected_contract = False
         if not (
             self.settings.intent_model_enabled
             and self.settings.multi_question_model_enabled
@@ -719,20 +724,26 @@ class SingleQuestionPlanner:
                     attempt, exc,
                 )
                 if attempt == attempts - 1:
+                    if rejected_contract:
+                        raise TaskInputBindingError('上一份规划缺少可执行业务输入或前置排名，重试失败；未执行查询') from exc
                     return last_result
                 continue
             last_result = decomposition
             off_data, off_meta = self._normalize_decomposition_metrics(decomposition)
             unsplit_compound = self._unsplit_compound_metrics(decomposition)
             grounded_data = self._grounded_data_request(question, semantic_context, decomposition)
-            wrong_boundary = grounded_data and decomposition.intent in {
-                PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE, PrimaryIntent.METRIC_DEFINITION}
+            nonquery_intents={PrimaryIntent.CHAT,PrimaryIntent.OUT_OF_SCOPE,PrimaryIntent.METRIC_DEFINITION}
+            wrong_boundary = grounded_data and (decomposition.intent in nonquery_intents or (
+                len(decomposition.tasks)==1 and decomposition.tasks[0].intent in nonquery_intents))
             unbound_calculation = self._unbound_calculation(decomposition)
+            missing_ranking = self._ranking_prerequisite_missing(decomposition)
+            missing_projection = self._local_detail_needs_new_owner(decomposition)
             empty_extraction = (
                 not any(task.structured is not None for task in decomposition.tasks)
                 and decomposition.intent not in _NO_DATA_INTENTS
             )
-            if attempt == 0 and (empty_extraction or off_data or off_meta or unsplit_compound or wrong_boundary or unbound_calculation):
+            if attempt == 0 and (empty_extraction or off_data or off_meta or unsplit_compound or wrong_boundary or unbound_calculation or missing_ranking or missing_projection):
+                rejected_contract = wrong_boundary or missing_ranking or missing_projection
                 # 全部任务提取为空、指标名目录外或复合指标未按公式拆分，
                 # 说明这次输出不可信，带纠错说明重试一次
                 retry_feedback = self._retry_feedback(
@@ -744,17 +755,72 @@ class SingleQuestionPlanner:
                     extra.append('原问题是针对已登记业务数据的度量或排序请求。部分业务对象未绑定时保留原文并交给授权ASL澄清；不能因此改为闲聊、非数据任务、指标定义，不能替换成另一个业务对象。')
                 if unbound_calculation:
                     extra.append('本地计算任务缺少可执行操作和输入字段。请依据原问题与前序实际输出，明确计算公式或计算绑定；不能只写计算上述结果。多步变换须保留运算顺序，不创造口径。')
+                if missing_ranking:
+                    extra.append('明细任务返回多个实体的信息，但原要求先按登记指标找出排名对象，再查其关联明细。请先建立指标分组排名任务，再建立依赖该对象结果的新明细查询，继承原有时间和过滤条件；不能把实体指标排名替换成明细行金额排序，或只在输出要求里描述前置排名。')
+                if missing_projection:
+                    extra.append('声明不查库的明细任务要求返回前置结果未包含的另一个业务对象。已有排名不能直接变出其他实体的明细；需要以已返回对象作为约束发起新查询，并将任务文字及是否查询数据库保持一致。用户明确禁止新查询时说明数据不足，不暗中补查。')
                 retry_feedback = '\n'.join(filter(None, [retry_feedback, *extra]))
                 continue
             if wrong_boundary:
-                # Preserve the data request for scoped ASL binding. This is not
-                # permission to replace the unknown object with a catalog one.
-                from dataclasses import replace
-                last_result = replace(decomposition, intent=PrimaryIntent.METRIC_QUERY,
-                    tasks=(DecomposedTask(question=question,intent=PrimaryIntent.METRIC_QUERY),))
+                # Oagnet binds structured parameters only; a bare question
+                # would produce a missing-handoff error, not semantic binding.
+                raise TaskInputBindingError(
+                    f'当前规划未能生成可绑定的业务参数，原问题“{question}”已保留；尚未生成或执行ASL/SQL，不能以闲聊答复代替该数据问题。')
+            if missing_ranking:
+                raise TaskInputBindingError('明细查询缺少已声明指标排名的前置结果，不能用明细行排序代替；未执行查询')
+            if missing_projection:
+                raise TaskInputBindingError('已有结果未包含所需明细对象，不能作为不查库任务执行；未执行查询')
             from app.planning.calculation_bindings import materialize_declared_division, materialize_declared_result_operation
-            return materialize_declared_division(materialize_declared_result_operation(last_result))
+            compiled=materialize_declared_division(materialize_declared_result_operation(last_result))
+            if len(compiled.tasks)>1:
+                # Run the same read-only question grounding used by the router
+                # while the existing correction attempt is still available.
+                # Do not weaken its checks or silently switch execution routes.
+                from types import SimpleNamespace
+                from app.planning.compound_question import _validate_grounding
+                try:
+                    _validate_grounding(SimpleNamespace(tasks=compiled.tasks,final_deliverable=None),question)
+                except TaskPlanningError as exc:
+                    if attempt==0:
+                        rejected_contract=True
+                        retry_feedback=('完整任务计划未通过原问题校验：'+str(exc)+'。请仅依据原问题修正任务文字和结构化参数；'
+                            '不增加条件或指标，不遗漏交付。依赖对象后需要新字段的任务仍须声明新查询，不能声称直接复用。')
+                        continue
+                    raise TaskInputBindingError(str(exc)) from exc
+            return compiled
         return last_result
+
+    @staticmethod
+    def _local_detail_needs_new_owner(decomposition):
+        from app.planning.dependency_contract import projection
+        for task in decomposition.tasks:
+            target=task.structured or {}
+            if (task.intent!=PrimaryIntent.DETAIL_QUERY or database_query_choice(target) is not False
+                    or not task.depends_on or target.get('结果操作') or target.get('计算绑定')):
+                continue
+            sources=[decomposition.tasks[index].structured or {} for index in task.depends_on
+                if 0<=index<len(decomposition.tasks)]
+            available={item for source in sources for item in projection(source)}
+            owners={owner for owner,_ in available if owner}
+            owners.update(name for source in sources for owner,name in projection({'维度':source.get('维度',[])}))
+            if any(owner and owner not in owners and (owner,name) not in available
+                    for owner,name in projection({'展示字段':target.get('展示字段',[])})):
+                return True
+        return False
+
+    @staticmethod
+    def _ranking_prerequisite_missing(decomposition):
+        if len(decomposition.tasks)!=1 or not decomposition.metric_catalog:
+            return False
+        task=decomposition.tasks[0];structured=task.structured or {}
+        if ((task.intent or decomposition.intent)!=PrimaryIntent.DETAIL_QUERY
+                or structured.get('指标') or not structured.get('排序')):
+            return False
+        owners={item.get('entity') for item in structured.get('展示字段',[]) if isinstance(item,dict) and item.get('entity')}
+        terms=set(decomposition.metric_catalog[0])|set(decomposition.metric_catalog[1])
+        text=task.question+' '+str(structured.get('输出要求') or '')
+        return (len(owners)>1 and bool(re.search(r'最高|最低|最多|最少|第一|前[一二三四五六七八九十\d]',text))
+            and any(len(term)>=2 and term in text for term in terms))
 
     @staticmethod
     def _unbound_calculation(decomposition):
@@ -775,11 +841,16 @@ class SingleQuestionPlanner:
     @staticmethod
     def _grounded_data_request(question, semantic_context, decomposition):
         if (re.search(r'写|创作|编|讲|翻译|润色|画|口径|定义|什么意思|怎么算|如何计算', question)
-                or not re.search(r'查询|统计|分析|计算|列出|比较|对比|找出|筛选|哪几|哪些|多少', question)
-                or not re.search(r'数量|金额|多少|最高|最低|最多|最少|最快|增长|下降|趋势|排名|平均|占比|同比|环比', question)):
+                or not re.search(r'查询|统计|分析|计算|列出|比较|对比|找出|筛选|谁|哪(?:个|家|位|一|些|几)|多少', question)):
             return False
         catalog = decomposition.metric_catalog
         terms = set(catalog[0]) | set(catalog[1]) if catalog else set()
+        # Registered metric wording is already measure evidence; do not
+        # require a second generic keyword such as 数量 in 订单数/订阅数.
+        if any(len(term)>=2 and term in question for term in terms):
+            return True
+        if not re.search(r'数量|金额|多少|最高|最低|最多|最少|最快|增长|下降|趋势|排名|平均|占比|同比|环比',question):
+            return False
         active = False
         for line in semantic_context.splitlines():
             if not line.strip().startswith('|'):

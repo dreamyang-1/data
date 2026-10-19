@@ -1385,11 +1385,16 @@ def apply_followup_operation(
         non_null = [row for row in rows if row.get(field_name) is not None]
         null_rows = [row for row in rows if row.get(field_name) is None]
         values = [row[field_name] for row in non_null]
-        numeric_sort = bool(values) and all(_numeric_or_none(value) is not None for value in values)
+        sort_number = _numeric_or_none
+        if values and all(isinstance(value,str) and value.endswith('%') for value in values):
+            percent_number = lambda value: _numeric_or_none(value[:-1])
+            if all(percent_number(value) is not None for value in values):
+                sort_number = percent_number
+        numeric_sort = bool(values) and all(sort_number(value) is not None for value in values)
         try:
             non_null.sort(
                 key=(
-                    (lambda row: _numeric_or_none(row[field_name]))
+                    (lambda row: sort_number(row[field_name]))
                     if numeric_sort
                     else (lambda row: row[field_name])
                 ),

@@ -37,9 +37,16 @@ async def run(args):
     identity=json.loads((args.model_run/'identity.json').read_text(encoding='utf8'))
     cases=json.loads((args.model_run/'frozen-inputs.json').read_text(encoding='utf8'))
     responses={}
+    calls=json.loads((args.model_run/'calls.json').read_text(encoding='utf8'))
     for path in sorted(args.model_run.glob('model-response-*.json')):
         item=json.loads(path.read_text(encoding='utf8'))
-        responses.setdefault(item['case_id'],[]).append(item['choices'])
+        call=calls[int(path.stem.rsplit('-',1)[1])-1]
+        if call['case_id']!=item['case_id']:
+            raise SystemExit('Recorded model response/call identity mismatch')
+        key=item.get('request_sha256',call['request_sha256'])
+        if key!=call['request_sha256']:
+            raise SystemExit('Recorded model request digest mismatch')
+        responses.setdefault(item['case_id'],{}).setdefault(key,[]).append(item['choices'])
     snapshot=json.loads(args.catalog.read_text(encoding='utf8'))
     platform=json.loads(args.rules.read_text(encoding='utf8'))
     if snapshot['catalog_version']!=identity['catalog_version']:
@@ -60,11 +67,12 @@ async def run(args):
         record={'case_id':case['case_id'],'question':case['question'],'status':'FAIL',
             'business_database_calls':0,'real_model_calls':0,'asl_grounding_verified':False}
         try:
-            replies=list(responses[case['case_id']])
+            replies={key:list(value) for key,value in responses[case['case_id']].items()}
             async def model(request):
-                if not replies:
-                    raise RuntimeError('Replay exhausted recorded model responses')
-                return httpx.Response(200,json={'choices':replies.pop(0)})
+                key=hashlib.sha256(request.content).hexdigest()
+                if not replies.get(key):
+                    raise LookupError('No response recorded for this exact request: '+key)
+                return httpx.Response(200,json={'choices':replies[key].pop(0)})
             agent=service()
             settings=agent.settings.model_copy(update={'intent_model_enabled':True,
                 'multi_question_model_enabled':True,'intent_model_api_key':SecretStr('offline-replay')})

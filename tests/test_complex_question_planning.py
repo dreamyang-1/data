@@ -102,6 +102,25 @@ async def test_public_handler_does_not_fall_back_to_query_after_budget_error(kin
     agent._handle.assert_not_called()
 
 
+@pytest.mark.asyncio
+async def test_rejected_recognized_plan_does_not_become_a_single_query():
+    from app.domain.models import AtomicTask,TaskPlan
+    from app.planning.compound_question import validate_plan
+    from test_complex_execution_correctness import service,context,IDENTITY
+    agent=service();chat,_=context();chat.question='查询2025年甲数据；查询2025年乙数据'
+    async def plan(*args,**kwargs):
+        candidate=TaskPlan(planner='STRUCTURED_MODEL',tasks=[
+            AtomicTask(task_id='a',question='查询2026年甲数据'),
+            AtomicTask(task_id='b',question='查询2025年乙数据')])
+        validate_plan(candidate,source_question=chat.question)
+        return candidate
+    agent.task_planner=SimpleNamespace(plan=plan)
+    agent._handle=AsyncMock(side_effect=AssertionError('invalid full plan cannot become a query'))
+    response=await agent.handle(chat,IDENTITY)
+    assert response.status=='SAFE_FALLBACK'
+    agent._handle.assert_not_called()
+
+
 def test_calculation_binding_survives_sanitizing_and_maps_local_sources():
     from app.domain.models import PrimaryIntent
     from app.planning.task_dag import SingleQuestionPlanner, materialize_computation_binding

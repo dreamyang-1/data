@@ -211,6 +211,8 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 问题意图枚举（intent字段从中选择最贴合的一个，只输出枚举名本身）：
 指标查询、明细查询、趋势分析、对比分析、占比分析、异常分析、归因分析、预测分析、报表生成、解释口径、闲聊、非数据任务。
 
+意图判定补充：问题按已注册指标的阈值筛选并返回对象名单（如"订单笔数大于5笔的经销商名单""合作时长大于12个月的经销商"）时，intent输出指标查询，不输出明细查询；指标本身的统计口径由后续环节处理。
+
 业务域（business_domain）从注入的业务语义规范中识别，输出业务域名称（如“医药销售域”）；规范中识别不到时输出null。
 
 子问题生成规则：
@@ -258,7 +260,12 @@ def validate_plan(plan: TaskPlan, *, source_question: str | None = None) -> None
             )
         known.add(task.task_id)
     if source_question is not None:
-        _validate_grounding(plan, source_question)
+        try:
+            _validate_grounding(plan, source_question)
+        except TaskPlanningError as exc:
+            # A complete recognized plan was rejected. Do not let the public
+            # handler silently replace its questions with a single query.
+            raise TaskInputBindingError(str(exc)) from exc
 
 
 def _validate_question_conditions(entries, source_question):

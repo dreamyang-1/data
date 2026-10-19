@@ -35,6 +35,7 @@ from app.services.general_rules import attach_general_rules
 from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
+from app.analysis.chain_tools.temporal_window import align_structured_time_window
 from app.config import Settings
 from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
@@ -857,11 +858,64 @@ class DataAnalysisOrchestrator:
                 ).strip()
                 if label:
                     options.append(label)
+        # Result context helps resolve a reference, but a bounded sample is
+        # never a complete dependency set. Only expose small, proven complete
+        # results from the current semantic scope to the triage model.
+        prior_result_text = ""
+        try:
+            prior_table = await self.sessions.get_task_table(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+        except Exception:
+            logger.warning(
+                "read prior task table for pending triage failed: message_id=%s",
+                chat.message_id,
+                exc_info=True,
+            )
+            prior_table = None
+        if (isinstance(prior_table, dict) and prior_table.get('semantic_scope_fingerprint')
+                == chat.authorized_semantic_scope.fingerprint()):
+            rows: list[str] = []
+            for row in (prior_table.get("tasks") or [])[:3]:
+                if not isinstance(row, dict):
+                    continue
+                parts = [str(row.get("名称") or "").strip()]
+                summary = row.get("结果概要")
+                if isinstance(summary, dict):
+                    if summary.get("row_count") is not None:
+                        parts.append(f"共{summary['row_count']}行")
+                    sample = summary.get("sample")
+                    if (summary.get('sample_is_complete') is True and isinstance(sample,list)
+                            and type(summary.get('row_count')) is int
+                            and len(sample)==summary['row_count'] and sample
+                            and all(isinstance(item,dict) for item in sample)):
+                        for sample_row in sample[:10]:
+                            pairs = "；".join(
+                                f"{k}={v}"
+                                for k, v in list(sample_row.items())[:4]
+                            )
+                            parts.append(pairs)
+                text = "；".join(p for p in parts if p)
+                if text:
+                    rows.append("- " + text)
+            if rows:
+                prior_question = str(
+                    prior_table.get("question") or ""
+                ).strip()
+                prior_result_text = (
+                    "上一轮查询结果概要（仅标记为完整的值可展开）：\n"
+                    + (f"上一轮问题：{prior_question}\n" if prior_question else "")
+                    + "\n".join(rows)
+                )
         prompt = (
             "你在判断用户最新输入与系统挂起的追问之间的关系。\n\n"
             f"用户此前的问题：{original or '（无记录）'}\n"
             f"系统因信息不全暂停执行，挂起的待确认项：{'；'.join(asked) or '无'}"
             + (f"\n系统给出的候选：{'、'.join(options[:8])}" if options else "")
+            + (f"\n{prior_result_text}" if prior_result_text else "")
             + f"\n用户最新输入：{chat.question.strip()}\n\n"
             "判断属于哪一类，只输出 JSON：\n"
             '- 用户仍在原话题内（直接给值、换一种说法、只补了部分条件、'
@@ -876,6 +930,9 @@ class DataAnalysisOrchestrator:
             "用户输入与某个候选名称近似（同义、错字、增减“总额/金额”等"
             "通用字）时视为选择了该候选，merged_question 里统一用候选的"
             "规范名称。\n"
+            "用户指代上一轮对象时，只能用上文已验证完整的结果展开；没有完整值时"
+            "保留原指代和用户补充条件，交给数据集/依赖绑定处理，不得从采样补成完整名单，"
+            "不得根据总行数编造其余对象。\n"
         )
         body = {
             "model": settings.intent_model_name,
@@ -5049,16 +5106,31 @@ class DataAnalysisOrchestrator:
             question_chain=[turn.content for turn in chat.history if turn.role == "user"],
             include_resolved_context=not chat._intent_context_progress_emitted,
         ))
+        structured_payload = (
+            planner_extraction.structured
+            if planner_extraction is not None else None
+        )
+        if isinstance(structured_payload, dict):
+            aligned_grain = align_structured_time_window(
+                request.rewritten_question or request.original_question,
+                structured_payload.get("时间粒度"),
+                intent=request.primary_intent.value,
+                today=date.today(),
+            )
+            if aligned_grain is not None:
+                # 趋势分析要求月桶完整：相对范围在发出前对齐到桶边界，
+                # 同比另需扩展基期窗口。只改发往 ASL 的副本，规划侧原始
+                # 提取与请求指纹不动，改写依据记入 assumptions 供下游披露。
+                structured_payload = dict(structured_payload)
+                structured_payload["时间粒度"] = aligned_grain
+                request.assumptions.append(
+                    "TIME_WINDOW_ALIGNED=" + str(aligned_grain.get("time_range"))
+                )
         try:
-            # 规划产出的结构化提取JSON原样透传给语义查询器，消费方式由下游负责；
-            # mentions 保留作兼容，语义查询器未适配前行为不变。
             await emit_progress("ASL_GENERATION", "RUNNING", "正在解析并校验结构化参数，生成标准 ASL。")
             result = await self.adapters.query.query_surface(
                 request, identity, mentions=mentions,
-                structured_extraction=(
-                    planner_extraction.structured
-                    if planner_extraction is not None else None
-                ),
+                structured_extraction=structured_payload,
             )
         except AdapterError as exc:
             if exc.code in {"ASL_AMBIGUOUS", "SQL_TRANSLATION_AMBIGUOUS"}:
@@ -10703,6 +10775,14 @@ class DataAnalysisOrchestrator:
         summary: dict[str, Any] = {
             "columns": columns[:12],
             "row_count": len(dataset.rows or []),
+            "sample_is_complete": (
+                type(getattr(dataset,'total_row_count',None)) is int
+                and dataset.total_row_count == len(dataset.rows or [])
+                and getattr(dataset,'row_count',None) == len(dataset.rows or [])
+                and not getattr(dataset,'truncated',True)
+                and len(dataset.rows or []) <= 10
+                and all(len(str(value)) <= 80 for row in (dataset.rows or []) for value in row.values())
+            ),
         }
         if sample:
             encoded = json.dumps(sample, ensure_ascii=False, default=str)
@@ -10729,6 +10809,7 @@ class DataAnalysisOrchestrator:
             summaries = getattr(chat, "_task_result_summaries", {}) or {}
             payload = {
                 "message_id": chat.message_id,
+                "semantic_scope_fingerprint": chat.authorized_semantic_scope.fingerprint(),
                 # ChatRequest 没有 rewritten_question，改写后的问题在
                 # original_question（修订重问场景）或 question 本身
                 "question": (
@@ -10789,6 +10870,7 @@ class DataAnalysisOrchestrator:
                 )
             )
             query_fingerprint = self._query_fingerprint(request)
+            from app.services.query_output_bindings import calculation_columns
             provenance = {
                 "type": "query_provenance",
                 "source_truncated": query_result.dataset.truncated,
@@ -10812,6 +10894,7 @@ class DataAnalysisOrchestrator:
                 "descending": AnalysisOperator.BOTTOM_N not in request.operators,
                 "ranking_limit": request.ranking_limit,
                 "column_bindings": sql_column_bindings(query_result.sql, query_result.dataset.columns),
+                "calculation_columns": calculation_columns(request,query_result),
             }
             reference = await asyncio.to_thread(
                 self.dataset_store.save_dataset,

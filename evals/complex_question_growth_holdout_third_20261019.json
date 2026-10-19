@@ -1,0 +1,6 @@
+{
+  "purpose": "针对第二批澄清能力缺口修复后冻结的新问法；保留第二批首次失败记录",
+  "cases": [
+    {"family_id":"Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH","question":"分别给出各经销商最近一年逐月销量增幅的平均水平，能算一下吗？"}
+  ]
+}
