@@ -54,13 +54,19 @@ async def test_retired_judge_intent_is_ignored_but_other_extra_fields_are_reject
 async def test_period_series_routing_preserves_object_comparisons_and_local_computation(question,expected):
     async def handler(request):
         payload={'intent':'COMPARISON_ANALYSIS','tasks':[{'question':question,'depends_on':[],
-            'extraction':{'意图':'对比分析','实体':['销售订单'],'指标':[{'name':'销售额'}]}}]}
+            'extraction':{'意图':'对比分析','实体':['销售订单'],'指标':[{'name':'销售额'}],
+              '维度':['业务日期'],'排序':[{'field':'销售额','order':'desc'}],'限制':1}}]}
         return httpx.Response(200,json={'choices':[{'message':{'content':json.dumps(payload,ensure_ascii=False)}}]})
     planner=SingleQuestionPlanner(settings(),transport=httpx.MockTransport(handler))
     result=await planner._model_decompose(question)
     assert result.tasks[0].intent==expected
     if expected==PrimaryIntent.TREND_ANALYSIS:
         assert result.tasks[0].structured['意图']=='趋势分析'
+        assert result.tasks[0].structured['排序']==[{'field':'业务日期','order':'asc'}]
+        assert result.tasks[0].structured['限制'] is None  # choose extrema after reading the full sequence
+    else:
+        assert result.tasks[0].structured['排序']==[{'field':'销售额','order':'desc'}]
+        assert result.tasks[0].structured['限制']==1
 
 
 @pytest.mark.asyncio

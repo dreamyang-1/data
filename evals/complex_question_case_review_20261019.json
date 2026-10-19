@@ -14283,5 +14283,22 @@
       }
     },
     "scope_note": "仅验证显式明细/聚合角色和依赖；订单与明细行身份、值池及实际关系路径未作生产答案通过断言。"
+  },
+  "final_trend_order_integration": {
+    "remote_update_preserved": true,
+    "writers_paused_by_user": true,
+    "reproduced_before": {
+      "failed": 2,
+      "passed": 7
+    },
+    "full_offline": {
+      "passed": 5186,
+      "failed": 97
+    },
+    "critical": {
+      "passed": 350
+    },
+    "change": "Normalize trend time order; multi-period changes require the full sequence, so model Top 1 must not truncate the input. Object comparisons and local computations retain their original ordering and limits.",
+    "business_results_verified": false
   }
 }

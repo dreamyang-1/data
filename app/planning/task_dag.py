@@ -136,6 +136,45 @@ def _period_change_series_question(question: str) -> bool:
     )
 
 
+_TEMPORAL_DIMENSION_WORDS = re.compile(r"日期|时间")
+
+
+def _normalize_trend_time_order(structured: dict[str, Any], *, full_series: bool = False) -> None:
+    """趋势意图下把排序统一为时间维度升序。
+
+    趋势引擎按契约只接受按时间升序返回的序列；规划器对“哪个月
+    最大/最小”类问题会本能地把排序写成指标降序，SQL 按指标排序后
+    时间乱序，趋势计算被拒。排序只影响行的返回顺序，极值比较由
+    确定性引擎在序列上完成，改写不损失任何用户语义。
+    """
+    dimensions = [
+        str(item).strip()
+        for item in structured.get("维度") or []
+        if str(item).strip()
+    ]
+    temporal = next(
+        (dim for dim in dimensions if _TEMPORAL_DIMENSION_WORDS.search(dim)),
+        None,
+    )
+    if temporal is None:
+        return
+    if full_series:
+        # Period extrema are computed from the sequence. A model's Top 1
+        # belongs to the answer and must not truncate the input to one month.
+        structured['限制'] = None
+    sort_spec = structured.get("排序")
+    if (
+        isinstance(sort_spec, list)
+        and len(sort_spec) == 1
+        and isinstance(sort_spec[0], dict)
+        and str(sort_spec[0].get("field") or "").strip() == temporal
+        and str(sort_spec[0].get("order") or "").lower() == "asc"
+    ):
+        return
+    structured["排序"] = [{"field": temporal, "order": "asc"}]
+    structured["排序类型"] = "升序"
+
+
 def _ground_location_owners(extraction: dict[str, Any] | None, question: str) -> None:
     """Correct only explicit location modifiers at the NL extraction boundary.
 
@@ -1238,6 +1277,10 @@ class SingleQuestionPlanner:
                 logger.info(
                     "period-change intent rerouted to TREND_ANALYSIS: question=%s",
                     task_question[:120],
+                )
+            if task_intent is PrimaryIntent.TREND_ANALYSIS and structured is not None:
+                _normalize_trend_time_order(
+                    structured, full_series=_period_change_series_question(task_question)
                 )
             # 口径/血缘解释问题保留完整参数；若模型仍输出null提取，则至少把
             # 原文指标名带进参数通道，否则下游解析不到指标，追问门禁会引导
