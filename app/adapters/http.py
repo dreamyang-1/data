@@ -1350,13 +1350,42 @@ class HttpDataRetrievalAdapter:
         # from being copied into a display-name filter (or vice versa).
         return key_kind(expected_normalized) == key_kind(actual_normalized)
 
-    @staticmethod
-    def _merge_dependency_filters(request: CanonicalAnalysisRequest) -> None:
+    @classmethod
+    def _merge_dependency_filters(cls, request: CanonicalAnalysisRequest) -> None:
         """Put immutable upstream values in structured input, not just prose."""
         if not request.dependency_constraints:
             return
         extraction = request._planner_extraction
         structured = extraction.structured if extraction is not None else None
+        families = {cls._constraint_field_family(item.source_column)
+                    for item in request.dependency_constraints} - {None}
+        resolved_references = set()
+
+        def resolve_reference(item):
+            # A planner may express an unresolved predecessor reference as a
+            # name value. The complete, scoped key set below owns that binding.
+            # Preserve real literals, exclusions and filters on other objects.
+            if (cls._constraint_field_family(str(item.get('field') or '')) not in families
+                    or str(item.get('operator') or item.get('op') or '=').upper() not in {'=', 'EQ', 'IN'}):
+                return item
+            value = item.get('value')
+            values = value if isinstance(value, list) else [value]
+            retained = [v for v in values if not (
+                isinstance(v, str) and v not in request.original_question
+                and re.match(r'^(?:复用|根据|基于)?(?:上述|上一轮|上一步|前序|前一)(?:任务)?'
+                             r'(?:的)?(?:查询)?(?:返回)?(?:的)?(?:结果|名单)(?:[：:]|$)', v.strip()))]
+            if len(retained) == len(values):
+                return item
+            resolved_references.update(v for v in values if isinstance(v, str) and v not in retained)
+            return {**item, 'value': retained if isinstance(value, list) else retained[0]} if retained else None
+
+        request.filters = [resolved for item in request.filters
+                           if (resolved := resolve_reference(item)) is not None]
+        if structured is not None:
+            structured['过滤条件'] = [resolved for item in structured.get('过滤条件') or []
+                                    if (resolved := resolve_reference(item)) is not None]
+        request.semantic_entity_mentions = [value for value in request.semantic_entity_mentions
+                                           if value not in resolved_references]
         for constraint in request.dependency_constraints:
             item = {"field": constraint.source_column, "operator": "IN",
                     "value": list(constraint.values)}

@@ -10941,6 +10941,8 @@ class DataAnalysisOrchestrator:
                 parsed_period = None
             if parsed_period is not None:
                 request.time_range = parsed_period
+                request.assumptions = [item for item in request.assumptions
+                    if item not in {"TIME_SCOPE=ALL_TIME", "TIME_SCOPE=ALL_AVAILABLE_HISTORY"}]
         request.asl_template = None
         request.source_dataset_id = None
         # Ensure semantic/ASL receives this child's shape, not parent wording.
