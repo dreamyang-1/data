@@ -204,7 +204,7 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 10. “前N名销售人员以及所属公司”等同一对象的唯一关联属性，不是额外的分组目标；把关联属性保留在查询的展示字段中。任何用户要求返回的属性不得遗漏。
 
 问题意图枚举（intent字段从中选择最贴合的一个，只输出枚举名本身）：
-统计查询、明细查询、趋势分析、对比分析、占比分析、解释口径、闲聊、非数据任务。
+指标查询、明细查询、趋势分析、对比分析、占比分析、解释口径、闲聊、非数据任务。
 
 极值判定补充：问题按最高、最低、最快、最慢等极值挑出某个对象或订单（如"哪个订单的均价最低"）时，intent输出明细查询，不输出指标查询；极值不存在大于/小于的门槛数值，不属于阈值筛选。极值依据的数值口径由后续环节处理：口径是业务语义规范中已注册指标的，提取环节把该指标写入指标通道并按登记口径计算后排序取最值；未注册的口径按明细列排序加行数限制实现。
 
@@ -235,8 +235,7 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 # ---------------------------------------------------------------------------
 
 
-def validate_plan(plan: TaskPlan, *, source_question: str | None = None,
-                  registered_default_times: tuple[str, ...] = ()) -> None:
+def validate_plan(plan: TaskPlan, *, source_question: str | None = None) -> None:
     if not 2 <= len(plan.tasks) <= 12:
         raise TaskPlanningError("任务计划必须包含2到12个原子任务")
     task_ids = [task.task_id for task in plan.tasks]
@@ -255,7 +254,7 @@ def validate_plan(plan: TaskPlan, *, source_question: str | None = None,
             )
         known.add(task.task_id)
     if source_question is not None:
-        _validate_grounding(plan, source_question, registered_default_times)
+        _validate_grounding(plan, source_question)
 
 
 def _unique_mentions(text: str, candidates: tuple[str, ...]) -> list[str]:
@@ -314,24 +313,6 @@ def _normalize_grounding_numbers(text: str) -> str:
     )
 
 
-def _goal_signals(text: str) -> set[str]:
-    patterns = {
-        "TREND": r"趋势|走势|按(?:日|周|月|季|年)变化",
-        "COMPARE": r"同比|环比|对比|比较|差多少|增长率",
-        "COMPOSITION": r"占比|构成|份额|结构",
-        "ANOMALY": r"异常|突增|突降|离群|不正常",
-        "ROOT_CAUSE": r"归因|原因|为什么|影响因素",
-        "FORECAST": r"预测|预估|预计|推算",
-        "DETAIL": r"明细|名单|逐笔|每一条|列表",
-        "RANK": r"(?:前|后)[\d一二三四五六七八九十百]+|最高|最低|排名|排序|降序|升序|从高到低|从低到高",
-        "DEFINITION": r"口径|定义|公式|怎么算",
-        "LINEAGE": r"血缘|来源表|来源字段|来自哪",
-        "QUALITY": r"数据质量|缺失|重复|空值|对账|延迟",
-        "DELIVERY": r"报告|报表|导出|下载|生成(?:excel|xlsx|pdf|word|docx)",
-    }
-    return {name for name, pattern in patterns.items() if re.search(pattern, text)}
-
-
 def _qualified_facet_parts(question: str) -> tuple[str, list[str]] | None:
     """返回共享前缀和两个对比性、可在原文落地的业务分支措辞。"""
     normalized = question.strip(" ，,。！？?；;")
@@ -376,9 +357,16 @@ def _qualified_facet_parts(question: str) -> tuple[str, list[str]] | None:
     return prefix, [left.group(0) + suffix, right.group(0) + suffix]
 
 
-def _validate_grounding(plan: TaskPlan, source_question: str,
-                       registered_default_times: tuple[str, ...] = ()) -> None:
-    """拒绝模型自造的日期、数字、指标和带引号的过滤值。"""
+def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
+    """拒绝模型自造的日期、数字、指标和带引号的过滤值。
+
+    只做防自造的正向校验：任务文本不得引入原问题没有的数字、指标、
+    时间条件、引号过滤值和业务型号。"遗漏"方向只比对无参数载体的信号
+    （排除/限定语气、并列分支结构、业务型号编码）——任务问题文本是
+    允许改写的展示字段，年份、排名、指标、时间等要求合法落在结构化
+    参数（时间粒度、排序、限制、指标通道）里而不复读进文本，文本级
+    强比对只会把整个规划误杀（实测多轮复现），下游合同以结构化参数为准。
+    """
     source_for_grounding = re.sub(
         r"(?:^|[;；\n])\s*[一二三四五1-5][、.)．]\s*",
         " ",
@@ -405,12 +393,8 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
     source_quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", source_question))
     source_identifiers = set(_business_identifiers(source_question))
     for task in plan.tasks:
-        grounding_question = task.question
-        for default in registered_default_times:
-            pattern = r"\s*".join(re.escape(char) for char in default)
-            grounding_question = re.sub(pattern, "", grounding_question)
         compact = _normalize_grounding_numbers(
-            re.sub(r"\s+", "", grounding_question).casefold()
+            re.sub(r"\s+", "", task.question).casefold()
         )
         if not set(re.findall(r"\d+(?:\.\d+)?", compact)).issubset(source_numbers):
             raise TaskPlanningError("子任务包含原问题中不存在的数字或日期")
@@ -425,17 +409,10 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
         if not task_identifiers.issubset(source_identifiers):
             raise TaskPlanningError("子任务包含原问题中不存在的业务型号或编码")
 
-    # 落地校验是双向的：只防自造不够，计划悄悄丢掉用户要求的一部分同样要拒绝。
-    if not source_numbers.issubset(set(re.findall(r"\d+(?:\.\d+)?", planned_compact))):
-        raise TaskPlanningError("任务计划遗漏原问题中的数字或日期")
-    if not source_metrics.issubset({value for value in metric_terms if value in planned_compact}):
-        raise TaskPlanningError("任务计划遗漏原问题中的指标")
-    if not source_temporal.issubset({value for value in temporal_terms if value in planned_compact}):
-        raise TaskPlanningError("任务计划遗漏原问题中的时间条件")
-    if not source_quoted.issubset(set(re.findall(
-        r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", " ".join(task.question for task in plan.tasks)
-    ))):
-        raise TaskPlanningError("任务计划遗漏原问题中的过滤值")
+    # "遗漏"方向的文本比对只保留无参数载体的信号：排除/限定语气、并列分支
+    # 结构、业务型号编码没有独立的结构化参数通道，任务文本丢了就真丢了；
+    # 数字、排名、指标、时间等信号合法落在时间粒度/排序/限制/指标通道里，
+    # 文本级强比对只会把整个规划误杀（实测多轮复现），不做反向比对。
     planned_identifiers = set(
         _business_identifiers(" ".join(task.question for task in plan.tasks))
     )
@@ -452,19 +429,11 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
         if any(count != 1 for count in coverage.values()):
             raise TaskPlanningError("任务计划遗漏或重复了并列业务分支")
 
-    source_goals = _goal_signals(source_compact)
-    if plan.final_deliverable == "COMBINED_REPORT":
-        # 交付动作由根DAG在所有分析子任务成功后统一执行；
-        # 要求每个子任务都带“报告”会错误地触发每份数据集各导一次。
-        source_goals.discard("DELIVERY")
-    planned_goals = _goal_signals(planned_compact)
-    if not source_goals.issubset(planned_goals):
-        raise TaskPlanningError("任务计划遗漏原问题中的分析目标")
     constraint_markers = {
         marker for marker in ("不要", "不看", "不查", "排除", "剔除", "只看", "仅看")
         if marker in source_compact
     }
-    if not constraint_markers.issubset({marker for marker in constraint_markers if marker in planned_compact}):
+    if not constraint_markers.issubset(planned_compact):
         raise TaskPlanningError("任务计划遗漏原问题中的排除或限定条件")
 
 
@@ -1355,9 +1324,7 @@ class CompoundTaskPlanner:
                 final_deliverable=judgment.final_deliverable,
                 question_groups=question_groups,
             )
-        validate_plan(plan, source_question=source_question, registered_default_times=tuple(
-            dict.fromkeys(default for decomposition in decompositions
-                          for default in decomposition.grounding_default_times)))
+        validate_plan(plan, source_question=source_question)
         self._reject_metric_substitution(plan, source_question)
         return plan
 
@@ -1583,8 +1550,7 @@ class CompoundQuestionRouter:
             split_reason_code="TASK_DECOMPOSITION",
             compound_metrics=_compound_metrics_in_decompositions([decomposition]),
         )
-        validate_plan(plan, source_question=question,
-                      registered_default_times=decomposition.grounding_default_times)
+        validate_plan(plan, source_question=question)
         return CompoundRouteResult(judgment=judgment, plan=plan)
 
 
