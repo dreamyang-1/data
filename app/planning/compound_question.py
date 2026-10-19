@@ -204,7 +204,7 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 10. “前N名销售人员以及所属公司”等同一对象的唯一关联属性，不是额外的分组目标；把关联属性保留在查询的展示字段中。任何用户要求返回的属性不得遗漏。
 
 问题意图枚举（intent字段从中选择最贴合的一个，只输出枚举名本身）：
-指标查询、明细查询、趋势分析、对比分析、占比分析、解释口径、闲聊、非数据任务。
+统计查询、明细查询、趋势分析、对比分析、占比分析、解释口径、闲聊、非数据任务。
 
 极值判定补充：问题按最高、最低、最快、最慢等极值挑出某个对象或订单（如"哪个订单的均价最低"）时，intent输出明细查询，不输出指标查询；极值不存在大于/小于的门槛数值，不属于阈值筛选。极值依据的数值口径由后续环节处理：口径是业务语义规范中已注册指标的，提取环节把该指标写入指标通道并按登记口径计算后排序取最值；未注册的口径按明细列排序加行数限制实现。
 
@@ -272,6 +272,25 @@ def _business_identifiers(text: str) -> list[str]:
     return list(dict.fromkeys(_BUSINESS_IDENTIFIER_PATTERN.findall(normalized)))
 
 
+def _cn_rank_number(match: re.Match[str]) -> str:
+    """中文序数写法转阿拉伯数字，“前五位”“前十名”与“前5位”“10名”等价。"""
+    text = match.group(1)
+    digits = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+              "六": 6, "七": 7, "八": 8, "九": 9}
+    if "十" in text:
+        tens_part, _, ones_part = text.partition("十")
+        if (tens_part and any(ch not in digits for ch in tens_part)) or (
+            ones_part and any(ch not in digits for ch in ones_part)
+        ):
+            return match.group(0)
+        tens = digits.get(tens_part, 1) if tens_part else 1
+        ones = digits.get(ones_part, 0) if ones_part else 0
+        return str(tens * 10 + ones)
+    if any(ch not in digits for ch in text):
+        return match.group(0)
+    return str(digits[text])
+
+
 def _normalize_grounding_numbers(text: str) -> str:
     """口语日期写法与规范写法等价"""
     text = re.sub(
@@ -280,6 +299,12 @@ def _normalize_grounding_numbers(text: str) -> str:
         text,
     )
     text = re.sub(r"(?<!\d)0(\d)(?=[月日号])", r"\1", text)
+    # “前五位/排名前三”常被改写成“前5位/前3”，前/第后面的中文数字转阿拉伯数字再比对
+    text = re.sub(
+        r"(?<=[前第])([一二两三四五六七八九十]{1,3})(?![一二两三四五六七八九十\d年])",
+        _cn_rank_number,
+        text,
+    )
     # “最多/最高”常被改写为“第1名/前1名”，序数措辞里的1不参与数字比对
     return re.sub(
         r"第\s*[一1]\s*[名位席]|前\s*[一1]\s*[名位席个家]|top\s*1(?!\d)",

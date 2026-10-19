@@ -39,15 +39,6 @@ _METADATA_INTENTS = {
     PrimaryIntent.DATA_LINEAGE,
 }
 
-_INTENT_PROMPT_OPTIONS = (
-    "METRIC_QUERY（指标查询）, DETAIL_QUERY（明细/名单查询）, "
-    "TREND_ANALYSIS（趋势分析）, COMPARISON_ANALYSIS（对比分析）, "
-    "COMPOSITION_ANALYSIS（占比构成分析）, ANOMALY_ANALYSIS（异常分析）, "
-    "ROOT_CAUSE_ANALYSIS（归因分析）, FORECAST_ANALYSIS（预测分析）, "
-    "REPORT_GENERATION（报告生成）, METRIC_DEFINITION（指标口径解释）, "
-    "CHAT（闲聊）, OUT_OF_SCOPE（超出业务范围）"
-)
-
 _PARAMETER_PATTERN = re.compile(r"^(.+?)（(.+?)）$")
 
 
@@ -84,22 +75,6 @@ _CHINESE_INTENT_LABELS = frozenset(_CHINESE_INTENT_TO_PRIMARY)
 
 _EXTRACTION_PROMPT_PATH = Path(__file__).with_name("structured_extraction_prompt.txt")
 _EXTRACTION_PROMPT_MARKER = "【用户提示词（业务场景上下文）】"
-_EXTRACTION_ROLE_GUIDANCE = """
-结构化提取的角色边界：
-实体表示本次查询涉及或需要关联的逻辑业务对象/表，不是具体筛选值。
-例如实体中的“商品”“经销商”表示商品表、经销商表；不能生成商品名称=商品、经销商名称=经销商。
-指标是计算口径，维度是分组方向，展示字段是返回列，均不能仅因被提取就转成值过滤。
-只有用户给出的具体对象值（例如万益特、贝朗、具体商品名）才进入过滤条件。
-同一字段的多个可选值保留 IN，排除多个值保留 NOT IN，不能拆成同时满足的多个等号。
-用户消息中的业务语义说明仅用于理解角色与业务含义；不是授权清单，也不是物理 JOIN 指令。
-说明有重复、矛盾或关联描述不一致时，不据此编造字段或关系，最终由当前授权语义目录绑定。
-条件归属必须逐项依据当前问题，而非目录属性排列或默认主表：上海市各经销商→entity=经销商；
-上海地区哪个医院→entity=医院；上海医院按经销商汇总→entity=医院。不同实体的所在地条件分开保留。
-名称条件保留业务名称字段和用户原值；不能因为目录只在医院/经销商下列出“关联省份ID”就把上海填进ID。
-地区名称用field=省份名称或城市名称并单独标明所属业务entity，名称到外键编码的转换交给ASL按已发布关系完成。
-同理，公司名称、商品名称等不能填到关联编码字段；只有用户明确给出编码时才提取编码条件，不猜测编码。
-医院的消化内科、呼吸内科等临床科室属于科室实体（field=科室名称），不是销售订单的业务科室/业务组织；只有原文明确要求企业业务组织时才提取业务科室条件。
-"""
 
 
 def _ground_location_owners(extraction: dict[str, Any] | None, question: str) -> None:
@@ -279,15 +254,11 @@ def _semantic_context_section(semantic_context: str, *, origin: str = "智能体
         f"\n以下平台业务语义规范摘自{origin}，是当前问题判断指标、实体、维度、"
         "同义词与口径的唯一业务依据；优先于通用知识与示例，不得改写登记名；"
         "规范中未出现的对象、指标、维度或取值不得自行引入，"
-        "但规范指标层级中各指标的同义词视为该指标的等价说法：用户说法是登记指标的同义词或派生口径"
-        "（对指标求增长率、均值、占比、排名、最高最低等）时，按正常任务意图处理，"
-        "extraction的指标名输出该指标的登记原名，派生口径写入“输出要求”键；"
-        "说法与规范内任何指标都无关、也无法由规范内指标派生时，才按指标口径解释处理"
-        "（意图输出METRIC_DEFINITION，指标名保留用户原文）。"
-        "判断是否“无法派生”按业务语义判断，不要求字面上包含指标名：围绕规范内"
-        "实体或业务对象的度量（数量、金额、快慢、高低、升降、排名）提出的说法，"
-        "都可由该业务对象在规范内的指标派生；只有规范中连对应业务对象的度量都"
-        "不存在的纯概念词，才按指标口径解释处理：\n"
+        "用户说法是某个登记指标的同义词时归一为该指标的登记原名；"
+        "与任何登记指标都对应不上时置空，不得把用户提到的属性说法"
+        "归到语义相近的注册指标名上，只有与规范内任何指标都无关、"
+        "也无法由规范内指标派生的纯概念词才按指标口径解释处理"
+        "（意图输出METRIC_DEFINITION，指标名保留用户原文）：\n"
         + semantic_context.strip()
         + "\n"
     )
@@ -504,9 +475,9 @@ class TaskPlanningError(RuntimeError):
 _EXTRACTION_SCHEMA_DESCRIPTION = (
     "结构化提取JSON，严格按系统提示词中的结构化提取规范输出，"
     "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重/是否查询数据库；"
-    "意图取值限定为 指标查询、趋势分析、对比分析、占比分析、明细查询 之一。"
-    "数据查询任务的指标名只能输出注入规范指标层级表中登记的原名"
-    "（用户说法是同义词或派生口径时归一为登记原名，派生口径写入“输出要求”），不得自造指标名；"
+    "意图取值限定为 统计查询、趋势分析、对比分析、占比分析、排名分析、明细查询 之一。"
+    "数据查询任务的指标名：用户说法是某个登记指标的同义词时输出该指标的登记原名，"
+    "与任何登记指标都对应不上时置空，不得用语义相近的指标顶替，不得自造指标名；"
     "不需要查询业务数据的问题（闲聊、超出业务范围）输出null；"
     "指标口径解释任务按规范完整提取参数，指标名保留用户原文，"
     "意图键固定输出“解释口径”"
@@ -563,31 +534,7 @@ class _SinglePlan(BaseModel):
     )
 
 
-_SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取器。只输出符合JSON Schema的JSON，不回答用户问题，不调用工具。
-
-你的职责：把问题拆解成可执行任务（绝大多数问题只有1个任务），识别问题意图，并按末尾的结构化提取规范逐任务输出参数。问题是否为复合问题已由前置环节判断——你收到的每个问题都是一个可独立验收的业务目标，不要把多个业务目标合成一个任务，也不要丢弃问题中的任何条件。
-
-任务拆解规则：
-1. 默认输出1个任务，任务问题即用户问题本身。
-2. 先排名或筛选出对象、再查询这些对象的其他关系或明细时（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”），拆为2个任务：任务1排名或筛选，任务2依赖任务1并写明“根据上述任务的查询结果……”。任务2要执行新的数据库查询，问题里不要写“不再查询数据库”——该句只允许出现在基于前序结果直接计算或筛选、不再发任何新查询的任务里。例外：提示上下文里的[上一轮任务表]已包含该排名/筛选结果（所需实体名单已在采样中给出）时，不适用本条——不拆分，只输出1个任务，把上一轮采样中的参数值直接写进任务问题文本并以“复用上一轮查询结果：”开头，该任务照常发起新查询。
-3. 用户明确要求分别查询多个结果再比较或合并计算时（如“分别查询今年和去年销售额，并比较同比变化”），按查询数拆任务，再加一个依赖全部前序任务的计算任务，任务问题写明“根据上述任务的查询结果……不再查询数据库”。
-4. 业务语义规范指标表中某指标的依赖指标列登记了成分指标（取值不是"无"或空）时，该指标必须按公式成分拆分：依赖指标列里的每个成分指标各一个查询任务（指标名用该成分的规范登记原名，筛选条件按规范中该成分的口径与公式规则归属，分组维度只放在需要按维度分组的成分任务上），最后再加一个计算任务，依赖全部成分任务，问题写明"根据上述任务的查询结果计算×××，不再查询数据库"。对复合指标做趋势、占比、对比等分析时同样先按成分拆分，分析口径写进成分任务与计算任务的问题文本。依赖指标列为无、或成分指标不在规范指标表内时不拆；依赖指标列为无的普通指标的趋势、占比、对比分析，以及围绕同一份数据的分析都保持1个任务。
-5. 不要把ASL、SQL、取数、校验、洞察这些内部步骤拆成任务。
-6. 每个任务都要输出name字段：任务名称是"动词+业务指标+过滤条件"的陈述句（如"统计2025年上海市各经销商的含税销售总额""计算2025年上海市平均每单销售金额""查询订单笔数大于5笔的经销商名单"），用规范登记的指标、维度或实体名概括任务要得到的业务结果，不得照抄用户问题原文，不得出现"是多少""有哪些"等疑问词，结尾不加标点；计算任务的name直接写"计算×××"，不用带"根据上述任务的查询结果"前缀。
-
-意图判断规则（问题级intent字段）：
-1. 从下列意图枚举中选一个最贴合问题目标的取值，只输出枚举名本身。不需要查询业务数据的问题（闲聊、超出业务范围）按实际选CHAT或OUT_OF_SCOPE，extraction输出null。
-2. 指标说法与规范指标层级比对后分两种情况：说法由规范内指标派生（对规范内指标求增长率、均值、占比、排名、最高最低等派生口径），按正常任务意图处理并完整提取参数，extraction的指标名输出派生来源的规范指标登记原名（按规范中各指标的登记名、同义词和业务语义选择最贴合的一个，不得自造指标名），派生口径（如"按环比增长率降序取排名"）写入"输出要求"键；说法与规范内任何指标都无关、也无法由规范内指标派生时，才按指标口径解释处理：任务意图输出METRIC_DEFINITION，参数仍照常完整提取，指标名保留用户原文，不得用语义相近的指标替代，也不得自行编造计算口径。判断是否"无法派生"按业务语义判断，不要求字面上包含指标名：围绕规范内实体或业务对象的度量（数量、金额、快慢、高低、升降、排名）提出的说法，都可由该业务对象在规范内的指标派生，按正常任务意图处理；只有规范中连对应业务对象的度量都不存在的纯概念词，才按指标口径解释处理。
-3. 任务问题含"不再查询数据库"时，这是基于前序任务结果的计算/筛选任务，不是闲聊：该任务照常输出extraction，指标取被计算的指标名（保留原文叫法），"意图"键固定输出"指标计算"，过滤条件、时间粒度、维度按任务问题文本提取，识别不到的键置[]或null。
-
-数据查询问题的extraction字段：按本提示词末尾的"结构化提取规范"产出结构化提取JSON（固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求），只提取用户原文和注入的业务语义规范中出现的内容，识别不到的键按规范置[]或null。数据查询问题的指标名只输出规范指标层级表中的登记原名（用户说法是同义词或派生口径时归一为登记原名，派生口径写入"输出要求"），不得自造指标名。排序的field同样只输出规范登记的指标名或维度名：增长率、占比、排名等派生口径不作为排序字段，按哪个指标排就把该指标的登记原名放进field，派生口径写入"输出要求"。指标口径解释问题（METRIC_DEFINITION）的extraction按规范完整提取参数并保留用户原文指标名，"意图"键固定输出"解释口径"。
-
-任务意图枚举：
-""" + _INTENT_PROMPT_OPTIONS + """
-
-判定示例：
-- “查看上海各经销商科室业务匹配度。” → 意图METRIC_DEFINITION：科室业务匹配度与规范内任何指标都无关且无法派生，按指标口径解释处理并保留原文指标名，参数照常完整提取（地区、经销商等照常输出）；不得改用规范内指标替代。
-- “统计各经销商近12月的平均月度销量增长率。” → 意图METRIC_QUERY：平均月度销量增长率由规范内指标“销量”派生，完整提取参数（时间范围、维度等），extraction的指标名输出规范登记原名“销量”，“计算平均月度增长率”写入“输出要求”。
+_SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取器。把问题拆解成可执行任务（绝大多数问题只有1个任务），按末尾的结构化提取规范逐任务输出extraction参数。只有与规范内任何指标都无关、也无法由规范内指标派生的纯概念词，才按指标口径解释处理（任务意图输出METRIC_DEFINITION，指标名保留用户原文）。只输出符合JSON Schema的JSON。
 """
 
 # 结构化提取规范整段取自国药语义解析器提示词，extraction字段按此输出。
@@ -646,57 +593,19 @@ class SingleQuestionPlanner:
                 continue
             last_result = decomposition
             off_data, off_meta = self._normalize_decomposition_metrics(decomposition)
-            unsplit_compound = self._unsplit_compound_metrics(decomposition)
             empty_extraction = (
                 not any(task.structured is not None for task in decomposition.tasks)
                 and decomposition.intent not in _NO_DATA_INTENTS
             )
-            if attempt == 0 and (empty_extraction or off_data or off_meta or unsplit_compound):
-                # 全部任务提取为空、指标名目录外或复合指标未按公式拆分，
-                # 说明这次输出不可信，带纠错说明重试一次
+            if attempt == 0 and (empty_extraction or off_data or off_meta):
+                # 全部任务提取为空或指标名目录外，说明这次输出不可信，
+                # 带纠错说明重试一次
                 retry_feedback = self._retry_feedback(
                     off_data, off_meta, empty_extraction=empty_extraction,
-                    unsplit_compound=unsplit_compound,
                 )
                 continue
             return last_result
         return last_result
-
-    @staticmethod
-    def _unsplit_compound_metrics(
-        decomposition: QuestionDecomposition,
-    ) -> list[tuple[str, tuple[str, ...]]]:
-        """找出数据查询任务里未按公式拆分的复合指标：返回（指标, 成分）列表。
-
-        计算任务（问题含"不再查询数据库"）本来就携带复合指标名，
-        口径解释任务保留用户原文，二者都不算未拆分。
-        """
-        dependencies = decomposition.metric_dependencies
-        if not dependencies:
-            return []
-        catalog = decomposition.metric_catalog
-        if catalog is None:
-            return []
-        registered, aliases = catalog
-        findings: list[tuple[str, tuple[str, ...]]] = []
-        for task in decomposition.tasks:
-            if "不再查询数据库" in task.question or task.intent in _METADATA_INTENTS:
-                continue
-            structured = task.structured
-            if not isinstance(structured, dict):
-                continue
-            metrics = structured.get("指标")
-            if not isinstance(metrics, list):
-                continue
-            for item in metrics:
-                name = item.get("name") if isinstance(item, dict) else item
-                if not isinstance(name, str) or not name.strip():
-                    continue
-                normalized = _normalize_metric_name(name.strip(), registered, aliases)
-                components = dependencies.get(normalized)
-                if components and all(dep in registered for dep in components):
-                    findings.append((normalized, components))
-        return findings
 
     async def plan_single(
         self,
@@ -789,7 +698,6 @@ class SingleQuestionPlanner:
         off_meta: list[str],
         *,
         empty_extraction: bool,
-        unsplit_compound: list[tuple[str, tuple[str, ...]]] | None = None,
     ) -> str | None:
         """重试时附带的纠错说明：指出问题，给两条合法出路，不点名该选哪个指标。"""
         parts: list[str] = []
@@ -798,24 +706,13 @@ class SingleQuestionPlanner:
                 "上一轮没有输出任何结构化提取参数。该问题属于业务问题，"
                 "必须按结构化提取规范完整输出参数；仅当问题确与业务无关时才允许输出null。"
             )
-        if unsplit_compound:
-            for metric, components in unsplit_compound:
-                parts.append(
-                    "指标“" + metric + "”在规范指标表的依赖指标列登记了成分指标（"
-                    + "、".join(components)
-                    + "），上一轮把它当成了单个查询任务。必须按任务拆解规则5拆分："
-                    "每个成分指标一个查询任务（指标名用该成分的登记原名，"
-                    "筛选条件按规范中该成分的口径归属），最后再加一个依赖全部成分任务的"
-                    "计算任务，问题写明“根据上述任务的查询结果计算" + metric
-                    + "，不再查询数据库”。"
-                )
         if off_data:
             parts.append(
                 "指标名“"
                 + "、".join(off_data)
-                + "”不在注入规范指标层级表中。数据查询问题的指标名只能输出表中登记的原名；"
-                "若用户说法是某个登记指标的同义词或派生口径，输出该指标的登记原名，"
-                "派生口径写入“输出要求”。"
+                + "”不在注入规范指标层级表中。确属某个登记指标的同义词时，"
+                "输出该指标的登记原名；与任何登记指标都对应不上时，指标通道置空，"
+                "不得用语义相近的指标顶替，不得自造指标名。"
             )
         if off_meta:
             parts.append(
@@ -853,6 +750,9 @@ class SingleQuestionPlanner:
 
         schema = _SinglePlan.model_json_schema()
         system_content = _SINGLE_SYSTEM_PROMPT
+        # 通用规则块放在前部：贴着Schema末尾时会干扰指标选择，
+        # 使模型在多个可对应的登记指标之间选错（实测多次复现）
+        system_content += general_rules
         # 规范只注入一次：远程按模型生成的描述文件优先，
         # 平台提示词粘贴段兼容存量，提示词文件内置规范最后兜底。
         reference = await load_semantic_description(self.settings, semantic_model_id)
@@ -883,14 +783,13 @@ class SingleQuestionPlanner:
             spec_for_catalog = ""
         if prior_block:
             system_content += "\n" + prior_block + "\n"
-        system_content += general_rules
         metric_catalog = _parse_metric_catalog(spec_for_catalog)
         body = {
             "model": self.settings.intent_model_name,
             "messages": [
                 {
                     "role": "system",
-                    "content": system_content + _EXTRACTION_ROLE_GUIDANCE + "\nJSON Schema：" + json.dumps(
+                    "content": system_content + "\nJSON Schema：" + json.dumps(
                         schema, ensure_ascii=False, separators=(",", ":")
                     ),
                 },
@@ -1085,6 +984,22 @@ class SingleQuestionPlanner:
             }
             registered = metric_catalog[0] if metric_catalog else frozenset()
             aliases = metric_catalog[1] if metric_catalog else {}
+            # 豁免收紧：只有排序、过滤条件实际引用到的注册指标才保留在指标通道，
+            # 模型顺手多提的指标（如“含税单价最低”带上含税销售总额）在这里丢弃，
+            # 未被引用的注册指标也不迁展示字段，保持指标[]与平台口径一致
+            referenced_names: set[str] = set()
+            for ref_items in (structured["排序"], structured["过滤条件"]):
+                for ref in ref_items:
+                    ref_name = (
+                        str(ref.get("field") or "").strip()
+                        if isinstance(ref, dict) else str(ref).strip()
+                    )
+                    if not ref_name:
+                        continue
+                    referenced_names.add(ref_name)
+                    referenced_names.add(
+                        _normalize_metric_name(ref_name, registered, aliases)
+                    )
             for key in ("指标", "维度"):
                 kept: list[Any] = []
                 for item in structured[key]:
@@ -1098,7 +1013,8 @@ class SingleQuestionPlanner:
                         else ""
                     )
                     if key == "指标" and normalized in registered:
-                        kept.append(item)
+                        if name in referenced_names or normalized in referenced_names:
+                            kept.append(item)
                         continue
                     if name and name not in known_fields:
                         display.append({"field": name})
