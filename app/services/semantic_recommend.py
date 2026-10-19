@@ -16,8 +16,15 @@ Resp 包装、VO 字段）与 Java 版保持一致，后端可直接调用或整
   模型名必须是网关 LLM_MODELS 支持的名称（当前为 qwen3.7-max；
   qwen3-max 不在列表，网关会静默返回空答案）。
 - 全部为只读接口，不落库、不改数据。
-- detect_relations / recommend_relations 一次请求固定 4 条 SQL
+- detect_relations 一次请求固定 4 条 SQL
   （entities/relations/tables/fields_batch 各一条），不随实体数增长。
+- 两跳间接推断（2026-10-19 用户需求）：实体 A 与 C 无直接证据，但存在
+  B 使 A-B、B-C 均有直接证据（已配置关系或规则命中字段对）时，生成
+  经 B 的间接关系候选（VO 附 indirect/viaEntityTypeId/viaEntityName，
+  语义描述注明中间实体）。detect_relations 不增加 SQL；recommend_relations
+  仅在无已配置且无直接推导时额外装载全部实体（+2 条 SQL，最多 6 条）。
+  间接候选不改变"不做无中生有"契约——每一跳都必须有物理/配置证据，
+  且关联检测的间接候选可被大模型复核否决。
 """
 from __future__ import annotations
 
@@ -615,13 +622,17 @@ class SemanticRecommendService:
         current_info = info_map.get(entity_type_id)
         result: list[dict[str, Any]] = []
         evidence: dict[str, list[dict[str, Any]]] = {}
+        direct_by_id: dict[str, list[dict[str, Any]]] = {}
+        skipped: list[dict[str, Any]] = []
         for other in others:
             configured = configured_count.get(other["id"], 0)
             candidates = self._infer_relation_candidates(
                 current, other, current_info, info_map.get(other["id"])
             )
+            direct_by_id[other["id"]] = candidates
             inferred = sum(len(c["fieldPairs"]) for c in candidates)
             if configured <= 0 and inferred <= 0:
+                skipped.append(other)
                 continue
             evidence[other["id"]] = candidates
             result.append({
@@ -632,10 +643,31 @@ class SemanticRecommendService:
                 "inferred": inferred > 0,
                 "inferredCount": inferred,
             })
+        # 两跳间接推断（2026-10-19 用户需求）：A-C 无直接证据，但存在 B 使
+        # A-B、B-C 均有直接证据 → 生成经 B 的间接候选（纯内存计算，不加 SQL）。
+        indirect = self._infer_indirect_candidates(
+            current, current_info, skipped, others, relations, info_map,
+            direct_by_id=direct_by_id,
+        )
+        for vo in indirect:
+            evidence.setdefault(vo["otherEntityTypeId"], []).append(vo)
+            result.append({
+                "otherEntityTypeId": vo["otherEntityTypeId"],
+                "otherEntityName": vo.get("otherEntityName"),
+                "related": False,
+                "relationCount": 0,
+                "inferred": False,
+                "inferredCount": 0,
+                "indirect": True,
+                "viaEntityTypeId": vo.get("viaEntityTypeId"),
+                "viaEntityName": vo.get("viaEntityName"),
+                "semanticDescription": vo.get("semanticDescription"),
+                "relationCandidates": [vo],
+            })
         # 大模型复核（2026-10-15）：确认/否决/修正规则命中的字段对并排序；
         # 失败时静默降级，result 保持纯规则结果与原顺序。
         # 2026-10-15 用户契约：模型不做无中生有的建议——未配置且规则未命中
-        # 的实体对一律不返回。
+        # 的实体对一律不返回（间接候选每跳均有证据，且可被模型否决）。
         self._enhance_detect_relations_with_llm(
             current, current_info, result, evidence, info_map
         )
@@ -663,7 +695,8 @@ class SemanticRecommendService:
 
         # 1. 已配置关系（同模型、两实体间任意方向），按关系分组聚合字段对
         existing: dict[str, dict[str, Any]] = {}
-        for relation in self._reader.relations(semantic_model_id):
+        relations = self._reader.relations(semantic_model_id)
+        for relation in relations:
             src_id = relation.get("source_entity_type_id")
             tgt_id = relation.get("target_entity_type_id")
             if {src_id, tgt_id} != {source_entity_type_id, target_entity_type_id}:
@@ -726,6 +759,22 @@ class SemanticRecommendService:
             source["name"], target["name"], inferred
         )
         result.extend(inferred)
+
+        # 3. 两跳间接推断（2026-10-19 用户需求）：A 与 C 无已配置且无直接
+        # 推导时，搜索中间实体 B（A-B、B-C 均有直接证据）生成经 B 的候选。
+        # 惰性触发：仅在直接结果为空时额外装载全部实体（+2 条 SQL）。
+        if not result:
+            all_others = [
+                e for e in entities if e["id"] != source_entity_type_id
+            ]
+            all_info = self._entity_table_info_map(
+                [source, *all_others], semantic_model_id
+            )
+            indirect = self._infer_indirect_candidates(
+                source, all_info.get(source_entity_type_id),
+                [target], all_others, relations, all_info,
+            )
+            result.extend(indirect)
         return result
 
     # ---------- 内部工具 ----------
@@ -820,6 +869,11 @@ class SemanticRecommendService:
                 other_info = info_map.get(vo["otherEntityTypeId"])
                 other_name = vo.get("otherEntityName") or vo["otherEntityTypeId"]
                 block = schema_block(other_name, other_info)
+                if vo.get("indirect"):
+                    block += (
+                        f"\n  （该候选为经由中间实体【{vo.get('viaEntityName') or '未知'}】"
+                        "的两跳间接关联，字段对跨越中间表，请结合业务判断是否成立）"
+                    )
                 if vo["related"]:
                     block += f"\n  （已有 {vo['relationCount']} 条人工配置的关联关系）"
                 candidates = evidence.get(vo["otherEntityTypeId"]) or []
@@ -989,6 +1043,168 @@ class SemanticRecommendService:
                 pairs, "N:N", source["name"], target["name"]
             ))
         return candidates
+
+    # ---------- 两跳间接推断（2026-10-19 用户需求） ----------
+
+    @staticmethod
+    def _merge_cardinality(first_hop: str | None, second_hop: str | None) -> str:
+        """两跳基数合成：A→B→C 推 A:C 的多重性。
+
+        链式乘法语义（"1:N" = 1 个源行对 N 个目标行）：
+        - C 侧为 N ⟺ 1 个 A 行能展开到多个 C 行：第一跳 A:B 的 B 侧为 N
+          （1 个 A 对多个 B），或第二跳 B:C 的 C 侧为 N（1 个 B 对多个 C）；
+        - A 侧为 N ⟺ 1 个 C 行能展开到多个 A 行：第二跳 B 侧为 N
+          （N 个 B 对 1 个 C，1 个 C 关联多个 B 行），或第一跳 A 侧为 N
+          （N 个 A 对 1 个 B，该 B 的多个 A 行各自可达 C）。
+        例：1:N（A→B）+ N:1（B→C）→ N:N（经典中间表场景）；
+            N:1（A→B）+ 1:N（B→C）→ N:N。
+        """
+        first = _normalize_cardinality(first_hop, False)
+        second = _normalize_cardinality(second_hop, False)
+        a_mult = "N" if (first.startswith("N") or second.startswith("N")) else "1"
+        c_mult = "N" if (first.endswith("N") or second.endswith("N")) else "1"
+        if a_mult == "N" and c_mult == "1":
+            return "N:1"
+        if a_mult == "1" and c_mult == "N":
+            return "1:N"
+        return f"{a_mult}:{c_mult}"
+
+    def _configured_hops(
+        self, source: dict[str, Any], target: dict[str, Any],
+        relations: list[dict[str, Any]],
+    ) -> list[tuple[list[dict[str, Any]], str]]:
+        """已配置关系作为一跳证据：返回 [(字段对列表, 基数)]，方向统一 source→target。"""
+        hops: list[tuple[list[dict[str, Any]], str]] = []
+        for relation in relations:
+            src_id = relation.get("source_entity_type_id")
+            tgt_id = relation.get("target_entity_type_id")
+            if {src_id, tgt_id} != {source["id"], target["id"]}:
+                continue
+            reversed_pair = target["id"] == src_id
+            src_table, src_column = _split_table_column(
+                relation.get("source_table_column_name")
+            )
+            tgt_table, tgt_column = _split_table_column(
+                relation.get("target_table_column_name")
+            )
+            if reversed_pair:
+                src_table, src_column, tgt_table, tgt_column = (
+                    tgt_table, tgt_column, src_table, src_column,
+                )
+            if not (src_table and src_column and tgt_table and tgt_column):
+                continue
+            hops.append(([{
+                "sourceTableName": src_table,
+                "sourceColumnName": src_column,
+                "sourceColumnComment": None,
+                "targetTableName": tgt_table,
+                "targetColumnName": tgt_column,
+                "targetColumnComment": None,
+            }], _normalize_cardinality(relation.get("type"), reversed_pair)))
+        return hops
+
+    def _build_indirect_description(
+        self, source_name: str, via_name: str | None,
+        target_name: str, cardinality: str,
+    ) -> str:
+        middle = f"【{via_name}】" if via_name else "中间实体"
+        if cardinality == "1:1":
+            return f"1个【{source_name}】通过{middle}间接关联1个【{target_name}】"
+        if cardinality == "N:1":
+            return f"多个【{source_name}】通过{middle}间接关联1个【{target_name}】"
+        if cardinality == "1:N":
+            return f"1个【{source_name}】通过{middle}间接关联多个【{target_name}】"
+        return f"多个【{source_name}】通过{middle}间接关联多个【{target_name}】"
+
+    def _infer_indirect_candidates(
+        self, current: dict[str, Any], current_info: dict[str, Any] | None,
+        targets: list[dict[str, Any]], others: list[dict[str, Any]],
+        relations: list[dict[str, Any]],
+        info_map: dict[str, dict[str, Any] | None],
+        direct_by_id: dict[str, list[dict[str, Any]]] | None = None,
+        *, max_per_target: int = 1, max_total: int = 8,
+    ) -> list[dict[str, Any]]:
+        """两跳间接候选：A-C 无直接证据，但存在 B 使 A-B、B-C 均有直接证据
+        （已配置关系或规则命中字段对）→ 生成经 B 的候选。
+
+        纯内存计算，不触发任何 SQL。每个对端默认取最先命中的一个中间实体
+        （bridge 顺序与 others 一致，保证稳定），全局上限 max_total 防爆炸。
+        direct_by_id 可传入调用方已算好的 current→X 规则候选复用（bridge 也在
+        others 中，第一轮循环已计算）；未传时内部重算。
+        """
+        if current_info is None or not targets:
+            return []
+        target_ids = {t["id"] for t in targets}
+        # bridge 池：除当前实体与目标外、与 current 存在一跳证据的实体
+        bridge_map: dict[str, tuple[dict[str, Any], list[tuple[list, str]]]] = {}
+        for entity in others:
+            if entity["id"] == current["id"] or entity["id"] in target_ids:
+                continue
+            hops = self._configured_hops(current, entity, relations)
+            rule_candidates = (direct_by_id or {}).get(entity["id"])
+            if rule_candidates is None:
+                entity_info = info_map.get(entity["id"])
+                rule_candidates = (
+                    self._infer_relation_candidates(
+                        current, entity, current_info, entity_info
+                    )
+                    if entity_info is not None else []
+                )
+            hops.extend(
+                (c["fieldPairs"], c["cardinality"])
+                for c in rule_candidates
+            )
+            if hops:
+                bridge_map[entity["id"]] = (entity, hops)
+        if not bridge_map:
+            return []
+
+        result: list[dict[str, Any]] = []
+        for target in targets:
+            if len(result) >= max_total:
+                break
+            target_info = info_map.get(target["id"])
+            if target_info is None:
+                continue
+            added = 0
+            for bridge_id, (bridge, first_hops) in bridge_map.items():
+                if added >= max_per_target or len(result) >= max_total:
+                    break
+                second_hops: list[tuple[list, str]] = self._configured_hops(
+                    bridge, target, relations
+                )
+                bridge_info = info_map.get(bridge_id)
+                if bridge_info is not None:
+                    second_hops.extend(
+                        (c["fieldPairs"], c["cardinality"])
+                        for c in self._infer_relation_candidates(
+                            bridge, target, bridge_info, target_info
+                        )
+                    )
+                if not second_hops:
+                    continue
+                first_pairs, first_card = first_hops[0]
+                second_pairs, second_card = second_hops[0]
+                pairs = [*first_pairs, *second_pairs]
+                if not pairs:
+                    continue
+                cardinality = self._merge_cardinality(first_card, second_card)
+                vo = self._build_inferred_candidate(
+                    pairs, cardinality, current["name"], target["name"]
+                )
+                vo["relationName"] = "间接关联"
+                vo["semanticDescription"] = self._build_indirect_description(
+                    current["name"], bridge.get("name"),
+                    target["name"], cardinality,
+                )
+                vo["indirect"] = True
+                vo["viaEntityTypeId"] = bridge_id
+                vo["viaEntityName"] = bridge.get("name")
+                vo["otherEntityTypeId"] = target["id"]
+                vo["otherEntityName"] = target.get("name")
+                result.append(vo)
+                added += 1
+        return result
 
     def _enhance_relation_candidates_with_llm(
         self, source_name: str, target_name: str,

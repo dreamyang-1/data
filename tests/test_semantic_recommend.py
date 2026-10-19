@@ -500,6 +500,219 @@ def test_detect_relations_fixed_reader_calls():
     assert reader.calls == ["entities", "relations", "tables", "fields_batch"]
 
 
+# ---------- 接口三扩展：两跳间接推断（2026-10-19 用户需求） ----------
+
+
+def bridge_reader(**overrides):
+    """三实体中间表场景：客户—订单—产品，客户与产品之间无直接关系。
+
+    规则命中：customer.id ↔ sales_order.customer_id（1:N）、
+    sales_order.product_id → product.id（N:1）、customer 与 product 无任何直接命中。
+    """
+    data = dict(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58},
+            {"id": "et-3", "name": "产品", "main_table_name": "product",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "customer", "comment": "客户信息表",
+             "data_source_id": 58},
+            {"id": 2, "name": "sales_order", "comment": "订单记录表",
+             "data_source_id": 58},
+            {"id": 5, "name": "product", "comment": "产品表",
+             "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint"),
+                field(12, "customer_name", "客户名称")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "customer_id", "客户ID"),
+                field(23, "product_id", "产品ID")],
+            5: [field(51, "id", "主键", "bigint"),
+                field(52, "product_name", "产品名称")],
+        },
+        relations=[],
+    )
+    data.update(overrides)
+    return FakeReader(**data)
+
+
+def test_merge_cardinality_two_hops():
+    # A→B 1:N + B→C N:1：经典中间表 → N:N
+    assert SemanticRecommendService._merge_cardinality("1:N", "N:1") == "N:N"
+    # A→B 1:N + B→C 1:N（两跳 B 侧均为 1）→ 1 A 对 N C → 1:N
+    assert SemanticRecommendService._merge_cardinality("1:N", "1:N") == "1:N"
+    # A→B N:1 + B→C 1:N：N A : 1 B : N C ⇒ 双侧均 N
+    assert SemanticRecommendService._merge_cardinality("N:1", "1:N") == "N:N"
+    # A→B 1:1 + B→C 1:1 → 1:1；空值兜底 1:N + 1:N → 1:N
+    assert SemanticRecommendService._merge_cardinality("1:1", "1:1") == "1:1"
+    assert SemanticRecommendService._merge_cardinality(None, None) == "1:N"
+
+
+def test_detect_relations_indirect_via_bridge():
+    """客户与产品无直接证据，但经订单两跳均有证据 → 返回间接候选行。"""
+    service = SemanticRecommendService(bridge_reader(), None)
+    result = service.detect_relations(81, "et-1")
+
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2", "et-3"]
+    direct, indirect = result
+    # bridge_reader 无已配置关系：et-2 为规则命中行，间接键不出现
+    assert direct["inferred"] is True and "indirect" not in direct
+
+    assert indirect["otherEntityName"] == "产品"
+    assert indirect["related"] is False
+    assert indirect["relationCount"] == 0
+    assert indirect["inferred"] is False
+    assert indirect["indirect"] is True
+    assert indirect["viaEntityTypeId"] == "et-2"
+    assert indirect["viaEntityName"] == "订单"
+    assert indirect["semanticDescription"] == (
+        "多个【客户】通过【订单】间接关联多个【产品】"
+    )
+    # 字段映射：两跳路径拼接（customer.id→sales_order.customer_id、
+    # sales_order.product_id→product.id），基数 1:N + N:1 → N:N
+    candidate = indirect["relationCandidates"][0]
+    assert candidate["cardinality"] == "N:N"
+    assert candidate["relationName"] == "间接关联"
+    assert [(p["sourceTableName"], p["sourceColumnName"],
+             p["targetTableName"], p["targetColumnName"])
+            for p in candidate["fieldPairs"]] == [
+        ("customer", "id", "sales_order", "customer_id"),
+        ("sales_order", "product_id", "product", "id"),
+    ]
+
+
+def test_detect_relations_indirect_from_configured_hops():
+    """两跳均为已配置关系（即使无规则字段对）也能生成间接候选。"""
+    reader = bridge_reader(
+        fields={
+            1: [field(11, "id", "主键", "bigint")],
+            2: [field(21, "id", "主键", "bigint")],
+            5: [field(51, "id", "主键", "bigint")],
+        },
+        relations=[
+            {"id": 9, "name": "下单", "category": None, "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+             "source_table_column_name": "customer-id",
+             "target_table_column_name": "sales_order-customer_id"},
+            {"id": 10, "name": "含产品", "category": None, "type": "1:N",
+             "source_entity_type_id": "et-2", "target_entity_type_id": "et-3",
+             "source_table_column_name": "sales_order-id",
+             "target_table_column_name": "product-order_id"},
+        ],
+    )
+    service = SemanticRecommendService(reader, None)
+    result = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2", "et-3"]
+    indirect = result[1]
+    assert indirect["indirect"] is True
+    # 1:N + 1:N（两跳订单侧均为 1）：1 个客户对 N 个产品 → 1:N
+    candidate = indirect["relationCandidates"][0]
+    assert candidate["cardinality"] == "1:N"
+    assert [(p["sourceTableName"], p["sourceColumnName"],
+             p["targetTableName"], p["targetColumnName"])
+            for p in candidate["fieldPairs"]] == [
+        ("customer", "id", "sales_order", "customer_id"),
+        ("sales_order", "id", "product", "order_id"),
+    ]
+
+
+def test_detect_relations_no_indirect_when_direct_evidence():
+    """客户与产品有直接规则命中时不生成间接候选（不做重复建议）。"""
+    reader = bridge_reader()
+    reader._fields[1].append(field(13, "product_id", "产品ID"))
+    service = SemanticRecommendService(reader, None)
+    result = service.detect_relations(81, "et-1")
+    assert all(not row.get("indirect") for row in result)
+    assert {row["otherEntityTypeId"] for row in result} == {"et-2", "et-3"}
+
+
+def test_detect_relations_indirect_llm_denial_drops_row():
+    """模型否决经中间表的间接候选 → 该行整体移除。"""
+    answer = json.dumps([
+        {"otherEntityTypeId": "et-3", "confirmed": False,
+         "cardinality": None, "confidence": "low",
+         "reason": "两跳路径业务上不成立",
+         "fieldPairs": []},
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(bridge_reader(), FakeGateway(answer))
+    result = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
+
+
+def test_detect_relations_indirect_llm_confirm_keeps_row():
+    """模型确认间接候选 → 保留并附复核字段。"""
+    answer = json.dumps([
+        {"otherEntityTypeId": "et-3", "confirmed": True,
+         "cardinality": "N:N", "confidence": "medium",
+         "reason": "订单表连接客户与产品",
+         "fieldPairs": [
+             {"sourceTableName": "customer", "sourceColumnName": "id",
+              "targetTableName": "product", "targetColumnName": "id"},
+         ]},
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(bridge_reader(), FakeGateway(answer))
+    result = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2", "et-3"]
+    indirect = result[1]
+    assert indirect["llmConfirmed"] is True
+    assert indirect["llmReason"] == "订单表连接客户与产品"
+    # 间接说明进入复核提示，供模型结合业务判断
+    query, prompt = service._gateway.calls[0]
+    assert "两跳间接关联" in prompt
+
+
+def test_recommend_relations_indirect_via_common_neighbor():
+    """两实体无已配置且无直接推导时，经共同邻居生成间接候选（+2 条 SQL）。"""
+    reader = bridge_reader()
+    service = SemanticRecommendService(reader, None)
+    result = service.recommend_relations(81, "et-1", "et-3")
+    assert len(result) == 1
+    vo = result[0]
+    assert vo["fromExisting"] is False
+    assert vo["relationName"] == "间接关联"
+    assert vo["cardinality"] == "N:N"
+    assert vo["viaEntityTypeId"] == "et-2"
+    assert vo["viaEntityName"] == "订单"
+    assert vo["otherEntityTypeId"] == "et-3"
+    assert vo["semanticDescription"] == (
+        "多个【客户】通过【订单】间接关联多个【产品】"
+    )
+    assert [(p["sourceTableName"], p["sourceColumnName"],
+             p["targetTableName"], p["targetColumnName"])
+            for p in vo["fieldPairs"]] == [
+        ("customer", "id", "sales_order", "customer_id"),
+        ("sales_order", "product_id", "product", "id"),
+    ]
+    # 惰性装载：直接结果为空才追加全量实体（tables + fields_batch 各一次）
+    assert reader.calls == ["entities", "relations", "tables", "fields_batch",
+                            "tables", "fields_batch"]
+
+
+def test_recommend_relations_direct_result_skips_indirect():
+    """有直接推导时不触发间接路径，SQL 次数保持 4。"""
+    service = SemanticRecommendService(bridge_reader(), None)
+    result = service.recommend_relations(81, "et-1", "et-2")
+    assert result and all(not vo.get("indirect") for vo in result)
+    assert service._reader.calls == [
+        "entities", "relations", "tables", "fields_batch",
+    ]
+
+
+def test_detect_relations_indirect_fixed_reader_calls():
+    """间接推断纯内存计算：关联检测 SQL 次数仍固定为 4。"""
+    service = SemanticRecommendService(bridge_reader(), None)
+    result = service.detect_relations(81, "et-1")
+    assert any(row.get("indirect") for row in result)
+    assert service._reader.calls == [
+        "entities", "relations", "tables", "fields_batch",
+    ]
+
+
 # ---------- 接口三：大模型复核（2026-10-15） ----------
 
 
