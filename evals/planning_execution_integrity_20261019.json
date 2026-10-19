@@ -1,5 +1,5 @@
 {
-  "status": "IMPLEMENTATION_VERIFIED_RELEASE_PENDING",
+  "status": "VERIFIED_NOT_DEPLOYED_PER_USER",
   "scope": {
     "semantic_model_id": 81,
     "business_domain_ids": [
@@ -186,9 +186,20 @@
     "missing supplier catalog and incompletely populated months remain disclosed"
   ],
   "deployment": {
-    "status": "PENDING",
+    "status": "NOT_DEPLOYED_PER_USER",
+    "preflight": "STOPPED_REMOTE_DRIFT",
+    "production_files_written": 0,
+    "production_services_restarted": false,
+    "user_decision": "本轮暂不部署，保留提交和 Draft PR",
     "catalog_mutations": 0,
     "index_rebuilds": 0,
-    "v2_cutover": false
+    "v2_cutover": false,
+    "code_commits": {
+      "Agent": "de3903e68d03ad07b387f49a12c337a2bf4a9034",
+      "Oagnet": "cb77ab26559583a8dcf5debc2cda957d4913414e"
+    },
+    "draft_pr": "https://github.com/dreamyang-1/data/pull/104",
+    "draft": true,
+    "isolated_test_processes_stopped": true
   }
 }
