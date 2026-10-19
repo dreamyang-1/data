@@ -850,8 +850,12 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 if having_expr:
                     ast['having'].append(having_expr)
                     continue
-                ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
-                    '指标阈值筛选只能作用在汇总结果上，请调整问法为统计类查询，或由上游将该条件拆分为统计任务加纯计算任务'))
+                problem=issue(f'{source}[{index+1}]',original,
+                    '当前计划没有提供可执行的指标结果筛选任务，需要任务规划器补齐')
+                problem.update(type='context',affected_slots=['task_plan'],
+                    ambiguity_id='PLANNER_METRIC_THRESHOLD_RESULT_OPERATION',
+                    question='指标阈值缺少已绑定的结果筛选任务，请任务规划器修正；尚未生成或执行SQL。')
+                ast['ambiguity'].append(problem)
                 continue
             allowed = (catalog['metrics'] if target == 'metrics' else
                        {**catalog['dimensions'], **slot_catalog['fields']} if target == 'dimensions' else
@@ -1122,6 +1126,22 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
         ast['time_context'] = compile_time(temporal, ast, catalog, knowledge, plan.get('time'), clock)
     except (ValueError, TypeError, KeyError, OverflowError) as exc:
         ast['ambiguity'].append(issue('时间粒度', temporal, str(exc)))
+    if not ast['metrics'] and ast.get('time_context'):
+        # A declared dated transaction is the relationship anchor. Starting
+        # from a projected master can otherwise connect two parties through
+        # a shared geography dictionary instead of their dated transactions.
+        anchor=(ast['time_context'] or {}).get('anchor')
+        owners=field_owners(catalog['fields'].get(anchor) or {})
+        declared=set()
+        for label in extraction.get('实体') or []:
+            if isinstance(label,str):declared.update(resolve_entities(label,catalog['entities']))
+        candidates=owners & declared
+        if len(candidates)==1 and len(declared)>1:
+            selected=next(iter(candidates));current=(ast.get('subject') or {}).get('entity')
+            if selected!=current:
+                ast['subject']={'entity':selected}
+                repairs.append({'type':'DETAIL_SUBJECT_FROM_DECLARED_TIME_ANCHOR',
+                    'source':'SCOPED_TIME_ANCHOR','previous_subject':current,'entity':selected})
     if not ast['metrics'] and not ast['dimensions'] and not ast['ambiguity']:
         ast['ambiguity'].append(issue('指标/展示字段', [], '未声明要计算的指标或返回的字段，不能自行补医院名称或计数'))
     if not ast['subject'] and not ast['ambiguity']:
