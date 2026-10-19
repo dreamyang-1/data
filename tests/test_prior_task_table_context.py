@@ -3,7 +3,7 @@
 import asyncio
 from types import SimpleNamespace
 
-from app.domain.models import Dataset
+from app.domain.models import Dataset, ChatRequest
 from app.semantic_v2.context_proposal import _trim_prior_task_table
 from app.services import DataAnalysisOrchestrator
 from app.stores import InMemorySessionStore
@@ -52,6 +52,7 @@ def test_persist_conversation_task_table_assembles_payload():
     orchestrator.sessions = sessions
     chat = SimpleNamespace(
         message_id="m-2", rewritten_question=None,
+        authorized_semantic_scope=ChatRequest(semantic_model_id=81,application_id='app',conversation_id='conv',message_id='m-2',question='查询').authorized_semantic_scope,
         original_question="上月各经销商含税销售额", question="上月各经销商含税销售额",
         application_id="app", conversation_id="conv",
         _task_table=[
@@ -69,6 +70,7 @@ def test_persist_conversation_task_table_assembles_payload():
     asyncio.run(orchestrator._persist_conversation_task_table(chat, SimpleNamespace(tenant_id="t", user_id="u")))
     payload = asyncio.run(sessions.get_task_table("t", "u", "app", "conv"))
     assert payload["message_id"] == "m-2"
+    assert payload['semantic_scope_fingerprint']==chat.authorized_semantic_scope.fingerprint()
     assert payload["question"] == "上月各经销商含税销售额"
     assert payload["tasks"][0]["结果概要"] == {"columns": ["经销商"], "row_count": 8}
     assert payload["tasks"][0]["数据集ID"] == "ds-1"
@@ -84,6 +86,7 @@ def test_persist_conversation_task_table_single_task_fallback():
     orchestrator.sessions = sessions
     chat = SimpleNamespace(
         message_id="m-3", rewritten_question=None, original_question="查销量", question="查销量",
+        authorized_semantic_scope=ChatRequest(semantic_model_id=81,application_id='app',conversation_id='conv',message_id='m-3',question='查询').authorized_semantic_scope,
         application_id="app", conversation_id="conv",
         _task_table=[{"任务": "task-1", "名称": "查销量", "是否查询数据库": "是", "执行状态": "已完成"}],
         _task_result_summaries={},

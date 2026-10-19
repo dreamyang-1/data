@@ -5,7 +5,7 @@ from app.adapters.base import AdapterError
 from app.adapters.http import HttpDataRetrievalAdapter
 from app.domain.models import CanonicalAnalysisRequest, PlannerExtraction, PrimaryIntent
 from app.intent.structured import HybridIntentClassifier, StructuredFilter
-from app.planning.task_dag import MultiQuestionPlanner, extraction_parser_prompt
+from app.planning.task_dag import SingleQuestionPlanner, extraction_parser_prompt
 from app.services.orchestrator import DataAnalysisOrchestrator
 
 
@@ -38,7 +38,7 @@ def test_legacy_filter_without_owner_is_backward_compatible():
 
 def test_planner_sanitization_does_not_drop_owners():
     source = {'过滤条件':[{'entity':'医院','field':'省份','op':'=','value':['上海市']}]}
-    result = MultiQuestionPlanner._sanitize_extraction(source,intent=PrimaryIntent.METRIC_QUERY)
+    result = SingleQuestionPlanner._sanitize_extraction(source,intent=PrimaryIntent.METRIC_QUERY)
     assert result['过滤条件'] == source['过滤条件']
     assert '条件归属' in extraction_parser_prompt()
 
@@ -48,7 +48,12 @@ def test_planner_final_role_guidance_keeps_names_separate_from_foreign_keys():
     assert '上海市各经销商→entity=经销商' in _EXTRACTION_ROLE_GUIDANCE
     assert '上海医院按经销商汇总→entity=医院' in _EXTRACTION_ROLE_GUIDANCE
     assert '不能因为目录只在医院/经销商下列出“关联省份ID”' in _EXTRACTION_ROLE_GUIDANCE
-    assert '临床科室属于科室实体' in _EXTRACTION_ROLE_GUIDANCE
+    # STALE_TEST: 2026-10-19用户确认默认按商品适用科室筛医院订单，
+    # 原“临床科室”含义没有目录依据；其余名称/外键及地区归属合同保留。
+    assert '医院某科室的订单按商品适用科室筛选' in _EXTRACTION_ROLE_GUIDANCE
+    assert '订单笔数仍按订单去重' in _EXTRACTION_ROLE_GUIDANCE
+    assert '用户明确指定销售订单业务科室时保留该字段' in _EXTRACTION_ROLE_GUIDANCE
+    assert '明确指定医院临床开单/收货科室且目录无相应关系时保留待确认' in _EXTRACTION_ROLE_GUIDANCE
 
 
 @pytest.mark.parametrize('question,owner', [

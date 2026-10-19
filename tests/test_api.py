@@ -231,7 +231,7 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
         events, "ASL_GENERATION", status="RUNNING"
     )
     assert "规划调用：" not in planning_content
-    assert "解析校验" in parsing_running_content
+    assert "调度执行" in parsing_running_content
     assert "正在解析并校验结构化参数" in parsing_running_content
     assert "语义解析" not in QUERY_EXECUTION_CHAIN
     assert QUERY_EXECUTION_CHAIN == (
@@ -255,11 +255,12 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
     assert asl_index < retrieval_completed_index
     document = "".join(event.get("content", "") for event in events
                        if event.get("type") == "message_chunk")
-    titles = ["意图识别", "任务拆分与规划", "解析校验", "调度执行", "结果校验", "数据洞察分析"]
+    titles = ["意图识别", "任务拆分与规划", "调度执行", "结果校验", "数据洞察分析", "最终输出"]
     assert all("#### ◉ " + title in document for title in titles), document
     positions = [document.index("#### ◉ " + title) for title in titles]
     assert positions == sorted(positions)
-    assert document.index("结构化解析与校验（ASL）") < document.index("#### ◉ 调度执行")
+    assert document.index("#### ◉ 调度执行") < document.index("结构化解析与校验（ASL）") < document.index("#### ◉ 结果校验")
+    assert "#### ◉ 解析校验" not in document
     assert next(i for i, e in enumerate(events) if e.get("step") == "output") > retrieval_completed_index
     insight_content = thinking_content(
         events, "INSIGHT_ANALYSIS", status="COMPLETED"
@@ -2070,15 +2071,16 @@ def test_planning_running_milestone_is_not_replayed_after_composite_intent():
     assert thinking.index("补全后的问题：") < thinking.index("拆分判断完成")
 
 
-def test_all_seven_analytic_thinking_stages_have_normalized_headings():
+def test_internal_milestones_share_the_current_six_main_headings():
     expected = {
         "INTENT_RECOGNITION": "#### ◉ 意图识别",
         "FILE_INSPECTION": "#### ◉ 文件感知与解析",
         "TASK_PLANNING": "#### ◉ 任务拆分与规划",
-        "ASL_GENERATION": "#### ◉ 解析校验",
+        "ASL_GENERATION": "#### ◉ 调度执行",
         "DATA_RETRIEVAL": "#### ◉ 调度执行",
         "RELIABILITY_CHECK": "#### ◉ 结果校验",
         "INSIGHT_ANALYSIS": "#### ◉ 数据洞察分析",
+        "FINAL_OUTPUT": "#### ◉ 最终输出",
     }
 
     assert {

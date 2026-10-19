@@ -499,18 +499,20 @@ async def test_dependent_new_entity_does_not_reuse_predecessor_dataset() -> None
 
 @pytest.mark.asyncio
 async def test_structured_model_plan_is_schema_validated() -> None:
+    calls = []
     async def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
+        calls.append(body)
         system_prompt = body["messages"][0]["content"]
         if "问题拆分判断器" in system_prompt:
             assert "业务任务边界" in system_prompt
-            assert "每个子问题都会由系统独立执行完整链路" in system_prompt
+            assert "问题内部的任务拆解" in system_prompt
             assert "多个指标、多个展示字段或多个分组维度" in system_prompt
             assert '"split"' in system_prompt
             content = """
             {"split":true,"sub_questions":[
-              {"question":"查询本月销售额","depends_on":[]},
-              {"question":"解释退款率口径","depends_on":[]}
+              {"question":"查询本月销售额","intent":"指标查询","depends_on":[]},
+              {"question":"解释退款率口径","intent":"解释口径","depends_on":[]}
             ]}
             """
         else:
@@ -530,6 +532,7 @@ async def test_structured_model_plan_is_schema_validated() -> None:
     plan = await _run_plan(planner, "查询本月销售额；另外解释退款率口径")
     assert plan is not None
     assert plan.planner == "STRUCTURED_MODEL"
+    assert len(calls) == 3  # one question judgment, then one decomposition per goal
     assert [task.question for task in plan.tasks] == [
         "查询本月销售额", "解释退款率口径"
     ]
@@ -549,8 +552,8 @@ async def test_structured_model_plan_preserves_business_split_metadata() -> None
              "split_reason_code":"DISTINCT_DELIVERABLES",
              "shared_conditions":["上海市"],
              "sub_questions":[
-               {"question":"查询上海市经销商名单","depends_on":[],"expected_output":"经销商名单"},
-               {"question":"查询上海市医院名单","depends_on":[],"expected_output":"医院名单"}
+               {"question":"查询上海市经销商名单","intent":"明细查询","depends_on":[],"expected_output":"经销商名单"},
+               {"question":"查询上海市医院名单","intent":"明细查询","depends_on":[],"expected_output":"医院名单"}
              ]}
             """
         else:
@@ -586,8 +589,8 @@ async def test_structured_model_analyze_summary_is_preserved() -> None:
             {"split":true,
              "analyze_summary":"拆分为两项子任务，任务2依赖任务1的科室名单。",
              "sub_questions":[
-               {"question":"查询TDC-3产品的适用科室","depends_on":[]},
-               {"question":"从适用科室中筛选合作医院","depends_on":[0]}
+               {"question":"查询TDC-3产品的适用科室","intent":"明细查询","depends_on":[]},
+               {"question":"从适用科室中筛选合作医院","intent":"明细查询","depends_on":[0]}
              ]}
             """
         else:
@@ -612,15 +615,15 @@ async def test_structured_model_analyze_summary_is_preserved() -> None:
 
 @pytest.mark.asyncio
 async def test_structured_model_dependency_decision_is_preserved() -> None:
-    async def handler(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={
-            "choices": [{"message": {"content": """
+    async def handler(request: httpx.Request) -> httpx.Response:
+        system = json.loads(request.content)['messages'][0]['content']
+        content = """
             {"split":true,"sub_questions":[
-              {"question":"查询TDC-3产品的适用科室","depends_on":[]},
-              {"question":"从TDC-3产品的适用科室中筛选合作医院","depends_on":[0]}
+              {"question":"查询TDC-3产品的适用科室","intent":"明细查询","depends_on":[]},
+              {"question":"从TDC-3产品的适用科室中筛选合作医院","intent":"明细查询","depends_on":[0]}
             ]}
-            """}}]
-        })
+            """ if '问题拆分判断器' in system else _DEFAULT_EXTRACT_PAYLOAD
+        return httpx.Response(200, json={'choices':[{'message':{'content':content}}]})
 
     settings = Settings(
         _env_file=None,
@@ -672,15 +675,15 @@ async def test_model_judges_period_separated_independent_questions() -> None:
         "查询外周插管中心静脉导管合作的医院名单。"
     )
 
-    async def handler(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={
-            "choices": [{"message": {"content": """
+    async def handler(request: httpx.Request) -> httpx.Response:
+        system = json.loads(request.content)['messages'][0]['content']
+        content = """
             {"split":true,"sub_questions":[
-              {"question":"查询空心纤维血液透析器产品合作的经销商名单","depends_on":[]},
-              {"question":"查询外周插管中心静脉导管合作的医院名单","depends_on":[]}
+              {"question":"查询空心纤维血液透析器产品合作的经销商名单","intent":"明细查询","depends_on":[]},
+              {"question":"查询外周插管中心静脉导管合作的医院名单","intent":"明细查询","depends_on":[]}
             ]}
-            """}}]
-        })
+            """ if '问题拆分判断器' in system else _DEFAULT_EXTRACT_PAYLOAD
+        return httpx.Response(200, json={'choices':[{'message':{'content':content}}]})
 
     settings = Settings(
         _env_file=None,
@@ -2133,9 +2136,11 @@ async def test_model_plan_without_semantic_context_keeps_plain_prompt() -> None:
 
     await planner.route_and_plan("查询最近半年销售额；然后分析趋势")
 
-    # 平台语义上下文缺失时不注入智能体配置摘录，用提示词文件内置规范兜底。
+    # STALE_TEST: live platform descriptions replaced embedded business catalogs.
+    # Missing context retains the parser contract without inventing a catalog.
     assert "摘自智能体配置" not in captured["system"]
-    assert "医药销售域" in captured["system"]
+    assert "结构化提取规范" in captured["system"]
+    assert "医药销售域" not in captured["system"]
 
 
 @pytest.mark.asyncio
@@ -2418,7 +2423,7 @@ async def test_substituted_calculation_plan_is_forced_to_metric_definition() -> 
 
 @pytest.mark.asyncio
 async def test_legitimate_composite_metric_plan_survives_guard() -> None:
-    """用户原话明确提到覆盖率指标时，规则9的三任务拆分照常保留。"""
+    """One business goal can legitimately contain two queries and a calculation."""
 
     settings = Settings(
         _env_file=None,
@@ -2426,33 +2431,28 @@ async def test_legitimate_composite_metric_plan_survives_guard() -> None:
         intent_model_api_key=SecretStr("test-key"),
         multi_question_model_enabled=True,
     )
-    planner = CompoundQuestionRouter(settings, transport=httpx.MockTransport(
-        _split_handler(
-            """
-            {"split":true,
-             "sub_questions":[
-               {"question":"查询上海市各经销商的已合作医院数","depends_on":[]},
-               {"question":"查询上海市的区域全部医院总数","depends_on":[]},
-               {"question":"根据上述问题的查询结果计算各经销商的区域医院覆盖率，不再查询数据库",
-                "depends_on":[0,1]}
-             ]}
-            """,
-            {
-                "已合作医院数": '{"intent":"METRIC_QUERY","extraction":{"意图":"统计查询",'
-                             '"指标":[{"name":"已合作医院数"}],"维度":["经销商"]}}',
-                "区域全部医院总数": '{"intent":"METRIC_QUERY","extraction":{"意图":"统计查询",'
-                                '"指标":[{"name":"区域全部医院总数"}]}}',
-                "不再查询数据库": '{"intent":"COMPARISON_ANALYSIS","extraction":{"意图":"指标计算",'
-                              '"指标":[{"name":"区域医院覆盖率"}]}}',
-            },
-        )
-    ))
-
-    route = await planner.route_and_plan("统计上海市各经销商的区域医院覆盖率")
+    async def handler(request):
+        system = json.loads(request.content)['messages'][0]['content']
+        payload = {'split':False,'sub_questions':[]} if '问题拆分判断器' in system else {
+            'intent':'METRIC_QUERY','tasks':[
+                {'question':'查询上海市各经销商的已合作医院数','depends_on':[],
+                 'extraction':{'意图':'统计查询','指标':[{'name':'已合作医院数'}],'维度':['经销商']}},
+                {'question':'查询上海市的区域全部医院总数','depends_on':[],
+                 'extraction':{'意图':'统计查询','指标':[{'name':'区域全部医院总数'}]}},
+                {'question':'根据上述任务的查询结果计算区域医院覆盖率，不再查询数据库','depends_on':[0,1],
+                 'extraction':{'意图':'指标计算','指标':[{'name':'区域医院覆盖率'}]}}]}
+        return httpx.Response(200,json={'choices':[{'message':{'content':json.dumps(payload,ensure_ascii=False)}}]})
+    planner = CompoundQuestionRouter(settings, transport=httpx.MockTransport(handler))
+    catalog = ('| 指标 | 同义词 | 依赖指标 |\n| --- | --- | --- |\n'
+        '| 已合作医院数 | 无 | 无 |\n| 区域全部医院总数 | 无 | 无 |\n'
+        '| 区域医院覆盖率 | 无 | 已合作医院数、区域全部医院总数 |')
+    route = await planner.route_and_plan("统计上海市各经销商的区域医院覆盖率", semantic_context=catalog)
 
     assert route.plan is not None
     assert len(route.plan.tasks) == 3
     assert route.single is None
+    assert not route.judgment.is_compound
+    assert route.plan.tasks[2].depends_on == ['task-1','task-2']
 
 
 @pytest.mark.asyncio

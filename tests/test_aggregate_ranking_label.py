@@ -15,11 +15,11 @@ def test_declared_calculation_does_not_need_possessive_de(question):
 
 @pytest.mark.parametrize('rank_text,source_rank',[('降序取前五名','最高的前五位'),('升序取前三位','最低的前三位'),('从高到低取前5名','最高的前5位')])
 def test_calculation_rank_retains_original_rank_goal(rank_text,source_rank):
-    from app.planning.task_dag import MultiQuestionPlanner
+    from app.planning.compound_question import validate_plan
     from app.domain.models import AtomicTask,TaskPlan
     plan=TaskPlan(planner='STRUCTURED_MODEL',tasks=[AtomicTask(task_id='q',question='统计2025年各销售人员的含税销售总额和订单笔数，并展示所属公司'),
         AtomicTask(task_id='c',question='计算订单平均金额，'+rank_text+'销售人员及所属公司，不再查询数据库',depends_on=['q'])])
-    MultiQuestionPlanner.validate(plan,source_question='筛选2025年订单平均金额'+source_rank+'销售人员，以及所属公司')
+    validate_plan(plan,source_question='筛选2025年订单平均金额'+source_rank+'销售人员，以及所属公司')
 
 
 @pytest.mark.parametrize('dimension',['业务员','销售员','销售人员','salesperson'])

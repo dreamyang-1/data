@@ -15,7 +15,7 @@ from app.domain.models import (
     DependencyConstraint, EvidenceItem, PlannerExtraction, PrimaryIntent,
     ReliabilityReport, TaskPlan, TrustedIdentity,
 )
-from app.planning import MultiQuestionPlanner
+from app.planning import CompoundQuestionRouter
 from app.planning.dependency_contract import (
     key_kind, missing_display_fields, sql_column_bindings, structured_query_changed,
 )
@@ -239,7 +239,7 @@ async def test_original_and_three_similar_dependent_queries(target_owner, target
         AtomicTask(task_id="task-1", question="查询2025年测试医院销售额最高的销售员", extraction=source),
         AtomicTask(task_id="task-2", question=question, depends_on=["task-1"], extraction=target)])
     service = Service(settings=settings, classifier=SimpleNamespace(), adapters=build_mock_adapters(),
-        sessions=sessions, task_planner=MultiQuestionPlanner(settings), dataset_store=Store())
+        sessions=sessions, task_planner=CompoundQuestionRouter(settings), dataset_store=Store())
     result = await service._handle_task_plan(ChatRequest(semantic_model_id=81, application_id="app",
         conversation_id="original", message_id="m1", question="测试排名及其明细"),
         TrustedIdentity(tenant_id="t", user_id="u"), plan)

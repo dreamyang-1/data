@@ -178,12 +178,21 @@ def dataset_source_complete(reference: DatasetReference | Mapping[str, Any], loa
         if any(key in operation and operation[key] is not False for key in ('truncated', 'source_truncated')):
             return False
         kind = str(operation.get('type') or '').lower()
+        if kind == 'query_provenance' and operation.get('source_total_row_count') is not None:
+            total = operation['source_total_row_count']
+            # Derived filters/aggregates retain root provenance. Compare the
+            # root's loaded count, not the smaller derived result's row count.
+            source_count = operation.get('source_row_count')
+            if source_count is None and not value.get('parent_dataset_ids'):
+                source_count = value.get('row_count')
+            if type(total) is not int or (source_count is not None and total != source_count):
+                return False
         if kind == 'pipeline':
             steps = operation.get('operations')
             return isinstance(steps, list) and bool(steps) and all(complete(step) for step in steps)
         if kind == 'inner_join':
             return operation.get('source_truncated') is False
-        return kind in {'query_provenance', 'filter', 'select', 'sort', 'derive', 'aggregate'}
+        return kind in {'query_provenance', 'filter', 'select', 'sort', 'derive', 'aggregate', 'monthly_growth'}
 
     log = value.get('transformation_log', ())
     if not isinstance(log, (list, tuple)) or (value.get('parent_dataset_ids') and not log):
@@ -1337,6 +1346,10 @@ def apply_followup_operation(
     rows = [dict(row) for row in source_rows]
     declared = tuple(columns)
 
+    if op == 'monthly_growth':
+        from app.services.period_computation import monthly_growth
+        return monthly_growth(declared,rows,operation)
+
     if op == "pipeline":
         operations = operation.get("operations")
         if not isinstance(operations, list) or not 1 <= len(operations) <= 5:
@@ -1372,11 +1385,16 @@ def apply_followup_operation(
         non_null = [row for row in rows if row.get(field_name) is not None]
         null_rows = [row for row in rows if row.get(field_name) is None]
         values = [row[field_name] for row in non_null]
-        numeric_sort = bool(values) and all(_numeric_or_none(value) is not None for value in values)
+        sort_number = _numeric_or_none
+        if values and all(isinstance(value,str) and value.endswith('%') for value in values):
+            percent_number = lambda value: _numeric_or_none(value[:-1])
+            if all(percent_number(value) is not None for value in values):
+                sort_number = percent_number
+        numeric_sort = bool(values) and all(sort_number(value) is not None for value in values)
         try:
             non_null.sort(
                 key=(
-                    (lambda row: _numeric_or_none(row[field_name]))
+                    (lambda row: sort_number(row[field_name]))
                     if numeric_sort
                     else (lambda row: row[field_name])
                 ),
@@ -1457,8 +1475,12 @@ def apply_followup_operation(
         arithmetic = str(operation.get("operator", "")).lower()
         if arithmetic not in {"add", "subtract", "multiply", "divide"}:
             raise InvalidFollowupOperation("derive operator must be add/subtract/multiply/divide")
+        result_format = operation.get('result_format','number')
+        if result_format not in {'number','percent'}:
+            raise InvalidFollowupOperation('derive result_format must be number/percent')
         for row in rows:
-            row[result_field] = _arithmetic(row.get(left), row.get(right), arithmetic)
+            value = _arithmetic(row.get(left), row.get(right), arithmetic)
+            row[result_field] = f'{value * 100:.2f}%' if value is not None and result_format == 'percent' else value
         return (*declared, result_field), rows
 
     if op == "aggregate":

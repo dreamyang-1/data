@@ -99,10 +99,10 @@ async def plan_question(planner: Any, question: str, *, semantic_context: str,
                           single_extraction=single.single_extraction if single is not None else None,
                           judgment=outcome.judgment if routed else None,
                           single_task_name=(
-                              single.single_task_name if single is not None else None
+                              getattr(single, 'single_task_name', None)
                           ),
                           single_task_question=(
-                              single.single_task_question if single is not None else None
+                              getattr(single, 'single_task_question', None)
                           ))
 
 

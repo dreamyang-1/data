@@ -1,0 +1,11 @@
+{
+  "purpose": "在首次真实模型输出前冻结的新增改写；不用于逐句调试",
+  "cases": [
+    {"family_id":"Q1_ORDER_AVERAGE_AMOUNT","question":"2025年上海市的订单，一单平均销售金额能给个数吗？"},
+    {"family_id":"Q2_MONTHLY_ORDERS_AND_COVERAGE","question":"两张结果分别列出：2025年各月的订单笔数；上海每家经销商的区域医院覆盖率。"},
+    {"family_id":"Q3_HOSPITAL_DEPARTMENT_ORDER_RANK","question":"只看2025年9月上海医院消化内科的订单，哪家医院笔数居首？"},
+    {"family_id":"Q4_SUPPLIER_RECENT_ORDER_GROWTH","question":"供应商里，最近订单数增速排在最前的是哪些？"},
+    {"family_id":"Q5_TOP_SALESPERSON_THEN_PRODUCTS","question":"2025年9月，上海交通大学医学院附属新华医院销售金额最高的业务员是谁，他当月向该院销售了哪些商品？"},
+    {"family_id":"Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH","question":"按经销商看最近十二个月的销量，月度增长率平均值各是多少？"}
+  ]
+}

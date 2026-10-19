@@ -8,7 +8,7 @@ from pydantic import SecretStr
 from app.analysis import synthesis
 from app.config import Settings
 from app.domain import semantic_description as sd
-from app.planning.task_dag import MultiQuestionPlanner
+from app.planning.task_dag import SingleQuestionPlanner
 
 
 @pytest.mark.asyncio
@@ -28,7 +28,7 @@ async def test_current_model_description_shared_by_planning_and_insight(monkeypa
     async def model(request):
         prompts.append(json.loads(request.content))
         return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({
-            "task_structure": "SINGLE_TASK", "tasks": [], "single_task_intent": "CHAT",
+            "intent": "CHAT", "tasks": [],
         })}}]})
 
     original_client = httpx.AsyncClient
@@ -44,11 +44,11 @@ async def test_current_model_description_shared_by_planning_and_insight(monkeypa
                         semantic_description_base_url="https://descriptions.example",
                         mysql_host="catalog.example", mysql_user="reader",
                         mysql_password="fixture", mysql_database="catalog")
-    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(model))
-    await planner.plan("查询本模型的信息", semantic_model_id=120)
+    planner = SingleQuestionPlanner(settings, transport=httpx.MockTransport(model))
+    await planner.plan_question("查询本模型的信息", semantic_model_id=120)
     assert "甲实体" in prompts[-1]["messages"][0]["content"]
     assert "乙实体" not in prompts[-1]["messages"][0]["content"]
-    await planner.plan("查询本模型的信息", semantic_model_id=121)
+    await planner.plan_question("查询本模型的信息", semantic_model_id=121)
     assert "乙实体" in prompts[-1]["messages"][0]["content"]
     assert "甲实体" not in prompts[-1]["messages"][0]["content"]
     documents[121] = "# 模型乙发布后的新内容"
@@ -65,13 +65,13 @@ async def test_missing_platform_document_does_not_inject_static_business_spec(mo
     async def model(request):
         prompts.append(json.loads(request.content))
         return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({
-            "task_structure": "SINGLE_TASK", "tasks": [], "single_task_intent": "CHAT",
+            "intent": "CHAT", "tasks": [],
         })}}]})
     monkeypatch.setattr(sd, "load_semantic_description", unavailable)
     settings = Settings(_env_file=None, env="test", intent_model_api_key=SecretStr("fixture"),
                         multi_question_model_enabled=True)
-    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(model))
-    await planner.plan("分析本模型的数据", semantic_model_id=126)
+    planner = SingleQuestionPlanner(settings, transport=httpx.MockTransport(model))
+    await planner.plan_question("分析本模型的数据", semantic_model_id=126)
     assert prompts[-1]["messages"][1]["content"] == "分析本模型的数据"
     assert "## 二、医药销售域" not in prompts[-1]["messages"][0]["content"]
     assert not (await synthesis._semantic_reference(settings, 126))["available"]

@@ -63,13 +63,13 @@ def sql_column_bindings(sql: str, columns: list[str]) -> dict[str, str]:
     """
     pairs = re.findall(
         r"(?<![\w.])(`?[A-Za-z_]\w*`?\s*\.\s*`?[A-Za-z_]\w*`?)"
-        r"\s+AS\s+(?:`([^`]+)`|\"([^\"]+)\"|([A-Za-z_]\w*))",
+        r"\s+AS\s+(?:`([^`]+)`|\"([^\"]+)\"|\[([^\]]+)\]|([A-Za-z_]\w*))",
         sql, re.I,
     )
     result: dict[str, str] = {}
     conflicts: set[str] = set()
-    for field, quoted, double, bare in pairs:
-        alias = quoted or double or bare
+    for field, quoted, double, bracket, bare in pairs:
+        alias = quoted or double or bracket or bare
         if alias not in columns:
             continue
         field = re.sub(r"[\s`]", "", field)

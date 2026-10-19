@@ -1,0 +1,358 @@
+{
+  "status": "SCOPED_GOAL_COMPLETED",
+  "runtime_commit": "8449c02b7801827afa736b2da13144ef691a2ba9",
+  "draft_pr": "https://github.com/dreamyang-1/data/pull/103",
+  "full_offline": {
+    "passed": 5186,
+    "failed": 97
+  },
+  "collection_errors": 0,
+  "prior_pass_regressions": 0,
+  "critical_contracts": {
+    "passed": 350
+  },
+  "test_scope_note": "最终Python、提示文本和测试全部纳入稳定快照全量及350项专项；真实模型分批保存各自代码和上下文身份。",
+  "sql_generator_contracts": {
+    "passed": 95,
+    "business_database_access": false
+  },
+  "deployment": {
+    "server": "49",
+    "affected_service": "data-analysis-agent",
+    "runtime_files_verified": 18,
+    "backed_up": true,
+    "configuration_unchanged": true,
+    "live": 200,
+    "ready": 200,
+    "invalid_model_rejected": 422,
+    "unaffected_services_not_restarted": true,
+    "semantic_catalog_mutations": 0,
+    "index_rebuilds": 0,
+    "v2_cutover": false
+  },
+  "runtime_manifest": [
+    {
+      "path": "app/analysis/chain_tools/temporal_window.py",
+      "sha256": "99a18556a27fd53960854c709f794f4d6a26c9e78791921297e293d6037b3986"
+    },
+    {
+      "path": "app/api.py",
+      "sha256": "82d849a73bcfa6a1d7731a83689665146eb83679f433b0083eedc45c04a46f69"
+    },
+    {
+      "path": "app/planning/calculation_bindings.py",
+      "sha256": "b02a7eaf4a02a8a8db2d9a31ea7b7a587f9193bba465567de122055ce5aa62a4"
+    },
+    {
+      "path": "app/planning/compat.py",
+      "sha256": "5d6e08bb7de9c13a534dcda97f2a529f9e38c845f43409335849b2d1b734ccd2"
+    },
+    {
+      "path": "app/planning/compound_question.py",
+      "sha256": "06f1142057772a3449e7cefddf7e114f49dbbe74533d8debeaec8ff5d517c1aa"
+    },
+    {
+      "path": "app/planning/dependency_contract.py",
+      "sha256": "d7cc7978d6b5c6ce7b703b625c13aba13c9d6afd210d5d79b1e8cbbc4c3e2af1"
+    },
+    {
+      "path": "app/planning/structured_extraction_prompt.txt",
+      "sha256": "8f589d9e8c77f550a9ce3625ea6feb6210a60d7772a7c417ca2b555178e1c1a2"
+    },
+    {
+      "path": "app/planning/task_dag.py",
+      "sha256": "a44768be84010b9be2ba7113dba65772b801d843a4673573a0b9c16b2e3473db"
+    },
+    {
+      "path": "app/presentation/root_report.py",
+      "sha256": "1c8f6d12dedac53ef57bef6a964e69036b2f9c6a146b9c912bf3aac588a1a499"
+    },
+    {
+      "path": "app/semantic_v2/context_v1_execution.py",
+      "sha256": "1212dd34acbb4e8f1e04846de712913c8a9b2587fce9669ce10a9f0d0f9d315a"
+    },
+    {
+      "path": "app/services/clarification_policy.py",
+      "sha256": "4fb6e465fea2265f679516e6d8357942288e909ff0289314db0ace88a5ad32ef"
+    },
+    {
+      "path": "app/services/computation_delivery.py",
+      "sha256": "33136839f9d02e962db6e66de4236b818ce9f2f9ff286e0fa5a445d383f376a7"
+    },
+    {
+      "path": "app/services/dataset_followup.py",
+      "sha256": "c439da4d1dc58aeca691d82a5ef01c511eaeeadeea5fc72efa0ed66106591020"
+    },
+    {
+      "path": "app/services/orchestrator.py",
+      "sha256": "a377d418b77a2bc03acd564138c354b97df2b33a681d6606927921609b8331f7"
+    },
+    {
+      "path": "app/services/period_computation.py",
+      "sha256": "b39e27ec6b7693238d1234fa70520bd00d4e3a3bf0dc56db361616b12f899711"
+    },
+    {
+      "path": "app/services/query_identity.py",
+      "sha256": "2865c6ecd1af7c47672d9da4dd85b050b085ef348e82cc2013ffe62c6b11d07b"
+    },
+    {
+      "path": "app/services/query_output_bindings.py",
+      "sha256": "c788192e03ffc3827cae266b9f29ebff7aee714112ecd0d92b103d72ee1e5b76"
+    },
+    {
+      "path": "minio_followup_store.py",
+      "sha256": "d9ee98174f7a2a48e80645233c3b5d5b9b1621c70105f628b5d09f6bba39ecbf"
+    }
+  ],
+  "final_functional_commit_manifest": [
+    {
+      "path": "app/planning/task_dag.py",
+      "before_sha256": "71ebc7e1893cba37f205ef38aad81a7d3f4227a4edd2d3efed8b4788d3193fc3",
+      "sha256": "a44768be84010b9be2ba7113dba65772b801d843a4673573a0b9c16b2e3473db"
+    },
+    {
+      "path": "tests/test_declared_calculation_planning.py",
+      "before_sha256": "01a770aaab88b11f48a276e9621b626cdb11d4ab486f0f1d8cb28c098988c805",
+      "sha256": "c9bf635723c8d5fb0d786e29d40c756728526ca6ded29207f9866dd0ef822e8d"
+    },
+    {
+      "path": "app/services/query_output_bindings.py",
+      "before_sha256": "c788192e03ffc3827cae266b9f29ebff7aee714112ecd0d92b103d72ee1e5b76",
+      "sha256": "c788192e03ffc3827cae266b9f29ebff7aee714112ecd0d92b103d72ee1e5b76"
+    },
+    {
+      "path": "app/services/orchestrator.py",
+      "before_sha256": "a377d418b77a2bc03acd564138c354b97df2b33a681d6606927921609b8331f7",
+      "sha256": "a377d418b77a2bc03acd564138c354b97df2b33a681d6606927921609b8331f7"
+    },
+    {
+      "path": "app/services/computation_delivery.py",
+      "before_sha256": "33136839f9d02e962db6e66de4236b818ce9f2f9ff286e0fa5a445d383f376a7",
+      "sha256": "33136839f9d02e962db6e66de4236b818ce9f2f9ff286e0fa5a445d383f376a7"
+    },
+    {
+      "path": "minio_followup_store.py",
+      "before_sha256": "d9ee98174f7a2a48e80645233c3b5d5b9b1621c70105f628b5d09f6bba39ecbf",
+      "sha256": "d9ee98174f7a2a48e80645233c3b5d5b9b1621c70105f628b5d09f6bba39ecbf"
+    },
+    {
+      "path": "tests/test_computation_query_output_binding.py",
+      "before_sha256": "a8f4f2ccce5561a0e6b429d6b10f199c71bed94bdcb5c122ad9f237f7e2c23fa",
+      "sha256": "a8f4f2ccce5561a0e6b429d6b10f199c71bed94bdcb5c122ad9f237f7e2c23fa"
+    },
+    {
+      "path": "tests/test_monthly_growth_execution.py",
+      "before_sha256": "7c30163791e6d3adc44eb78082d5c6733e5d73e03801ec685f1c4bf5ce17720c",
+      "sha256": "7c30163791e6d3adc44eb78082d5c6733e5d73e03801ec685f1c4bf5ce17720c"
+    },
+    {
+      "path": "evals/run_complex_question_model_evaluation.py",
+      "before_sha256": "b1dacb902207742fcaae4308eab22737045719d8d8871dacdcb1997f990fb136",
+      "sha256": "74a6ef4664d2b161dc8508190289016d93ce6325dcb60ec4795b17581bdd7d4d"
+    },
+    {
+      "path": "tests/test_aggregate_ranking_label.py",
+      "before_sha256": "59aa079ec870d97282e650a2382689d991de45cc710d36365c805a34e1ee722a",
+      "sha256": "59aa079ec870d97282e650a2382689d991de45cc710d36365c805a34e1ee722a"
+    },
+    {
+      "path": "tests/test_extraction_semantic_description.py",
+      "before_sha256": "f6352d88d22b6740d2add32dbb3dc2eb8bfdaff7751c6c77d9cca5a34e909f04",
+      "sha256": "f6352d88d22b6740d2add32dbb3dc2eb8bfdaff7751c6c77d9cca5a34e909f04"
+    },
+    {
+      "path": "docs/cutover/complex_question_execution_closure_20261019.md",
+      "before_sha256": "2c52a89f8af1cc10afe480808fdd49ae1f53dccbe4a0333e6955e136fba2cb22",
+      "sha256": "c88cf713c6b5f8e48d6d8cd2cf87fb03ab838f0d0b31b352594d5ec5f360538f"
+    },
+    {
+      "path": "app/planning/calculation_bindings.py",
+      "before_sha256": "b02a7eaf4a02a8a8db2d9a31ea7b7a587f9193bba465567de122055ce5aa62a4",
+      "sha256": "b02a7eaf4a02a8a8db2d9a31ea7b7a587f9193bba465567de122055ce5aa62a4"
+    },
+    {
+      "path": "app/planning/compound_question.py",
+      "before_sha256": "8447b172b67412105a89dad54452b425b3922a07435cab5a7b28d9d0ff934a3e",
+      "sha256": "a98eee2604ace086b42eddc65f82ac3d7ec9039905da86e06ee247f1ab121213"
+    },
+    {
+      "path": "app/planning/dependency_contract.py",
+      "before_sha256": "d7cc7978d6b5c6ce7b703b625c13aba13c9d6afd210d5d79b1e8cbbc4c3e2af1",
+      "sha256": "d7cc7978d6b5c6ce7b703b625c13aba13c9d6afd210d5d79b1e8cbbc4c3e2af1"
+    },
+    {
+      "path": "app/presentation/root_report.py",
+      "before_sha256": "1c8f6d12dedac53ef57bef6a964e69036b2f9c6a146b9c912bf3aac588a1a499",
+      "sha256": "1c8f6d12dedac53ef57bef6a964e69036b2f9c6a146b9c912bf3aac588a1a499"
+    },
+    {
+      "path": "tests/test_complex_question_planning.py",
+      "before_sha256": "d27512788404f498db62f5ffaf0d681ad708d4869517738a24bdc897b63b4041",
+      "sha256": "d27512788404f498db62f5ffaf0d681ad708d4869517738a24bdc897b63b4041"
+    },
+    {
+      "path": "tests/test_complex_question_delivery.py",
+      "before_sha256": "726708893c1140f1cf69c56c039f8e66feda50911ac388d9c30b826074a54159",
+      "sha256": "726708893c1140f1cf69c56c039f8e66feda50911ac388d9c30b826074a54159"
+    },
+    {
+      "path": "tests/test_location_owner_surface_forms.py",
+      "before_sha256": "ef3bebfe4c08467cf63957ae8637b938034370d7f43bda7b23a4942a16bbc893",
+      "sha256": "ef3bebfe4c08467cf63957ae8637b938034370d7f43bda7b23a4942a16bbc893"
+    },
+    {
+      "path": "evals/run_complex_calculation_replay.py",
+      "before_sha256": "c75b2ae6192d132099401dd35f7b8c13b7a87c8ece3e86e4cf641fc808a876a4",
+      "sha256": "c75b2ae6192d132099401dd35f7b8c13b7a87c8ece3e86e4cf641fc808a876a4"
+    },
+    {
+      "path": "evals/complex_question_holdouts_second_20261019.json",
+      "before_sha256": "384081d052a894dadd5502568d68147d175273a76772a801d293e69d8905f2ac",
+      "sha256": "384081d052a894dadd5502568d68147d175273a76772a801d293e69d8905f2ac"
+    },
+    {
+      "path": "app/planning/structured_extraction_prompt.txt",
+      "before_sha256": "c8f0e9f4f27a97efeccdac423cafb739f2d679770619f09d843f0a1f35a78dc7",
+      "sha256": "8f589d9e8c77f550a9ce3625ea6feb6210a60d7772a7c417ca2b555178e1c1a2"
+    },
+    {
+      "path": "app/analysis/chain_tools/temporal_window.py",
+      "before_sha256": "99a18556a27fd53960854c709f794f4d6a26c9e78791921297e293d6037b3986",
+      "sha256": "99a18556a27fd53960854c709f794f4d6a26c9e78791921297e293d6037b3986"
+    },
+    {
+      "path": "tests/test_pending_result_context_completeness.py",
+      "before_sha256": "7446aedec7d50a5394a9f42ad01528975811ec68868309eb0f8897a6690a4bba",
+      "sha256": "7446aedec7d50a5394a9f42ad01528975811ec68868309eb0f8897a6690a4bba"
+    },
+    {
+      "path": "evals/complex_question_growth_holdout_third_20261019.json",
+      "before_sha256": "f0de9f211c49cdadff0bc29c7c2f496b090b0369522c5a0dc128708b9b5d7790",
+      "sha256": "f0de9f211c49cdadff0bc29c7c2f496b090b0369522c5a0dc128708b9b5d7790"
+    },
+    {
+      "path": "evals/complex_question_case_review_20261019.json",
+      "before_sha256": "7cd3a00d63abeedf4a1a0ba9e19f12329cec723d648b15943808be1e05355a6a",
+      "sha256": "ff2efcbf95c6389d88870fd51039c66c7ee258fb65c6c1bf9b304ac296a1cace"
+    },
+    {
+      "path": "tests/test_prior_task_table_context.py",
+      "before_sha256": "d1e86fce14531b94b898b077170a78849e199fc63c005b133ef8411d48afe9f9",
+      "sha256": "d1e86fce14531b94b898b077170a78849e199fc63c005b133ef8411d48afe9f9"
+    },
+    {
+      "path": "evals/complex_question_salesperson_holdout_third_20261019.json",
+      "before_sha256": null,
+      "sha256": "79c39230170995131701bb670e5505ff9355441384fd3ba44b3be2bf1b8248ee"
+    },
+    {
+      "path": "evals/complex_question_department_roles_20261019.json",
+      "before_sha256": null,
+      "sha256": "64d693eddbe806bed56f43ba2507cd3f005ec411501f69f48119f8eba7eb7bc8"
+    },
+    {
+      "path": "tests/test_explicit_filter_owner.py",
+      "before_sha256": "1b1c82a6df315b55a6c5b8377b9f2a7f47e9138e852d35d5c509fcd325b1badf",
+      "sha256": "a47fa370a86aa427515e2acd3ed6f18b3519b5762adc7ec604f1e7f97f3122f2"
+    },
+    {
+      "path": "app/semantic_v2/context_v1_execution.py",
+      "before_sha256": "56ee5b2c9fcd4ffc2d8bbfb9edbff71308548a7593598102944006ac081ea141",
+      "sha256": "1212dd34acbb4e8f1e04846de712913c8a9b2587fce9669ce10a9f0d0f9d315a"
+    },
+    {
+      "path": "tests/test_v2_context_v1_execution_bridge.py",
+      "before_sha256": "456f9392c8a7657a7bb69de76caab903eb34354748f2944f1b1ffb7bf1d0eae0",
+      "sha256": "dcec0a1cef6f6b515399a4d2fb83cf9f3d826bb1341a2c4a8c0d1149219ae338"
+    },
+    {
+      "path": "tests/test_remote_planning_integration.py",
+      "before_sha256": "6c43de8dc69c6fef176a2891be740db20a69dd99574fae7df01079b203da6af7",
+      "sha256": "7b2242f0e0faf93488d33cde2b9fe1ddaaa2d2202347ae80890e293f0fdee69b"
+    },
+    {
+      "path": "evals/complex_question_extrema_grain_holdouts_20261019.json",
+      "before_sha256": null,
+      "sha256": "e7857c86565d4466f34e1bad796dd3c7e0111f3caa44cf21bb536f9a939491f2"
+    }
+  ],
+  "changed_files_since_goal_baseline": [
+    "app/analysis/chain_tools/temporal_window.py",
+    "app/api.py",
+    "app/planning/calculation_bindings.py",
+    "app/planning/compat.py",
+    "app/planning/compound_question.py",
+    "app/planning/dependency_contract.py",
+    "app/planning/structured_extraction_prompt.txt",
+    "app/planning/task_dag.py",
+    "app/presentation/root_report.py",
+    "app/semantic_v2/context_v1_execution.py",
+    "app/services/clarification_policy.py",
+    "app/services/computation_delivery.py",
+    "app/services/dataset_followup.py",
+    "app/services/orchestrator.py",
+    "app/services/period_computation.py",
+    "app/services/query_identity.py",
+    "app/services/query_output_bindings.py",
+    "docs/cutover/complex_question_execution_closure_20261019.md",
+    "evals/complex_question_case_review_20261019.json",
+    "evals/complex_question_department_roles_20261019.json",
+    "evals/complex_question_extrema_grain_holdouts_20261019.json",
+    "evals/complex_question_growth_holdout_third_20261019.json",
+    "evals/complex_question_holdouts_20261019.json",
+    "evals/complex_question_holdouts_second_20261019.json",
+    "evals/complex_question_salesperson_holdout_third_20261019.json",
+    "evals/run_complex_calculation_replay.py",
+    "evals/run_complex_question_model_evaluation.py",
+    "minio_followup_store.py",
+    "tests/test_aggregate_ranking_label.py",
+    "tests/test_api.py",
+    "tests/test_asl_parsing_stage.py",
+    "tests/test_bound_result_operations.py",
+    "tests/test_calculation_method_pending.py",
+    "tests/test_complex_execution_correctness.py",
+    "tests/test_complex_question_delivery.py",
+    "tests/test_complex_question_planning.py",
+    "tests/test_complex_question_recovery.py",
+    "tests/test_composite_surface_execution.py",
+    "tests/test_computation_delivery.py",
+    "tests/test_computation_query_output_binding.py",
+    "tests/test_declared_calculation_planning.py",
+    "tests/test_dependency_query_contract.py",
+    "tests/test_explicit_filter_owner.py",
+    "tests/test_extraction_semantic_description.py",
+    "tests/test_location_owner_surface_forms.py",
+    "tests/test_monthly_growth_execution.py",
+    "tests/test_no_default_time.py",
+    "tests/test_pending_execution_transition.py",
+    "tests/test_pending_result_context_completeness.py",
+    "tests/test_planner_api_compatibility.py",
+    "tests/test_platform_semantic_description_flow.py",
+    "tests/test_prior_task_table_context.py",
+    "tests/test_question_condition_grounding.py",
+    "tests/test_remote_planning_integration.py",
+    "tests/test_six_node_progress_contract.py",
+    "tests/test_task_dag.py",
+    "tests/test_task_dependency_empty.py",
+    "tests/test_task_reuse_prediction.py",
+    "tests/test_v2_context_v1_execution_bridge.py"
+  ],
+  "evaluation_scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS",
+    "catalog_version": "4096806228e276f229e211a271262fb988280707af7d8e4c0779bb4eb5ce5b8a"
+  },
+  "semantic_review": "complex_question_case_review_20261019.json",
+  "decision": "医院科室订单按商品适用科室筛选；订单笔数仍按不同订单统计。",
+  "limits": [
+    "97项历史保留失败未清零，当前共同用例没有新增失败。",
+    "真实模型验证与合成计算、HTTP Mock及真实SQL生成器测试分开记录，不等于生产业务答案通过率。",
+    "当前冻结目录没有供应商，保留原对象并澄清/阻断，未替换为经销商或厂家。",
+    "冻结目录缺少部分字典值池，最终ASL值和关系绑定未作全链路通过断言。",
+    "明确医院临床开单科室的字段含义仍未验证，用户确认的是商品适用科室口径。",
+    "当前任务完成不代表V2替代V1就绪；无自动合并或切流。"
+  ]
+}

@@ -278,7 +278,9 @@ async def test_filled_slot_can_transition_to_asl_clarification_then_complete():
     assert final_request.primary_intent == PrimaryIntent.METRIC_QUERY
     assert [metric.input for metric in final_request.metrics] == ["含税销售额"]
     assert "补充：本月" in final_request.original_question
-    assert "含税销售额" in final_request.original_question
+    # The displayed Pending question is immutable. Put the confirmed choice
+    # into the completed question, preserving the original snapshot for audit.
+    assert final_request.original_question == pending.request.original_question
     assert "补充：" not in final_request.rewritten_question
     assert "指标：含税销售额" in final_request.rewritten_question
     assert (
