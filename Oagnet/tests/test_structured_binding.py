@@ -221,28 +221,41 @@ def test_explicit_time_without_anchor_is_not_removed():
     ast,_=run(e,k,p);assert '时间' in ast['ambiguity'][0]['question']
 
 
-def test_original_question_cannot_reach_retrieval_or_model(monkeypatch):
+def test_completed_question_reaches_original_scoped_generator(monkeypatch):
+    # STALE_TEST: user restored question/catalog generation on 2026-10-19.
     import agent
     e,k,p=fixture();seen=[]
     class Builder:
-        def __init__(self,*args,**kwargs):self.last_knowledge=deepcopy(k)
+        def __init__(self,*args,**kwargs):
+            assert kwargs['semantic_model_id']==81 and kwargs['business_domain_ids']==[205]
+            self.last_knowledge=deepcopy(k)
         def retrieve(self,text):seen.append(text);return self.last_knowledge
-        def build(self,text):pytest.fail('old prompt construction must be deleted')
+        def build(self,text):seen.append(text);return 'original scoped prompt'
     def invoke(messages):
-        seen.append(json.dumps(messages,ensure_ascii=False));return Obj(content=json.dumps(p))
+        seen.append(json.dumps(messages,ensure_ascii=False))
+        return Obj(content=json.dumps({'version':'2.0','intent':'query','subject':{'entity':'hospital'},
+            'metrics':[{'name':'count_hospital'}],'dimensions':[],
+            'filters':[{'field':'hospital.province','operator':'=','value':'上海市'}],
+            'having':[],'ambiguity':[],'time_context':None,'sort':None,'limit':None}))
     monkeypatch.setattr(agent,'PromptBuilder',Builder)
     monkeypatch.setattr(agent,'_get_chat_model',lambda:Obj(invoke=invoke))
     result=agent.main('SECRET ORIGINAL',completed_question='OTHER SECRET',retrieval_query='WRONG EXTRA',
         semantic_model_id=81,business_domain_ids=[205],structured_extraction=e)
     assert not json.loads(result)['ambiguity']
-    assert all(not any(secret in text for secret in ['SECRET','WRONG EXTRA','OLD extraction prompt']) for text in seen)
+    assert seen[0]=='OTHER SECRET' and 'OTHER SECRET' in seen[1]
+    assert all('WRONG EXTRA' not in text and 'SECRET ORIGINAL' not in text for text in seen)
 
 
-def test_missing_extraction_never_falls_back(monkeypatch):
+def test_missing_extraction_and_unavailable_generator_remain_unresolved(monkeypatch):
+    # STALE_TEST: missing provisional slots no longer prohibit question generation.
     import agent
+    class Builder:
+        def __init__(self,*args,**kwargs):pass
+        def build(self,text):raise RuntimeError('fixture unavailable')
+    monkeypatch.setattr(agent,'PromptBuilder',Builder)
     monkeypatch.setattr(agent,'_get_chat_model',lambda:pytest.fail('must not re-extract'))
     result=json.loads(agent.main('医院总数',semantic_model_id=81,business_domain_ids=[205]))
-    assert result['ambiguity'] and '上游未提供' in result['ambiguity'][0]['question']
+    assert result['ambiguity'] and '尚未形成可执行查询' in result['ambiguity'][0]['question']
 
 
 def test_bare_source_column_and_full_per_parameter_pool_keep_standard_value():

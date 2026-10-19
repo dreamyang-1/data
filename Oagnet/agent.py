@@ -5268,6 +5268,38 @@ def _normalize_asl_compatibility(ast: dict) -> dict:
     return ast
 
 
+def _catalog_metric_having(expression, knowledge, selected_metrics):
+    """Expand a numeric threshold on a registered metric to its catalog formula."""
+    if not isinstance(expression, str):
+        return None
+    match = re.fullmatch(
+        r'\s*(.+?)\s*(>=|<=|!=|=|>|<)\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*',
+        expression,
+    )
+    if not match:
+        return None
+    left, operator, number = match.groups()
+    compact = lambda text: re.sub(r'\s+', '', str(text)).casefold()
+    aliases = {str(item.get('name')): str(item.get('alias') or '')
+               for item in selected_metrics if isinstance(item, dict)}
+    for item in knowledge.get('metrics') or []:
+        metadata = getattr(item, 'metadata', {}) or {}
+        code = str(metadata.get('metric_code') or '')
+        if code not in aliases:
+            continue
+        rule = _json_value(metadata.get('calculation_rule')) or {}
+        formula = (rule.get('calc_formula') if isinstance(rule, dict) else None) or metadata.get('calc_formula')
+        if not isinstance(formula, str) or not formula.strip():
+            continue
+        formula = re.sub(r'^\s*[A-Za-z_][A-Za-z0-9_]*\s*=\s*', '', formula).strip()
+        labels = {code, str(metadata.get('metric_name') or ''), aliases[code]}
+        formula_key = compact(formula)
+        if (left.strip().strip('`"') in labels
+                or compact(left) in {formula_key, '(' + formula_key + ')'}):
+            return f'{formula} {operator} {number}'
+    return None
+
+
 def _validate_asl_output(
     content: str,
     knowledge: dict,
@@ -5512,9 +5544,13 @@ def _validate_asl_output(
         if field_type == "field" and field not in known_fields:
             raise ValueError("ASL field sort was not retrieved from semantic scope")
 
-    for expression in ast["having"]:
-        if not isinstance(expression, str) or not _SAFE_HAVING.fullmatch(expression.strip()):
+    for index, expression in enumerate(ast["having"]):
+        if isinstance(expression, str) and _SAFE_HAVING.fullmatch(expression.strip()):
+            continue
+        normalized = _catalog_metric_having(expression, knowledge, ast['metrics'])
+        if normalized is None:
             raise ValueError("ASL having expression is outside the safe aggregate subset")
+        ast['having'][index] = normalized
 
     limit = ast.get("limit")
     if limit is not None and (
@@ -9064,6 +9100,60 @@ def _verify_missing_asl_fields_in_vector_store(
             authorized.add(field)
     knowledge["_vector_authorized_fields"] = sorted(authorized)
 
+def _recover_question_asl(
+    question, *, store, semantic_model_id, business_domain_id, domain_ids,
+    metric_codes, metric_selection_authoritative, structured_extraction,
+    structured_reference, intent_asl_contract,
+    analysis_operator=None, result_contract=None, exploration_requirements=None,
+):
+    """Use the original question/catalog generator with provisional planner slots.
+
+    Planner extraction is a reference here, as in PromptBuilder's original
+    contract. Catalog authorization and confirmed caller constraints still apply.
+    A failed recovery leaves the first binding result intact.
+    """
+    if not isinstance(question, str) or not question.strip():
+        return None
+    try:
+        builder = PromptBuilder(
+            store, embed_query, top_k=3 if len(domain_ids) == 1 else 4,
+            semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id, business_domain_ids=domain_ids,
+            preferred_metric_codes=metric_codes,
+            authoritative_entity_scope=metric_selection_authoritative and not metric_codes,
+        )
+        prompt = builder.build(question)
+        knowledge = builder.last_knowledge
+        knowledge['_contextual_metric_selection'] = True
+        knowledge['_vector_authorized_fields'] = sorted(_known_physical_fields(knowledge))
+        context = {'completed_question': question,
+                   'planner_extraction_reference': structured_extraction,
+                   'structured_reference': structured_reference,
+                   'confirmed_intent_asl_contract': intent_asl_contract}
+        context.update({key: value for key, value in {
+            'analysis_operator': analysis_operator, 'result_contract': result_contract,
+            'exploration_requirements': exploration_requirements,
+        }.items() if value is not None})
+        response = _get_chat_model().invoke([
+            {'role': 'system', 'content': prompt},
+            {'role': 'user', 'content': json.dumps(context, ensure_ascii=False)},
+        ])
+        result = _validate_asl_output(
+            _strip_code_fence(response.content), knowledge, question,
+            metric_codes or None,
+        )
+        ast = json.loads(result)
+        if ast.get('ambiguity'):
+            return None
+        _validate_vector_grounded_asl(result, knowledge)
+        _validate_intent_asl_contract(result, intent_asl_contract, knowledge)
+        return result, knowledge
+    except Exception as exc:
+        logger.warning('Question ASL recovery unavailable: model_id=%s error=%s',
+                       semantic_model_id, type(exc).__name__)
+        return None
+
+
 def main(
     query: str,
     completed_question: str | None = None,
@@ -9084,7 +9174,7 @@ def main(
     structured_reference: dict | None = None,
     structured_extraction: dict | None = None,
 ):
-    """结构化参数 → 授权目录绑定 → ASL；原问题仅用于审计。
+    """完整问题/授权目录生成 ASL；结构化参数绑定作为兼容路径。
 
     Args:
         query: 用户自然语言查询
@@ -9109,15 +9199,29 @@ def main(
     )
     if store is None:
         store = globals()["store"]
-    # Original wording remains an API/audit field only. There is deliberately
-    # no natural-language fallback when the planner handoff is absent.
+    # Restore the original question/catalog generator. Planner slots remain
+    # advisory; a failed generation can still use the existing finite binder.
     from structured_binding import bind, issue, retrieval_terms, filter_value_queries
     from query_binding_review import review_bindings
     from mysql_tool import resolve_scoped_dictionary_keys
-    if not isinstance(structured_extraction, dict):
+    generated = _recover_question_asl(
+        completed_question or query, store=store,
+        semantic_model_id=semantic_model_id, business_domain_id=business_domain_id,
+        domain_ids=domain_ids, metric_codes=metric_codes,
+        metric_selection_authoritative=metric_selection_authoritative,
+        structured_extraction=structured_extraction,
+        structured_reference=structured_reference, intent_asl_contract=intent_asl_contract,
+        analysis_operator=analysis_operator, result_contract=result_contract,
+        exploration_requirements=exploration_requirements,
+    )
+    if generated is not None:
+        result, knowledge = generated
+        repairs = [{'type': 'RESTORE_QUESTION_ASL_GENERATION',
+                    'source': 'SCOPED_QUESTION_AND_CATALOG'}]
+    elif not isinstance(structured_extraction, dict):
         result = _ambiguity_asl([issue(
             "结构化提取", None,
-            "上游未提供结构化参数，请检查任务拆分与规划节点；ASL不会重新读取原问题提取",
+            "上游未提供结构化参数，且完整问题和当前授权目录尚未形成可执行查询，请核对所需业务对象与条件",
         )])
         knowledge, repairs = {}, []
     else:
