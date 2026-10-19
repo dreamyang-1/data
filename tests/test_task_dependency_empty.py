@@ -74,8 +74,11 @@ def service_fixture(source_result, plan, *, synthesize=False):
     calls = []
 
     async def handle_child(chat, identity):
-        calls.append(chat.question)
-        if chat.question == plan.tasks[0].question:
+        # The executor may add the existing internal join-key hint. Identify
+        # the planned task by its stable ID, not by decorated request text.
+        task = next(task for task in plan.tasks if chat.message_id.endswith('-' + task.task_id))
+        calls.append(task.question)
+        if task.task_id == plan.tasks[0].task_id:
             if isinstance(source_result, Exception):
                 raise source_result
             return source_result.model_copy(update={"conversation_id": chat.conversation_id})

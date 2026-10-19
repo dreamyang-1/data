@@ -12,7 +12,8 @@
 import json
 import logging
 import re
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.config import Settings
 from app.observability.langfuse_client import trace_generation
 from app.domain.models import PlannerExtraction, PrimaryIntent
+from app.planning.dependency_contract import projection
 
 logger = logging.getLogger(__name__)
 
@@ -318,6 +320,44 @@ class QuestionDecomposition:
     metric_dependencies: dict[str, tuple[str, ...]] | None = None
 
 
+_NO_DATABASE_QUERY = re.compile(r"(?:不|无需|无须|别)(?:要|用|得|需要)?(?:再)?(?:查询|访问|查)(?:业务)?(?:数据库|库)")
+
+
+def _repair_unavailable_local_projection(decomposition, question):
+    """A planner-invented local projection cannot supply a new related field."""
+    if _NO_DATABASE_QUERY.search(question):
+        return decomposition  # An explicit user restriction remains authoritative.
+    tasks = list(decomposition.tasks)
+    for index, task in enumerate(tasks):
+        structured = task.structured or {}
+        local = str(structured.get('是否查询数据库') or '').startswith('否') or _NO_DATABASE_QUERY.search(task.question)
+        wanted = [(owner, field) for owner, field in projection(structured) if owner]
+        if not (local and task.depends_on and wanted) or structured.get('指标'):
+            continue
+        available = {item for dep in task.depends_on if 0 <= dep < index
+                     for item in projection(tasks[dep].structured)}
+        if all(item in available for item in wanted):
+            continue
+        corrected = deepcopy(structured)
+        corrected['是否查询数据库'] = '是'
+        corrected['意图'] = '明细查询'
+        # Render this child's fields and conditions, not the predecessor's
+        # repeated Top N wording (which would become a new ranking constraint).
+        text = '查询' + '、'.join(f'{owner}的{field}' for owner, field in wanted)
+        period = (corrected.get('时间粒度') or {}).get('time_range')
+        if period:
+            text += '，时间范围：' + str(period)
+        for condition in corrected.get('过滤条件') or []:
+            value = condition.get('value')
+            values = value if isinstance(value, list) else [value]
+            text += '，' + str(condition.get('entity') or '') + str(condition.get('field') or '')
+            text += str(condition.get('op') or condition.get('operator') or '=') + '、'.join(map(str, values))
+        tasks[index] = replace(task, question='根据上述任务的查询结果，' + text, name=text.split('，', 1)[0],
+            intent=PrimaryIntent.DETAIL_QUERY, structured=corrected,
+            parameters=tuple(extraction_to_parameters(corrected)))
+    return replace(decomposition, tasks=tuple(tasks))
+
+
 # 指标目录解析要识别的表头词：命中其一视为表头行，防止把下一张表的表头当指标
 _TABLE_HEADER_WORDS = {
     "指标", "指标名称", "维度", "维度名称", "实体", "实体名称",
@@ -535,6 +575,13 @@ class _SinglePlan(BaseModel):
 
 
 _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取器。把问题拆解成可执行任务（绝大多数问题只有1个任务），按末尾的结构化提取规范逐任务输出extraction参数。只有与规范内任何指标都无关、也无法由规范内指标派生的纯概念词，才按指标口径解释处理（任务意图输出METRIC_DEFINITION，指标名保留用户原文）。只输出符合JSON Schema的JSON。
+
+基础任务边界：
+1. 先按指标排名或筛选出对象，再查询这些对象的其他关系、明细或新的数据时，拆为前置查询和依赖查询。前置任务只按入选对象计算排名；后续任务depends_on引用前置任务下标，并明确沿用其完整结果。不得把后续返回对象加入前置排名的分组，否则会改变排名粒度。
+2. 例如“前3名销售员及他们销售过的产品”先按销售员销售总额选前3名，再查询这3名销售员销售的产品；不能改成销售员与商品组合的前3名。后续任务不继承前置Top N限制。同一对象的唯一关联展示属性（如所属公司）可在原查询返回，不为展示字段强制拆任务。
+3. 根据已有结果直接计算、筛选或投影且无须新数据时，作为依赖任务，问题写明“不再查询数据库”，extraction中“是否查询数据库”输出“否”。需要前序数据集中没有的新字段或新关系时应查询数据库，不得用前序表代替新结果。
+4. 有依赖时保留原问题明确的共享时间和筛选范围；用户为后续任务明确指定其他范围时按其要求。不关联的独立任务不消费彼此结果。依赖用于真实的数据传递，不为叙述先后添加虚假依赖。
+5. 不把ASL、SQL、取数、校验、洞察等内部技术步骤拆成业务任务；不重复或遗漏用户要求交付的结果。
 """
 
 # 结构化提取规范整段取自国药语义解析器提示词，extraction字段按此输出。
@@ -591,6 +638,7 @@ class SingleQuestionPlanner:
                 if attempt == attempts - 1:
                     return last_result
                 continue
+            decomposition = _repair_unavailable_local_projection(decomposition, question)
             last_result = decomposition
             off_data, off_meta = self._normalize_decomposition_metrics(decomposition)
             empty_extraction = (
