@@ -110,12 +110,6 @@ def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source
     key, candidates = semantic_question_identity(request, slot) if semantic else (clarification_key(slot, []), [])
     already = key in asked_keys
     is_user = len(options) >= 2 if semantic else slot in USER_SLOTS
-    if (source_stage == 'TASK_CALCULATION_DEFINITION' and slot == 'semantic_ambiguity'
-            and ambiguities and all(
-                item.type == 'context' and (item.ambiguity_id or '').startswith('PLANNER_CALCULATION_')
-                and set(item.affected_slots) and set(item.affected_slots)<={'analysis_method','analysis_window'}
-                for item in ambiguities)):
-        is_user = True
     structured_slot = (
         source_stage == 'STRUCTURED_ASL_BINDING' and slot == 'semantic_ambiguity'
         and ambiguities and ambiguities[0].type not in {'context', 'data_source', 'unknown'}
@@ -128,8 +122,6 @@ def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source
     if slot == 'task_answer_mapping':
         reason = 'USER_REFERENCE_AMBIGUITY'
     system_repair = False
-    if any((item.ambiguity_id or '').startswith('PLANNER_METRIC_THRESHOLD_') for item in ambiguities):
-        reason,is_user,system_repair='SYSTEM_FAILURE',False,True
     if slot == 'fields':
         reason, is_user = 'CATALOG_GOVERNANCE_GAP', False
     elif not is_user:

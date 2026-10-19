@@ -1,5 +1,5 @@
 {
-  "status": "DEPLOYED_VERIFIED",
+  "status": "RESTORED_PREDEPLOYMENT_PER_USER",
   "scope": {
     "semantic_model_id": 81,
     "business_domain_ids": [
@@ -65,15 +65,15 @@
   "runtime_manifest": [
     {
       "path": "app/api.py",
-      "sha256": "e71f52691fc27285dfd8f7e8fbb187384d8cb00f06afd8799718797ad9c03949"
+      "sha256": "69e1be94c77e7705fbde3c5ba76a0930b0eda1a1104b5476e4e879538fb3e83a"
     },
     {
       "path": "app/domain/models.py",
-      "sha256": "e58d869a000545ec048531d636f2a03ecee4a80bfbacbacd1c0702115cdef01c"
+      "sha256": "e2d641330d426058535da3e2a01a935270a66940b6c629a3982d01417ddad835"
     },
     {
       "path": "app/analysis/engine.py",
-      "sha256": "5978364a8ce7e57c339636bebb7fe3490958bf8a47a64b4d710d9d9e843db747"
+      "sha256": "1b602df3e412e6243417480499d474828d5599bc957bb3e3e8a42a8cf42eb8b4"
     },
     {
       "path": "app/analysis/chain_tools/period_extrema.py",
@@ -81,7 +81,7 @@
     },
     {
       "path": "app/analysis/chain_tools/temporal_window.py",
-      "sha256": "a195c4d993f5a2ee137073c2d31e537edaa56c4fd0767d51036d5d73ebd7640e"
+      "sha256": "99a18556a27fd53960854c709f794f4d6a26c9e78791921297e293d6037b3986"
     },
     {
       "path": "app/planning/catalog_context.py",
@@ -93,71 +93,71 @@
     },
     {
       "path": "app/planning/task_dag.py",
-      "sha256": "83c9fe352c848811a0cd31a9658e80e32986a154a156e6981ed63971491972fe"
+      "sha256": "a813b37ad7aff2f368f4e7a629c99bb79769f9bb8a8ff9ef062073bda73e1462"
     },
     {
       "path": "app/planning/compound_question.py",
-      "sha256": "c32e7a53b1d55612d6157e36f3f36d69d9a5a2ff7bea836a544cab9e5eca7146"
+      "sha256": "15d5f50fe60a7b25ead5d6fef2f9d4647aa5df585a2172af1cf4d92205a07b46"
     },
     {
       "path": "app/planning/calculation_bindings.py",
-      "sha256": "0ec633cc7a3eb4077980724a31c4d0452922800ad3ecaa908e521bbd86d1f87f"
+      "sha256": "b02a7eaf4a02a8a8db2d9a31ea7b7a587f9193bba465567de122055ce5aa62a4"
     },
     {
       "path": "app/planning/compat.py",
-      "sha256": "91c02fc9e5182683d649556290510f142f6bf98431103cea9d295b9e1528196b"
+      "sha256": "4176706032386132783b379fbf2171078085c66c2e22c518fd8f47449e0f652f"
     },
     {
       "path": "app/planning/structured_extraction_prompt.txt",
-      "sha256": "55cecbae93886dc7ec63e3c5e8a5ba93079c55c2da45f5265228a5e4e5fa1e18"
+      "sha256": "e4ce2940e39371455d9f571bccfcc765dbff200b3580a3d08d0eafd4b697ffc8"
     },
     {
       "path": "app/planning/dependency_contract.py",
-      "sha256": "df9472ff09da4a2271d255786b4b7d500a4eb852e8089578f554d6a2d573d4c2"
+      "sha256": "1de10457062ca48852c9fa034f09a6297980a95fff5b582f8ea5e83ca3eb1aba"
     },
     {
       "path": "app/presentation/root_report.py",
-      "sha256": "bbfebac1103eda671544ce36e7912f1b73ad009ba3745268ab071ae9cb239d96"
+      "sha256": "ac25a805ab9ff4f5dba9888ab6d306b0dfcac2c3401dd4c8285e36aecfebb0a7"
     },
     {
       "path": "app/services/orchestrator.py",
-      "sha256": "c56c03c207108da39557e6e229f502451853a2a9893cb230f1c61a90a147213e"
+      "sha256": "9f53f35535aaad8277ceedae85b112586bb335b2d81b6ad4f724e1386f138eb2"
     },
     {
       "path": "app/services/dataset_followup.py",
-      "sha256": "587aba4d599d602af40b9447c5c2af3ab2d52654637d1c2eddcc9c194603fedf"
+      "sha256": "02136915266d1d7557c8c2f235d907e3388a50a55c59050b399a5b6ab8772d1c"
     },
     {
       "path": "app/services/clarification_policy.py",
-      "sha256": "8a52f9535dea5af7710ce90726f392ee4c975a8e7b36d67ec7fa21f97c1d82e8"
+      "sha256": "94a243e52026f784920f06f060351d6cda78926ff1ba547a66626e978e7afe20"
     },
     {
       "path": "app/semantic_v2/current_catalog.py",
-      "sha256": "6d8c07f4d8845b3f94ae842ebb888bf53b7ad60a2a6ea8d1ff3966b919bbd06f"
+      "sha256": "d5b2aa3609e9a32288d0e769cb956ad15c415b0508168ed9c5635e8cccc7086e"
     },
     {
       "path": "app/semantic_v2/recognition.py",
-      "sha256": "97f724b4aa34fbe9b61857f932bee1d17e57232b1c8e239b2eae1cefde550165"
+      "sha256": "aa9210ce026516bd98a4be96d83d4f18252ee50f720f08f6e3cdc32dd3f1c793"
     },
     {
       "path": "app/semantic_v2/context_v1_execution.py",
-      "sha256": "e52f9c7d39cd6215370dd3291645b9390e576d3661f2c122a71fad0c3b19037f"
+      "sha256": "56ee5b2c9fcd4ffc2d8bbfb9edbff71308548a7593598102944006ac081ea141"
     },
     {
       "path": "app/services/computation_delivery.py",
-      "sha256": "33136839f9d02e962db6e66de4236b818ce9f2f9ff286e0fa5a445d383f376a7",
+      "sha256": "be861a25b8ce9d206a887017daf8cdf5b9275cbdeb59797b3dc3391bd4617c29",
       "restore_missing_accepted_capability": true
     },
     {
       "path": "minio_followup_store.py",
-      "sha256": "d9ee98174f7a2a48e80645233c3b5d5b9b1621c70105f628b5d09f6bba39ecbf",
+      "sha256": "533f7f219fa01c539cd730d1a7515945bf9331c0502b05acdbf6f330694e36fb",
       "restore_missing_accepted_capability": true
     }
   ],
   "peer_runtime_manifest": [
     {
       "path": "Oagnet/structured_binding.py",
-      "sha256": "401f533f7cd5614282b2414514613f0d5a4a631a29342fbe1ce20ce8194be6ac",
+      "sha256": "66cf60ad30883cd170cda0f1c4561300fedea55fabe7794f36dd5fc803d426ab",
       "changed": false
     }
   ],
@@ -188,10 +188,11 @@
   "limits": [
     "97 pre-existing Agent test failures, unchanged",
     "2 pre-existing peer scope test failures, unchanged",
-    "missing supplier catalog and incompletely populated months remain disclosed"
+    "missing supplier catalog and incompletely populated months remain disclosed",
+    "The earlier candidate validation describes the subsequently reverted release; it is not validation of new ASL fixes on the restored production version."
   ],
   "deployment": {
-    "status": "DEPLOYED_VERIFIED",
+    "status": "RESTORED_PREDEPLOYMENT_PER_USER",
     "user_decision": "部署重启，注意不要覆盖其他人的代码，有不一样的就优化合并",
     "resumed": true,
     "production_files_written": 23,
@@ -213,10 +214,6 @@
         "health": 200
       }
     },
-    "code_commits": {
-      "Agent": "2f75c790b6f91c08a6e768b0bc13b447aee054ee",
-      "Oagnet": "cb77ab26559583a8dcf5debc2cda957d4913414e"
-    },
     "draft_pr": "https://github.com/dreamyang-1/data/pull/104",
     "draft": true,
     "production_smoke": {
@@ -229,7 +226,112 @@
     "isolated_test_processes_stopped": true,
     "catalog_mutations": 0,
     "index_rebuilds": 0,
-    "v2_cutover": false
+    "v2_cutover": false,
+    "restoration": {
+      "files": 20,
+      "exact_prior_backup_sha_verified": true,
+      "configuration_unchanged": true,
+      "module_imports_verified": true,
+      "services": {
+        "Agent": {
+          "live": 200,
+          "ready": 200
+        },
+        "Oagnet": {
+          "health": 200
+        }
+      },
+      "new_asl_fixes_deployed": false,
+      "new_files_left_in_place": 3,
+      "intent_schema_and_render_verified": true,
+      "isolated_candidate_stopped": true,
+      "runtime_manifest": [
+        {
+          "path": "app/api.py",
+          "sha256": "69e1be94c77e7705fbde3c5ba76a0930b0eda1a1104b5476e4e879538fb3e83a"
+        },
+        {
+          "path": "app/domain/models.py",
+          "sha256": "e2d641330d426058535da3e2a01a935270a66940b6c629a3982d01417ddad835"
+        },
+        {
+          "path": "app/analysis/engine.py",
+          "sha256": "1b602df3e412e6243417480499d474828d5599bc957bb3e3e8a42a8cf42eb8b4"
+        },
+        {
+          "path": "app/analysis/chain_tools/temporal_window.py",
+          "sha256": "99a18556a27fd53960854c709f794f4d6a26c9e78791921297e293d6037b3986"
+        },
+        {
+          "path": "app/planning/task_dag.py",
+          "sha256": "a813b37ad7aff2f368f4e7a629c99bb79769f9bb8a8ff9ef062073bda73e1462"
+        },
+        {
+          "path": "app/planning/compound_question.py",
+          "sha256": "15d5f50fe60a7b25ead5d6fef2f9d4647aa5df585a2172af1cf4d92205a07b46"
+        },
+        {
+          "path": "app/planning/calculation_bindings.py",
+          "sha256": "b02a7eaf4a02a8a8db2d9a31ea7b7a587f9193bba465567de122055ce5aa62a4"
+        },
+        {
+          "path": "app/planning/compat.py",
+          "sha256": "4176706032386132783b379fbf2171078085c66c2e22c518fd8f47449e0f652f"
+        },
+        {
+          "path": "app/planning/structured_extraction_prompt.txt",
+          "sha256": "e4ce2940e39371455d9f571bccfcc765dbff200b3580a3d08d0eafd4b697ffc8"
+        },
+        {
+          "path": "app/planning/dependency_contract.py",
+          "sha256": "1de10457062ca48852c9fa034f09a6297980a95fff5b582f8ea5e83ca3eb1aba"
+        },
+        {
+          "path": "app/presentation/root_report.py",
+          "sha256": "ac25a805ab9ff4f5dba9888ab6d306b0dfcac2c3401dd4c8285e36aecfebb0a7"
+        },
+        {
+          "path": "app/services/orchestrator.py",
+          "sha256": "9f53f35535aaad8277ceedae85b112586bb335b2d81b6ad4f724e1386f138eb2"
+        },
+        {
+          "path": "app/services/dataset_followup.py",
+          "sha256": "02136915266d1d7557c8c2f235d907e3388a50a55c59050b399a5b6ab8772d1c"
+        },
+        {
+          "path": "app/services/clarification_policy.py",
+          "sha256": "94a243e52026f784920f06f060351d6cda78926ff1ba547a66626e978e7afe20"
+        },
+        {
+          "path": "app/semantic_v2/current_catalog.py",
+          "sha256": "d5b2aa3609e9a32288d0e769cb956ad15c415b0508168ed9c5635e8cccc7086e"
+        },
+        {
+          "path": "app/semantic_v2/recognition.py",
+          "sha256": "aa9210ce026516bd98a4be96d83d4f18252ee50f720f08f6e3cdc32dd3f1c793"
+        },
+        {
+          "path": "app/semantic_v2/context_v1_execution.py",
+          "sha256": "56ee5b2c9fcd4ffc2d8bbfb9edbff71308548a7593598102944006ac081ea141"
+        },
+        {
+          "path": "app/services/computation_delivery.py",
+          "sha256": "be861a25b8ce9d206a887017daf8cdf5b9275cbdeb59797b3dc3391bd4617c29"
+        },
+        {
+          "path": "minio_followup_store.py",
+          "sha256": "533f7f219fa01c539cd730d1a7515945bf9331c0502b05acdbf6f330694e36fb"
+        },
+        {
+          "path": "Oagnet/structured_binding.py",
+          "sha256": "66cf60ad30883cd170cda0f1c4561300fedea55fabe7794f36dd5fc803d426ab"
+        }
+      ]
+    },
+    "previous_release_code_commits": {
+      "Agent": "2f75c790b6f91c08a6e768b0bc13b447aee054ee",
+      "Oagnet": "cb77ab26559583a8dcf5debc2cda957d4913414e"
+    }
   },
   "resume_validation": {
     "agent_full": {

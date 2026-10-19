@@ -817,7 +817,6 @@ async def chat_stream(
         planning_released = False
         presentation_scenario = "ANALYTIC"
         titled_think_sections: set[str] = set()
-        last_task_table: list[dict[str, Any]] = []
         composite_mode = False
         off_topic_flag = False
         planning_data_verdict = ""
@@ -829,9 +828,6 @@ async def chat_stream(
         heartbeat_interval = settings.thinking_stream_heartbeat_seconds
 
         def render_thinking(event: dict[str, Any]) -> list[str]:
-            nonlocal last_task_table
-            if event.get('task_table') and not event.get('is_child_task'):
-                last_task_table=[dict(row) for row in event['task_table']]
             stage = str(event.get("stage") or "processing").strip().upper()
             section = _thinking_section(stage)
             include_heading = bool(
@@ -1314,26 +1310,7 @@ async def chat_stream(
                 else presentation_scenario
             )
             presentation_scenario = response_scenario
-            if len(last_task_table)==1 and not response.task_results:
-                terminal={'COMPLETED':'已完成','PARTIAL_SUCCESS':'部分完成',
-                    'NEEDS_CLARIFICATION':'待补充','SAFE_FALLBACK':'已失败','FAILED':'已失败'}.get(response.status)
-                if terminal and last_task_table[0].get('执行状态')!=terminal:
-                    table=[{**last_task_table[0],'执行状态':terminal}]
-                    async for rendered_event in stream_thinking({'stage':'TASK_STATUS','status':response.status,
-                        'message':'','heading_only':True,'task_table':table}):
-                        yield rendered_event
-            if (response_scenario!='CHAT' and titled_think_sections
-                    and (response.execution_shape=='COMPOSITE' or response.intent not in {
-                        PrimaryIntent.CHAT,PrimaryIntent.CAPABILITY_HELP,PrimaryIntent.OUT_OF_SCOPE})):
-                sequence=[('intent','INTENT_RECOGNITION'),('planning','TASK_PLANNING'),
-                    ('execution','ASL_GENERATION'),('validation','RELIABILITY_CHECK'),('insight','INSIGHT_ANALYSIS')]
-                last_opened=max((index for index,(section,_) in enumerate(sequence) if section in titled_think_sections),default=-1)
-                for section,stage in sequence[last_opened+1:]:
-                    async for rendered_event in stream_thinking({'stage':stage,'status':'SKIPPED',
-                        'message':'等待补充信息，本环节尚未执行。' if response.status=='NEEDS_CLARIFICATION' else '未取得执行所需的前置结果，本环节尚未执行。'}):
-                        yield rendered_event
-            if (response_scenario in {"CHAT", "CLARIFICATION"} or response.execution_shape == "COMPOSITE"
-                    or response.intent not in {PrimaryIntent.CHAT, PrimaryIntent.CAPABILITY_HELP, PrimaryIntent.OUT_OF_SCOPE}):
+            if response_scenario in {"CHAT", "CLARIFICATION"} or response.execution_shape == "COMPOSITE":
                 async for rendered_event in stream_thinking({
                     "stage": "FINAL_OUTPUT",
                     "status": "COMPLETED",
@@ -1542,7 +1519,7 @@ def _thinking_events(
         else str(progress.get("message") or stage).strip()
     )
     # Remove node-owned headings, then emit one normalized public heading for
-    # each of the six main data-agent stages at the SSE boundary.
+    # each of the seven data-agent stages at the SSE boundary.
     content = re.sub(r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", content).strip()
     content = _markdown_hard_line_breaks(content)
     if heading:
@@ -1670,23 +1647,17 @@ def _thinking_section(stage: str) -> str | None:
         "TASK_PLANNING": "planning",
         "DATA_RETRIEVAL": "execution",
         "SEMANTIC_QUERY_PLANNING": "execution",
-        "ASL_GENERATION": "execution",
+        "ASL_GENERATION": "parsing",
         "SQL_TRANSLATION": "execution",
         "SQL_EXECUTION": "execution",
         "KNOWLEDGE_RETRIEVAL": "execution",
         "EXTERNAL_SEARCH": "execution",
         "RELIABILITY_CHECK": "validation",
         "INSIGHT_ANALYSIS": "insight",
-        "CLARIFICATION_EXECUTION": "execution",
-        "CLARIFICATION_RESULT": "validation",
+        "CLARIFICATION_EXECUTION": "clarification_execution",
+        "CLARIFICATION_RESULT": "clarification_result",
         "FINAL_OUTPUT": "final_output",
     }.get(stage)
-
-
-def _ordering_section(stage: str) -> str | None:
-    # Retain the existing internal ASL/SQL barrier while publishing both inside
-    # the frozen execution node. This does not alter tool or retry ordering.
-    return 'parsing' if stage == 'ASL_GENERATION' else _thinking_section(stage)
 
 
 class _CompositeChildProgressOrderer:
@@ -1767,7 +1738,7 @@ class _CompositeChildProgressOrderer:
     def push(self, event: dict[str, Any]) -> list[dict[str, Any]]:
         """Keep all child ASL output above SQL without delaying actual tools."""
         self._observe_task_count(event)
-        section = _ordering_section(str(event.get("stage") or "").upper())
+        section = _thinking_section(str(event.get("stage") or "").upper())
         task_key = self._task_key(event)
         visible: list[dict[str, Any]] = []
         if section == "parsing":
@@ -1797,7 +1768,7 @@ class _CompositeChildProgressOrderer:
         self._observe_task_count(current)
         stage = str(current.get("stage") or "").upper()
         status = str(current.get("status") or "").upper()
-        section = _ordering_section(stage)
+        section = _thinking_section(stage)
         task_key = self._task_key(current)
 
         if section == "execution":
@@ -1878,7 +1849,7 @@ def _ordered_composite_child_progress_events(
 
     def sort_key(indexed: tuple[int, dict[str, Any]]) -> tuple[int, int, int]:
         sequence, event = indexed
-        section = _ordering_section(str(event.get("stage") or "").upper())
+        section = _thinking_section(str(event.get("stage") or "").upper())
         try:
             task_index = max(0, int(event.get("task_index") or 0))
         except (TypeError, ValueError):
@@ -1890,7 +1861,7 @@ def _ordered_composite_child_progress_events(
     rendered: list[dict[str, Any]] = []
     for event in ordered:
         current = dict(event)
-        section = _ordering_section(str(current.get("stage") or "").upper())
+        section = _thinking_section(str(current.get("stage") or "").upper())
         try:
             task_index = max(0, int(current.get("task_index") or 0))
         except (TypeError, ValueError):
@@ -1930,10 +1901,10 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
     if normalized_scenario == "CLARIFICATION":
         scenario_titles = {
             "intent": "#### ◉ 意图识别",
-            "planning": "#### ◉ 任务拆分与规划",
-            "clarification_execution": "#### ◉ 调度执行",
-            "clarification_result": "#### ◉ 结果校验",
-            "final_output": "#### ◉ 最终输出",
+            "planning": "#### 2、任务拆分与规划",
+            "clarification_execution": "#### 3、调研执行",
+            "clarification_result": "#### 4、结果生成",
+            "final_output": "#### 5、最终输出",
         }
         if section in scenario_titles:
             return scenario_titles[section]
@@ -1948,7 +1919,7 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
         "intent": "#### ◉ 意图识别",
         "file": "#### ◉ 文件感知与解析",
         "planning": "#### ◉ 任务拆分与规划",
-        "parsing": "#### ◉ 调度执行",
+        "parsing": "#### ◉ 解析校验",
         "execution": "#### ◉ 调度执行",
         "validation": "#### ◉ 结果校验",
         "insight": "#### ◉ 数据洞察分析",

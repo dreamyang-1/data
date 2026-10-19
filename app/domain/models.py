@@ -794,7 +794,6 @@ class ChatRequest(StrictModel):
     # 桥内前置判断产出的复合/单一结论（含各子问题的意图与业务域），
     # 编排器据此直接规划，避免二次判断。
     _compound_judgment: Any = PrivateAttr(default=None)
-    _planning_catalog_context: str = PrivateAttr(default='')
     # 识别模型对追问轮的数据来源判定（SNAPSHOT/NEW_QUERY）及快照操作，
     # 执行层据此做快照路由，规划节点据此展示追问判定行。
     _model_data_source: str | None = PrivateAttr(default=None)
