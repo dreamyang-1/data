@@ -1,5 +1,5 @@
 {
-  "status": "IMPLEMENTATION_VERIFIED_RELEASE_PENDING",
+  "status": "SCOPED_IMPLEMENTATION_AND_RELEASE_COMPLETED_WITH_DECLARED_LIMITS",
   "scope": {
     "semantic_model_id": 81,
     "business_domain_ids": [
@@ -14300,5 +14300,38 @@
     },
     "change": "Normalize trend time order; multi-period changes require the full sequence, so model Top 1 must not truncate the input. Object comparisons and local computations retain their original ordering and limits.",
     "business_results_verified": false
+  },
+  "release_summary": {
+    "runtime_commit": "8449c02b7801827afa736b2da13144ef691a2ba9",
+    "draft_pr": "https://github.com/dreamyang-1/data/pull/103",
+    "full_offline": {
+      "passed": 5186,
+      "failed": 97
+    },
+    "critical_contracts": {
+      "passed": 350
+    },
+    "deployment": {
+      "server": "49",
+      "affected_service": "data-analysis-agent",
+      "runtime_files_verified": 18,
+      "backed_up": true,
+      "configuration_unchanged": true,
+      "live": 200,
+      "ready": 200,
+      "invalid_model_rejected": 422,
+      "unaffected_services_not_restarted": true,
+      "semantic_catalog_mutations": 0,
+      "index_rebuilds": 0,
+      "v2_cutover": false
+    },
+    "limits": [
+      "97项历史保留失败未清零，当前共同用例没有新增失败。",
+      "真实模型验证与合成计算、HTTP Mock及真实SQL生成器测试分开记录，不等于生产业务答案通过率。",
+      "当前冻结目录没有供应商，保留原对象并澄清/阻断，未替换为经销商或厂家。",
+      "冻结目录缺少部分字典值池，最终ASL值和关系绑定未作全链路通过断言。",
+      "明确医院临床开单科室的字段含义仍未验证，用户确认的是商品适用科室口径。",
+      "当前任务完成不代表V2替代V1就绪；无自动合并或切流。"
+    ]
   }
 }
