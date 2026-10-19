@@ -46,3 +46,11 @@ Current Stage：本轮任务链路完整性验收与受控发布。Catalog/Evalu
 - [Draft PR #104](https://github.com/dreamyang-1/data/pull/104) 保留，不自动合并。
 
 Current Stage：本轮代码修复与验收完成，按用户决定不部署。Cutover Blocker P0/P1：本轮未作生产切流判定；现有历史失败和数据缺口继续保留。Catalog/Evaluation/Shadow Gap：未变更目录或索引，未开展新生产Shadow。V1 Replacement Readiness：不声明V2正式替换就绪。Next shortest blocking path：今后恢复部署时重新核对49最新差异、合并并验证后再发布；本轮不继续部署。
+
+## 恢复部署核验
+
+用户随后明确要求恢复部署重启，并保留合并其他人的差异；前述“本轮暂不部署”为历史检查点。重新读取49最新快照后，新增差异仅两个规划文件。前置分问不判断/展示意图的删除已包含于候选；同步移除单问题规划里的手工阈值拆分提示词，保留确定性指标阈值编译、采样完整性、计算绑定及任务依赖保护。其他已审查远端能力继续保留，无关文件不纳入写入清单。
+
+合并后重跑：Agent 5239通过、97个历史失败不变，无新增回归或收集错误；Critical 403通过。最新远端运行文件加本轮清单覆盖组成的隔离实例成功启动；真实只读合作时长查询完整输入2154行，严格>12筛出4行，独立复算一致，两个任务完成且六主节点顺序正确。Oagnet和SQL代码未增加改动，沿用此前对应版本已通过的验证。
+
+Current Stage：恢复部署前验证完成。Cutover Blocker P0/P1：本轮不作V2切流或替换就绪判定。Catalog/Evaluation/Shadow Gap：不修改目录/索引、不开展新生产Shadow。V1 Replacement Readiness：维持原有路由。Next shortest blocking path：精确清单发布、备份及配置校验、受影响服务重启、健康与只读业务验证；最终以发布回执为准。

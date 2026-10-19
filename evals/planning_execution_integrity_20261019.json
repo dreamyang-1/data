@@ -1,5 +1,5 @@
 {
-  "status": "VERIFIED_NOT_DEPLOYED_PER_USER",
+  "status": "RESUMED_VERIFIED_RELEASE_PENDING",
   "scope": {
     "semantic_model_id": 81,
     "business_domain_ids": [
@@ -93,7 +93,7 @@
     },
     {
       "path": "app/planning/task_dag.py",
-      "sha256": "5d543feb904bf5cc71e71df8bcd86758ba73d99d8477e82e4927479f71547264"
+      "sha256": "83c9fe352c848811a0cd31a9658e80e32986a154a156e6981ed63971491972fe"
     },
     {
       "path": "app/planning/compound_question.py",
@@ -178,6 +178,11 @@
       "product-applicable department role",
       "Pending and scope isolation",
       "bounded source completeness"
+    ],
+    "resumed_snapshot": "remote-deploy-resume-1",
+    "resumed_decisions": [
+      "Retain remote removal of threshold-specific intent instruction; candidate already has no question-judge intent display.",
+      "Merge remote removal of manual threshold split prompt. Keep registered-metric deterministic compilation, complete-source filtering and dependency protection."
     ]
   },
   "limits": [
@@ -186,11 +191,11 @@
     "missing supplier catalog and incompletely populated months remain disclosed"
   ],
   "deployment": {
-    "status": "NOT_DEPLOYED_PER_USER",
+    "status": "PENDING_RESUMED_USER_AUTHORIZATION",
     "preflight": "STOPPED_REMOTE_DRIFT",
     "production_files_written": 0,
     "production_services_restarted": false,
-    "user_decision": "本轮暂不部署，保留提交和 Draft PR",
+    "user_decision": "部署重启，注意不要覆盖其他人的代码，有不一样的就优化合并",
     "catalog_mutations": 0,
     "index_rebuilds": 0,
     "v2_cutover": false,
@@ -200,6 +205,22 @@
     },
     "draft_pr": "https://github.com/dreamyang-1/data/pull/104",
     "draft": true,
-    "isolated_test_processes_stopped": true
+    "isolated_test_processes_stopped": false,
+    "resumed": true
+  },
+  "resume_validation": {
+    "agent_full": {
+      "passed": 5239,
+      "failed": 97
+    },
+    "critical": {
+      "passed": 403
+    },
+    "new_regressions": 0,
+    "collection_errors": 0,
+    "cooperation_complete_source": 2154,
+    "cooperation_filtered": 4,
+    "independent_match": true,
+    "six_stages": true
   }
 }
