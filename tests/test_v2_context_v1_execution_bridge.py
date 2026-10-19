@@ -420,13 +420,11 @@ async def test_compound_judgment_is_shown_in_resolved_context_and_stashed(provid
         entries=(
             CompoundJudgmentEntry(
                 question="统计各经销商的订单笔数",
-                intent="指标查询",
                 business_domain="医药销售域",
                 expected_output="各经销商订单笔数",
             ),
             CompoundJudgmentEntry(
                 question="筛选订单笔数大于5笔的经销商名单",
-                intent="明细查询",
                 business_domain="医药销售域",
                 expected_output="经销商名单",
             ),
@@ -476,14 +474,16 @@ async def test_compound_judgment_is_shown_in_resolved_context_and_stashed(provid
         event for event in events
         if event.get("progress_phase") == "V2_COMPOUND_JUDGE_START"
     )
-    assert judge_start["message"] == "正在判断问题类型，并识别各问题的意图与业务域。"
+    # STALE_TEST: 用户确认保留49的前置判断不再判定/展示意图；
+    # 子问题、业务域、判断先后及向执行层透传的断言保留。
+    assert judge_start["message"] == "正在判断问题类型，并识别各问题的业务域。"
     assert events.index(judge_start) < events.index(resolved_context)
     assert "问题拆分为2个独立子问题：" in resolved_context["message"]
     assert (
-        "问题1：统计各经销商的订单笔数，意图：指标查询，业务域：医药销售域。"
+        "问题1：统计各经销商的订单笔数，业务域：医药销售域。"
     ) in resolved_context["message"]
     assert (
-        "问题2：筛选订单笔数大于5笔的经销商名单，意图：明细查询，业务域：医药销售域。"
+        "问题2：筛选订单笔数大于5笔的经销商名单，业务域：医药销售域。"
     ) in resolved_context["message"]
     # 执行层 chat 由 model_copy(deep=True) 派生，判断结论深拷贝透传，内容一致
     assert seen["judgment"] == judgment

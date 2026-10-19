@@ -45,6 +45,9 @@ def catalog_context(snapshot, rules):
                           for a in entity.get('attributes', [])]
             lines.append('| ' + ' | '.join(text(value) for value in (
                 entity.get('entity_name'),entity.get('entity_alias'),entity.get('business_definition'),attributes)) + ' |')
+        # Keep the entity table contiguous: runtime catalog parsers terminate
+        # it at non-table lines. Relations belong after all entity rows.
+        for entity in document.get('entities', []):
             if entity.get('relations'):
                 lines.append('目录关系（' + text(entity.get('entity_name')) + '）：' + text(entity['relations']))
         lines += ['| 维度 | 同义词 | 业务定义 |', '| --- | --- | --- |']

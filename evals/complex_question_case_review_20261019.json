@@ -35,7 +35,8 @@
     "Frozen metadata lacks dictionary values and SQL source pin; field evidence is not a business-result proof.",
     "Conditional planning checks and explicit unsupported outcomes are not numeric answer passes.",
     "The captured Q5 rejection is corrected using one bounded model correction; all original failed observations remain recorded. No claim of perfect accuracy or production business values.",
-    "User confirmed hospital department order questions use product applicability. New 11-case review supersedes the earlier default-role uncertainty; no live business-result PASS is implied. Clinical ordering fields remain unverified."
+    "User confirmed hospital department order questions use product applicability. New 11-case review supersedes the earlier default-role uncertainty; no live business-result PASS is implied. Clinical ordering fields remain unverified.",
+    "round29 exposed a local wording override bypass and a broken evaluator entity table; initial errors are retained. The guard and evaluation rendering were corrected, with targeted round30 evidence. No universal model accuracy claim."
   ],
   "results": [
     {
@@ -11446,5 +11447,2841 @@
       "订单去重及Join依赖登记指标和实际SQL，不由规划文字证明。",
       "旧Q3“临床含义未知”记录为历史状态；本次确认仅解决默认角色，不证明医院临床开单字段。"
     ]
+  },
+  "final_server_integration": {
+    "cases": 8,
+    "model_calls_round29": 18,
+    "model_calls_round30": 6,
+    "business_database_calls": 0,
+    "records": [
+      {
+        "case_id": "Q1_ORDER_AVERAGE_AMOUNT:0",
+        "status": "EXPLICIT_DIVISION_CONTRACT",
+        "note": "结构化公式正确；数值与持久化路径由独立合成证据覆盖，地区绑定仍有条件。",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q1_ORDER_AVERAGE_AMOUNT:0",
+          "family_id": "Q1_ORDER_AVERAGE_AMOUNT",
+          "kind": "original",
+          "question": "2025年上海市，平均每单销售金额是多少?",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": {
+            "schema_version": "1.0",
+            "planner": "STRUCTURED_MODEL",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "question": "2025年上海市平均每单销售金额是多少?",
+                "name": "统计含税销售总额、订单笔数计算输入",
+                "depends_on": [],
+                "expected_output": "供后续计算使用的原始指标与分组数据",
+                "parameters": [
+                  "销售订单（实体）",
+                  "含税销售总额（指标）",
+                  "订单笔数（指标）",
+                  "上海（省份名称）",
+                  "2025年（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "统计查询",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单"
+                  ],
+                  "指标": [
+                    {
+                      "name": "含税销售总额"
+                    },
+                    {
+                      "name": "订单笔数"
+                    }
+                  ],
+                  "维度": [],
+                  "展示字段": [],
+                  "过滤条件": [
+                    {
+                      "entity": "医院",
+                      "field": "省份名称",
+                      "op": "=",
+                      "value": [
+                        "上海"
+                      ]
+                    }
+                  ],
+                  "排序": [],
+                  "时间粒度": {
+                    "unit": "年",
+                    "time_range": "2025年",
+                    "anchor": null
+                  },
+                  "限制": null,
+                  "输出要求": "返回后续结果操作需要的原始指标和分组字段，不在文字中声称计算完成",
+                  "是否去重": null,
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "METRIC_QUERY"
+              },
+              {
+                "task_id": "task-2",
+                "question": "根据上述任务的查询结果完成2025年上海市平均每单销售金额数值，不再查询数据库",
+                "name": "计算查询结果",
+                "depends_on": [
+                  "task-1"
+                ],
+                "expected_output": "2025年上海市平均每单销售金额数值",
+                "parameters": [],
+                "extraction": {
+                  "意图": "指标计算",
+                  "是否查询数据库": "否",
+                  "结果操作": {
+                    "source_task_id": "task-1",
+                    "operation": {
+                      "type": "derive",
+                      "operator": "divide",
+                      "left_field": "含税销售总额",
+                      "right_field": "订单笔数",
+                      "result_field": "平均每单销售金额"
+                    }
+                  }
+                },
+                "primary_intent": "COMPARISON_ANALYSIS"
+              }
+            ],
+            "final_deliverable": null,
+            "split_reason_code": "TASK_DECOMPOSITION",
+            "shared_conditions": [],
+            "analyze_summary": null,
+            "question_groups": null,
+            "compound_metrics": []
+          },
+          "single": null,
+          "elapsed_seconds": 10.328,
+          "model_calls": [
+            {
+              "case_id": "Q1_ORDER_AVERAGE_AMOUNT:0",
+              "status": 200,
+              "request_sha256": "21b41ec8f26920c3d03be9c0dac6eca6d3687aed57b6cf85ab3d5c4dc43fb1b2",
+              "response_sha256": "7281f2b4d3739f95298e648265d8b0a507f9d8ef386d227b6ccc3fa882b3bdb2",
+              "elapsed_seconds": 1.828
+            },
+            {
+              "case_id": "Q1_ORDER_AVERAGE_AMOUNT:0",
+              "status": 200,
+              "request_sha256": "223c6fd32dd183a4ea5e34fd701a1c90451c62a0d930f551f0b3c6663d1a2fe0",
+              "response_sha256": "634608be8caaff51e57fc49f66de1f85272b808b21ef5bfc74b55c3846f37722",
+              "elapsed_seconds": 8.5
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:0",
+        "status": "INDEPENDENT_QUESTION_SCOPE_PRESERVED",
+        "note": "月度订单与上海覆盖率局部条件不串用。",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:0",
+          "family_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE",
+          "kind": "original",
+          "question": "统计2025年月度订单笔数，查询上海地区各经销商区域医院覆盖率",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": true,
+            "entries": [
+              {
+                "question": "统计2025年月度订单笔数",
+                "label": "2025年月度订单笔数",
+                "business_domain": "医药销售域",
+                "expected_output": "2025年各月的订单笔数统计结果",
+                "depends_on": []
+              },
+              {
+                "question": "查询上海地区各经销商区域医院覆盖率",
+                "label": "上海各经销商区域医院覆盖率",
+                "business_domain": "医药销售域",
+                "expected_output": "上海地区各经销商的区域医院覆盖率数据",
+                "depends_on": []
+              }
+            ],
+            "business_domain": null,
+            "analyze_summary": "问题1交付2025年月度订单笔数，问题2交付上海地区各经销商区域医院覆盖率，两者为并行独立业务目标，无依赖关系。",
+            "split_reason_code": "DISTINCT_DELIVERABLES",
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": {
+            "schema_version": "1.0",
+            "planner": "STRUCTURED_MODEL",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "question": "统计2025年月度订单笔数",
+                "name": "统计2025年各月订单笔数",
+                "depends_on": [],
+                "expected_output": "2025年每个月的订单笔数列表",
+                "parameters": [
+                  "销售订单（实体）",
+                  "订单笔数（指标）",
+                  "业务日期（维度）",
+                  "2025年（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "统计查询",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单"
+                  ],
+                  "指标": [
+                    {
+                      "name": "订单笔数"
+                    }
+                  ],
+                  "维度": [
+                    "业务日期"
+                  ],
+                  "展示字段": [],
+                  "过滤条件": [],
+                  "排序": [
+                    {
+                      "field": "业务日期",
+                      "order": "asc"
+                    }
+                  ],
+                  "时间粒度": {
+                    "unit": "月",
+                    "time_range": "2025年",
+                    "anchor": null
+                  },
+                  "限制": null,
+                  "输出要求": "默认输出表格",
+                  "是否去重": null,
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "METRIC_QUERY"
+              },
+              {
+                "task_id": "task-2",
+                "question": "查询上海地区各经销商区域医院覆盖率",
+                "name": "统计上海地区各经销商区域医院覆盖率",
+                "depends_on": [],
+                "expected_output": "上海地区各经销商的区域医院覆盖率列表",
+                "parameters": [
+                  "经销商（实体）",
+                  "医院（实体）",
+                  "销售订单（实体）",
+                  "区域医院覆盖率（指标）",
+                  "经销商（维度）",
+                  "上海（省份名称）"
+                ],
+                "extraction": {
+                  "意图": "统计查询",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "经销商",
+                    "医院",
+                    "销售订单"
+                  ],
+                  "指标": [
+                    {
+                      "name": "区域医院覆盖率"
+                    }
+                  ],
+                  "维度": [
+                    "经销商"
+                  ],
+                  "展示字段": [],
+                  "过滤条件": [
+                    {
+                      "entity": "经销商",
+                      "field": "省份名称",
+                      "op": "=",
+                      "value": [
+                        "上海"
+                      ]
+                    }
+                  ],
+                  "排序": [],
+                  "时间粒度": {
+                    "unit": null,
+                    "time_range": null,
+                    "anchor": null
+                  },
+                  "限制": null,
+                  "输出要求": "默认输出表格",
+                  "是否去重": null,
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "METRIC_QUERY"
+              }
+            ],
+            "final_deliverable": null,
+            "split_reason_code": "DISTINCT_DELIVERABLES",
+            "shared_conditions": [],
+            "analyze_summary": "问题1交付2025年月度订单笔数，问题2交付上海地区各经销商区域医院覆盖率，两者为并行独立业务目标，无依赖关系。",
+            "question_groups": [
+              {
+                "question": "统计2025年月度订单笔数",
+                "label": "2025年月度订单笔数",
+                "task_offset": 0,
+                "task_count": 1
+              },
+              {
+                "question": "查询上海地区各经销商区域医院覆盖率",
+                "label": "上海各经销商区域医院覆盖率",
+                "task_offset": 1,
+                "task_count": 1
+              }
+            ],
+            "compound_metrics": []
+          },
+          "single": null,
+          "elapsed_seconds": 11.578,
+          "model_calls": [
+            {
+              "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:0",
+              "status": 200,
+              "request_sha256": "1addfdfc5583cf1ab0d9411a45be1424f1da0d635cfc13dc9a7dfc19b28fc31c",
+              "response_sha256": "729f215bf986bdeebc1cef55e105f25c4a52cadd1d7e06f167e7bc984e2ed931",
+              "elapsed_seconds": 4.656
+            },
+            {
+              "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:0",
+              "status": 200,
+              "request_sha256": "2a713dd2e013b21912f6f9128de7c2c4745b5627742770d5c4b8fed216e9fa09",
+              "response_sha256": "02c00947776a784d2dac8d53501952842d3794ec039fff58b00b0b300d08e730",
+              "elapsed_seconds": 6.063
+            },
+            {
+              "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:0",
+              "status": 200,
+              "request_sha256": "54912f97f44a0b41dc3a2cf9fc974e9254fe56424f324076a059f80499e67607",
+              "response_sha256": "82dfb475540df83a211b91c9cd3e2e7fa3c9164761a97af6e30c0786967bdb0c",
+              "elapsed_seconds": 6.703
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:6",
+        "status": "DEPENDENCY_PRESENT_HISTORICAL_COVERAGE_CONDITIONAL",
+        "note": "依赖存在，但覆盖率继承2025年需实际ASL拒绝/澄清；地区含义仍未核准，未判完整语义通过。",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:6",
+          "family_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE",
+          "kind": "contrast",
+          "question": "先找2025年上海订单笔数最高的经销商，再查这些经销商的区域医院覆盖率。",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": {
+            "schema_version": "1.0",
+            "planner": "STRUCTURED_MODEL",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "question": "查询2025年上海订单笔数最高的经销商",
+                "name": "查询2025年上海订单笔数最高的经销商",
+                "depends_on": [],
+                "expected_output": "2025年上海地区订单笔数最高的经销商名称及订单笔数",
+                "parameters": [
+                  "销售订单（实体）",
+                  "经销商（实体）",
+                  "订单笔数（指标）",
+                  "经销商（维度）",
+                  "上海（省份名称）",
+                  "2025年（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "排名分析",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单",
+                    "经销商"
+                  ],
+                  "指标": [
+                    {
+                      "name": "订单笔数"
+                    }
+                  ],
+                  "维度": [
+                    "经销商"
+                  ],
+                  "展示字段": [],
+                  "过滤条件": [
+                    {
+                      "entity": "医院",
+                      "field": "省份名称",
+                      "op": "=",
+                      "value": [
+                        "上海"
+                      ]
+                    }
+                  ],
+                  "排序": [
+                    {
+                      "field": "订单笔数",
+                      "order": "desc"
+                    }
+                  ],
+                  "时间粒度": {
+                    "unit": "年",
+                    "time_range": "2025年",
+                    "anchor": null
+                  },
+                  "限制": 1,
+                  "输出要求": "默认输出表格",
+                  "是否去重": null,
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "METRIC_QUERY"
+              },
+              {
+                "task_id": "task-2",
+                "question": "根据上述任务的查询结果，查询这些经销商的区域医院覆盖率",
+                "name": "查询指定经销商的区域医院覆盖率",
+                "depends_on": [
+                  "task-1"
+                ],
+                "expected_output": "2025年上海订单笔数最高经销商的区域医院覆盖率",
+                "parameters": [
+                  "销售订单（实体）",
+                  "经销商（实体）",
+                  "医院（实体）",
+                  "区域医院覆盖率（指标）",
+                  "经销商（维度）",
+                  "上海（省份名称）",
+                  "2025年（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "统计查询",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单",
+                    "经销商",
+                    "医院"
+                  ],
+                  "指标": [
+                    {
+                      "name": "区域医院覆盖率"
+                    }
+                  ],
+                  "维度": [
+                    "经销商"
+                  ],
+                  "展示字段": [],
+                  "过滤条件": [
+                    {
+                      "entity": "医院",
+                      "field": "省份名称",
+                      "op": "=",
+                      "value": [
+                        "上海"
+                      ]
+                    }
+                  ],
+                  "排序": [],
+                  "时间粒度": {
+                    "unit": "年",
+                    "time_range": "2025年",
+                    "anchor": null
+                  },
+                  "限制": null,
+                  "输出要求": "默认输出表格",
+                  "是否去重": null,
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "METRIC_QUERY"
+              }
+            ],
+            "final_deliverable": null,
+            "split_reason_code": "TASK_DECOMPOSITION",
+            "shared_conditions": [],
+            "analyze_summary": null,
+            "question_groups": null,
+            "compound_metrics": []
+          },
+          "single": null,
+          "elapsed_seconds": 12.781,
+          "model_calls": [
+            {
+              "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:6",
+              "status": 200,
+              "request_sha256": "2afbc5c8a0d4bdb2da6f8aafe1d0beeab2147e15cd3b373540de87749a499181",
+              "response_sha256": "da36e674c72f7fdeb29af972f883dc9167e8c95197a5611c35a216075f18b07f",
+              "elapsed_seconds": 1.75
+            },
+            {
+              "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:6",
+              "status": 200,
+              "request_sha256": "3443fedc077cdeaf9556240bbcda5ee1eeb808ea0c6e01336b29405d287eb9af",
+              "response_sha256": "5c272c0230ac1995e73af645b2e06d6a55ef563b3f9c4e80c4f70ed2060e0e56",
+              "elapsed_seconds": 11.016
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+        "status": "USER_CONFIRMED_APPLICABILITY_ROLE_PRESERVED",
+        "note": "默认商品适用科室逻辑保留，实际ASL绑定未判通过。",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+          "family_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK",
+          "kind": "original",
+          "question": "上海地区哪个医院消化内科2025年9月份的订单数量最多?",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": null,
+          "single": {
+            "intent": "METRIC_QUERY",
+            "question": "上海地区消化内科2025年9月份订单数量最多的医院是哪个",
+            "extraction": {
+              "intent": "METRIC_QUERY",
+              "parameters": [
+                "销售订单（实体）",
+                "医院（实体）",
+                "商品科室关联（实体）",
+                "订单笔数（指标）",
+                "医院（维度）",
+                "上海（省份名称）",
+                "消化内科（科室名称）",
+                "2025年9月份（时间范围）"
+              ],
+              "structured": {
+                "意图": "排名分析",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "医院",
+                  "商品科室关联"
+                ],
+                "指标": [
+                  {
+                    "name": "订单笔数"
+                  }
+                ],
+                "维度": [
+                  "医院"
+                ],
+                "展示字段": [],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "省份名称",
+                    "op": "=",
+                    "value": [
+                      "上海"
+                    ]
+                  },
+                  {
+                    "entity": "科室",
+                    "field": "科室名称",
+                    "op": "=",
+                    "value": [
+                      "消化内科"
+                    ]
+                  }
+                ],
+                "排序": [
+                  {
+                    "field": "订单笔数",
+                    "order": "desc"
+                  }
+                ],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "2025年9月份",
+                  "anchor": null
+                },
+                "限制": 1,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              }
+            }
+          },
+          "elapsed_seconds": 9.844,
+          "model_calls": [
+            {
+              "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+              "status": 200,
+              "request_sha256": "a3e2da8ebd5b92a1ffc9ce7c35f501f7991d660549b2c5d883df2e83bc689106",
+              "response_sha256": "fa1444f996919e77c34e56f42e18661ad6a9d78625097435786a87d05fe8aa68",
+              "elapsed_seconds": 1.875
+            },
+            {
+              "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+              "status": 200,
+              "request_sha256": "3c890a88dc721cb9fda1f8ece0e40fe336964ff71a50c716e57aea9be7f138ef",
+              "response_sha256": "b8cbb3829527ac5bf30a4564481259063e860763e55763ee5482a8f669f70c6b",
+              "elapsed_seconds": 7.953
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH:0",
+        "status": "UNSUPPORTED_OBJECT_AND_METHOD_PENDING",
+        "note": "未执行；候选中的对象映射是假设，需用户明确确认，不是目录同义词证据。round29评测表中断导致OUT_OF_SCOPE未计通过。",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH:0",
+          "family_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH",
+          "kind": "original",
+          "question": "最近销售订单增长最快的供应商有哪几家",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": null,
+          "single": {
+            "intent": "METRIC_QUERY",
+            "question": "最近销售订单增长最快的供应商有哪几家",
+            "extraction": {
+              "intent": "METRIC_QUERY",
+              "parameters": [
+                "销售订单（实体）",
+                "订单笔数（指标）",
+                "最近（时间范围）"
+              ],
+              "structured": {
+                "意图": "排名分析",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单"
+                ],
+                "指标": [
+                  {
+                    "name": "订单笔数"
+                  }
+                ],
+                "维度": [],
+                "展示字段": [
+                  {
+                    "entity": null,
+                    "field": "供应商"
+                  }
+                ],
+                "过滤条件": [],
+                "排序": [
+                  {
+                    "field": "订单笔数",
+                    "order": "desc"
+                  }
+                ],
+                "时间粒度": {
+                  "unit": null,
+                  "time_range": "最近",
+                  "anchor": null
+                },
+                "限制": null,
+                "输出要求": "按销售订单增长最快降序排名",
+                "是否去重": null,
+                "是否查询数据库": "是",
+                "计算待确认": {
+                  "question": "问题中“供应商”未在业务语义规范中登记为实体或维度，且“销售订单增长最快”未明确增长计算口径（如环比、同比、绝对增量或增长率）及统计周期，请确认以下信息以便准确取数",
+                  "candidates": [
+                    "供应商指生产厂家，按订单笔数环比增长率降序排名",
+                    "供应商指经销商，按订单笔数环比增长率降序排名",
+                    "供应商指生产厂家，按订单笔数同比增量降序排名",
+                    "供应商指经销商，按订单笔数同比增量降序排名"
+                  ],
+                  "affected_slots": [
+                    "analysis_method",
+                    "analysis_window"
+                  ]
+                }
+              }
+            }
+          },
+          "elapsed_seconds": 17.094,
+          "model_calls": [
+            {
+              "case_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH:0",
+              "status": 200,
+              "request_sha256": "5b1e6539591ec8d57cfe89fdd2a44a26c01c0c1b33693225540655b38561aab1",
+              "response_sha256": "0db4f445f9a4cbf6f3ca5be5ab702334bfa99242097d978b8b1e1c571c644ac3",
+              "elapsed_seconds": 4.641
+            },
+            {
+              "case_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH:0",
+              "status": 200,
+              "request_sha256": "3fb538b60bf4fbdacdff62162d9445969fd6ff95ae3890a016cb3a033adf7eda",
+              "response_sha256": "5927ee6c5a99cde56959242a6a3fc61763dcf84c15a3e5fe4986aec8c9450a3c",
+              "elapsed_seconds": 3.422
+            },
+            {
+              "case_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH:0",
+              "status": 200,
+              "request_sha256": "716700a7dadaa6d355991d396dc6c0d3873e8a93ee07aff19ed76421375b2272",
+              "response_sha256": "22bc80feffe6d979d4e1529ad7887d733a6c226ab2bcb38d3f32d5f9dae41c1a",
+              "elapsed_seconds": 9.015
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+        "status": "WINNER_DEPENDENT_NEW_QUERY_CONTRACT",
+        "note": "同医院同月、依赖新查询；round29:4的本地路由错误保留，修复守卫后round30生成正确路由。",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+          "family_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS",
+          "kind": "original",
+          "question": "25年9月针对上海交通大学医学院附属新华医院销售订单金额最多的销售员是谁?销售了哪些产品?",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": {
+            "schema_version": "1.0",
+            "planner": "STRUCTURED_MODEL",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "question": "统计2025年9月上海交通大学医学院附属新华医院各销售员的含税销售总额并按金额降序取第1名",
+                "name": "统计2025年9月上海交通大学医学院附属新华医院各销售员含税销售总额并取金额最高者",
+                "depends_on": [],
+                "expected_output": "2025年9月在上海交通大学医学院附属新华医院含税销售总额最高的销售员姓名及其含税销售总额",
+                "parameters": [
+                  "销售订单（实体）",
+                  "业务员（实体）",
+                  "含税销售总额（指标）",
+                  "业务员（维度）",
+                  "上海交通大学医学院附属新华医院（医院名称）",
+                  "2025年9月（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "排名分析",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单",
+                    "业务员"
+                  ],
+                  "指标": [
+                    {
+                      "name": "含税销售总额"
+                    }
+                  ],
+                  "维度": [
+                    "业务员"
+                  ],
+                  "展示字段": [],
+                  "过滤条件": [
+                    {
+                      "entity": "医院",
+                      "field": "医院名称",
+                      "op": "=",
+                      "value": [
+                        "上海交通大学医学院附属新华医院"
+                      ]
+                    }
+                  ],
+                  "排序": [
+                    {
+                      "field": "含税销售总额",
+                      "order": "desc"
+                    }
+                  ],
+                  "时间粒度": {
+                    "unit": "月",
+                    "time_range": "2025年9月",
+                    "anchor": null
+                  },
+                  "限制": 1,
+                  "输出要求": "默认输出表格",
+                  "是否去重": null,
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "METRIC_QUERY"
+              },
+              {
+                "task_id": "task-2",
+                "question": "根据上述任务的查询结果筛选出含税销售总额最高的销售员，查询该销售员在2025年9月于上海交通大学医学院附属新华医院销售的产品明细",
+                "name": "查询2025年9月上海交通大学医学院附属新华医院含税销售总额最高销售员的销售产品明细",
+                "depends_on": [
+                  "task-1"
+                ],
+                "expected_output": "该销售员在2025年9月于上海交通大学医学院附属新华医院销售的所有产品名称列表",
+                "parameters": [
+                  "销售订单（实体）",
+                  "商品（实体）",
+                  "业务员（实体）",
+                  "上海交通大学医学院附属新华医院（医院名称）",
+                  "2025年9月（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "明细查询",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单",
+                    "商品",
+                    "业务员"
+                  ],
+                  "指标": [],
+                  "维度": [],
+                  "展示字段": [
+                    {
+                      "entity": "商品",
+                      "field": "商品名称"
+                    }
+                  ],
+                  "过滤条件": [
+                    {
+                      "entity": "医院",
+                      "field": "医院名称",
+                      "op": "=",
+                      "value": [
+                        "上海交通大学医学院附属新华医院"
+                      ]
+                    }
+                  ],
+                  "排序": [],
+                  "时间粒度": {
+                    "unit": "月",
+                    "time_range": "2025年9月",
+                    "anchor": null
+                  },
+                  "限制": null,
+                  "输出要求": "默认输出表格",
+                  "是否去重": "是",
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "DETAIL_QUERY"
+              }
+            ],
+            "final_deliverable": null,
+            "split_reason_code": "TASK_DECOMPOSITION",
+            "shared_conditions": [],
+            "analyze_summary": null,
+            "question_groups": null,
+            "compound_metrics": []
+          },
+          "single": null,
+          "elapsed_seconds": 22.203,
+          "model_calls": [
+            {
+              "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+              "status": 200,
+              "request_sha256": "e97da8a6daf508c9bf75d758f38b787ecd4b06e71549c28e7ec33d4cea31cd19",
+              "response_sha256": "74178c3c55a19f50d56949b2690b91ac391f5a664db4b232d76804fd77fc71a2",
+              "elapsed_seconds": 1.813
+            },
+            {
+              "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+              "status": 200,
+              "request_sha256": "c99ff08d72f2d5fa98777f14d2917512e0d0a682172e271569b3fd12d3f8f4c5",
+              "response_sha256": "923c734e90e762be706f2713de32bf6c666dbe3ff72f33f3943aa8a30d7b1112",
+              "elapsed_seconds": 7.765
+            },
+            {
+              "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+              "status": 200,
+              "request_sha256": "edbc2045696fabbf169ea88ea8ca94063c5cd0c38309a4bde31a747fa38a09b3",
+              "response_sha256": "61a4f06a316c16c780a981178f2eaffe6d0721eab94c89e0817dfb1d9dc669ad",
+              "elapsed_seconds": 12.625
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:4",
+        "status": "WINNER_DEPENDENT_NEW_QUERY_CONTRACT",
+        "note": "同医院同月、依赖新查询；round29:4的本地路由错误保留，修复守卫后round30生成正确路由。",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:4",
+          "family_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS",
+          "kind": "paraphrase",
+          "question": "上海交通大学医学院附属新华医院2025年9月销售订单金额最多的销售员及其当月在该院销售的产品分别是什么？",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": {
+            "schema_version": "1.0",
+            "planner": "STRUCTURED_MODEL",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "question": "查询上海交通大学医学院附属新华医院2025年9月各销售员的含税销售总额并按金额降序取第1名",
+                "name": "统计2025年9月新华医院各销售员含税销售总额并取金额最高者",
+                "depends_on": [],
+                "expected_output": "2025年9月在上海交通大学医学院附属新华医院含税销售总额最高的销售员姓名及其含税销售总额",
+                "parameters": [
+                  "销售订单（实体）",
+                  "业务员（实体）",
+                  "含税销售总额（指标）",
+                  "业务员（维度）",
+                  "上海交通大学医学院附属新华医院（医院名称）",
+                  "2025年9月（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "排名分析",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单",
+                    "业务员"
+                  ],
+                  "指标": [
+                    {
+                      "name": "含税销售总额"
+                    }
+                  ],
+                  "维度": [
+                    "业务员"
+                  ],
+                  "展示字段": [],
+                  "过滤条件": [
+                    {
+                      "entity": "医院",
+                      "field": "医院名称",
+                      "op": "=",
+                      "value": [
+                        "上海交通大学医学院附属新华医院"
+                      ]
+                    }
+                  ],
+                  "排序": [
+                    {
+                      "field": "含税销售总额",
+                      "order": "desc"
+                    }
+                  ],
+                  "时间粒度": {
+                    "unit": "月",
+                    "time_range": "2025年9月",
+                    "anchor": null
+                  },
+                  "限制": 1,
+                  "输出要求": "默认输出表格",
+                  "是否去重": null,
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "METRIC_QUERY"
+              },
+              {
+                "task_id": "task-2",
+                "question": "根据上述任务的查询结果筛选出含税销售总额最高的销售员，查询该销售员2025年9月在上海交通大学医学院附属新华医院的销售产品明细",
+                "name": "查询2025年9月新华医院销售额最高销售员的销售产品明细",
+                "depends_on": [
+                  "task-1"
+                ],
+                "expected_output": "该销售员2025年9月在上海交通大学医学院附属新华医院销售的所有产品名称列表",
+                "parameters": [
+                  "销售订单（实体）",
+                  "商品（实体）",
+                  "业务员（实体）",
+                  "上海交通大学医学院附属新华医院（医院名称）",
+                  "2025年9月（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "明细查询",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单",
+                    "商品",
+                    "业务员"
+                  ],
+                  "指标": [],
+                  "维度": [],
+                  "展示字段": [
+                    {
+                      "entity": "商品",
+                      "field": "商品名称"
+                    }
+                  ],
+                  "过滤条件": [
+                    {
+                      "entity": "医院",
+                      "field": "医院名称",
+                      "op": "=",
+                      "value": [
+                        "上海交通大学医学院附属新华医院"
+                      ]
+                    }
+                  ],
+                  "排序": [],
+                  "时间粒度": {
+                    "unit": "月",
+                    "time_range": "2025年9月",
+                    "anchor": null
+                  },
+                  "限制": null,
+                  "输出要求": "默认输出表格",
+                  "是否去重": "是",
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "DETAIL_QUERY"
+              }
+            ],
+            "final_deliverable": null,
+            "split_reason_code": "TASK_DECOMPOSITION",
+            "shared_conditions": [],
+            "analyze_summary": null,
+            "question_groups": null,
+            "compound_metrics": []
+          },
+          "single": null,
+          "elapsed_seconds": 27.953,
+          "model_calls": [
+            {
+              "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:4",
+              "status": 200,
+              "request_sha256": "df45f2c2481916de81ee1ea988a01399d60b8ab2d7d342e7da6114c92d6a32a8",
+              "response_sha256": "5397bfee16657bbd629032251eb23fe9a0fbced1ed88d3befe1d8167dff3b3ea",
+              "elapsed_seconds": 2.125
+            },
+            {
+              "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:4",
+              "status": 200,
+              "request_sha256": "96a7d5de8d62c01eccf452dc88d41f535ff12a81e2bb2641de0e608ff6017ead",
+              "response_sha256": "8cfe5be2c7985ba15b46c98f9030b01bb75850cbe714bffb6381159223ddb6c4",
+              "elapsed_seconds": 13.032
+            },
+            {
+              "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:4",
+              "status": 200,
+              "request_sha256": "109b9742bada6e3dc8484a419e74fbfe159168e456b843e8184ed79b85bda956",
+              "response_sha256": "0f608f552e3f9aa405450727d57d0c18a4211cfd8376451a9f37d9cb0f858054",
+              "elapsed_seconds": 12.781
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH:0",
+        "status": "EXPLICIT_GROWTH_METHOD_PENDING",
+        "note": "未明确算法先澄清，不查询原始数后冒充增长计算。",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH:0",
+          "family_id": "Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH",
+          "kind": "original",
+          "question": "统计各经销商近12月的平均月度销量增长率",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": null,
+          "single": {
+            "intent": "METRIC_QUERY",
+            "question": "统计各经销商近12月的平均月度销量增长率",
+            "extraction": {
+              "intent": "METRIC_QUERY",
+              "parameters": [
+                "销售订单（实体）",
+                "经销商（实体）",
+                "销售总数量（指标）",
+                "经销商（维度）",
+                "近12个月（时间范围）"
+              ],
+              "structured": {
+                "意图": "统计查询",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "经销商"
+                ],
+                "指标": [
+                  {
+                    "name": "销售总数量"
+                  }
+                ],
+                "维度": [
+                  "经销商"
+                ],
+                "展示字段": [],
+                "过滤条件": [],
+                "排序": [],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "近12个月",
+                  "anchor": null
+                },
+                "限制": null,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是",
+                "计算待确认": {
+                  "question": "平均月度增长率的计算方法未明确，请选择：算术平均（逐月环比增长率的算术平均值）或复合平均（期末/基期的月数次方根减1）。两种方法结果不同。",
+                  "candidates": [
+                    "算术平均（逐月环比增长率的算术平均值）",
+                    "复合平均（期末/基期的月数次方根减1）"
+                  ],
+                  "affected_slots": [
+                    "analysis_method"
+                  ]
+                }
+              }
+            }
+          },
+          "elapsed_seconds": 10.781,
+          "model_calls": [
+            {
+              "case_id": "Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH:0",
+              "status": 200,
+              "request_sha256": "f1c95b5a180c35266fd90a5ea1eab46278918f9f07b233ade41e60c1b55d8794",
+              "response_sha256": "2c1e7e28cb27a6a692f12d5a868a16b9530046ca8c6bdc03a43862f77d360c18",
+              "elapsed_seconds": 1.906
+            },
+            {
+              "case_id": "Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH:0",
+              "status": 200,
+              "request_sha256": "8a385e109126dd3c6a08e4bf3c1692f4da8100b50316516f0976b6c8ff72f41c",
+              "response_sha256": "fb4b012a36e555880b68cf55e77635ef7cc2956ca4e747e08a1f1b90fa0ec016",
+              "elapsed_seconds": 8.86
+            }
+          ]
+        }
+      }
+    ],
+    "initial_round29_retained": [
+      {
+        "case_id": "Q1_ORDER_AVERAGE_AMOUNT:0",
+        "family_id": "Q1_ORDER_AVERAGE_AMOUNT",
+        "kind": "original",
+        "question": "2025年上海市，平均每单销售金额是多少?",
+        "evaluation_status": "UNREVIEWED",
+        "judgment": {
+          "is_compound": false,
+          "entries": [],
+          "business_domain": "医药销售域",
+          "analyze_summary": null,
+          "split_reason_code": null,
+          "shared_conditions": [],
+          "final_deliverable": null,
+          "judge_source": "STRUCTURED_MODEL"
+        },
+        "plan": {
+          "schema_version": "1.0",
+          "planner": "STRUCTURED_MODEL",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "question": "2025年上海市平均每单销售金额是多少?",
+              "name": "统计含税销售总额、订单笔数计算输入",
+              "depends_on": [],
+              "expected_output": "供后续计算使用的原始指标与分组数据",
+              "parameters": [
+                "销售订单（实体）",
+                "含税销售总额（指标）",
+                "订单笔数（指标）",
+                "上海（省份名称）",
+                "2025年（时间范围）"
+              ],
+              "extraction": {
+                "意图": "统计查询",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单"
+                ],
+                "指标": [
+                  {
+                    "name": "含税销售总额"
+                  },
+                  {
+                    "name": "订单笔数"
+                  }
+                ],
+                "维度": [],
+                "展示字段": [],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "省份名称",
+                    "op": "=",
+                    "value": [
+                      "上海"
+                    ]
+                  }
+                ],
+                "排序": [],
+                "时间粒度": {
+                  "unit": "年",
+                  "time_range": "2025年",
+                  "anchor": null
+                },
+                "限制": null,
+                "输出要求": "返回后续结果操作需要的原始指标和分组字段，不在文字中声称计算完成",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              },
+              "primary_intent": "METRIC_QUERY"
+            },
+            {
+              "task_id": "task-2",
+              "question": "根据上述任务的查询结果完成2025年上海市平均每单销售金额数值，不再查询数据库",
+              "name": "计算查询结果",
+              "depends_on": [
+                "task-1"
+              ],
+              "expected_output": "2025年上海市平均每单销售金额数值",
+              "parameters": [],
+              "extraction": {
+                "意图": "指标计算",
+                "是否查询数据库": "否",
+                "结果操作": {
+                  "source_task_id": "task-1",
+                  "operation": {
+                    "type": "derive",
+                    "operator": "divide",
+                    "left_field": "含税销售总额",
+                    "right_field": "订单笔数",
+                    "result_field": "平均每单销售金额"
+                  }
+                }
+              },
+              "primary_intent": "COMPARISON_ANALYSIS"
+            }
+          ],
+          "final_deliverable": null,
+          "split_reason_code": "TASK_DECOMPOSITION",
+          "shared_conditions": [],
+          "analyze_summary": null,
+          "question_groups": null,
+          "compound_metrics": []
+        },
+        "single": null,
+        "elapsed_seconds": 10.328,
+        "model_calls": [
+          {
+            "case_id": "Q1_ORDER_AVERAGE_AMOUNT:0",
+            "status": 200,
+            "request_sha256": "21b41ec8f26920c3d03be9c0dac6eca6d3687aed57b6cf85ab3d5c4dc43fb1b2",
+            "response_sha256": "7281f2b4d3739f95298e648265d8b0a507f9d8ef386d227b6ccc3fa882b3bdb2",
+            "elapsed_seconds": 1.828
+          },
+          {
+            "case_id": "Q1_ORDER_AVERAGE_AMOUNT:0",
+            "status": 200,
+            "request_sha256": "223c6fd32dd183a4ea5e34fd701a1c90451c62a0d930f551f0b3c6663d1a2fe0",
+            "response_sha256": "634608be8caaff51e57fc49f66de1f85272b808b21ef5bfc74b55c3846f37722",
+            "elapsed_seconds": 8.5
+          }
+        ]
+      },
+      {
+        "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:0",
+        "family_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE",
+        "kind": "original",
+        "question": "统计2025年月度订单笔数，查询上海地区各经销商区域医院覆盖率",
+        "evaluation_status": "UNREVIEWED",
+        "judgment": {
+          "is_compound": true,
+          "entries": [
+            {
+              "question": "统计2025年月度订单笔数",
+              "label": "2025年月度订单笔数",
+              "business_domain": "医药销售域",
+              "expected_output": "2025年各月的订单笔数统计结果",
+              "depends_on": []
+            },
+            {
+              "question": "查询上海地区各经销商区域医院覆盖率",
+              "label": "上海各经销商区域医院覆盖率",
+              "business_domain": "医药销售域",
+              "expected_output": "上海地区各经销商的区域医院覆盖率数据",
+              "depends_on": []
+            }
+          ],
+          "business_domain": null,
+          "analyze_summary": "问题1交付2025年月度订单笔数，问题2交付上海地区各经销商区域医院覆盖率，两者为并行独立业务目标，无依赖关系。",
+          "split_reason_code": "DISTINCT_DELIVERABLES",
+          "shared_conditions": [],
+          "final_deliverable": null,
+          "judge_source": "STRUCTURED_MODEL"
+        },
+        "plan": {
+          "schema_version": "1.0",
+          "planner": "STRUCTURED_MODEL",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "question": "统计2025年月度订单笔数",
+              "name": "统计2025年各月订单笔数",
+              "depends_on": [],
+              "expected_output": "2025年每个月的订单笔数列表",
+              "parameters": [
+                "销售订单（实体）",
+                "订单笔数（指标）",
+                "业务日期（维度）",
+                "2025年（时间范围）"
+              ],
+              "extraction": {
+                "意图": "统计查询",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单"
+                ],
+                "指标": [
+                  {
+                    "name": "订单笔数"
+                  }
+                ],
+                "维度": [
+                  "业务日期"
+                ],
+                "展示字段": [],
+                "过滤条件": [],
+                "排序": [
+                  {
+                    "field": "业务日期",
+                    "order": "asc"
+                  }
+                ],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "2025年",
+                  "anchor": null
+                },
+                "限制": null,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              },
+              "primary_intent": "METRIC_QUERY"
+            },
+            {
+              "task_id": "task-2",
+              "question": "查询上海地区各经销商区域医院覆盖率",
+              "name": "统计上海地区各经销商区域医院覆盖率",
+              "depends_on": [],
+              "expected_output": "上海地区各经销商的区域医院覆盖率列表",
+              "parameters": [
+                "经销商（实体）",
+                "医院（实体）",
+                "销售订单（实体）",
+                "区域医院覆盖率（指标）",
+                "经销商（维度）",
+                "上海（省份名称）"
+              ],
+              "extraction": {
+                "意图": "统计查询",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "经销商",
+                  "医院",
+                  "销售订单"
+                ],
+                "指标": [
+                  {
+                    "name": "区域医院覆盖率"
+                  }
+                ],
+                "维度": [
+                  "经销商"
+                ],
+                "展示字段": [],
+                "过滤条件": [
+                  {
+                    "entity": "经销商",
+                    "field": "省份名称",
+                    "op": "=",
+                    "value": [
+                      "上海"
+                    ]
+                  }
+                ],
+                "排序": [],
+                "时间粒度": {
+                  "unit": null,
+                  "time_range": null,
+                  "anchor": null
+                },
+                "限制": null,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              },
+              "primary_intent": "METRIC_QUERY"
+            }
+          ],
+          "final_deliverable": null,
+          "split_reason_code": "DISTINCT_DELIVERABLES",
+          "shared_conditions": [],
+          "analyze_summary": "问题1交付2025年月度订单笔数，问题2交付上海地区各经销商区域医院覆盖率，两者为并行独立业务目标，无依赖关系。",
+          "question_groups": [
+            {
+              "question": "统计2025年月度订单笔数",
+              "label": "2025年月度订单笔数",
+              "task_offset": 0,
+              "task_count": 1
+            },
+            {
+              "question": "查询上海地区各经销商区域医院覆盖率",
+              "label": "上海各经销商区域医院覆盖率",
+              "task_offset": 1,
+              "task_count": 1
+            }
+          ],
+          "compound_metrics": []
+        },
+        "single": null,
+        "elapsed_seconds": 11.578,
+        "model_calls": [
+          {
+            "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:0",
+            "status": 200,
+            "request_sha256": "1addfdfc5583cf1ab0d9411a45be1424f1da0d635cfc13dc9a7dfc19b28fc31c",
+            "response_sha256": "729f215bf986bdeebc1cef55e105f25c4a52cadd1d7e06f167e7bc984e2ed931",
+            "elapsed_seconds": 4.656
+          },
+          {
+            "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:0",
+            "status": 200,
+            "request_sha256": "2a713dd2e013b21912f6f9128de7c2c4745b5627742770d5c4b8fed216e9fa09",
+            "response_sha256": "02c00947776a784d2dac8d53501952842d3794ec039fff58b00b0b300d08e730",
+            "elapsed_seconds": 6.063
+          },
+          {
+            "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:0",
+            "status": 200,
+            "request_sha256": "54912f97f44a0b41dc3a2cf9fc974e9254fe56424f324076a059f80499e67607",
+            "response_sha256": "82dfb475540df83a211b91c9cd3e2e7fa3c9164761a97af6e30c0786967bdb0c",
+            "elapsed_seconds": 6.703
+          }
+        ]
+      },
+      {
+        "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:6",
+        "family_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE",
+        "kind": "contrast",
+        "question": "先找2025年上海订单笔数最高的经销商，再查这些经销商的区域医院覆盖率。",
+        "evaluation_status": "UNREVIEWED",
+        "judgment": {
+          "is_compound": false,
+          "entries": [],
+          "business_domain": "医药销售域",
+          "analyze_summary": null,
+          "split_reason_code": null,
+          "shared_conditions": [],
+          "final_deliverable": null,
+          "judge_source": "STRUCTURED_MODEL"
+        },
+        "plan": {
+          "schema_version": "1.0",
+          "planner": "STRUCTURED_MODEL",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "question": "查询2025年上海订单笔数最高的经销商",
+              "name": "查询2025年上海订单笔数最高的经销商",
+              "depends_on": [],
+              "expected_output": "2025年上海地区订单笔数最高的经销商名称及订单笔数",
+              "parameters": [
+                "销售订单（实体）",
+                "经销商（实体）",
+                "订单笔数（指标）",
+                "经销商（维度）",
+                "上海（省份名称）",
+                "2025年（时间范围）"
+              ],
+              "extraction": {
+                "意图": "排名分析",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "经销商"
+                ],
+                "指标": [
+                  {
+                    "name": "订单笔数"
+                  }
+                ],
+                "维度": [
+                  "经销商"
+                ],
+                "展示字段": [],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "省份名称",
+                    "op": "=",
+                    "value": [
+                      "上海"
+                    ]
+                  }
+                ],
+                "排序": [
+                  {
+                    "field": "订单笔数",
+                    "order": "desc"
+                  }
+                ],
+                "时间粒度": {
+                  "unit": "年",
+                  "time_range": "2025年",
+                  "anchor": null
+                },
+                "限制": 1,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              },
+              "primary_intent": "METRIC_QUERY"
+            },
+            {
+              "task_id": "task-2",
+              "question": "根据上述任务的查询结果，查询这些经销商的区域医院覆盖率",
+              "name": "查询指定经销商的区域医院覆盖率",
+              "depends_on": [
+                "task-1"
+              ],
+              "expected_output": "2025年上海订单笔数最高经销商的区域医院覆盖率",
+              "parameters": [
+                "销售订单（实体）",
+                "经销商（实体）",
+                "医院（实体）",
+                "区域医院覆盖率（指标）",
+                "经销商（维度）",
+                "上海（省份名称）",
+                "2025年（时间范围）"
+              ],
+              "extraction": {
+                "意图": "统计查询",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "经销商",
+                  "医院"
+                ],
+                "指标": [
+                  {
+                    "name": "区域医院覆盖率"
+                  }
+                ],
+                "维度": [
+                  "经销商"
+                ],
+                "展示字段": [],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "省份名称",
+                    "op": "=",
+                    "value": [
+                      "上海"
+                    ]
+                  }
+                ],
+                "排序": [],
+                "时间粒度": {
+                  "unit": "年",
+                  "time_range": "2025年",
+                  "anchor": null
+                },
+                "限制": null,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              },
+              "primary_intent": "METRIC_QUERY"
+            }
+          ],
+          "final_deliverable": null,
+          "split_reason_code": "TASK_DECOMPOSITION",
+          "shared_conditions": [],
+          "analyze_summary": null,
+          "question_groups": null,
+          "compound_metrics": []
+        },
+        "single": null,
+        "elapsed_seconds": 12.781,
+        "model_calls": [
+          {
+            "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:6",
+            "status": 200,
+            "request_sha256": "2afbc5c8a0d4bdb2da6f8aafe1d0beeab2147e15cd3b373540de87749a499181",
+            "response_sha256": "da36e674c72f7fdeb29af972f883dc9167e8c95197a5611c35a216075f18b07f",
+            "elapsed_seconds": 1.75
+          },
+          {
+            "case_id": "Q2_MONTHLY_ORDERS_AND_COVERAGE:6",
+            "status": 200,
+            "request_sha256": "3443fedc077cdeaf9556240bbcda5ee1eeb808ea0c6e01336b29405d287eb9af",
+            "response_sha256": "5c272c0230ac1995e73af645b2e06d6a55ef563b3f9c4e80c4f70ed2060e0e56",
+            "elapsed_seconds": 11.016
+          }
+        ]
+      },
+      {
+        "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+        "family_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK",
+        "kind": "original",
+        "question": "上海地区哪个医院消化内科2025年9月份的订单数量最多?",
+        "evaluation_status": "UNREVIEWED",
+        "judgment": {
+          "is_compound": false,
+          "entries": [],
+          "business_domain": "医药销售域",
+          "analyze_summary": null,
+          "split_reason_code": null,
+          "shared_conditions": [],
+          "final_deliverable": null,
+          "judge_source": "STRUCTURED_MODEL"
+        },
+        "plan": null,
+        "single": {
+          "intent": "METRIC_QUERY",
+          "question": "上海地区消化内科2025年9月份订单数量最多的医院是哪个",
+          "extraction": {
+            "intent": "METRIC_QUERY",
+            "parameters": [
+              "销售订单（实体）",
+              "医院（实体）",
+              "商品科室关联（实体）",
+              "订单笔数（指标）",
+              "医院（维度）",
+              "上海（省份名称）",
+              "消化内科（科室名称）",
+              "2025年9月份（时间范围）"
+            ],
+            "structured": {
+              "意图": "排名分析",
+              "业务域": [
+                "医药销售域"
+              ],
+              "实体": [
+                "销售订单",
+                "医院",
+                "商品科室关联"
+              ],
+              "指标": [
+                {
+                  "name": "订单笔数"
+                }
+              ],
+              "维度": [
+                "医院"
+              ],
+              "展示字段": [],
+              "过滤条件": [
+                {
+                  "entity": "医院",
+                  "field": "省份名称",
+                  "op": "=",
+                  "value": [
+                    "上海"
+                  ]
+                },
+                {
+                  "entity": "科室",
+                  "field": "科室名称",
+                  "op": "=",
+                  "value": [
+                    "消化内科"
+                  ]
+                }
+              ],
+              "排序": [
+                {
+                  "field": "订单笔数",
+                  "order": "desc"
+                }
+              ],
+              "时间粒度": {
+                "unit": "月",
+                "time_range": "2025年9月份",
+                "anchor": null
+              },
+              "限制": 1,
+              "输出要求": "默认输出表格",
+              "是否去重": null,
+              "是否查询数据库": "是"
+            }
+          }
+        },
+        "elapsed_seconds": 9.844,
+        "model_calls": [
+          {
+            "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+            "status": 200,
+            "request_sha256": "a3e2da8ebd5b92a1ffc9ce7c35f501f7991d660549b2c5d883df2e83bc689106",
+            "response_sha256": "fa1444f996919e77c34e56f42e18661ad6a9d78625097435786a87d05fe8aa68",
+            "elapsed_seconds": 1.875
+          },
+          {
+            "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+            "status": 200,
+            "request_sha256": "3c890a88dc721cb9fda1f8ece0e40fe336964ff71a50c716e57aea9be7f138ef",
+            "response_sha256": "b8cbb3829527ac5bf30a4564481259063e860763e55763ee5482a8f669f70c6b",
+            "elapsed_seconds": 7.953
+          }
+        ]
+      },
+      {
+        "case_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH:0",
+        "family_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH",
+        "kind": "original",
+        "question": "最近销售订单增长最快的供应商有哪几家",
+        "evaluation_status": "UNREVIEWED",
+        "judgment": {
+          "is_compound": false,
+          "entries": [],
+          "business_domain": "医药销售域",
+          "analyze_summary": null,
+          "split_reason_code": null,
+          "shared_conditions": [],
+          "final_deliverable": null,
+          "judge_source": "STRUCTURED_MODEL"
+        },
+        "plan": null,
+        "single": {
+          "intent": "OUT_OF_SCOPE",
+          "question": "最近销售订单增长最快的供应商有哪几家",
+          "extraction": {
+            "intent": "OUT_OF_SCOPE",
+            "parameters": [],
+            "structured": null
+          }
+        },
+        "elapsed_seconds": 4.656,
+        "model_calls": [
+          {
+            "case_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH:0",
+            "status": 200,
+            "request_sha256": "2aa47ad9e9aad39c05b4be1f4f786d400af5cca83b4a7c296698b6a8b7b22656",
+            "response_sha256": "8726b7f6e4f620ad884b5e7566896d2cbf52a5998a02e5bb38fd73cdc49b8c7b",
+            "elapsed_seconds": 1.844
+          },
+          {
+            "case_id": "Q4_SUPPLIER_RECENT_ORDER_GROWTH:0",
+            "status": 200,
+            "request_sha256": "f359515de8a34f4db6e02f6ca0458711c1c23df2113684cd955e8f54b71dc84c",
+            "response_sha256": "ccf8d893b03053ebd0ad6b3c75d220f88ffba405f30d1aa8e501911a58bd10ab",
+            "elapsed_seconds": 2.812
+          }
+        ]
+      },
+      {
+        "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+        "family_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS",
+        "kind": "original",
+        "question": "25年9月针对上海交通大学医学院附属新华医院销售订单金额最多的销售员是谁?销售了哪些产品?",
+        "evaluation_status": "UNREVIEWED",
+        "judgment": {
+          "is_compound": false,
+          "entries": [],
+          "business_domain": "医药销售域",
+          "analyze_summary": null,
+          "split_reason_code": null,
+          "shared_conditions": [],
+          "final_deliverable": null,
+          "judge_source": "STRUCTURED_MODEL"
+        },
+        "plan": {
+          "schema_version": "1.0",
+          "planner": "STRUCTURED_MODEL",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "question": "统计2025年9月上海交通大学医学院附属新华医院各销售员的含税销售总额并按金额降序取第1名",
+              "name": "统计2025年9月上海交通大学医学院附属新华医院各销售员含税销售总额并取金额最高者",
+              "depends_on": [],
+              "expected_output": "2025年9月在上海交通大学医学院附属新华医院含税销售总额最高的销售员姓名及其含税销售总额",
+              "parameters": [
+                "销售订单（实体）",
+                "业务员（实体）",
+                "含税销售总额（指标）",
+                "业务员（维度）",
+                "上海交通大学医学院附属新华医院（医院名称）",
+                "2025年9月（时间范围）"
+              ],
+              "extraction": {
+                "意图": "排名分析",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "业务员"
+                ],
+                "指标": [
+                  {
+                    "name": "含税销售总额"
+                  }
+                ],
+                "维度": [
+                  "业务员"
+                ],
+                "展示字段": [],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "医院名称",
+                    "op": "=",
+                    "value": [
+                      "上海交通大学医学院附属新华医院"
+                    ]
+                  }
+                ],
+                "排序": [
+                  {
+                    "field": "含税销售总额",
+                    "order": "desc"
+                  }
+                ],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "2025年9月",
+                  "anchor": null
+                },
+                "限制": 1,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              },
+              "primary_intent": "METRIC_QUERY"
+            },
+            {
+              "task_id": "task-2",
+              "question": "根据上述任务的查询结果筛选出含税销售总额最高的销售员，查询该销售员在2025年9月于上海交通大学医学院附属新华医院销售的产品明细",
+              "name": "查询2025年9月上海交通大学医学院附属新华医院含税销售总额最高销售员的销售产品明细",
+              "depends_on": [
+                "task-1"
+              ],
+              "expected_output": "该销售员在2025年9月于上海交通大学医学院附属新华医院销售的所有产品名称列表",
+              "parameters": [
+                "销售订单（实体）",
+                "商品（实体）",
+                "业务员（实体）",
+                "上海交通大学医学院附属新华医院（医院名称）",
+                "2025年9月（时间范围）"
+              ],
+              "extraction": {
+                "意图": "明细查询",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "商品",
+                  "业务员"
+                ],
+                "指标": [],
+                "维度": [],
+                "展示字段": [
+                  {
+                    "entity": "商品",
+                    "field": "商品名称"
+                  }
+                ],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "医院名称",
+                    "op": "=",
+                    "value": [
+                      "上海交通大学医学院附属新华医院"
+                    ]
+                  }
+                ],
+                "排序": [],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "2025年9月",
+                  "anchor": null
+                },
+                "限制": null,
+                "输出要求": "默认输出表格",
+                "是否去重": "是",
+                "是否查询数据库": "是"
+              },
+              "primary_intent": "DETAIL_QUERY"
+            }
+          ],
+          "final_deliverable": null,
+          "split_reason_code": "TASK_DECOMPOSITION",
+          "shared_conditions": [],
+          "analyze_summary": null,
+          "question_groups": null,
+          "compound_metrics": []
+        },
+        "single": null,
+        "elapsed_seconds": 22.203,
+        "model_calls": [
+          {
+            "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+            "status": 200,
+            "request_sha256": "e97da8a6daf508c9bf75d758f38b787ecd4b06e71549c28e7ec33d4cea31cd19",
+            "response_sha256": "74178c3c55a19f50d56949b2690b91ac391f5a664db4b232d76804fd77fc71a2",
+            "elapsed_seconds": 1.813
+          },
+          {
+            "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+            "status": 200,
+            "request_sha256": "c99ff08d72f2d5fa98777f14d2917512e0d0a682172e271569b3fd12d3f8f4c5",
+            "response_sha256": "923c734e90e762be706f2713de32bf6c666dbe3ff72f33f3943aa8a30d7b1112",
+            "elapsed_seconds": 7.765
+          },
+          {
+            "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+            "status": 200,
+            "request_sha256": "edbc2045696fabbf169ea88ea8ca94063c5cd0c38309a4bde31a747fa38a09b3",
+            "response_sha256": "61a4f06a316c16c780a981178f2eaffe6d0721eab94c89e0817dfb1d9dc669ad",
+            "elapsed_seconds": 12.625
+          }
+        ]
+      },
+      {
+        "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:4",
+        "family_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS",
+        "kind": "paraphrase",
+        "question": "上海交通大学医学院附属新华医院2025年9月销售订单金额最多的销售员及其当月在该院销售的产品分别是什么？",
+        "evaluation_status": "UNREVIEWED",
+        "judgment": {
+          "is_compound": false,
+          "entries": [],
+          "business_domain": "医药销售域",
+          "analyze_summary": null,
+          "split_reason_code": null,
+          "shared_conditions": [],
+          "final_deliverable": null,
+          "judge_source": "STRUCTURED_MODEL"
+        },
+        "plan": {
+          "schema_version": "1.0",
+          "planner": "STRUCTURED_MODEL",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "question": "查询上海交通大学医学院附属新华医院2025年9月各销售员的含税销售总额并按金额降序取第1名",
+              "name": "统计2025年9月新华医院各销售员含税销售总额并取金额最高者",
+              "depends_on": [],
+              "expected_output": "2025年9月在上海交通大学医学院附属新华医院含税销售总额最高的销售员姓名及其含税销售总额",
+              "parameters": [
+                "销售订单（实体）",
+                "业务员（实体）",
+                "医院（实体）",
+                "含税销售总额（指标）",
+                "业务员（维度）",
+                "上海交通大学医学院附属新华医院（医院名称）",
+                "2025年9月（时间范围）"
+              ],
+              "extraction": {
+                "意图": "排名分析",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "业务员",
+                  "医院"
+                ],
+                "指标": [
+                  {
+                    "name": "含税销售总额"
+                  }
+                ],
+                "维度": [
+                  "业务员"
+                ],
+                "展示字段": [],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "医院名称",
+                    "op": "=",
+                    "value": [
+                      "上海交通大学医学院附属新华医院"
+                    ]
+                  }
+                ],
+                "排序": [
+                  {
+                    "field": "含税销售总额",
+                    "order": "desc"
+                  }
+                ],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "2025年9月",
+                  "anchor": null
+                },
+                "限制": 1,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              },
+              "primary_intent": "METRIC_QUERY"
+            },
+            {
+              "task_id": "task-2",
+              "question": "根据上述任务的查询结果筛选出含税销售总额最高的销售员，查询该销售员2025年9月在上海交通大学医学院附属新华医院销售的产品明细，不再查询数据库",
+              "name": "获取2025年9月新华医院销售额最高销售员的销售产品明细",
+              "depends_on": [
+                "task-1"
+              ],
+              "expected_output": "该销售员2025年9月在上海交通大学医学院附属新华医院销售的所有产品名称列表",
+              "parameters": [
+                "销售订单（实体）",
+                "商品（实体）",
+                "业务员（实体）",
+                "医院（实体）",
+                "上海交通大学医学院附属新华医院（医院名称）",
+                "2025年9月（时间范围）"
+              ],
+              "extraction": {
+                "意图": "明细查询",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "商品",
+                  "业务员",
+                  "医院"
+                ],
+                "指标": [],
+                "维度": [],
+                "展示字段": [
+                  {
+                    "entity": "商品",
+                    "field": "商品名称"
+                  }
+                ],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "医院名称",
+                    "op": "=",
+                    "value": [
+                      "上海交通大学医学院附属新华医院"
+                    ]
+                  }
+                ],
+                "排序": [],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "2025年9月",
+                  "anchor": null
+                },
+                "限制": null,
+                "输出要求": "默认输出表格",
+                "是否去重": "是",
+                "是否查询数据库": "否"
+              },
+              "primary_intent": "COMPARISON_ANALYSIS"
+            }
+          ],
+          "final_deliverable": null,
+          "split_reason_code": "TASK_DECOMPOSITION",
+          "shared_conditions": [],
+          "analyze_summary": null,
+          "question_groups": null,
+          "compound_metrics": []
+        },
+        "single": null,
+        "elapsed_seconds": 14.625,
+        "model_calls": [
+          {
+            "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:4",
+            "status": 200,
+            "request_sha256": "f9737c62bf4f0d785f610f5590c32f742f22702069c07400be17cc3cfaba44f1",
+            "response_sha256": "054ae11da9eb38a169386fc8164885b918479dca5faf0993afd24e9f7ade09b6",
+            "elapsed_seconds": 1.828
+          },
+          {
+            "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:4",
+            "status": 200,
+            "request_sha256": "36353bfe83c9fa3c49721ab0aea60f29865acde3c07772021975c856af62d4b4",
+            "response_sha256": "6998a01fc6da3e8df35acb0ea1fe3bc902f2e501bb517f0ea654dc92ddc85175",
+            "elapsed_seconds": 12.797
+          }
+        ]
+      },
+      {
+        "case_id": "Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH:0",
+        "family_id": "Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH",
+        "kind": "original",
+        "question": "统计各经销商近12月的平均月度销量增长率",
+        "evaluation_status": "UNREVIEWED",
+        "judgment": {
+          "is_compound": false,
+          "entries": [],
+          "business_domain": "医药销售域",
+          "analyze_summary": null,
+          "split_reason_code": null,
+          "shared_conditions": [],
+          "final_deliverable": null,
+          "judge_source": "STRUCTURED_MODEL"
+        },
+        "plan": null,
+        "single": {
+          "intent": "METRIC_QUERY",
+          "question": "统计各经销商近12月的平均月度销量增长率",
+          "extraction": {
+            "intent": "METRIC_QUERY",
+            "parameters": [
+              "销售订单（实体）",
+              "经销商（实体）",
+              "销售总数量（指标）",
+              "经销商（维度）",
+              "近12个月（时间范围）"
+            ],
+            "structured": {
+              "意图": "统计查询",
+              "业务域": [
+                "医药销售域"
+              ],
+              "实体": [
+                "销售订单",
+                "经销商"
+              ],
+              "指标": [
+                {
+                  "name": "销售总数量"
+                }
+              ],
+              "维度": [
+                "经销商"
+              ],
+              "展示字段": [],
+              "过滤条件": [],
+              "排序": [],
+              "时间粒度": {
+                "unit": "月",
+                "time_range": "近12个月",
+                "anchor": null
+              },
+              "限制": null,
+              "输出要求": "默认输出表格",
+              "是否去重": null,
+              "是否查询数据库": "是",
+              "计算待确认": {
+                "question": "平均月度增长率的计算方法未明确，请选择：算术平均（逐月环比增长率的算术平均值）或复合平均（期末/基期的月数次方根减1）。两种方法结果不同。",
+                "candidates": [
+                  "算术平均（逐月环比增长率的算术平均值）",
+                  "复合平均（期末/基期的月数次方根减1）"
+                ],
+                "affected_slots": [
+                  "analysis_method"
+                ]
+              }
+            }
+          }
+        },
+        "elapsed_seconds": 10.781,
+        "model_calls": [
+          {
+            "case_id": "Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH:0",
+            "status": 200,
+            "request_sha256": "f1c95b5a180c35266fd90a5ea1eab46278918f9f07b233ade41e60c1b55d8794",
+            "response_sha256": "2c1e7e28cb27a6a692f12d5a868a16b9530046ca8c6bdc03a43862f77d360c18",
+            "elapsed_seconds": 1.906
+          },
+          {
+            "case_id": "Q6_DEALER_AVERAGE_MONTHLY_VOLUME_GROWTH:0",
+            "status": 200,
+            "request_sha256": "8a385e109126dd3c6a08e4bf3c1692f4da8100b50316516f0976b6c8ff72f41c",
+            "response_sha256": "fb4b012a36e555880b68cf55e77635ef7cc2956ca4e747e08a1f1b90fa0ec016",
+            "elapsed_seconds": 8.86
+          }
+        ]
+      }
+    ],
+    "identities": {
+      "live-final-remote-integration-round29": {
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "catalog_version": "4096806228e276f229e211a271262fb988280707af7d8e4c0779bb4eb5ce5b8a",
+        "context_sha256": "a3449eddba8cb242f2bd799600b5c0dec246084f73a159006bb7458008ff7385",
+        "rules_sha256": "dd6e7de294701f28eb42ca7932c540d8242e36ed56ba9ef9bdeca1abf4f4df81",
+        "seed_sha256": "0825bb03832c1d5d04e26953ddf56425a06201199bdbe3222d759f52af83f2df",
+        "model": "qwen3.7-max",
+        "holdouts_sha256": null,
+        "model_endpoint_hash": "5891aed827c4e67b2d7c0c73ea819327ce3f2b6ef72213cd79669486a26b1ead",
+        "temperature": 0,
+        "enable_thinking": false,
+        "reference_time": "2026-10-19 Asia/Shanghai",
+        "history": [],
+        "pending": null,
+        "data_watermark": "NO_BUSINESS_DATA_QUERIED; downstream deterministic fixtures are evaluated separately",
+        "production_session_writes": 0,
+        "business_database_calls": 0,
+        "semantic_catalog_mutations": 0,
+        "code_hashes": {
+          "app/planning/compound_question.py": "a98eee2604ace086b42eddc65f82ac3d7ec9039905da86e06ee247f1ab121213",
+          "app/planning/task_dag.py": "2e9298e0b07ee8f4ddcf0492dac3953a366fce263409f3460b081cab5dcc4e07",
+          "app/planning/calculation_bindings.py": "b02a7eaf4a02a8a8db2d9a31ea7b7a587f9193bba465567de122055ce5aa62a4",
+          "app/planning/structured_extraction_prompt.txt": "c8f0e9f4f27a97efeccdac423cafb739f2d679770619f09d843f0a1f35a78dc7",
+          "app/services/orchestrator.py": "a377d418b77a2bc03acd564138c354b97df2b33a681d6606927921609b8331f7",
+          "app/services/computation_delivery.py": "33136839f9d02e962db6e66de4236b818ce9f2f9ff286e0fa5a445d383f376a7",
+          "app/services/period_computation.py": "b39e27ec6b7693238d1234fa70520bd00d4e3a3bf0dc56db361616b12f899711",
+          "app/services/query_output_bindings.py": "c788192e03ffc3827cae266b9f29ebff7aee714112ecd0d92b103d72ee1e5b76",
+          "minio_followup_store.py": "d9ee98174f7a2a48e80645233c3b5d5b9b1621c70105f628b5d09f6bba39ecbf",
+          "evals/run_complex_question_model_evaluation.py": "b1dacb902207742fcaae4308eab22737045719d8d8871dacdcb1997f990fb136"
+        }
+      },
+      "live-final-contract-correction-round30": {
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ],
+          "scope_mode": "EXPLICIT_DOMAINS"
+        },
+        "catalog_version": "4096806228e276f229e211a271262fb988280707af7d8e4c0779bb4eb5ce5b8a",
+        "context_sha256": "31e21c89d92444af8c85eba99ffdf18096a871ce78008c8c7ce4ef737445f438",
+        "rules_sha256": "dd6e7de294701f28eb42ca7932c540d8242e36ed56ba9ef9bdeca1abf4f4df81",
+        "seed_sha256": "0825bb03832c1d5d04e26953ddf56425a06201199bdbe3222d759f52af83f2df",
+        "model": "qwen3.7-max",
+        "holdouts_sha256": null,
+        "model_endpoint_hash": "5891aed827c4e67b2d7c0c73ea819327ce3f2b6ef72213cd79669486a26b1ead",
+        "temperature": 0,
+        "enable_thinking": false,
+        "reference_time": "2026-10-19 Asia/Shanghai",
+        "history": [],
+        "pending": null,
+        "data_watermark": "NO_BUSINESS_DATA_QUERIED; downstream deterministic fixtures are evaluated separately",
+        "production_session_writes": 0,
+        "business_database_calls": 0,
+        "semantic_catalog_mutations": 0,
+        "code_hashes": {
+          "app/planning/compound_question.py": "a98eee2604ace086b42eddc65f82ac3d7ec9039905da86e06ee247f1ab121213",
+          "app/planning/task_dag.py": "71ebc7e1893cba37f205ef38aad81a7d3f4227a4edd2d3efed8b4788d3193fc3",
+          "app/planning/calculation_bindings.py": "b02a7eaf4a02a8a8db2d9a31ea7b7a587f9193bba465567de122055ce5aa62a4",
+          "app/planning/structured_extraction_prompt.txt": "c8f0e9f4f27a97efeccdac423cafb739f2d679770619f09d843f0a1f35a78dc7",
+          "app/services/orchestrator.py": "a377d418b77a2bc03acd564138c354b97df2b33a681d6606927921609b8331f7",
+          "app/services/computation_delivery.py": "33136839f9d02e962db6e66de4236b818ce9f2f9ff286e0fa5a445d383f376a7",
+          "app/services/period_computation.py": "b39e27ec6b7693238d1234fa70520bd00d4e3a3bf0dc56db361616b12f899711",
+          "app/services/query_output_bindings.py": "c788192e03ffc3827cae266b9f29ebff7aee714112ecd0d92b103d72ee1e5b76",
+          "minio_followup_store.py": "d9ee98174f7a2a48e80645233c3b5d5b9b1621c70105f628b5d09f6bba39ecbf",
+          "evals/run_complex_question_model_evaluation.py": "74a6ef4664d2b161dc8508190289016d93ce6325dcb60ec4795b17581bdd7d4d"
+        }
+      }
+    },
+    "limits": [
+      "本轮不提供所有改写稳定正确或生产业务答案通过率。",
+      "关系上下文渲染修复后哈希变化，按新身份单独记录，不冒充精确请求重放。"
+    ]
+  },
+  "extrema_grain_review": {
+    "cases": 4,
+    "model_calls": 9,
+    "business_database_calls": 0,
+    "records": [
+      {
+        "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+        "status": "GROUPED_METRIC_RANKING_CONTRACT",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+          "family_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK",
+          "kind": "original",
+          "question": "上海地区哪个医院消化内科2025年9月份的订单数量最多?",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": null,
+          "single": {
+            "intent": "METRIC_QUERY",
+            "question": "上海地区消化内科2025年9月份订单数量最多的医院是哪个",
+            "extraction": {
+              "intent": "METRIC_QUERY",
+              "parameters": [
+                "销售订单（实体）",
+                "医院（实体）",
+                "订单笔数（指标）",
+                "医院（维度）",
+                "上海（省份名称）",
+                "消化内科（科室名称）",
+                "2025年9月份（时间范围）"
+              ],
+              "structured": {
+                "意图": "排名分析",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "医院"
+                ],
+                "指标": [
+                  {
+                    "name": "订单笔数"
+                  }
+                ],
+                "维度": [
+                  "医院"
+                ],
+                "展示字段": [],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "省份名称",
+                    "op": "=",
+                    "value": [
+                      "上海"
+                    ]
+                  },
+                  {
+                    "entity": "商品科室关联",
+                    "field": "科室名称",
+                    "op": "=",
+                    "value": [
+                      "消化内科"
+                    ]
+                  }
+                ],
+                "排序": [
+                  {
+                    "field": "订单笔数",
+                    "order": "desc"
+                  }
+                ],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "2025年9月份",
+                  "anchor": null
+                },
+                "限制": 1,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              }
+            }
+          },
+          "elapsed_seconds": 10.078,
+          "model_calls": [
+            {
+              "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+              "status": 200,
+              "request_sha256": "528816c08fe53fea8ec2ce517679ffe6a057dec4dfe12399ad75de952d57bd00",
+              "response_sha256": "a78f735bdd321655ed1e0e2d7dbe7d43be2b9368112f0e7f7fed168ada04cd30",
+              "elapsed_seconds": 1.875
+            },
+            {
+              "case_id": "Q3_HOSPITAL_DEPARTMENT_ORDER_RANK:0",
+              "status": 200,
+              "request_sha256": "ed0aa6a8cd5aa911d3965f860eeb8c258021f610c83ecdfd1fb52fe0eec4a31a",
+              "response_sha256": "f600e8ed58537ac666a3723fc3a03b114575a4140d84b8bbe30f6b6a8e727607",
+              "elapsed_seconds": 8.188
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+        "status": "AGGREGATED_WINNER_THEN_NEW_PRODUCT_QUERY",
+        "business_result_verified": false,
+        "generated": {
+          "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+          "family_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS",
+          "kind": "original",
+          "question": "25年9月针对上海交通大学医学院附属新华医院销售订单金额最多的销售员是谁?销售了哪些产品?",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": {
+            "schema_version": "1.0",
+            "planner": "STRUCTURED_MODEL",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "question": "统计2025年9月上海交通大学医学院附属新华医院各业务员的含税销售总额并按金额降序取第1名",
+                "name": "统计2025年9月新华医院各业务员含税销售总额并取金额最高者",
+                "depends_on": [],
+                "expected_output": "2025年9月上海交通大学医学院附属新华医院含税销售总额最高的业务员姓名及其含税销售总额",
+                "parameters": [
+                  "销售订单（实体）",
+                  "业务员（实体）",
+                  "含税销售总额（指标）",
+                  "业务员（维度）",
+                  "上海交通大学医学院附属新华医院（医院名称）",
+                  "2025年9月（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "排名分析",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单",
+                    "业务员"
+                  ],
+                  "指标": [
+                    {
+                      "name": "含税销售总额"
+                    }
+                  ],
+                  "维度": [
+                    "业务员"
+                  ],
+                  "展示字段": [],
+                  "过滤条件": [
+                    {
+                      "entity": "医院",
+                      "field": "医院名称",
+                      "op": "=",
+                      "value": [
+                        "上海交通大学医学院附属新华医院"
+                      ]
+                    }
+                  ],
+                  "排序": [
+                    {
+                      "field": "含税销售总额",
+                      "order": "desc"
+                    }
+                  ],
+                  "时间粒度": {
+                    "unit": "月",
+                    "time_range": "2025年9月",
+                    "anchor": null
+                  },
+                  "限制": 1,
+                  "输出要求": "默认输出表格",
+                  "是否去重": null,
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "METRIC_QUERY"
+              },
+              {
+                "task_id": "task-2",
+                "question": "根据上述任务的查询结果筛选出含税销售总额最高的业务员，查询该业务员在2025年9月于上海交通大学医学院附属新华医院销售的商品明细",
+                "name": "查询2025年9月新华医院销售金额最高业务员的销售商品明细",
+                "depends_on": [
+                  "task-1"
+                ],
+                "expected_output": "该业务员在2025年9月于上海交通大学医学院附属新华医院销售的所有商品名称列表",
+                "parameters": [
+                  "销售订单（实体）",
+                  "商品（实体）",
+                  "业务员（实体）",
+                  "上海交通大学医学院附属新华医院（医院名称）",
+                  "2025年9月（时间范围）"
+                ],
+                "extraction": {
+                  "意图": "明细查询",
+                  "业务域": [
+                    "医药销售域"
+                  ],
+                  "实体": [
+                    "销售订单",
+                    "商品",
+                    "业务员"
+                  ],
+                  "指标": [],
+                  "维度": [],
+                  "展示字段": [
+                    {
+                      "entity": "商品",
+                      "field": "商品名称"
+                    }
+                  ],
+                  "过滤条件": [
+                    {
+                      "entity": "医院",
+                      "field": "医院名称",
+                      "op": "=",
+                      "value": [
+                        "上海交通大学医学院附属新华医院"
+                      ]
+                    }
+                  ],
+                  "排序": [],
+                  "时间粒度": {
+                    "unit": "月",
+                    "time_range": "2025年9月",
+                    "anchor": null
+                  },
+                  "限制": null,
+                  "输出要求": "默认输出表格",
+                  "是否去重": "是",
+                  "是否查询数据库": "是"
+                },
+                "primary_intent": "DETAIL_QUERY"
+              }
+            ],
+            "final_deliverable": null,
+            "split_reason_code": "TASK_DECOMPOSITION",
+            "shared_conditions": [],
+            "analyze_summary": null,
+            "question_groups": null,
+            "compound_metrics": []
+          },
+          "single": null,
+          "elapsed_seconds": 21.797,
+          "model_calls": [
+            {
+              "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+              "status": 200,
+              "request_sha256": "4ca125e1ea500892409e7ce5731abe523ac2933446897466bee9538840a3e399",
+              "response_sha256": "418f2aa7b80e2cb037d2f2ccf6561e71fa4d73d870ce0cd9b3a96f43c4bfcdb3",
+              "elapsed_seconds": 1.797
+            },
+            {
+              "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+              "status": 200,
+              "request_sha256": "0f2767abe56f3ac79c64dcd6fa731205abca7f1dfc72fe979e9aa7c2acbc064f",
+              "response_sha256": "0b9797578e9c3d471656092b79886d2e97332774f2839568918ca1ec1a9b3ed5",
+              "elapsed_seconds": 8.187
+            },
+            {
+              "case_id": "Q5_TOP_SALESPERSON_THEN_PRODUCTS:0",
+              "status": 200,
+              "request_sha256": "85095b05d04b69490bfdee26c789c777ff4c939471674fecd63c7e480ef921a5",
+              "response_sha256": "563628ede90d85ebd404eb755ccb031ba658e511fde4423bf0a00f0f38296244",
+              "elapsed_seconds": 11.797
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "EXTREMA_DETAIL_RECORD:holdout",
+        "status": "EXPLICIT_UNGROUPED_RECORD_SORT_CONTRACT",
+        "business_result_verified": false,
+        "generated": {
+          "family_id": "EXTREMA_DETAIL_RECORD",
+          "question": "上海地区医院2025年9月的订单中，含税金额最低的是哪笔？返回订单号和含税金额，不做分组汇总。",
+          "expected": "明细查询；已登记订单号与含税金额属性；金额升序取一；不生成未登记的均价列",
+          "case_id": "EXTREMA_DETAIL_RECORD:holdout",
+          "kind": "holdout",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": null,
+          "single": {
+            "intent": "DETAIL_QUERY",
+            "question": "上海地区医院2025年9月的订单中，含税金额最低的是哪笔？返回订单号和含税金额，不做分组汇总。",
+            "extraction": {
+              "intent": "DETAIL_QUERY",
+              "parameters": [
+                "销售订单（实体）",
+                "医院（实体）",
+                "上海（省份名称）",
+                "2025年9月（时间范围）"
+              ],
+              "structured": {
+                "意图": "明细查询",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "医院"
+                ],
+                "指标": [],
+                "维度": [],
+                "展示字段": [
+                  {
+                    "entity": "销售订单",
+                    "field": "订单号"
+                  },
+                  {
+                    "entity": "销售订单",
+                    "field": "含税金额"
+                  }
+                ],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "省份名称",
+                    "op": "=",
+                    "value": [
+                      "上海"
+                    ]
+                  }
+                ],
+                "排序": [
+                  {
+                    "field": "含税金额",
+                    "order": "asc"
+                  }
+                ],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "2025年9月",
+                  "anchor": "订单日期"
+                },
+                "限制": 1,
+                "输出要求": "默认输出表格",
+                "是否去重": "否",
+                "是否查询数据库": "是"
+              }
+            }
+          },
+          "elapsed_seconds": 9.968,
+          "model_calls": [
+            {
+              "case_id": "EXTREMA_DETAIL_RECORD:holdout",
+              "status": 200,
+              "request_sha256": "2a2cf0a7c6f94981da0e946d5725a79643064f10d996b2bc9757140c2a378f0f",
+              "response_sha256": "680d8033c07e4bf0a0e62e522ce48782cb5719e6e9c0f5b6ded5f4d87592fafa",
+              "elapsed_seconds": 2.562
+            },
+            {
+              "case_id": "EXTREMA_DETAIL_RECORD:holdout",
+              "status": 200,
+              "request_sha256": "310be3e486024ea36b399d239c4138346e7ddc35ba56c6b717914b16a794c4d2",
+              "response_sha256": "3d60f9cf94d0fd5c108f3a1f0c4091e3da441bbfffa440afa37deac576480d1f",
+              "elapsed_seconds": 7.406
+            }
+          ]
+        }
+      },
+      {
+        "case_id": "EXTREMA_GROUPED_COUNT:holdout",
+        "status": "GROUPED_METRIC_RANKING_CONTRACT",
+        "business_result_verified": false,
+        "generated": {
+          "family_id": "EXTREMA_GROUPED_COUNT",
+          "question": "2025年9月上海地区各医院分别有多少笔订单？按医院汇总后找出订单笔数最多的医院。",
+          "expected": "订单笔数登记指标、医院分组、降序取一；不是直接排序单条订单属性",
+          "case_id": "EXTREMA_GROUPED_COUNT:holdout",
+          "kind": "holdout",
+          "evaluation_status": "UNREVIEWED",
+          "judgment": {
+            "is_compound": false,
+            "entries": [],
+            "business_domain": "医药销售域",
+            "analyze_summary": null,
+            "split_reason_code": null,
+            "shared_conditions": [],
+            "final_deliverable": null,
+            "judge_source": "STRUCTURED_MODEL"
+          },
+          "plan": null,
+          "single": {
+            "intent": "METRIC_QUERY",
+            "question": "2025年9月上海地区各医院分别有多少笔订单？按医院汇总后找出订单笔数最多的医院。",
+            "extraction": {
+              "intent": "METRIC_QUERY",
+              "parameters": [
+                "销售订单（实体）",
+                "医院（实体）",
+                "订单笔数（指标）",
+                "医院（维度）",
+                "上海（省份名称）",
+                "2025年9月（时间范围）"
+              ],
+              "structured": {
+                "意图": "排名分析",
+                "业务域": [
+                  "医药销售域"
+                ],
+                "实体": [
+                  "销售订单",
+                  "医院"
+                ],
+                "指标": [
+                  {
+                    "name": "订单笔数"
+                  }
+                ],
+                "维度": [
+                  "医院"
+                ],
+                "展示字段": [],
+                "过滤条件": [
+                  {
+                    "entity": "医院",
+                    "field": "省份名称",
+                    "op": "=",
+                    "value": [
+                      "上海"
+                    ]
+                  }
+                ],
+                "排序": [
+                  {
+                    "field": "订单笔数",
+                    "order": "desc"
+                  }
+                ],
+                "时间粒度": {
+                  "unit": "月",
+                  "time_range": "2025年9月",
+                  "anchor": null
+                },
+                "限制": 1,
+                "输出要求": "默认输出表格",
+                "是否去重": null,
+                "是否查询数据库": "是"
+              }
+            }
+          },
+          "elapsed_seconds": 8.86,
+          "model_calls": [
+            {
+              "case_id": "EXTREMA_GROUPED_COUNT:holdout",
+              "status": 200,
+              "request_sha256": "42aad7d39bab0c93d403e902fb6942f0dc5fd7cc487ce41b753e7d7cc026474c",
+              "response_sha256": "b636eff584518f7c78c6dcfd5fe6fd7a93cf16d84b19cc56eaf93e4cddc5cdbe",
+              "elapsed_seconds": 1.844
+            },
+            {
+              "case_id": "EXTREMA_GROUPED_COUNT:holdout",
+              "status": 200,
+              "request_sha256": "b6e50d8658a968022804287290fb1d9b3883a332f225c69a44ea846efaf0ac6c",
+              "response_sha256": "e653960f899dccc34ba6655e13e7f059a9983b38ced8e35359f4cb88652bc457",
+              "elapsed_seconds": 7.016
+            }
+          ]
+        }
+      }
+    ],
+    "identity": {
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "catalog_version": "4096806228e276f229e211a271262fb988280707af7d8e4c0779bb4eb5ce5b8a",
+      "context_sha256": "31e21c89d92444af8c85eba99ffdf18096a871ce78008c8c7ce4ef737445f438",
+      "rules_sha256": "dd6e7de294701f28eb42ca7932c540d8242e36ed56ba9ef9bdeca1abf4f4df81",
+      "seed_sha256": "0825bb03832c1d5d04e26953ddf56425a06201199bdbe3222d759f52af83f2df",
+      "model": "qwen3.7-max",
+      "holdouts_sha256": "e7857c86565d4466f34e1bad796dd3c7e0111f3caa44cf21bb536f9a939491f2",
+      "model_endpoint_hash": "5891aed827c4e67b2d7c0c73ea819327ce3f2b6ef72213cd79669486a26b1ead",
+      "temperature": 0,
+      "enable_thinking": false,
+      "reference_time": "2026-10-19 Asia/Shanghai",
+      "history": [],
+      "pending": null,
+      "data_watermark": "NO_BUSINESS_DATA_QUERIED; downstream deterministic fixtures are evaluated separately",
+      "production_session_writes": 0,
+      "business_database_calls": 0,
+      "semantic_catalog_mutations": 0,
+      "code_hashes": {
+        "app/planning/compound_question.py": "a98eee2604ace086b42eddc65f82ac3d7ec9039905da86e06ee247f1ab121213",
+        "app/planning/task_dag.py": "71ebc7e1893cba37f205ef38aad81a7d3f4227a4edd2d3efed8b4788d3193fc3",
+        "app/planning/calculation_bindings.py": "b02a7eaf4a02a8a8db2d9a31ea7b7a587f9193bba465567de122055ce5aa62a4",
+        "app/planning/structured_extraction_prompt.txt": "8f589d9e8c77f550a9ce3625ea6feb6210a60d7772a7c417ca2b555178e1c1a2",
+        "app/services/orchestrator.py": "a377d418b77a2bc03acd564138c354b97df2b33a681d6606927921609b8331f7",
+        "app/services/computation_delivery.py": "33136839f9d02e962db6e66de4236b818ce9f2f9ff286e0fa5a445d383f376a7",
+        "app/services/period_computation.py": "b39e27ec6b7693238d1234fa70520bd00d4e3a3bf0dc56db361616b12f899711",
+        "app/services/query_output_bindings.py": "c788192e03ffc3827cae266b9f29ebff7aee714112ecd0d92b103d72ee1e5b76",
+        "minio_followup_store.py": "d9ee98174f7a2a48e80645233c3b5d5b9b1621c70105f628b5d09f6bba39ecbf",
+        "evals/run_complex_question_model_evaluation.py": "74a6ef4664d2b161dc8508190289016d93ce6325dcb60ec4795b17581bdd7d4d"
+      }
+    },
+    "scope_note": "仅验证显式明细/聚合角色和依赖；订单与明细行身份、值池及实际关系路径未作生产答案通过断言。"
   }
 }

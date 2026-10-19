@@ -1642,7 +1642,7 @@ class V2ContextV1ExecutionBridge:
                     await emit_progress(
                         "INTENT_RECOGNITION",
                         "RUNNING",
-                        "正在判断问题类型，并识别各问题的意图与业务域。",
+                        "正在判断问题类型，并识别各问题的业务域。",
                         progress_phase="V2_COMPOUND_JUDGE_START",
                     )
                     judgment_section = ""

@@ -82,12 +82,11 @@ _REPORT_FACET = re.compile(
 
 @dataclass(frozen=True)
 class CompoundJudgmentEntry:
-    """一个拆出的子问题：完整可独立执行的业务问题文本 + 该问题的意图与业务域。"""
+    """一个拆出的子问题：完整可独立执行的业务问题文本 + 所属业务域。"""
 
     question: str
     # 子问题的简短业务名称，任务规划节点的分组名；缺省回退问题文本
     label: str | None = None
-    intent: str | None = None
     business_domain: str | None = None
     expected_output: str | None = None
     # 问题级依赖，后续映射到前问题的实际交付任务，而非任务数组下标。
@@ -98,13 +97,12 @@ class CompoundJudgmentEntry:
 class CompoundJudgment:
     """前置判断产出：复合/单一结论，复合时给出 2-5 个子问题。
 
-    单一问题时 intent/business_domain 描述整个问题；复合时每个子问题
-    在自己的条目上携带意图与业务域。
+    单一问题时 business_domain 描述整个问题；复合时每个子问题
+    在自己的条目上携带业务域。
     """
 
     is_compound: bool
     entries: tuple[CompoundJudgmentEntry, ...] = ()
-    intent: str | None = None
     business_domain: str | None = None
     analyze_summary: str | None = None
     split_reason_code: str | None = None
@@ -131,10 +129,6 @@ class _JudgeTask(BaseModel):
         description="该子问题的简短业务名称，用规范登记的指标、维度或实体名"
             "概括要得到的业务结果，不得照抄用户问题原文，不带筛选值和标点",
     )
-    intent: str = Field(
-        max_length=20,
-        description="必填；该子问题的问题意图，取值为意图枚举之一",
-    )
     business_domain: str | None = Field(
         default=None,
         max_length=60,
@@ -153,11 +147,6 @@ class _JudgeResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     split: bool = Field(description="必填；true=复合问题拆为多个子问题，false=单一问题")
-    intent: str | None = Field(
-        default=None,
-        max_length=20,
-        description="split=false时必填；整个问题的问题意图，取值为意图枚举之一",
-    )
     business_domain: str | None = Field(
         default=None,
         max_length=60,
@@ -183,7 +172,7 @@ class _JudgeResult(BaseModel):
 
 _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输出符合JSON Schema的JSON，不回答用户问题，不调用工具。
 
-你的职责：判断用户问题是一个可单独验收的业务目标（单一问题），还是多个需要分别交付的业务目标（复合问题）；同时对每个问题识别问题意图和所属业务域。不做参数提取和问题内部的任务拆解，这些由后续环节完成。
+你的职责：判断用户问题是一个可单独验收的业务目标（单一问题），还是多个需要分别交付的业务目标（复合问题）；同时识别所属业务域。不做参数提取，不做意图判定，不做问题内部的任务拆解，这些由后续环节完成。
 
 复合问题的判定标准：有多个需要分别交付且可单独验收的业务目标。分别验收不等于数据独立；如一个目标消费另一目标的名单、范围或结果，保留depends_on问题级依赖。仅共同完成同一个交付目标的排名、查明细、计算等步骤仍是单一问题，交给后续任务拆解。
 
@@ -193,8 +182,8 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 1. 提取每个业务目标的动作、指标、返回对象或展示字段、分组维度、筛选值、时间范围与粒度、排序数量、分析或交付要求。
 2. 判断每项目标能否形成分别交付的答案或数据集；再判断是否消费其他目标的结果。
 3. 按判断结果输出：
-   - split=false：只有一个可验收业务目标，sub_questions必须为空，intent/business_domain描述整个问题。
-   - split=true：2到5个分别交付的子问题，各自输出intent、business_domain和depends_on。
+   - split=false：只有一个可验收业务目标，sub_questions必须为空，business_domain描述整个问题。
+   - split=true：2到5个分别交付的子问题，各自输出business_domain和depends_on。
 
 数据分析任务边界：
 1. 同一业务对象、筛选范围和结果粒度下的多个指标、多个展示字段或多个分组维度，通常可由一份ASL和一个数据集承载，属于一个子问题。例如“按月统计今年上海市销售额和订单笔数”“查询产品名称、规格型号和生产厂家”均为split=false。
@@ -207,11 +196,6 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 8. 规范指标层级中登记的指标（包括业务语义由其他指标运算合成的复合口径指标，如覆盖率、平均每单金额）可直接作为一个查询目标执行，输出split=false；不得按其依赖指标拆成多个查询加计算。
 9. 指标说法与规范指标层级比对后分两种情况：说法由规范内指标派生（对规范内指标求增长率、均值、占比、排名、最高最低等派生口径），按正常问题处理不拆分；说法与规范内任何指标都无关、也无法由规范内指标派生时，同样不拆分（后续环节会按指标口径解释处理）。判断是否“无法派生”按业务语义判断，不要求字面上包含指标名：围绕规范内实体或业务对象的度量（数量、金额、快慢、高低、升降、排名）提出的说法，都可由该业务对象在规范内的指标派生；只有规范中连对应业务对象的度量都不存在的纯概念词，才属于无法派生。
 10. “前N名销售人员以及所属公司”等同一对象的唯一关联属性，不是额外的分组目标；把关联属性保留在查询的展示字段中。任何用户要求返回的属性不得遗漏。
-
-问题意图枚举（intent字段从中选择最贴合的一个，只输出枚举名本身）：
-指标查询、明细查询、趋势分析、对比分析、占比分析、异常分析、归因分析、预测分析、报表生成、解释口径、闲聊、非数据任务。
-
-意图判定补充：问题按已注册指标的阈值筛选并返回对象名单（如"订单笔数大于5笔的经销商名单""合作时长大于12个月的经销商"）时，intent输出指标查询，不输出明细查询；指标本身的统计口径由后续环节处理。
 
 业务域（business_domain）从注入的业务语义规范中识别，输出业务域名称（如“医药销售域”）；规范中识别不到时输出null。
 
@@ -1239,13 +1223,24 @@ class CompoundQuestionJudge:
         content = payload["choices"][0]["message"].get("content")
         if not content:
             raise ValueError("compound judge returned empty content")
-        result = _JudgeResult.model_validate(json.loads(_strip_json_fences(content)))
+        payload = json.loads(_strip_json_fences(content))
+        # Older model replies may still contain the retired judge intent.
+        # Accept that one legacy field without requesting, using or displaying
+        # it; all other unexpected fields retain strict schema validation.
+        if isinstance(payload, dict):
+            payload.pop('intent', None)
+            if isinstance(payload.get('sub_questions'), list):
+                payload['sub_questions'] = [
+                    {key: value for key, value in item.items() if key != 'intent'}
+                    if isinstance(item, dict) else item
+                    for item in payload['sub_questions']
+                ]
+        result = _JudgeResult.model_validate(payload)
         if not result.split:
             if result.sub_questions:
                 raise ValueError("single decision must not contain sub questions")
             return CompoundJudgment(
                 is_compound=False,
-                intent=(result.intent or "").strip() or None,
                 business_domain=(result.business_domain or "").strip() or None,
             )
         if len(result.sub_questions) < 2:
@@ -1256,7 +1251,6 @@ class CompoundQuestionJudge:
             CompoundJudgmentEntry(
                 question=item.question.strip(),
                 label=(item.label.strip() if item.label and item.label.strip() else None),
-                intent=(item.intent or "").strip() or None,
                 business_domain=(item.business_domain or "").strip() or None,
                 expected_output=(
                     item.expected_output.strip()
@@ -1418,14 +1412,11 @@ class CompoundRouteResult:
     single: PlannerOutcome | None = None
 
 
-def _question_annotation(intent: str | None, business_domain: str | None) -> str:
-    """单个问题的意图与业务域标注，判断器没给出的项不展示。"""
-    parts: list[str] = []
-    if intent:
-        parts.append(f"意图：{intent}")
+def _question_annotation(business_domain: str | None) -> str:
+    """单个问题的业务域标注，判断器没给出的项不展示。"""
     if business_domain:
-        parts.append(f"业务域：{business_domain}")
-    return "，".join(parts)
+        return f"业务域：{business_domain}"
+    return ""
 
 
 # 子问题文本尾部统一成句号，避免"统计各经销商的订单笔数？"这类问号混在陈述句里
@@ -1433,13 +1424,11 @@ _SUBQUESTION_TAIL_PUNCT = "。．.!！?？;；,， "
 
 
 def _subquestion_statement(entry: CompoundJudgmentEntry) -> str:
-    """子问题一行：问题文本在前，意图与业务域字段标注跟在后面，缺项跳过。"""
+    """子问题一行：问题文本在前，业务域标注跟在后面，缺项跳过。"""
     question = str(entry.question or "").strip().rstrip(_SUBQUESTION_TAIL_PUNCT)
     parts: list[str] = []
     if question:
         parts.append(question)
-    if entry.intent:
-        parts.append(f"意图：{entry.intent}")
     if entry.business_domain:
         parts.append(f"业务域：{entry.business_domain}")
     if not parts:
@@ -1448,13 +1437,11 @@ def _subquestion_statement(entry: CompoundJudgmentEntry) -> str:
 
 
 def judgment_display_section(judgment: CompoundJudgment | None) -> str:
-    """意图识别节点展示的复合/单一判断段：意图、业务域与拆分出的子问题。"""
+    """意图识别节点展示的复合/单一判断段：业务域与拆分出的子问题。"""
     if judgment is None:
         return ""
     if not judgment.is_compound:
-        annotation = _question_annotation(
-            judgment.intent, judgment.business_domain
-        )
+        annotation = _question_annotation(judgment.business_domain)
         if annotation:
             return f"{annotation}。"
         return ""

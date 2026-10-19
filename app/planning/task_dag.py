@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.config import Settings
 from app.observability.langfuse_client import trace_generation
 from app.domain.models import PlannerExtraction, PrimaryIntent
+from app.analysis.chain_tools.temporal_window import has_pop_signal, has_yoy_signal
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,36 @@ _EXTRACTION_ROLE_GUIDANCE = """
 用户明确指定销售订单业务科室时保留该字段；明确指定医院临床开单/收货科室且目录无相应关系时保留待确认，不能用商品适用科室冒充。最终字段、值及关系绑定交给当前授权范围内的ASL。
 业务对象标准化只允许原名或目录明示的同义词关系。原文对象未登记或没有对应同义词时，实体/维度参数保留该对象原词，交给ASL确认；不能因为相近对象可以查到数据就替换原对象。对象缺少绑定不等于闲聊或指标口径解释。增长排序还必须保留用户明确的基础度量，数量、金额不能互相替换。
 """
+
+
+# 环比/同比问题改判趋势分析的序列特征：跨时间范围或逐期措辞说明
+# 计算落在多期时间序列上；两期式（如“11月环比10月”）不属于此类。
+_PERIOD_SERIES_WORDS = re.compile(
+    r"各月|每月|逐月|每个月|哪个月|哪个月份|各期|逐期|趋势|变化情况|增长情况|下降情况"
+)
+_PERIOD_RANGE_WORDS = re.compile(
+    r"到|至|~|～|最近|近[0-9一二两三四五六七八九十]|过去[0-9一二两三四五六七八九十]"
+)
+# 对象间比较措辞：保持对比分析，不做趋势改判
+_OBJECT_COMPARISON_WORDS = re.compile(
+    r"对比|比较|差异|谁更高|谁更低|哪个更高|哪个更低"
+)
+
+
+def _period_change_series_question(question: str) -> bool:
+    """判断环比/同比问题是否落在多期时间序列上。
+
+    只有同时满足环比/同比措辞、无对象间比较词、且带时间范围或逐期
+    序列特征时才改判趋势分析；两期式与对象对比保持原判。
+    """
+    compact = str(question or "").replace(" ", "")
+    if not (has_pop_signal(compact) or has_yoy_signal(compact)):
+        return False
+    if _OBJECT_COMPARISON_WORDS.search(compact):
+        return False
+    return bool(
+        _PERIOD_RANGE_WORDS.search(compact) or _PERIOD_SERIES_WORDS.search(compact)
+    )
 
 
 def _ground_location_owners(extraction: dict[str, Any] | None, question: str) -> None:
@@ -669,6 +700,9 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 判定示例：
 - “查看上海各经销商科室业务匹配度。” → 意图METRIC_DEFINITION：科室业务匹配度与规范内任何指标都无关且无法派生，按指标口径解释处理并保留原文指标名，参数照常完整提取（地区、经销商等照常输出）；不得改用规范内指标替代。
 - “统计各经销商近12月的平均月度销量增长率。” → 意图METRIC_QUERY：平均月度销量增长率由规范内指标“销量”派生，完整提取参数（时间范围、维度等），extraction的指标名输出规范登记原名“销量”，“计算平均月度增长率”写入“输出要求”。
+- “分析2025年10月到2025年12月含税销售总额的同比增长情况。” → 意图TREND_ANALYSIS：跨时间范围或多期的同比/环比是时间序列上的逐期计算，按趋势分析处理并完整提取参数（时间范围、维度），同比/环比口径写入“输出要求”。
+- “哪个月环比降幅最大。” → 意图TREND_ANALYSIS：环比落在多个月份的序列上，需要逐期计算再比较，按趋势分析处理。
+- “对比11月和12月的含税销售总额环比变化。” → 意图COMPARISON_ANALYSIS：只涉及明确两期，是期间对比，不是时间序列分析。
 """
 
 # 结构化提取规范整段取自国药语义解析器提示词，extraction字段按此输出。
@@ -795,7 +829,8 @@ class SingleQuestionPlanner:
         from app.planning.dependency_contract import projection
         for task in decomposition.tasks:
             target=task.structured or {}
-            if (task.intent!=PrimaryIntent.DETAIL_QUERY or database_query_choice(target) is not False
+            is_detail=(task.intent==PrimaryIntent.DETAIL_QUERY or target.get('意图')=='明细查询')
+            if (not is_detail or database_query_choice(target) is not False
                     or not task.depends_on or target.get('结果操作') or target.get('计算绑定')):
                 continue
             sources=[decomposition.tasks[index].structured or {} for index in task.depends_on
@@ -1188,6 +1223,22 @@ class SingleQuestionPlanner:
             if "不再查询数据库" in task_question:
                 # 计算/筛选任务基于前序任务结果，意图固定为对比分析
                 task_intent = PrimaryIntent.COMPARISON_ANALYSIS
+            elif (
+                task_intent is PrimaryIntent.COMPARISON_ANALYSIS
+                and _period_change_series_question(task_question)
+            ):
+                # 环比/同比落在多期时间序列上时属于趋势链路的逐期计算，
+                # 模型按“对比”字面归入对比分析会走两期引擎并拒算。
+                # 计算任务不适用本改判（上一分支已固定意图）。
+                task_intent = PrimaryIntent.TREND_ANALYSIS
+                if structured is not None and str(
+                    structured.get(_EXTRACTION_INTENT_KEY) or ""
+                ).strip() == "对比分析":
+                    structured[_EXTRACTION_INTENT_KEY] = "趋势分析"
+                logger.info(
+                    "period-change intent rerouted to TREND_ANALYSIS: question=%s",
+                    task_question[:120],
+                )
             # 口径/血缘解释问题保留完整参数；若模型仍输出null提取，则至少把
             # 原文指标名带进参数通道，否则下游解析不到指标，追问门禁会引导
             # 用户换成规范里的指标，违背“不得用语义相近指标替代”的约束。
