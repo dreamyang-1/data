@@ -235,7 +235,8 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 # ---------------------------------------------------------------------------
 
 
-def validate_plan(plan: TaskPlan, *, source_question: str | None = None) -> None:
+def validate_plan(plan: TaskPlan, *, source_question: str | None = None,
+                  registered_default_times: tuple[str, ...] = ()) -> None:
     if not 2 <= len(plan.tasks) <= 12:
         raise TaskPlanningError("任务计划必须包含2到12个原子任务")
     task_ids = [task.task_id for task in plan.tasks]
@@ -254,7 +255,7 @@ def validate_plan(plan: TaskPlan, *, source_question: str | None = None) -> None
             )
         known.add(task.task_id)
     if source_question is not None:
-        _validate_grounding(plan, source_question)
+        _validate_grounding(plan, source_question, registered_default_times)
 
 
 def _unique_mentions(text: str, candidates: tuple[str, ...]) -> list[str]:
@@ -357,7 +358,8 @@ def _qualified_facet_parts(question: str) -> tuple[str, list[str]] | None:
     return prefix, [left.group(0) + suffix, right.group(0) + suffix]
 
 
-def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
+def _validate_grounding(plan: TaskPlan, source_question: str,
+                       registered_default_times: tuple[str, ...] = ()) -> None:
     """拒绝模型自造的日期、数字、指标和带引号的过滤值。
 
     只做防自造的正向校验：任务文本不得引入原问题没有的数字、指标、
@@ -393,8 +395,12 @@ def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
     source_quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", source_question))
     source_identifiers = set(_business_identifiers(source_question))
     for task in plan.tasks:
+        grounding_question = task.question
+        for default in registered_default_times:
+            pattern = r"\s*".join(re.escape(char) for char in default)
+            grounding_question = re.sub(pattern, "", grounding_question)
         compact = _normalize_grounding_numbers(
-            re.sub(r"\s+", "", task.question).casefold()
+            re.sub(r"\s+", "", grounding_question).casefold()
         )
         if not set(re.findall(r"\d+(?:\.\d+)?", compact)).issubset(source_numbers):
             raise TaskPlanningError("子任务包含原问题中不存在的数字或日期")
@@ -433,7 +439,7 @@ def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
         marker for marker in ("不要", "不看", "不查", "排除", "剔除", "只看", "仅看")
         if marker in source_compact
     }
-    if not constraint_markers.issubset(planned_compact):
+    if not constraint_markers.issubset({marker for marker in constraint_markers if marker in planned_compact}):
         raise TaskPlanningError("任务计划遗漏原问题中的排除或限定条件")
 
 
@@ -1324,7 +1330,9 @@ class CompoundTaskPlanner:
                 final_deliverable=judgment.final_deliverable,
                 question_groups=question_groups,
             )
-        validate_plan(plan, source_question=source_question)
+        validate_plan(plan, source_question=source_question, registered_default_times=tuple(
+            dict.fromkeys(default for decomposition in decompositions
+                          for default in decomposition.grounding_default_times)))
         self._reject_metric_substitution(plan, source_question)
         return plan
 
@@ -1550,7 +1558,8 @@ class CompoundQuestionRouter:
             split_reason_code="TASK_DECOMPOSITION",
             compound_metrics=_compound_metrics_in_decompositions([decomposition]),
         )
-        validate_plan(plan, source_question=question)
+        validate_plan(plan, source_question=question,
+                      registered_default_times=decomposition.grounding_default_times)
         return CompoundRouteResult(judgment=judgment, plan=plan)
 
 
