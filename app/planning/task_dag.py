@@ -9,10 +9,10 @@
   指标目录解析、语义规范注入。
 """
 
+import copy
 import json
 import logging
 import re
-from copy import deepcopy
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
@@ -338,7 +338,7 @@ def _repair_unavailable_local_projection(decomposition, question):
                      for item in projection(tasks[dep].structured)}
         if all(item in available for item in wanted):
             continue
-        corrected = deepcopy(structured)
+        corrected = copy.deepcopy(structured)
         corrected['是否查询数据库'] = '是'
         corrected['意图'] = '明细查询'
         # Render this child's fields and conditions, not the predecessor's
@@ -515,7 +515,7 @@ class TaskPlanningError(RuntimeError):
 _EXTRACTION_SCHEMA_DESCRIPTION = (
     "结构化提取JSON，严格按系统提示词中的结构化提取规范输出，"
     "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重/是否查询数据库；"
-    "意图取值限定为 统计查询、趋势分析、对比分析、占比分析、排名分析、明细查询 之一。"
+    "意图取值限定为 指标查询、趋势分析、对比分析、占比分析、排名分析、明细查询 之一。"
     "数据查询任务的指标名：用户说法是某个登记指标的同义词时输出该指标的登记原名，"
     "与任何登记指标都对应不上时置空，不得用语义相近的指标顶替，不得自造指标名；"
     "不需要查询业务数据的问题（闲聊、超出业务范围）输出null；"
@@ -574,8 +574,25 @@ class _SinglePlan(BaseModel):
     )
 
 
-_SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取器。把问题拆解成可执行任务（绝大多数问题只有1个任务），按末尾的结构化提取规范逐任务输出extraction参数。只有与规范内任何指标都无关、也无法由规范内指标派生的纯概念词，才按指标口径解释处理（任务意图输出METRIC_DEFINITION，指标名保留用户原文）。只输出符合JSON Schema的JSON。
+_SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取器。把问题拆解成可执行任务，识别问题意图，并按末尾的结构化提取规范逐任务输出extraction参数。只输出符合JSON Schema的JSON，不回答用户问题，不调用工具。
 
+任务拆解规则：
+1. 默认输出1个任务，任务问题即用户问题本身。
+2. 先排名或筛选出对象、再查询这些对象的其他关系或明细时（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”），拆为2个任务：任务1排名或筛选，任务2依赖任务1并写明“根据上述任务的查询结果……”。任务2要执行新的数据库查询，问题里不要写“不再查询数据库”——该句只允许出现在基于前序结果直接计算或筛选、不再发任何新查询的任务里。例外：提示上下文里的[上一轮任务表]已包含该排名/筛选结果（所需实体名单已在采样中给出）时，不适用本条——不拆分，只输出1个任务，把上一轮采样中的参数值直接写进任务问题文本并以“复用上一轮查询结果：”开头，该任务照常发起新查询。
+3. 用户明确要求分别查询多个结果再比较或合并计算时（如“分别查询今年和去年销售额，并比较同比变化”），按查询数拆任务，再加一个依赖全部前序任务的计算任务，任务问题写明“根据上述任务的查询结果……不再查询数据库”。
+4. 业务语义规范指标表中某指标的依赖指标列登记了成分指标（取值不是"无"或空）时，该指标必须按公式成分拆分：依赖指标列里的每个成分指标各一个查询任务（指标名用该成分的规范登记原名，筛选条件按规范中该成分的口径与公式规则归属，分组维度只放在需要按维度分组的成分任务上），最后再加一个计算任务，依赖全部成分任务，问题写明"根据上述任务的查询结果计算×××，不再查询数据库"。对复合指标做趋势、占比、对比等分析时同样先按成分拆分，分析口径写进成分任务与计算任务的问题文本。依赖指标列为无、或成分指标不在规范指标表内时不拆；依赖指标列为无的普通指标的趋势、占比、对比分析，以及围绕同一份数据的分析都保持1个任务。
+5. 不要把ASL、SQL、取数、校验、洞察这些内部步骤拆成任务。
+6. 每个任务都要输出name字段：任务名称是"动词+业务指标+过滤条件"的陈述句（如"统计2025年上海市各经销商的含税销售总额""计算2025年上海市平均每单销售金额""查询订单笔数大于5笔的经销商名单"），用规范登记的指标、维度或实体名概括任务要得到的业务结果，不得照抄用户问题原文，不得出现"是多少""有哪些"等疑问词，结尾不加标点；计算任务的name直接写"计算×××"，不用带"根据上述任务的查询结果"前缀。
+
+意图判断规则（问题级intent字段）：
+1. 从下列意图枚举中选一个最贴合问题目标的取值，只输出枚举名本身。不需要查询业务数据的问题（闲聊、超出业务范围）按实际选CHAT或OUT_OF_SCOPE，extraction输出null。
+2. 说法与规范内任何指标都无关、也无法由规范内指标派生时，按指标口径解释处理：任务意图输出METRIC_DEFINITION，参数仍照常完整提取，指标名保留用户原文，不得用语义相近的指标替代，也不得自行编造计算口径。只有规范中连对应业务对象的度量都不存在的纯概念词，才按指标口径解释处理。其余数据问题的指标通道严格按末尾结构化提取规范输出：用户没有提到指标就填[]，不得把用户提到的属性说法归到语义相近的注册指标名上。
+3. 任务问题含"不再查询数据库"时，这是基于前序任务结果的计算/筛选任务，不是闲聊：该任务照常输出extraction，指标取被计算的指标名（保留原文叫法），"意图"键固定输出"指标计算"，过滤条件、时间粒度、维度按任务问题文本提取，识别不到的键置[]或null。
+
+数据查询问题的extraction字段：按本提示词末尾的"结构化提取规范"产出结构化提取JSON，只提取用户原文和注入的业务语义规范中出现的内容，识别不到的键按规范置[]或null。指标名在用户说法是某个登记指标的同义词时归一为该指标的登记原名；与任何登记指标都对应不上时置空，不得用语义相近的指标顶替，不得自造指标名。
+"""
+
+_SINGLE_SYSTEM_PROMPT += """
 基础任务边界：
 1. 先按指标排名或筛选出对象，再查询这些对象的其他关系、明细或新的数据时，拆为前置查询和依赖查询。前置任务只按入选对象计算排名；后续任务depends_on引用前置任务下标，并明确沿用其完整结果。不得把后续返回对象加入前置排名的分组，否则会改变排名粒度。
 2. 例如“前3名销售员及他们销售过的产品”先按销售员销售总额选前3名，再查询这3名销售员销售的产品；不能改成销售员与商品组合的前3名。后续任务不继承前置Top N限制。同一对象的唯一关联展示属性（如所属公司）可在原查询返回，不为展示字段强制拆任务。
@@ -641,6 +658,7 @@ class SingleQuestionPlanner:
             decomposition = _repair_unavailable_local_projection(decomposition, question)
             last_result = decomposition
             off_data, off_meta = self._normalize_decomposition_metrics(decomposition)
+            unsplit_compound = self._unsplit_compound_metrics(decomposition)
             empty_extraction = (
                 not any(task.structured is not None for task in decomposition.tasks)
                 and decomposition.intent not in _NO_DATA_INTENTS
@@ -652,8 +670,124 @@ class SingleQuestionPlanner:
                     off_data, off_meta, empty_extraction=empty_extraction,
                 )
                 continue
+            if unsplit_compound:
+                # 复合指标按登记成分在代码层确定性拆分：每个成分一个查询任务，
+                # 再加依赖全部成分的计算任务。不走模型重试——提示词里的拆分
+                # 条款会反过来干扰指标选择（实测多次复现）
+                decomposition = self._split_compound_metric_tasks(
+                    decomposition, unsplit_compound
+                )
+                last_result = decomposition
             return last_result
         return last_result
+
+    @staticmethod
+    def _unsplit_compound_metrics(
+        decomposition: QuestionDecomposition,
+    ) -> list[tuple[str, tuple[str, ...]]]:
+        """找出数据查询任务里未按公式拆分的复合指标：返回（指标, 成分）列表。
+
+        计算任务（问题含"不再查询数据库"）本来就携带复合指标名，
+        口径解释任务保留用户原文，二者都不算未拆分。
+        """
+        dependencies = decomposition.metric_dependencies
+        if not dependencies:
+            return []
+        catalog = decomposition.metric_catalog
+        if catalog is None:
+            return []
+        registered, aliases = catalog
+        findings: list[tuple[str, tuple[str, ...]]] = []
+        for task in decomposition.tasks:
+            if "不再查询数据库" in task.question or task.intent in _METADATA_INTENTS:
+                continue
+            structured = task.structured
+            if not isinstance(structured, dict):
+                continue
+            metrics = structured.get("指标")
+            if not isinstance(metrics, list):
+                continue
+            for item in metrics:
+                name = item.get("name") if isinstance(item, dict) else item
+                if not isinstance(name, str) or not name.strip():
+                    continue
+                normalized = _normalize_metric_name(name.strip(), registered, aliases)
+                components = dependencies.get(normalized)
+                if components and all(dep in registered for dep in components):
+                    findings.append((normalized, components))
+        return findings
+
+    @staticmethod
+    def _split_compound_metric_tasks(
+        decomposition: QuestionDecomposition,
+        findings: list[tuple[str, tuple[str, ...]]],
+    ) -> QuestionDecomposition:
+        """把未拆分的复合指标任务按登记成分拆成查询任务+计算任务。
+
+        成分任务沿用原任务的过滤条件与时间范围，指标换成成分登记原名，
+        排序字段同步替换、行数限制清空；计算任务保留原排序与限制，
+        依赖全部成分任务，问题文本按原链路口径写"不再查询数据库"。
+        """
+        if not findings:
+            return decomposition
+        split_by_metric = dict(findings)
+        new_tasks: list[DecomposedTask] = []
+        for task in decomposition.tasks:
+            structured = task.structured if isinstance(task.structured, dict) else None
+            metric = None
+            if structured:
+                for item in structured.get("指标") or []:
+                    name = item.get("name") if isinstance(item, dict) else item
+                    if isinstance(name, str) and name.strip() in split_by_metric:
+                        metric = name.strip()
+                        break
+            if metric is None or not structured:
+                new_tasks.append(task)
+                continue
+            components = split_by_metric[metric]
+
+            def _condition_text(base: dict[str, Any]) -> str:
+                parts: list[str] = []
+                time_granularity = base.get("时间粒度")
+                if isinstance(time_granularity, dict) and time_granularity.get("time_range"):
+                    parts.append(str(time_granularity["time_range"]))
+                for item in base.get("过滤条件") or []:
+                    if isinstance(item, dict):
+                        values = item.get("value")
+                        if isinstance(values, list) and values:
+                            parts.append("".join(str(v) for v in values))
+                return "".join(parts)
+
+            condition = _condition_text(structured)
+            component_start = len(new_tasks)
+            for comp in components:
+                comp_structured = copy.deepcopy(structured)
+                comp_structured["指标"] = [{"name": comp}]
+                for sort_item in comp_structured.get("排序") or []:
+                    if isinstance(sort_item, dict) and sort_item.get("field") == metric:
+                        sort_item["field"] = comp
+                comp_structured["限制"] = None
+                new_tasks.append(DecomposedTask(
+                    question=f"统计{condition}{comp}",
+                    name=f"统计{condition}{comp}",
+                    intent=task.intent,
+                    parameters=task.parameters,
+                    structured=comp_structured,
+                ))
+            calc_structured = copy.deepcopy(structured)
+            calc_structured["指标"] = [{"name": metric}]
+            calc_structured["意图"] = "指标计算"
+            new_tasks.append(DecomposedTask(
+                question=f"根据上述任务的查询结果计算{metric}，不再查询数据库",
+                depends_on=tuple(range(component_start, component_start + len(components))),
+                name=f"计算{metric}",
+                intent=task.intent,
+                parameters=task.parameters,
+                structured=calc_structured,
+            ))
+        if len(new_tasks) == len(decomposition.tasks):
+            return decomposition
+        return replace(decomposition, tasks=tuple(new_tasks))
 
     async def plan_single(
         self,
