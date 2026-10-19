@@ -54,3 +54,13 @@ Current Stage：本轮代码修复与验收完成，按用户决定不部署。C
 合并后重跑：Agent 5239通过、97个历史失败不变，无新增回归或收集错误；Critical 403通过。最新远端运行文件加本轮清单覆盖组成的隔离实例成功启动；真实只读合作时长查询完整输入2154行，严格>12筛出4行，独立复算一致，两个任务完成且六主节点顺序正确。Oagnet和SQL代码未增加改动，沿用此前对应版本已通过的验证。
 
 Current Stage：恢复部署前验证完成。Cutover Blocker P0/P1：本轮不作V2切流或替换就绪判定。Catalog/Evaluation/Shadow Gap：不修改目录/索引、不开展新生产Shadow。V1 Replacement Readiness：维持原有路由。Next shortest blocking path：精确清单发布、备份及配置校验、受影响服务重启、健康与只读业务验证；最终以发布回执为准。
+
+## 恢复部署最终回执
+
+状态：`DEPLOYED_VERIFIED`。用户恢复授权后，已将合并后的Agent提交 `2f75c790b6f91c08a6e768b0bc13b447aee054ee` 和Oagnet提交 `cb77ab26559583a8dcf5debc2cda957d4913414e` 发布到约定服务器，并重启两个受影响服务。此前暂不部署的决定及预检停止回执保留为历史记录，本节是最新状态。
+
+逐文件发布23项，20个原文件均已备份并核对哈希，另外3项为新增文件；所有发布文件SHA与版本仓一致。配置文件及发布清单以外的运行代码在发布前后核对一致，没有覆盖其他人的无关改动。Agent `/live`、`/ready` 和Oagnet健康接口均为200，服务均为active且进程已更新。
+
+正式服务只读实测“查询合作时长大于12个月的经销商名单”：两个任务完成，完整查询2154行、筛选得到4行，无截断，六主节点按合同顺序展示。隔离实例已关闭。未修改业务数据、语义库、索引、权限或V2路由；没有自动合并Draft PR。
+
+Current Stage：本轮合并发布及重启验收完成。Cutover Blocker P0/P1：未评估或声称V2生产替换就绪；97个Agent历史失败、2个Oagnet历史失败及目录/月份数据缺口继续保留。Catalog/Evaluation/Shadow Gap：本轮无目录发布、索引重建或新生产Shadow。V1 Replacement Readiness：保持现有路由。Next shortest blocking path：本轮无剩余发布步骤；后续功能变更重新执行差异、验证和发布门禁。

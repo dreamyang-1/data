@@ -1,5 +1,5 @@
 {
-  "status": "RESUMED_VERIFIED_RELEASE_PENDING",
+  "status": "DEPLOYED_VERIFIED",
   "scope": {
     "semantic_model_id": 81,
     "business_domain_ids": [
@@ -191,22 +191,45 @@
     "missing supplier catalog and incompletely populated months remain disclosed"
   ],
   "deployment": {
-    "status": "PENDING_RESUMED_USER_AUTHORIZATION",
-    "preflight": "STOPPED_REMOTE_DRIFT",
-    "production_files_written": 0,
-    "production_services_restarted": false,
+    "status": "DEPLOYED_VERIFIED",
     "user_decision": "部署重启，注意不要覆盖其他人的代码，有不一样的就优化合并",
-    "catalog_mutations": 0,
-    "index_rebuilds": 0,
-    "v2_cutover": false,
+    "resumed": true,
+    "production_files_written": 23,
+    "original_files_backed_up": 20,
+    "new_files": 3,
+    "backups_sha_verified": true,
+    "production_services_restarted": true,
+    "protected_configurations_unchanged": true,
+    "unrelated_runtime_unchanged": true,
+    "runtime_sha_verified": true,
+    "services": {
+      "Agent": {
+        "active": true,
+        "live": 200,
+        "ready": 200
+      },
+      "Oagnet": {
+        "active": true,
+        "health": 200
+      }
+    },
     "code_commits": {
-      "Agent": "de3903e68d03ad07b387f49a12c337a2bf4a9034",
+      "Agent": "2f75c790b6f91c08a6e768b0bc13b447aee054ee",
       "Oagnet": "cb77ab26559583a8dcf5debc2cda957d4913414e"
     },
     "draft_pr": "https://github.com/dreamyang-1/data/pull/104",
     "draft": true,
-    "isolated_test_processes_stopped": false,
-    "resumed": true
+    "production_smoke": {
+      "status": "COMPLETED",
+      "tasks": 2,
+      "complete_source_rows": 2154,
+      "filtered_rows": 4,
+      "six_stages": true
+    },
+    "isolated_test_processes_stopped": true,
+    "catalog_mutations": 0,
+    "index_rebuilds": 0,
+    "v2_cutover": false
   },
   "resume_validation": {
     "agent_full": {
