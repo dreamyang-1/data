@@ -110,6 +110,12 @@ def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source
     key, candidates = semantic_question_identity(request, slot) if semantic else (clarification_key(slot, []), [])
     already = key in asked_keys
     is_user = len(options) >= 2 if semantic else slot in USER_SLOTS
+    if (source_stage == 'TASK_CALCULATION_DEFINITION' and slot == 'semantic_ambiguity'
+            and ambiguities and all(
+                item.type == 'context' and (item.ambiguity_id or '').startswith('PLANNER_CALCULATION_')
+                and set(item.affected_slots) and set(item.affected_slots)<={'analysis_method','analysis_window'}
+                for item in ambiguities)):
+        is_user = True
     structured_slot = (
         source_stage == 'STRUCTURED_ASL_BINDING' and slot == 'semantic_ambiguity'
         and ambiguities and ambiguities[0].type not in {'context', 'data_source', 'unknown'}

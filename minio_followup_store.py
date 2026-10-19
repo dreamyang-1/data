@@ -192,7 +192,7 @@ def dataset_source_complete(reference: DatasetReference | Mapping[str, Any], loa
             return isinstance(steps, list) and bool(steps) and all(complete(step) for step in steps)
         if kind == 'inner_join':
             return operation.get('source_truncated') is False
-        return kind in {'query_provenance', 'filter', 'select', 'sort', 'derive', 'aggregate'}
+        return kind in {'query_provenance', 'filter', 'select', 'sort', 'derive', 'aggregate', 'monthly_growth'}
 
     log = value.get('transformation_log', ())
     if not isinstance(log, (list, tuple)) or (value.get('parent_dataset_ids') and not log):
@@ -1346,6 +1346,10 @@ def apply_followup_operation(
     rows = [dict(row) for row in source_rows]
     declared = tuple(columns)
 
+    if op == 'monthly_growth':
+        from app.services.period_computation import monthly_growth
+        return monthly_growth(declared,rows,operation)
+
     if op == "pipeline":
         operations = operation.get("operations")
         if not isinstance(operations, list) or not 1 <= len(operations) <= 5:
@@ -1466,8 +1470,12 @@ def apply_followup_operation(
         arithmetic = str(operation.get("operator", "")).lower()
         if arithmetic not in {"add", "subtract", "multiply", "divide"}:
             raise InvalidFollowupOperation("derive operator must be add/subtract/multiply/divide")
+        result_format = operation.get('result_format','number')
+        if result_format not in {'number','percent'}:
+            raise InvalidFollowupOperation('derive result_format must be number/percent')
         for row in rows:
-            row[result_field] = _arithmetic(row.get(left), row.get(right), arithmetic)
+            value = _arithmetic(row.get(left), row.get(right), arithmetic)
+            row[result_field] = f'{value * 100:.2f}%' if value is not None and result_format == 'percent' else value
         return (*declared, result_field), rows
 
     if op == "aggregate":

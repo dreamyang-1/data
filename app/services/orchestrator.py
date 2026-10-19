@@ -990,6 +990,19 @@ class DataAnalysisOrchestrator:
             conversation_id=chat.conversation_id,
         )
 
+    @staticmethod
+    async def _emit_cached_progress(response: AgentResponse) -> None:
+        if response.status not in {'COMPLETED', 'PARTIAL_SUCCESS'} or response.intent in NO_DATA_INTENTS | METADATA_INTENTS:
+            return
+        for stage, message in (
+            ('INTENT_RECOGNITION', '已核对本次请求，命中当前会话及授权范围内的已完成结果。'),
+            ('TASK_PLANNING', '本轮沿用已完成请求的任务规划，复用结果及附件，不重新拆分。'),
+            ('DATA_RETRIEVAL', '复用已保存的结果和附件；本轮未执行新的ASL、SQL或数据库查询。'),
+            ('RELIABILITY_CHECK', '保留原结果的校验状态及可靠性；本轮未重新校验业务数据。'),
+            ('INSIGHT_ANALYSIS', '沿用已完成的分析；本轮未新增模型分析。'),
+        ):
+            await emit_progress(stage, 'COMPLETED', message)
+
     async def _handle_request(
         self, chat: ChatRequest, identity: TrustedIdentity
     ) -> AgentResponse:
@@ -1015,6 +1028,7 @@ class DataAnalysisOrchestrator:
                 "EXPLICIT" if chat.business_domain_ids else "AUTO"
             )
             await self._ensure_clarification_trace(cached, chat)
+            await self._emit_cached_progress(cached)
             return cached
         repeat_fingerprint = (
             self._repeat_query_fingerprint(chat, identity)
@@ -1043,6 +1057,7 @@ class DataAnalysisOrchestrator:
                     "检测到当前问题与本会话已完成查询相同，直接复用已有结果和附件。",
                 )
                 repeated.request_id = uuid4()
+                await self._emit_cached_progress(repeated)
                 return repeated
         owner_token = str(uuid4())
         claim = getattr(self.sessions, "claim_message_execution", None)
@@ -1066,6 +1081,7 @@ class DataAnalysisOrchestrator:
                     chat.conversation_id, chat.message_id, request_fingerprint,
                 )
                 if cached is not None:
+                    await self._emit_cached_progress(cached)
                     return cached
         try:
             request_started = time.perf_counter()
@@ -1076,6 +1092,7 @@ class DataAnalysisOrchestrator:
                 chat.conversation_id, chat.message_id, request_fingerprint,
             )
             if cached is not None:
+                await self._emit_cached_progress(cached)
                 return cached
             if chat._is_regeneration_execution:
                 # A refresh replaces the active turn in the same conversation.
@@ -2139,6 +2156,12 @@ class DataAnalysisOrchestrator:
         return False
 
     @staticmethod
+    def _semantic_versions(chat: ChatRequest) -> dict[str, str]:
+        proof = getattr(chat._semantic_decision, 'scope_proof', None)
+        return {key:value for key in ('catalog_version','semantic_model_version')
+                if isinstance((value := getattr(proof, key, None)), str) and value}
+
+    @staticmethod
     def _dag_scope_fingerprint(chat: ChatRequest) -> str:
         payload = {
             'scope_contract': 'phase0c-v1',
@@ -2241,6 +2264,10 @@ class DataAnalysisOrchestrator:
                     level="HIGH", score=1.0, gates={"dag_cancelled": True}
                 ),
             )
+
+        if state.get('semantic_versions', {}) != self._semantic_versions(chat):
+            return self._dag_resume_error(chat,
+                '原任务的语义目录或模型版本已变化，或当前无法核验原版本；请在当前范围内重新提交完整问题。原待确认信息已保留。')
 
         answers = dict(chat.task_answers)
         unknown = sorted(set(answers) - set(awaiting))
@@ -2798,6 +2825,9 @@ class DataAnalysisOrchestrator:
         responses: dict[str, Any] | None = None,
     ) -> AgentResponse:
         """复合指标拆出的计算任务：不查库，对前序任务结果集做确定性计算后回复。"""
+        clarification = await self._planner_calculation_clarification(chat, identity)
+        if clarification is not None:
+            return clarification
         await emit_progress(
             "ASL_GENERATION",
             "COMPLETED",
@@ -2806,7 +2836,7 @@ class DataAnalysisOrchestrator:
         fallback = self._pure_computation_unavailable(chat)
         if self.dataset_store is None:
             return fallback
-        from app.services.computation_delivery import bind_division, numeric_value
+        from app.services.computation_delivery import bind_division, bound_row_division, bound_dataset_operation, numeric_value
         from app.services.query_identity import source_quality
         from minio_followup_store import dataset_source_complete
         references = []
@@ -2852,6 +2882,12 @@ class DataAnalysisOrchestrator:
                 logger.warning("pure computation source load failed: %s", exc)
                 return fallback
             references.append((source, loaded.rows))
+        try:
+            row_operation = bound_dataset_operation(task, references) or bound_row_division(task, references)
+        except ValueError as exc:
+            return self._pure_computation_unavailable(chat, reason=str(exc))
+        if row_operation is not None:
+            return await self._respond_dataset_computation(chat, identity, task, references, operation=row_operation)
         single_rows = [item for item in references if item[0].row_count == 1]
         multi_rows = [item for item in references if item[0].row_count > 1]
         if not (task.extraction or {}).get('计算绑定') and (
@@ -3012,7 +3048,7 @@ class DataAnalysisOrchestrator:
             ),
         )
 
-    async def _respond_dataset_computation(self, chat, identity, task, references):
+    async def _respond_dataset_computation(self, chat, identity, task, references, *, operation=None):
         """Execute bounded dataset operations and publish the exact final artifact."""
         from app.services.computation_delivery import aligned_input, computation_material
         from app.services.query_identity import source_quality
@@ -3022,7 +3058,7 @@ class DataAnalysisOrchestrator:
                        for ref, rows in references):
                 raise ValueError('计算输入不是完整数据集')
             columns, rows = aligned_input(references)
-            operation = plan_dataset_followup(task.question, columns, rows, source_complete=True)
+            operation = operation or plan_dataset_followup(task.question, columns, rows, source_complete=True)
             if operation is None:
                 raise ValueError('未能将计算要求映射为明确的受控数据操作')
             scope = DatasetScope(tenant_id=identity.tenant_id, user_id=identity.user_id,
@@ -3257,7 +3293,8 @@ class DataAnalysisOrchestrator:
             chat.conversation_id, root_message_id,
         )
         if (checkpoint and checkpoint.get("plan_fingerprint") == plan_fingerprint
-                and checkpoint.get('authorized_scope') == chat.authorized_semantic_scope.fingerprint()):
+                and checkpoint.get('authorized_scope') == chat.authorized_semantic_scope.fingerprint()
+                and checkpoint.get('semantic_versions', {}) == self._semantic_versions(chat)):
             deferred_insights.update(checkpoint.get("deferred_insights") or {})
             if not dag_pending and checkpoint.get("analysis_root_context"):
                 root_context = copy.deepcopy(checkpoint["analysis_root_context"])
@@ -3306,6 +3343,7 @@ class DataAnalysisOrchestrator:
                         "schema_version": "1.0",
                         "plan_fingerprint": plan_fingerprint,
                         'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
+                        'semantic_versions': self._semantic_versions(chat),
                         "completed": completed,
                         "conversations": conversation_by_task,
                         "analysis_root_context": root_context,
@@ -3873,6 +3911,7 @@ class DataAnalysisOrchestrator:
                     resume_token.encode("utf-8")
                 ).hexdigest(),
                 "scope_fingerprint": self._dag_scope_fingerprint(chat),
+                'semantic_versions': self._semantic_versions(chat),
                 "root_message_id": root_message_id,
                 "plan_fingerprint": plan_fingerprint,
                 "task_plan": plan.model_dump(mode="json"),
@@ -4356,6 +4395,9 @@ class DataAnalysisOrchestrator:
     def _is_repeat_cache_candidate(chat: ChatRequest) -> bool:
         """Cache only self-contained business requests, never elliptical follow-ups."""
         compact = re.sub(r"\s+", "", chat.question).strip("，,。.!！?？")
+        from app.services.query_identity import requires_fresh_query
+        if requires_fresh_query(chat):
+            return False
         if chat.dataset_id is not None:
             return False
         if DataAnalysisOrchestrator._structured_database_query_choice(chat._planner_extraction) is not None:
@@ -4384,6 +4426,9 @@ class DataAnalysisOrchestrator:
             "roles": sorted(set(identity.roles)),
             "use_longterm_memory": chat.use_longterm_memory,
         }
+        versions = DataAnalysisOrchestrator._semantic_versions(chat)
+        if versions:
+            payload['semantic_versions'] = versions
         canonical = json.dumps(
             payload,
             ensure_ascii=False,
@@ -5044,7 +5089,47 @@ class DataAnalysisOrchestrator:
         await self.sessions.put_task_frame(request)
         return await self._complete_query_result(chat, identity, request, result)
 
+    async def _planner_calculation_clarification(self, chat, identity, *, request=None, rounds=1):
+        """Use existing Pending for a declared missing method/window, before IO."""
+        extraction=getattr(chat,'_planner_extraction',None)
+        spec=((extraction.structured or {}) if extraction else {}).get('计算待确认')
+        if spec is None:
+            return None
+        if request is not None and 'CALCULATION_DEFINITION_CONFIRMED_BY_USER' in request.assumptions:
+            return None
+        try:
+            slots=spec.get('affected_slots',['analysis_method']) if isinstance(spec,dict) else []
+            if not slots or not set(slots)<={'analysis_method','analysis_window'}:
+                raise ValueError('计算口径确认必须明确方法或统计窗口')
+            ambiguity=SemanticAmbiguity(type='context',question=spec['question'],
+                ambiguity_id='PLANNER_CALCULATION_'+hashlib.sha256(json.dumps(spec,ensure_ascii=False,sort_keys=True).encode()).hexdigest()[:16],
+                phrase='计算口径',affected_slots=slots,candidates=spec.get('candidates',[]),
+                material_impact='不同计算算法或统计窗口会改变派生数值',semantic_model_id=chat.semantic_model_id)
+        except (ValueError,TypeError,KeyError) as exc:
+            return self._pure_computation_unavailable(chat,reason=f'计算口径确认参数无效：{exc}')
+        pending=await self.sessions.get_pending(identity.tenant_id,identity.user_id,chat.application_id,chat.conversation_id)
+        if request is None:
+            if pending is not None:
+                # Let existing turn admission resolve selection/new topic and
+                # scope before adding this turn's calculation clarification.
+                return None
+            request=self._classify_with_rules(chat.question,identity,chat.conversation_id)
+            request.application_id=chat.application_id
+            request.original_question=chat.question
+            request.rewritten_question=chat.question
+        request.primary_intent=(extraction.intent if extraction and extraction.intent else PrimaryIntent.METRIC_QUERY)
+        request._planner_extraction=extraction
+        request.semantic_ambiguities=[ambiguity]
+        request.ambiguities=[ambiguity.question]
+        request.missing_slots=['semantic_ambiguity']
+        bind_authorized_scope(request,chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=chat._demo_execution_resolved_business_domain_ids)
+        return await self._request_clarification(request,rounds,source_stage='TASK_CALCULATION_DEFINITION')
+
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
+        clarification = await self._planner_calculation_clarification(chat, identity)
+        if clarification is not None:
+            return clarification
         logger.info(
             "v1 handle enter: message_id=%s conversation=%s dag_independent=%s question=%s",
             chat.message_id, chat.conversation_id,
@@ -6942,6 +7027,10 @@ class DataAnalysisOrchestrator:
             ),
         )
         request.dependency_constraints = list(chat.dependency_constraints)
+        calculation_clarification = await self._planner_calculation_clarification(
+            chat,identity,request=request,rounds=rounds)
+        if calculation_clarification is not None:
+            return calculation_clarification
         if request.dependency_constraints:
             # 依赖任务的筛选值由前序结果约束在执行层补值；识别层随完成问题
             # 回传的 expected_filter(context) 歧义与筛选落值歧义对这类任务
@@ -11747,6 +11836,12 @@ class DataAnalysisOrchestrator:
                 )
                 applied = True
 
+        if (not applied and ambiguity.type == 'context'
+                and (ambiguity.ambiguity_id or '').startswith('PLANNER_CALCULATION_')
+                and set(ambiguity.affected_slots) and set(ambiguity.affected_slots)<={'analysis_method','analysis_window'}):
+            target.assumptions.append('CALCULATION_DEFINITION_CONFIRMED_BY_USER')
+            applied = True
+
         if not applied and ambiguity.type in {
             "subject", "entity_role", "entity_value", "filter", "filter_slot",
         }:
@@ -11830,10 +11925,13 @@ class DataAnalysisOrchestrator:
                 ))
             ]
         target.original_question = pending.original_question
-        target.rewritten_question = render_execution_question(
-            target,
-            confirmation=str(choice.get("confirmation") or "").strip() or None,
-        )
+        if (ambiguity.ambiguity_id or '').startswith('PLANNER_CALCULATION_'):
+            target.rewritten_question = cls._completed_question_with_choice(pending,choice)
+        else:
+            target.rewritten_question = render_execution_question(
+                target,
+                confirmation=str(choice.get("confirmation") or "").strip() or None,
+            )
         return target
 
     @staticmethod

@@ -48,6 +48,10 @@ def collect_root_materials(
     responses: dict[str, Any], deferred: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
     indexed = {item.task_id: item for item in results}
+    question_by_task = {}
+    for index, group in enumerate(plan.question_groups or []):
+        for task in plan.tasks[group.task_offset:group.task_offset + group.task_count]:
+            question_by_task[task.task_id] = (f'question-{index + 1}', group.question)
     materials = []
     for task in plan.tasks:
         result = indexed[task.task_id]
@@ -57,6 +61,10 @@ def collect_root_materials(
                         question=material.get("question") or task.question,
                         depends_on=list(task.depends_on), expected_output=task.expected_output,
                         structured_parameters=material.get("structured_parameters") or task.extraction)
+        question_id, original_question = question_by_task.get(task.task_id, ('question-1', None))
+        material['question_id'] = question_id
+        if original_question:
+            material['original_question'] = original_question
         material.setdefault("summary", result.answer)
         material["calculation_incomplete"] = bool(
             result.status == "FAILED" and result.reliability
@@ -85,6 +93,25 @@ def collect_root_materials(
     return materials
 
 
+def _same_question_dependency(item, materials):
+    """Hide an internal skipped step, keeping separately accepted questions."""
+    return any(dep['task_id'] in item.get('depends_on', []) and (
+        not item.get('question_id') or item.get('question_id') == dep.get('question_id'))
+        for dep in materials)
+
+
+def _required_question_outputs(available):
+    """Successful terminal outputs are relative to each original question.
+
+    A cross-question consumer does not erase its supplier's deliverable. Raw
+    legacy material without question ownership keeps its previous selection.
+    """
+    indexed = {item['task_id']:item for item in available}
+    consumed = {dep for item in available for dep in item.get('depends_on', [])
+                if item.get('question_id') and indexed.get(dep, {}).get('question_id') == item['question_id']}
+    return [item for item in available if item.get('question_id') and item['task_id'] not in consumed]
+
+
 def render_root_report(
     question: str, materials: list[dict[str, Any]], final: dict[str, Any] | None,
 ) -> tuple[str, list[str]]:
@@ -102,7 +129,7 @@ def render_root_report(
         task_ids = {item["task_id"] for item in materials}
         actionable = [
             item for item in materials
-            if not (item["status"] == "SKIPPED" and task_ids.intersection(item.get("depends_on", [])))
+                if not (item["status"] == "SKIPPED" and _same_question_dependency(item, materials))
         ]
         if not actionable:
             actionable = materials
@@ -122,7 +149,7 @@ def render_root_report(
                     else "该任务未能完成，暂未提供具体原因，请重试或联系管理员查看执行日志。"
                 )
             if len(actionable) > 1:
-                text = f"{item.get('question') or '未完成的任务'}：\n{text}"
+                text = f"{item.get('original_question') or item.get('question') or '未完成的任务'}：\n{text}"
             messages.append(text)
         return "\n\n".join(dict.fromkeys(messages)) or "本次任务未执行成功，尚未获得查询结果，请重试或联系管理员查看执行日志。", []
 
@@ -146,6 +173,14 @@ def render_root_report(
         # final calculation fails, keep the available evidence and explain why.
         consumed = {dep for item in available for dep in item.get("depends_on", [])}
         selected = [item for item in available if item["task_id"] not in consumed] or available
+    # Selection is presentation advice, not permission to drop an accepted
+    # question. Preserve legacy material behavior until ownership is known.
+    selected_ids = {item['task_id'] for item in selected}
+    for item in _required_question_outputs(available):
+        if item['task_id'] not in selected_ids:
+            selected.append(item)
+            selected_ids.add(item['task_id'])
+    selected = [item for item in available if item['task_id'] in selected_ids]
     selected_ids = {item["task_id"] for item in selected}
     tables, charts, notes = [], [], []
     for item in materials:
@@ -162,7 +197,7 @@ def render_root_report(
             else:
                 label = ("未执行的后续任务" if item["status"] == "SKIPPED" and item.get("depends_on")
                          else "尚未完成的内容")
-                notes.append(f"{label}：{item['question']}。{reason}")
+                notes.append(f"{label}：{item.get('original_question') or item['question']}。{reason}")
         for query in (item.get("query_results") or []) if item["task_id"] in selected_ids else []:
             if query.get("truncated"):
                 notes.append(f"“{item['question']}”仅提供{query.get('returned_row_count', '部分')}条预览，不能作为全量统计。")

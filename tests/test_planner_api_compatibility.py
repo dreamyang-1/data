@@ -80,8 +80,11 @@ async def test_native_router_api_when_installed():
     from app.config import Settings
     router = CompoundQuestionRouter(Settings(env='test', multi_question_model_enabled=False))
     judgment = CompoundJudgment(is_compound=False)
-    router._single.plan_single = AsyncMock(return_value=Obj(single_extraction=EXTRACTION))
+    from app.planning.task_dag import QuestionDecomposition, DecomposedTask
+    router._single.plan_question = AsyncMock(return_value=QuestionDecomposition(tasks=(
+        DecomposedTask(question='问题',intent=EXTRACTION.intent,parameters=tuple(EXTRACTION.parameters)),)))
     result = await plan_question(router, '问题', semantic_context='', semantic_model_id=121, prior_judgment=judgment)
-    assert result.single_extraction is EXTRACTION
+    assert result.single_extraction == EXTRACTION
+    router._single.plan_question.assert_awaited_once_with('问题',semantic_context='',semantic_model_id=121)
     plan = TaskPlan(planner='DETERMINISTIC_RULE', tasks=[AtomicTask(task_id='t1', question='查销售额'), AtomicTask(task_id='t2', question='查产品', depends_on=['t1'])])
     assert [[t.task_id for t in group] for group in prepare_execution(router, plan)[2]] == [['t1'], ['t2']]

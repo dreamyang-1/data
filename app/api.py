@@ -1310,7 +1310,8 @@ async def chat_stream(
                 else presentation_scenario
             )
             presentation_scenario = response_scenario
-            if response_scenario in {"CHAT", "CLARIFICATION"} or response.execution_shape == "COMPOSITE":
+            if (response_scenario in {"CHAT", "CLARIFICATION"} or response.execution_shape == "COMPOSITE"
+                    or response.intent not in {PrimaryIntent.CHAT, PrimaryIntent.CAPABILITY_HELP, PrimaryIntent.OUT_OF_SCOPE}):
                 async for rendered_event in stream_thinking({
                     "stage": "FINAL_OUTPUT",
                     "status": "COMPLETED",
@@ -1519,7 +1520,7 @@ def _thinking_events(
         else str(progress.get("message") or stage).strip()
     )
     # Remove node-owned headings, then emit one normalized public heading for
-    # each of the seven data-agent stages at the SSE boundary.
+    # each of the six main data-agent stages at the SSE boundary.
     content = re.sub(r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", content).strip()
     content = _markdown_hard_line_breaks(content)
     if heading:
@@ -1647,7 +1648,7 @@ def _thinking_section(stage: str) -> str | None:
         "TASK_PLANNING": "planning",
         "DATA_RETRIEVAL": "execution",
         "SEMANTIC_QUERY_PLANNING": "execution",
-        "ASL_GENERATION": "parsing",
+        "ASL_GENERATION": "execution",
         "SQL_TRANSLATION": "execution",
         "SQL_EXECUTION": "execution",
         "KNOWLEDGE_RETRIEVAL": "execution",
@@ -1658,6 +1659,12 @@ def _thinking_section(stage: str) -> str | None:
         "CLARIFICATION_RESULT": "clarification_result",
         "FINAL_OUTPUT": "final_output",
     }.get(stage)
+
+
+def _ordering_section(stage: str) -> str | None:
+    # Retain the existing internal ASL/SQL barrier while publishing both inside
+    # the frozen execution node. This does not alter tool or retry ordering.
+    return 'parsing' if stage == 'ASL_GENERATION' else _thinking_section(stage)
 
 
 class _CompositeChildProgressOrderer:
@@ -1738,7 +1745,7 @@ class _CompositeChildProgressOrderer:
     def push(self, event: dict[str, Any]) -> list[dict[str, Any]]:
         """Keep all child ASL output above SQL without delaying actual tools."""
         self._observe_task_count(event)
-        section = _thinking_section(str(event.get("stage") or "").upper())
+        section = _ordering_section(str(event.get("stage") or "").upper())
         task_key = self._task_key(event)
         visible: list[dict[str, Any]] = []
         if section == "parsing":
@@ -1768,7 +1775,7 @@ class _CompositeChildProgressOrderer:
         self._observe_task_count(current)
         stage = str(current.get("stage") or "").upper()
         status = str(current.get("status") or "").upper()
-        section = _thinking_section(stage)
+        section = _ordering_section(stage)
         task_key = self._task_key(current)
 
         if section == "execution":
@@ -1849,7 +1856,7 @@ def _ordered_composite_child_progress_events(
 
     def sort_key(indexed: tuple[int, dict[str, Any]]) -> tuple[int, int, int]:
         sequence, event = indexed
-        section = _thinking_section(str(event.get("stage") or "").upper())
+        section = _ordering_section(str(event.get("stage") or "").upper())
         try:
             task_index = max(0, int(event.get("task_index") or 0))
         except (TypeError, ValueError):
@@ -1861,7 +1868,7 @@ def _ordered_composite_child_progress_events(
     rendered: list[dict[str, Any]] = []
     for event in ordered:
         current = dict(event)
-        section = _thinking_section(str(current.get("stage") or "").upper())
+        section = _ordering_section(str(current.get("stage") or "").upper())
         try:
             task_index = max(0, int(current.get("task_index") or 0))
         except (TypeError, ValueError):
@@ -1919,7 +1926,7 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
         "intent": "#### ◉ 意图识别",
         "file": "#### ◉ 文件感知与解析",
         "planning": "#### ◉ 任务拆分与规划",
-        "parsing": "#### ◉ 解析校验",
+        "parsing": "#### ◉ 调度执行",
         "execution": "#### ◉ 调度执行",
         "validation": "#### ◉ 结果校验",
         "insight": "#### ◉ 数据洞察分析",

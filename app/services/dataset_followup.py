@@ -354,7 +354,7 @@ def dataset_operation_family(operation: Mapping[str, Any] | None) -> str | None:
         return None
     return {'limit':'DISPLAY_LIMIT', 'sort':'LOCAL_SORT', 'select':'PROJECTION',
             'sort_limit':'GLOBAL_RANKING', 'aggregate':'GLOBAL_RANKING',
-            'extrema':'GLOBAL_RANKING', 'extrema_difference':'GLOBAL_RANKING',
+            'extrema':'GLOBAL_RANKING', 'extrema_difference':'GLOBAL_RANKING', 'monthly_growth':'GLOBAL_RANKING',
             'drilldown':'DRILLDOWN'}.get(str(operation.get('type')))
 
 
@@ -364,6 +364,9 @@ def describe_dataset_operation(operation: Mapping[str, Any] | None) -> str | Non
         return None
     op_type = str(operation.get('type') or '').lower()
     field = str(operation.get('field') or '').strip()
+    if op_type == 'monthly_growth':
+        method={'arithmetic':'算术平均','compound':'复合平均'}.get(operation.get('method'),'未确认口径')
+        return f'按{operation.get("period_start")}至{operation.get("period_end")}月度序列计算{field}增长率的{method}'
     if op_type == 'sort':
         direction = '降序' if operation.get('descending') else '升序'
         return f'按{field}{direction}排列' if field else None

@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -511,9 +511,26 @@ class TaskInputBindingError(TaskPlanningError):
 
 def materialize_computation_binding(extraction, *, task_index, task_offset, dependencies):
     """Translate local operand references after global task IDs are assigned."""
-    if not extraction or '计算绑定' not in extraction:
+    if not extraction or not any(key in extraction for key in ('计算绑定','结果操作')):
         return extraction
     result = copy.deepcopy(extraction)
+    if '结果操作' in result:
+        from app.planning.calculation_bindings import validate_result_operation
+        spec = result['结果操作']
+        try:
+            if '计算绑定' in result or database_query_choice(result) is not False or not isinstance(spec, dict):
+                raise ValueError('结果操作必须是不查库且唯一的计算定义')
+            validate_result_operation(spec.get('operation'))
+            index = spec.get('source_task_index')
+            if type(index) is not int or not 0 <= index < task_index:
+                raise ValueError('结果操作必须引用本问题的前序任务')
+            source_id = f'task-{task_offset + index + 1}'
+            if list(dependencies) != [source_id]:
+                raise ValueError('结果操作要求一个明确的前序依赖')
+            result['结果操作'] = {'source_task_id':source_id,'operation':spec['operation']}
+        except ValueError as exc:
+            raise TaskInputBindingError(str(exc)) from exc
+        return result
     spec = result['计算绑定']
     if (not isinstance(spec, dict) or spec.get('operation') != 'divide'
             or database_query_choice(result) is not False
@@ -542,8 +559,24 @@ _EXTRACTION_SCHEMA_DESCRIPTION = (
     "（用户说法是同义词或派生口径时归一为登记原名，派生口径写入“输出要求”），不得自造指标名；"
     "不需要查询业务数据的问题（闲聊、超出业务范围）输出null；"
     "指标口径解释任务按规范完整提取参数，指标名保留用户原文，"
-    "意图键固定输出“解释口径”"
+    "意图键固定输出“解释口径”。"
+    "派生数值不能仅在输出要求里描述：需要多步运算时另填任务postprocess；"
+    "算法或统计窗口缺少业务定义时另填任务clarification，不得返回原始指标冒充派生结果。"
 )
+
+
+class _ResultOperation(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    source_task_index: int | None = Field(default=None,ge=0,strict=True,
+        description='本地计算引用的前序任务下标，从0开始；查询自带后处理时为null，系统会拆成查询和计算')
+    operation: dict[str, Any] = Field(description='必须是明确可执行的受控操作。derive声明operator/left_field/right_field/result_field；aggregate声明group_by及aggregations(field/function/alias)；pipeline按顺序列出operations，最多5步。月度平均增长使用monthly_growth，明确field/period_field/group_by/method(arithmetic或compound)/period_start/period_end/result_field/format。禁止代码或SQL；不得用文字要求代替操作字段。')
+
+
+class _CalculationClarification(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    question: str = Field(min_length=1,max_length=500,description='只问业务尚未定义且会改变计算结果的平均算法或统计窗口；不能因执行器错误重复问已明确条件')
+    candidates: list[str] = Field(default_factory=list,max_length=10,description='可供用户明确选择的业务含义；没有合理候选时留空')
+    affected_slots: list[Literal['analysis_method','analysis_window']] = Field(min_length=1,max_length=2)
 
 
 class _PlannedTask(BaseModel):
@@ -575,6 +608,10 @@ class _PlannedTask(BaseModel):
         default=None,
         description=_EXTRACTION_SCHEMA_DESCRIPTION,
     )
+    postprocess: _ResultOperation | None = Field(default=None,
+        description='查询之后的确定性计算，或对某个前序任务结果的运算；需要执行派生运算而目录未登记现成指标时填写，不能只写输出要求')
+    clarification: _CalculationClarification | None = Field(default=None,
+        description='平均算法或统计窗口在用户与规范中均未定义时填写。此任务先进入Pending，不查询业务库')
 
 
 class _SinglePlan(BaseModel):
@@ -594,6 +631,8 @@ class _SinglePlan(BaseModel):
         default=None,
         description="单任务时可直接输出的结构化提取JSON；已输出tasks时忽略本字段",
     )
+    postprocess: _ResultOperation | None = None
+    clarification: _CalculationClarification | None = None
 
 
 _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取器。只输出符合JSON Schema的JSON，不回答用户问题，不调用工具。
@@ -609,6 +648,9 @@ _SINGLE_SYSTEM_PROMPT = """你是数据智能体的任务拆解与参数提取�
 6. 不要把ASL、SQL、取数、校验、洞察这些内部步骤拆成任务。
 7. 每个任务都要输出name字段：任务名称是"动词+业务指标+过滤条件"的陈述句（如"统计2025年上海市各经销商的含税销售总额""计算2025年上海市平均每单销售金额""查询订单笔数大于5笔的经销商名单"），用规范登记的指标、维度或实体名概括任务要得到的业务结果，不得照抄用户问题原文，不得出现"是多少""有哪些"等疑问词，结尾不加标点；计算任务的name直接写"计算×××"，不用带"根据上述任务的查询结果"前缀。
 8. 计算任务必须明确操作、来源和字段，不能只写“计算上述结果”。多个结果间以明确单值为分母的除法，可在extraction添加可选“计算绑定”：{"operation":"divide","numerator":{"source_task_index":0,"column":"前序实际输出的分子列名"},"denominator":{"source_task_index":1,"column":"前序实际输出的单值分母列名"},"result_field":"计算结果名称","format":"percent或number"}；来源下标从0开始且必须登记在depends_on中，此任务“是否查询数据库”为“否”。字段及公式来自用户或登记口径，不猜字段ID。其他已有结果操作写明具体操作和输入字段；口径不明确保留待确认，不能创造公式或缺月补零策略。
+9. 对同一份结果的多步计算，extraction可声明“结果操作”：{"source_task_index":0,"operation":{"type":"pipeline","operations":[{"type":"derive","operator":"divide","left_field":"分子列","right_field":"分母列","result_field":"逐行比值"},{"type":"aggregate","group_by":[],"aggregations":[{"field":"逐行比值","function":"avg","alias":"平均比值"}]}]}}。计算任务须不查库且只依赖这一份结果。source_task_index从0开始引用前序任务。单查询也可把不含source_task_index的“结果操作”放在该查询extraction，系统会在执行前补成查询→计算两任务。pipeline最多5步、不嵌套；仅支持既有derive四则、aggregate的count/sum/avg/min/max及filter/select/sort/sort_limit/limit/extrema/extrema_difference。字段使用查询实际输出名称，禁止代码、SQL或任意表达式。先比值再平均与先汇总再相除必须按原问顺序；登记普通指标直接查询无需结果操作。不确定增长算法时保留待确认，不把原始月度数表声称为增长率。
+10. 月度平均增长计算可用结果操作{"type":"monthly_growth","field":"原始数量列","period_field":"月份列","group_by":["对象编码列"],"method":"arithmetic或compound","period_start":"YYYY-MM","period_end":"YYYY-MM","result_field":"平均月度增长率","format":"percent"}。period_start/end是目标增长月份，取数必须另含前一个月比较基期；单查询声明该操作时系统自动扩展基期并在计划中展示。arithmetic为逐月环比的算术平均，compound为期末/基期的月数次方根减1；缺月、重复月、零基数不能擅自跳过或补零。方法、统计窗口或比较方式在原问与规范均未明确时，extraction添加“计算待确认”：{"question":"明确缺少的口径及其影响","candidates":["有业务含义的选项一","选项二"],"affected_slots":["analysis_method或analysis_window"]}；候选可为空而由用户补充。保留原问题、已知指标和条件，系统会先澄清，不得仅查询原始指标后假装派生计算完成。用户已明确或规范已有算法时直接执行，不重复询问。
+11. JSON Schema中的任务postprocess和clarification是上述执行合同的优先输出位置：postprocess放结果操作，clarification放尚缺的计算口径；无需重复塞进extraction。postprocess与clarification不可同时填写。只有已登记普通指标可直接查询；没有登记公式的平均增长率不能仅填写原始数量指标和输出要求。口径缺失时保留原问，用clarification先确认。
 
 意图判断规则（问题级intent字段）：
 1. 从下列意图枚举中选一个最贴合问题目标的取值，只输出枚举名本身。不需要查询业务数据的问题（闲聊、超出业务范围）按实际选CHAT或OUT_OF_SCOPE，extraction输出null。
@@ -682,20 +724,78 @@ class SingleQuestionPlanner:
             last_result = decomposition
             off_data, off_meta = self._normalize_decomposition_metrics(decomposition)
             unsplit_compound = self._unsplit_compound_metrics(decomposition)
+            grounded_data = self._grounded_data_request(question, semantic_context, decomposition)
+            wrong_boundary = grounded_data and decomposition.intent in {
+                PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE, PrimaryIntent.METRIC_DEFINITION}
+            unbound_calculation = self._unbound_calculation(decomposition)
             empty_extraction = (
                 not any(task.structured is not None for task in decomposition.tasks)
                 and decomposition.intent not in _NO_DATA_INTENTS
             )
-            if attempt == 0 and (empty_extraction or off_data or off_meta or unsplit_compound):
+            if attempt == 0 and (empty_extraction or off_data or off_meta or unsplit_compound or wrong_boundary or unbound_calculation):
                 # 全部任务提取为空、指标名目录外或复合指标未按公式拆分，
                 # 说明这次输出不可信，带纠错说明重试一次
                 retry_feedback = self._retry_feedback(
                     off_data, off_meta, empty_extraction=empty_extraction,
                     unsplit_compound=unsplit_compound,
                 )
+                extra = []
+                if wrong_boundary:
+                    extra.append('原问题是针对已登记业务数据的度量或排序请求。部分业务对象未绑定时保留原文并交给授权ASL澄清；不能因此改为闲聊、非数据任务、指标定义，不能替换成另一个业务对象。')
+                if unbound_calculation:
+                    extra.append('本地计算任务缺少可执行操作和输入字段。请依据原问题与前序实际输出，明确计算公式或计算绑定；不能只写计算上述结果。多步变换须保留运算顺序，不创造口径。')
+                retry_feedback = '\n'.join(filter(None, [retry_feedback, *extra]))
                 continue
-            return last_result
+            if wrong_boundary:
+                # Preserve the data request for scoped ASL binding. This is not
+                # permission to replace the unknown object with a catalog one.
+                from dataclasses import replace
+                last_result = replace(decomposition, intent=PrimaryIntent.METRIC_QUERY,
+                    tasks=(DecomposedTask(question=question,intent=PrimaryIntent.METRIC_QUERY),))
+            from app.planning.calculation_bindings import materialize_declared_division, materialize_declared_result_operation
+            return materialize_declared_division(materialize_declared_result_operation(last_result))
         return last_result
+
+    @staticmethod
+    def _unbound_calculation(decomposition):
+        for task in decomposition.tasks:
+            structured = task.structured or {}
+            if (database_query_choice(structured) is not False or not task.depends_on
+                    or structured.get('计算绑定') or structured.get('结果操作') or not re.search(r'计算|平均|均值', task.question)
+                    or re.search(r'除以|÷|/|加上|减去|乘以', task.question + str(structured.get('输出要求') or ''))):
+                continue
+            metrics = []
+            for index in task.depends_on:
+                if 0 <= index < len(decomposition.tasks):
+                    metrics.extend((decomposition.tasks[index].structured or {}).get('指标') or [])
+            if len(metrics) >= 2:
+                return True
+        return False
+
+    @staticmethod
+    def _grounded_data_request(question, semantic_context, decomposition):
+        if (re.search(r'写|创作|编|讲|翻译|润色|画|口径|定义|什么意思|怎么算|如何计算', question)
+                or not re.search(r'查询|统计|分析|计算|列出|比较|对比|找出|筛选|哪几|哪些|多少', question)
+                or not re.search(r'数量|金额|多少|最高|最低|最多|最少|最快|增长|下降|趋势|排名|平均|占比|同比|环比', question)):
+            return False
+        catalog = decomposition.metric_catalog
+        terms = set(catalog[0]) | set(catalog[1]) if catalog else set()
+        active = False
+        for line in semantic_context.splitlines():
+            if not line.strip().startswith('|'):
+                active = False
+                continue
+            cells = [cell.strip() for cell in line.strip().strip('|').split('|')]
+            if cells[0] in {'实体','实体名称','指标','指标名称'}:
+                active = True
+                continue
+            if cells[0] in _TABLE_HEADER_WORDS:
+                active = False
+            if active and not re.fullmatch(r'[-: ]+', cells[0]):
+                terms.add(cells[0])
+                if len(cells)>1:
+                    terms.update(part.strip(' \"[]') for part in re.split(r'[,，、/;；]',cells[1]))
+        return any(len(term)>=2 and term in question for term in terms)
 
     @staticmethod
     def _unsplit_compound_metrics(
@@ -979,7 +1079,8 @@ class SingleQuestionPlanner:
         raw_tasks: list[_PlannedTask] = list(result.tasks)
         if not raw_tasks:
             # 模型走旧版单任务直出（顶层extraction）时归一成单任务
-            raw_tasks = [_PlannedTask(question=question, extraction=result.extraction)]
+            raw_tasks = [_PlannedTask(question=question, extraction=result.extraction,
+                postprocess=result.postprocess,clarification=result.clarification)]
         tasks: list[DecomposedTask] = []
         for item in raw_tasks:
             task_question = item.question.strip() or question
@@ -987,6 +1088,16 @@ class SingleQuestionPlanner:
             structured = self._sanitize_extraction(
                 item.extraction, intent=task_intent
             )
+            if item.postprocess is not None or item.clarification is not None:
+                structured = structured or {}
+                if item.clarification is not None:
+                    # A tentative operation is not executable until the
+                    # declared business choice is resolved. Keep Pending.
+                    structured.pop('结果操作',None)
+                    structured.pop('计算绑定',None)
+                    structured['计算待确认']=item.clarification.model_dump()
+                else:
+                    structured['结果操作']=item.postprocess.model_dump(exclude_none=True)
             _ground_location_owners(structured, task_question)
             if structured is not None and task_intent in {
                 None, *_CHINESE_INTENT_TO_PRIMARY.values(),
@@ -1143,4 +1254,8 @@ class SingleQuestionPlanner:
         )
         if isinstance(value.get('计算绑定'), dict):
             structured['计算绑定'] = copy.deepcopy(value['计算绑定'])
+        if '结果操作' in value:
+            structured['结果操作'] = copy.deepcopy(value['结果操作'])
+        if '计算待确认' in value:
+            structured['计算待确认'] = copy.deepcopy(value['计算待确认'])
         return structured

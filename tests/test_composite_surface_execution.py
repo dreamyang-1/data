@@ -9,7 +9,7 @@ from app.domain.models import (
     AgentPromptConfig, AtomicTask, ChatRequest, DataQueryResult, Dataset,
     PrimaryIntent, TaskPlan, TrustedIdentity,
 )
-from app.planning import MultiQuestionPlanner
+from app.planning import CompoundQuestionRouter
 from app.services.progress import progress_scope
 from test_orchestrator import service
 
@@ -45,7 +45,7 @@ def parent_chat():
 async def test_completed_children_reach_asl_with_their_own_extraction():
     agent = service()
     agent.settings.surface_asl_execution_enabled = True
-    agent.task_planner = MultiQuestionPlanner(agent.settings)
+    agent.task_planner = CompoundQuestionRouter(agent.settings)
     plan = hospital_plan()
     before = copy.deepcopy(plan)
     calls = []
@@ -83,7 +83,7 @@ async def test_child_context_preserves_prompt_without_bypassing_pending_answers(
     from app.domain.models import AgentResponse
     from uuid import uuid4
     agent = service()
-    agent.task_planner = MultiQuestionPlanner(agent.settings)
+    agent.task_planner = CompoundQuestionRouter(agent.settings)
     chat = parent_chat()
     chat._completed_question_execution = completed
     seen = []
@@ -108,7 +108,7 @@ async def test_dependent_child_still_uses_existing_context_path():
     from app.domain.models import AgentResponse
     from uuid import uuid4
     agent = service()
-    agent.task_planner = MultiQuestionPlanner(agent.settings)
+    agent.task_planner = CompoundQuestionRouter(agent.settings)
     plan = hospital_plan()
     plan.tasks[1].depends_on = ["task-1"]
     flags = []
@@ -130,7 +130,7 @@ async def test_native_plan_and_contextual_child_do_not_take_surface_shortcut(bou
     from uuid import uuid4
     from app.domain.models import AgentResponse
     agent = service()
-    agent.task_planner = MultiQuestionPlanner(agent.settings)
+    agent.task_planner = CompoundQuestionRouter(agent.settings)
     chat, plan = parent_chat(), hospital_plan()
     if boundary == "native":
         chat._semantic_decision = SimpleNamespace(source="V2_AUTHORIZED_PLAN")
@@ -154,7 +154,7 @@ async def test_every_child_has_terminal_progress_even_without_query(outcome):
     from app.domain.models import AgentResponse
     from uuid import uuid4
     agent = service()
-    agent.task_planner = MultiQuestionPlanner(agent.settings)
+    agent.task_planner = CompoundQuestionRouter(agent.settings)
     plan = hospital_plan()
     if outcome == "dependency":
         plan.tasks[1].depends_on = ["task-1"]

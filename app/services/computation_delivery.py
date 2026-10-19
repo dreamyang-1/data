@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import re
 from typing import Any
+import copy
 
 
 def numeric_value(value):
@@ -16,6 +17,71 @@ def numeric_value(value):
     if not number.is_finite():
         raise ValueError('计算输入不是有限数值')
     return number
+
+
+def bound_dataset_operation(task, references):
+    """Validate actual operands before the legacy executor can infer a new plan."""
+    spec = (task.extraction or {}).get('结果操作')
+    if spec is None:
+        return None
+    from app.planning.calculation_bindings import validate_result_operation
+    from minio_followup_store import apply_followup_operation
+    if not isinstance(spec, dict) or len(references) != 1 or task.depends_on != [spec.get('source_task_id')]:
+        raise ValueError('结果操作必须绑定唯一的实际前序结果')
+    source, rows = references[0]
+    if spec.get('dataset_id') and spec['dataset_id'] != source.dataset_id:
+        raise ValueError('结果操作的数据集与实际输出不一致')
+    operation = copy.deepcopy(spec.get('operation'))
+    columns = source.columns
+    for step in validate_result_operation(operation):
+        if not rows and step['type'] in {'derive','aggregate','extrema','extrema_difference'}:
+            raise ValueError('计算来源为空，不能宣称已生成数值')
+        if step['type'] == 'derive':
+            for row in rows:
+                numeric_value(row.get(step.get('left_field')))
+                right = numeric_value(row.get(step.get('right_field')))
+                if step.get('operator') == 'divide' and right <= 0:
+                    raise ValueError('计算存在非正分母')
+        elif step['type'] == 'aggregate':
+            for item in step.get('aggregations') or []:
+                if item.get('function') != 'count':
+                    for row in rows:
+                        numeric_value(row.get(item.get('field')))
+        columns, rows = apply_followup_operation(columns, rows, step)
+    operation['input_binding'] = {'source_task_id':spec['source_task_id'],'dataset_id':source.dataset_id}
+    return operation
+
+
+def bound_row_division(task, references):
+    """A same-source binding pairs columns by row, not by numeric positions."""
+    spec = (task.extraction or {}).get('计算绑定')
+    if not isinstance(spec, dict) or spec.get('operation') != 'divide' or spec.get('format') not in {'number','percent'}:
+        return None
+    numerator, denominator = spec.get('numerator'), spec.get('denominator')
+    if not isinstance(numerator, dict) or not isinstance(denominator, dict):
+        raise ValueError('计算输入绑定不完整')
+    task_id = numerator.get('source_task_id')
+    if not task_id or task_id != denominator.get('source_task_id'):
+        return None
+    if task_id not in task.depends_on:
+        raise ValueError('计算引用未知依赖任务')
+    source, rows = references[task.depends_on.index(task_id)]
+    if any(operand.get('dataset_id') and operand['dataset_id'] != source.dataset_id
+           for operand in (numerator, denominator)):
+        raise ValueError('计算绑定的数据集与上游实际输出不一致')
+    left, right, label = numerator.get('column'), denominator.get('column'), spec.get('result_field')
+    if left not in source.columns or right not in source.columns or not label or label in source.columns:
+        raise ValueError('计算字段缺失或输出覆盖原字段')
+    if len(references) != 1:
+        # Do not align unused datasets or silently discard them here.
+        raise ValueError('逐行计算要求一个明确的完整来源')
+    for row in rows:
+        numeric_value(row.get(left))
+        if numeric_value(row.get(right)) <= 0:
+            raise ValueError('逐行计算存在非正分母')
+    return {'type':'derive','operator':'divide','left_field':left,'right_field':right,'result_format':spec['format'],
+            'result_field':label,'input_binding':{'numerator':{'dataset_id':source.dataset_id,'column':left},
+            'denominator':{'dataset_id':source.dataset_id,'column':right}}}
 
 
 @dataclass(frozen=True)

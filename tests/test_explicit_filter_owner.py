@@ -5,7 +5,7 @@ from app.adapters.base import AdapterError
 from app.adapters.http import HttpDataRetrievalAdapter
 from app.domain.models import CanonicalAnalysisRequest, PlannerExtraction, PrimaryIntent
 from app.intent.structured import HybridIntentClassifier, StructuredFilter
-from app.planning.task_dag import MultiQuestionPlanner, extraction_parser_prompt
+from app.planning.task_dag import SingleQuestionPlanner, extraction_parser_prompt
 from app.services.orchestrator import DataAnalysisOrchestrator
 
 
@@ -38,7 +38,7 @@ def test_legacy_filter_without_owner_is_backward_compatible():
 
 def test_planner_sanitization_does_not_drop_owners():
     source = {'过滤条件':[{'entity':'医院','field':'省份','op':'=','value':['上海市']}]}
-    result = MultiQuestionPlanner._sanitize_extraction(source,intent=PrimaryIntent.METRIC_QUERY)
+    result = SingleQuestionPlanner._sanitize_extraction(source,intent=PrimaryIntent.METRIC_QUERY)
     assert result['过滤条件'] == source['过滤条件']
     assert '条件归属' in extraction_parser_prompt()
 

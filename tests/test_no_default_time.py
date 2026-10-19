@@ -4,7 +4,7 @@ import pytest
 
 from app.domain.models import TrustedIdentity
 from app.intent import RuleBasedIntentClassifier
-from app.planning.task_dag import extraction_user_prompt
+from app.planning.task_dag import extraction_parser_prompt
 
 
 @pytest.mark.parametrize('question', [
@@ -34,7 +34,7 @@ def test_explicit_period_survives(question):
 
 
 def test_description_sent_to_extraction_no_longer_defaults_to_twelve_months():
-    prompt = extraction_user_prompt('查询销售额')
+    prompt = extraction_parser_prompt()
     assert '默认取最近12个月' not in prompt
     assert '默认取最近 12 个月' not in prompt
-    assert '不添加默认时间筛选' in prompt
+    assert '时间粒度' in prompt

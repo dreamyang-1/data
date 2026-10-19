@@ -261,6 +261,51 @@ def validate_plan(plan: TaskPlan, *, source_question: str | None = None) -> None
         _validate_grounding(plan, source_question)
 
 
+def _validate_question_conditions(entries, source_question):
+    """Check local literal conditions only when source clauses align unambiguously.
+
+    Global grounding alone permits importing a sibling's city/year. Use the
+    existing rules' explicit filter values plus literal years; do not infer
+    ownership for unsplittable prose or manufacture a business default.
+    """
+    from app.intent import RuleBasedIntentClassifier
+    from app.domain.models import TrustedIdentity
+    pieces = [part.strip(' ，,。.') for fragment in _TASK_SPLIT_PATTERN.split(source_question)
+              for part in re.split(rf'[,，](?={_NEW_SENTENCE_ACTION_START})', fragment) if part.strip(' ，,。.')]
+    clauses = [part for part in pieces if _has_action(part)]
+    if len(clauses) != len(entries):
+        return
+    def compact(value):
+        return re.sub(r'\s+', '', value).removesuffix('市').removesuffix('省')
+    rules = RuleBasedIntentClassifier()
+    def facts(clause):
+        request = rules.classify(clause, TrustedIdentity(tenant_id='planning',user_id='planning'), 'grounding')
+        values = set(re.findall(r'(?<!\d)((?:19|20)\d{2})(?=年|[-/.])', clause))
+        for condition in request.filters:
+            raw = condition.get('value')
+            for value in raw if isinstance(raw, list) else [raw]:
+                if isinstance(value, (str,int)):
+                    literal = compact(str(value))
+                    if len(literal) >= 2 and literal in compact(clause):
+                        values.add(literal)
+        return values
+    local = [facts(clause) for clause in clauses]
+    all_facts = set().union(*local)
+    prefix = pieces[0] if pieces and not _has_action(pieces[0]) else ''
+    header = re.match(r'^([^：:]{1,80})[：:]', source_question)
+    if header and not _has_action(header[1]):
+        prefix = header[1]
+    shared = {value for value in all_facts if value in compact(prefix)}
+    for index, entry in enumerate(entries):
+        candidate = compact(entry.question)
+        if any(value not in candidate for value in local[index]):
+            raise ValueError('子问题遗漏了原子句的明确条件')
+        if not entry.depends_on:
+            foreign = all_facts - local[index] - shared
+            if any(value in candidate for value in foreign):
+                raise ValueError('子问题混入了另一问题的局部条件')
+
+
 def _unique_mentions(text: str, candidates: tuple[str, ...]) -> list[str]:
     # 取最长词优先，避免“退款”嵌在“退款率”里被当成两个独立指标，
     # 导致共享条件不再向子问题补齐。
@@ -1215,6 +1260,7 @@ class CompoundQuestionJudge:
             )
             for item in result.sub_questions
         )
+        _validate_question_conditions(entries, question)
         summary = (result.analyze_summary or "").strip()[:200] or None
         return CompoundJudgment(
             is_compound=True,

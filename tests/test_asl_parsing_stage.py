@@ -1,4 +1,4 @@
-"""ASL parsing is a separate public stage; SQL keeps its existing protocol."""
+"""ASL retains its internal barrier inside the six-node public contract."""
 import json
 from uuid import uuid4
 
@@ -41,11 +41,12 @@ def test_clarifying_child_does_not_invent_sql_execution_or_block_sibling():
     output += orderer.push(child("RELIABILITY_CHECK", "COMPLETED", 0))
     output += orderer.push(child("INSIGHT_ANALYSIS", "COMPLETED", 0))
     output += orderer.flush()
-    assert not any(e["task_index"] == 1 and _thinking_section(e["stage"]) == "execution" for e in output)
+    assert not any(e["task_index"] == 1 and e["stage"] in {
+        'SEMANTIC_QUERY_PLANNING','SQL_TRANSLATION','SQL_EXECUTION','DATA_RETRIEVAL'} for e in output)
     assert output[-1]["stage"] == "INSIGHT_ANALYSIS"
 
 
-def test_asl_clarification_stream_stays_in_parsing_without_sql_heading():
+def test_asl_clarification_stream_stays_inside_execution_without_sql():
     app = build_test_app()
 
     class Workflow:
@@ -66,6 +67,7 @@ def test_asl_clarification_stream_stays_in_parsing_without_sql_heading():
     events = [json.loads(block.removeprefix("data: ")) for block in response.text.strip().split("\n\n")]
     assert response.status_code == 200, response.text
     text = "".join(event.get("content", "") for event in events if event.get("type") == "message_chunk")
-    assert text.index("任务拆分与规划") < text.index("解析校验") < text.index("商品品类尚不能唯一绑定")
-    assert "#### ◉ 调度执行" not in text
+    assert text.index("任务拆分与规划") < text.index("调度执行") < text.index("商品品类尚不能唯一绑定")
+    assert "#### ◉ 解析校验" not in text
+    assert not any(event.get('meta', {}).get('stage') in {'SQL_TRANSLATION','SQL_EXECUTION'} for event in events)
     assert _thinking_title(_thinking_section("SEMANTIC_QUERY_PLANNING")) == "#### ◉ 调度执行"
