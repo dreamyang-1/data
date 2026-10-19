@@ -58,11 +58,13 @@ BUSINESS_SEMANTIC_EXTRACTION_RULES = '''
 - 意图：统计查询对应 SCALAR_AGGREGATE/GROUPED_AGGREGATE，趋势分析对应 TIME_SERIES，
   对比分析对应 COMPARISON_SET，占比分析保留组成/占比证据，排名分析对应 RANKING，
   明细查询对应 DETAIL_ROWS 或 RELATION_LIST。根据用户目的判断，不因出现时间词就判趋势。
-  按已注册指标的数值阈值筛选对象名单时，使用统计查询，指标进 metrics，
-  阈值进 filter_expression；普通属性阈值仍按明细查询。极值先判断粒度：
-  从单条记录取最高/最低时按明细查询，依赖登记指标计算或排序时仍保留 metrics；
-  按医院、商品、人员等对象汇总后排名时使用统计/排名查询，保留指标及分组，
-  不得因“最高/最低”改为逐条记录。不把未登记的派生口径伪装为普通属性。
+  筛选或返回条件作用在业务语义规范中已注册的指标上（按指标值做大于/小于/区间等阈值
+  筛选并返回名单）时，意图判统计查询：该指标进 metrics，阈值进 filter_expression，
+  名单类字段随结果展示；不判明细查询，不把注册指标降级成普通展示属性。阈值只作用在
+  普通属性（非注册指标）上的仍按明细查询处理。按最高/最低等极值挑出某个对象或订单
+  的意图判明细查询，极值没有门槛数值不属于阈值筛选；极值依据是已注册指标或其同义
+  说法（如"订单均价"）时该指标进 metrics 供排序取最值，未注册的口径不进 metrics，
+  交给排序与行数限制在明细列上实现。
 - 业务域和实体：仅引用授权上下文中可证明的业务域和实体。实体证据进入 subject；没有则不绑定。
 - 指标：仅将可聚合度量放入 metrics。mention.surface 必须保持用户原词；若上下文明确给出
   同义词映射，可将 normalized_surface 写为标准指标名。未提指标或不能确认时不绑定 metrics。
@@ -355,15 +357,11 @@ def _relation_reason_text(reason):
     return text
 
 
-def _context_relation_label(context_trace, snapshot_operation=None, default='澄清问题'):
-    """对话状态展示名：追问轮带操作子类型，排序类追问标成结果重排。"""
-    label = _CONTEXT_RELATION_LABELS.get(
+def _context_relation_label(context_trace, default='澄清问题'):
+    """对话状态展示名：按最终关系映射成用户可读的状态文案。"""
+    return _CONTEXT_RELATION_LABELS.get(
         str(context_trace.get('FINAL_RELATION') or ''), default
     )
-    op_type = str((snapshot_operation or {}).get('type') or '').lower()
-    if label == '问题追问' and op_type in {'sort', 'sort_limit'}:
-        return label + '（结果重排）'
-    return label
 
 
 async def _emit_relation_reason(reason, *, fallback=None):
@@ -889,7 +887,6 @@ class RawTurnPlanner:
                 await emit_progress('INTENT_RECOGNITION', 'RUNNING',
                     '对话状态识别：' + _context_relation_label(
                         context_trace,
-                        recognized.context_proposal.snapshot_operation,
                         default='当前问题承接上文',
                     ) + '。',
                     progress_phase='V2_CURRENT_TURN_PARSED')
@@ -928,7 +925,6 @@ class RawTurnPlanner:
                 '对话状态识别：'
                 + _context_relation_label(
                     context_trace,
-                    recognized.context_proposal.snapshot_operation,
                 )
                 + '。',
                 progress_phase='V2_CURRENT_TURN_PARSED',

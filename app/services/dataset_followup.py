@@ -217,22 +217,6 @@ def plan_dataset_followup(
                 sheet_filter, {"type": "select", "columns": selected}
             )
 
-    comparison = re.search(r'不少于|不低于|不小于|不超过|不高于|不大于|大于|超过|小于|不足|>=|<=|>|<',compact)
-    if comparison:
-        # A numeric comparison must never fall through to the equality matcher
-        # merely because its threshold happens to occur in the dataset.
-        operators={'不少于':'gte','不低于':'gte','不小于':'gte','不超过':'lte',
-            '不高于':'lte','不大于':'lte','大于':'gt','超过':'gt','小于':'lt','不足':'lt',
-            '>=':'gte','<=':'lte','>':'gt','<':'lt'}
-        for column in numeric_columns:
-            match=re.search(re.escape(column)+r'(?:的值)?'+re.escape(comparison[0])+
-                r'([+-]?\d+(?:\.\d+)?)(?=$|的|[，,。；;]|不再查询)',compact)
-            if match:
-                return _with_sheet_filter(sheet_filter,{'type':'filter','field':column,
-                    'operator':operators[comparison[0]],'value':float(match[1])})
-        # Unit conversion belongs to the catalog-bound planning operation.
-        return None
-
     if any(marker in compact for marker in ("只看", "只保留", "筛选", "过滤")):
         candidates: list[tuple[str, Any]] = []
         for column in columns:
@@ -370,7 +354,7 @@ def dataset_operation_family(operation: Mapping[str, Any] | None) -> str | None:
         return None
     return {'limit':'DISPLAY_LIMIT', 'sort':'LOCAL_SORT', 'select':'PROJECTION',
             'sort_limit':'GLOBAL_RANKING', 'aggregate':'GLOBAL_RANKING',
-            'extrema':'GLOBAL_RANKING', 'extrema_difference':'GLOBAL_RANKING', 'monthly_growth':'GLOBAL_RANKING',
+            'extrema':'GLOBAL_RANKING', 'extrema_difference':'GLOBAL_RANKING',
             'drilldown':'DRILLDOWN'}.get(str(operation.get('type')))
 
 
@@ -380,9 +364,6 @@ def describe_dataset_operation(operation: Mapping[str, Any] | None) -> str | Non
         return None
     op_type = str(operation.get('type') or '').lower()
     field = str(operation.get('field') or '').strip()
-    if op_type == 'monthly_growth':
-        method={'arithmetic':'算术平均','compound':'复合平均'}.get(operation.get('method'),'未确认口径')
-        return f'按{operation.get("period_start")}至{operation.get("period_end")}月度序列计算{field}增长率的{method}'
     if op_type == 'sort':
         direction = '降序' if operation.get('descending') else '升序'
         return f'按{field}{direction}排列' if field else None

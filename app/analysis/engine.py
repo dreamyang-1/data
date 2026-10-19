@@ -880,27 +880,6 @@ class AnalysisEngine:
                 "趋势结果粒度与用户明确要求不一致："
                 f"要求 {requested_granularity}，实际 {continuity['grain']}"
             )
-        from app.analysis.chain_tools.period_extrema import calculate_monthly_extremum,requested_month_window
-        try:
-            extremum=calculate_monthly_extremum(request.original_question,labels,values,requested_month_window(request))
-        except ValueError as exc:
-            raise AnalysisError(str(exc)) from exc
-        if extremum is not None:
-            mode='同比' if extremum['comparison']=='YOY' else '环比'
-            label='降幅最大' if extremum['direction']=='min' else '增幅最大'
-            selected='、'.join(f"{item['to']}（{mode}{item['change_rate']:+.2%}，基期{item['from']}）" for item in extremum['selected'])
-            answer=f"按月度{mode}变化率比较，{label}的月份：{selected}。已比较{extremum['compared_period_count']}个月。"
-            warnings=[]
-            if extremum['missing_period_count']:
-                warnings.append(f"{extremum['missing_period_count']}个月缺少本期或对应基期，不能确定完整请求范围内的极值")
-            if extremum['undefined_base_periods']:
-                warnings.append('部分月份基期非正数，增长率无定义，未参加变化率排名')
-            if extremum['direction']=='min' and extremum['selected'][0]['change_rate']>=0:
-                answer+='可比较月份均未下降，以上为增幅最小的月份。'
-            elif extremum['direction']=='max' and extremum['selected'][0]['change_rate']<=0:
-                answer+='可比较月份均未增长，以上为降幅最小的月份。'
-            if warnings:answer+='；'.join(warnings)+'。'
-            return AnalysisOutput(answer,'monthly_period_extremum',{'metric_column':metric,'period_extremum':extremum},warnings)
         change = values[-1] - values[0]
         pct = self._pct_change(values[0], values[-1])
         trend_diagnostics = self._trend_diagnostics(values)

@@ -382,11 +382,6 @@ class _CurrentCatalogSnapshotProvider:
         self.resolved_business_domain_ids = tuple(resolved_business_domain_ids)
         self.business_domain_labels = tuple(business_domain_labels)
 
-    def planning_context(self):
-        from app.planning.catalog_context import render_catalog_context
-        return render_catalog_context(self._snapshot,self._snapshot['scope']['semantic_model_id'],
-                                      self.resolved_business_domain_ids)
-
     def pin(self, semantic_model_id: int, business_domain_ids=()):
         expected = self._modules["catalog_release"].catalog_scope(
             semantic_model_id, tuple(business_domain_ids)

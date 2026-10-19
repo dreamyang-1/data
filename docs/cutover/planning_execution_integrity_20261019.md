@@ -64,3 +64,12 @@ Current Stage：恢复部署前验证完成。Cutover Blocker P0/P1：本轮不�
 正式服务只读实测“查询合作时长大于12个月的经销商名单”：两个任务完成，完整查询2154行、筛选得到4行，无截断，六主节点按合同顺序展示。隔离实例已关闭。未修改业务数据、语义库、索引、权限或V2路由；没有自动合并Draft PR。
 
 Current Stage：本轮合并发布及重启验收完成。Cutover Blocker P0/P1：未评估或声称V2生产替换就绪；97个Agent历史失败、2个Oagnet历史失败及目录/月份数据缺口继续保留。Catalog/Evaluation/Shadow Gap：本轮无目录发布、索引重建或新生产Shadow。V1 Replacement Readiness：保持现有路由。Next shortest blocking path：本轮无剩余发布步骤；后续功能变更重新执行差异、验证和发布门禁。
+
+
+## 用户要求优先恢复被覆盖内容
+
+用户明确要求“你前面已经覆盖掉的内容，先恢复回去”。已按上次部署前逐文件备份恢复20个被替换的原文件，包括问题判断的intent字段及展示；本轮尚未发布的ASL修复另行保存，没有混入恢复版本。3个由此前发布新增的文件留在原处，未删除文件；本次只回退被替换的原内容。
+
+恢复前检查远端当前SHA，未发现这些文件在本次发布之后又有变化；备份内容核对到部署前哈希。本次恢复前另行备份当前文件，恢复候选通过模块编译和应用导入检查，恢复后逐文件SHA一致。Agent live/ready及Oagnet健康接口均200，配置未变。
+
+最新状态为 `RESTORED_PREDEPLOYMENT_PER_USER`，替代前文已发布修复的状态。此前5239/97等测试数字属于已回退的候选，不代表恢复版本或尚未发布的ASL修复已完成验收。ASL问题仍需在恢复后的原有代码上逐项合入必要修复；本次先完成用户要求的恢复，不宣称所有业务问题已解决。Current Stage：优先恢复完成。Catalog/Evaluation/Shadow Gap：没有目录、索引或V2路由变更。V1 Replacement Readiness：不作生产替换就绪判定。Next shortest blocking path：按恢复后的原代码为底稿继续最小修复和逐题验收。

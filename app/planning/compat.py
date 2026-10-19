@@ -52,9 +52,6 @@ def render_prior_task_table_context(prior_task_table: Any, budget: int = 3500) -
             # 只给首行会让模型拿不全参数，进而退回"先查名单再查明细"的拆分
             sample = summary.get("sample")
             if sample and isinstance(sample[0], dict):
-                complete=(summary.get('sample_is_complete') is True and type(summary.get('row_count')) is int
-                    and len(sample)==summary['row_count'])
-                detail.append('以下值已验证完整' if complete else '以下仅为采样，不能作为完整对象名单')
                 for sample_row in sample[:10]:
                     pairs = "；".join(
                         f"{k}={v}" for k, v in list(sample_row.items())[:4]
@@ -67,10 +64,11 @@ def render_prior_task_table_context(prior_task_table: Any, budget: int = 3500) -
         "追问轮拆分规则（优先于通用拆分规则）：\n"
         "1. 上一轮已经查到的结果（如\"排名前三的是哪几家\"）不再生成任何任务，"
         "尤其不要生成以\"复用上一轮查询结果\"开头、用来重述上轮结论的任务。\n"
-        "2. 追问只有1个新增业务目标时按单一问题处理，按实际依赖安排执行任务。"
-        "仅标记为已验证完整的对象值允许展开；部分采样只用于理解结果结构，不能写成完整过滤名单。"
-        "没有完整值时保留对前序结果的引用，由完整数据集及依赖绑定取得对象范围，不能编造剩余值。"
-        "需要新增字段或关系时仍须查询数据库；基于已有字段的筛选计算须声明明确的受控操作。\n"
+        "2. 追问只有1个新增查询目标、且所需参数（实体名单等）已出现在上一轮任务表"
+        "的采样里时，整轮判定为单一问题，只输出1个任务：把采样里的参数值逐个写进"
+        "任务问题文本（如\"复用上一轮查询结果：查询A公司、B公司、C公司2025年10月"
+        "主要销售的产品明细\"），不得用\"这三家\"\"上述对象\"之类的指代替换参数值——"
+        "后续环节只认问题文本里的具体值；该任务照常发起新查询并完整提取参数。\n"
         "3. 只有追问包含多个相互独立的新增查询目标、或所需参数无法从上一轮任务表"
         "取得时，才按通用规则拆分。"
     )
@@ -101,10 +99,10 @@ async def plan_question(planner: Any, question: str, *, semantic_context: str,
                           single_extraction=single.single_extraction if single is not None else None,
                           judgment=outcome.judgment if routed else None,
                           single_task_name=(
-                              getattr(single, 'single_task_name', None)
+                              single.single_task_name if single is not None else None
                           ),
                           single_task_question=(
-                              getattr(single, 'single_task_question', None)
+                              single.single_task_question if single is not None else None
                           ))
 
 
