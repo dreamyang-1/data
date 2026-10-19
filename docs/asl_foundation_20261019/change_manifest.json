@@ -1,66 +1,23 @@
 {
   "base_commit": "56ebf6b5eb242245ab96395822f0123fa021fd80",
-  "service_commits": [
-    {
-      "service": "Agent",
-      "commit": "b90587e18c9547853eabfc5f92d4baa98451e42f",
-      "files": [
-        "app/domain/semantic_description.py",
-        "tests/test_semantic_description.py",
-        "tests/test_synced_semantic_description.py"
-      ]
-    },
-    {
-      "service": "Oagnet",
-      "commit": "8867f104d6a73722fcf58dba14c475c2c474bfa6",
-      "files": [
-        "Oagnet/agent.py",
-        "Oagnet/tests/test_structured_binding.py",
-        "Oagnet/tests/test_question_asl_recovery.py"
-      ]
-    },
-    {
-      "service": "SQL",
-      "commit": "55a44205862fdc6026a5cfd58cffb201c1ea4834",
-      "files": [
-        "sql-translator/sql_translator_prod.py",
-        "sql-translator/test_projected_metric_having.py"
-      ]
-    }
+  "code_head": "db390a11598b9c2cca2215a5930481599bdd167d",
+  "preserved_remote_baseline_commits": [
+    "15589252951dab310f9f1ff162cdda4e3c1c5687",
+    "0547c2ab7b358b261226f7fe87a0d46ce9655ccd",
+    "34678629863594c22fd9fe33e75d5e9af7e998aa"
   ],
-  "foundation_commit": "5561ad682be3dca8f04bf857efc831e605ebfcce",
   "files": [
-    {
-      "path": "app/domain/semantic_description.py",
-      "sha256": "a56534fb5817f751a86b0656fcba459b41ca675ff8e61a1118034a976369564c"
-    },
-    {
-      "path": "tests/test_semantic_description.py",
-      "sha256": "ab734b82edf9c81df7ea126db16e8bcfc5c8304000bf025acc58b04910c5918c"
-    },
-    {
-      "path": "tests/test_synced_semantic_description.py",
-      "sha256": "5af4ba61f08da62f433c74af246c10bb4f80347a8183b70938c6c81c154e53d0"
-    },
     {
       "path": "Oagnet/agent.py",
       "sha256": "2cfef5fa9da8ea78cee9c8eb67efd120eb58a6fd74cf5bb2ec5c77839aab779d"
-    },
-    {
-      "path": "Oagnet/tests/test_structured_binding.py",
-      "sha256": "585fb06411a7b5b4442e331929f38453499c7cb1817292e8e7bf04f96e5e55d6"
     },
     {
       "path": "Oagnet/tests/test_question_asl_recovery.py",
       "sha256": "a907262163dd2a60a3e13ed045196d4919294d70ac8c8fb20fea06b32dc78371"
     },
     {
-      "path": "sql-translator/sql_translator_prod.py",
-      "sha256": "84acef691fe72e11dc38a5c3c37465b560de442bfa830ee80618f26d1f448a12"
-    },
-    {
-      "path": "sql-translator/test_projected_metric_having.py",
-      "sha256": "99edd698ad3ac97e0858633711ee61d513f99f69f43cc077ff5b12b52a40560a"
+      "path": "Oagnet/tests/test_structured_binding.py",
+      "sha256": "585fb06411a7b5b4442e331929f38453499c7cb1817292e8e7bf04f96e5e55d6"
     },
     {
       "path": "app/adapters/http.py",
@@ -71,16 +28,76 @@
       "sha256": "02555108c9fb8d08b656bfab9d288b49fca4e431448e5cfccd180e8e7bd980b5"
     },
     {
+      "path": "app/domain/semantic_description.py",
+      "sha256": "a56534fb5817f751a86b0656fcba459b41ca675ff8e61a1118034a976369564c"
+    },
+    {
+      "path": "app/planning/compound_question.py",
+      "sha256": "8d2e69e2c47e4ff53985121869877277c3e9d34369c5eace5afcfca14edd65c5"
+    },
+    {
+      "path": "app/planning/structured_extraction_prompt.txt",
+      "sha256": "b59f343dcc0ffd65a1962f39170fb147ff2af8be92436bc3ced057b2b842f72d"
+    },
+    {
+      "path": "app/planning/task_dag.py",
+      "sha256": "00c6a0e09a5dc257b480789d978228e4c55d9ab0ed1f1c9dee398d9ade54ffc8"
+    },
+    {
       "path": "app/services/intent_asl_contract.py",
       "sha256": "c874282eb443922fbed33904f7e1ca91dbceb9cea09cc91abe69a92ed54d56b5"
     },
     {
       "path": "app/services/orchestrator.py",
-      "sha256": "fb2594cbac77d5d9840671df0b08090a8370fe4cc5f0fbd5ae78bfaae237a47e"
+      "sha256": "014db0159b16eb75b8d20accf26fd22f50e193cb3ab3b063ad5999edfca4bc12"
+    },
+    {
+      "path": "sql-translator/sql_translator_prod.py",
+      "sha256": "84acef691fe72e11dc38a5c3c37465b560de442bfa830ee80618f26d1f448a12"
+    },
+    {
+      "path": "sql-translator/test_projected_metric_having.py",
+      "sha256": "99edd698ad3ac97e0858633711ee61d513f99f69f43cc077ff5b12b52a40560a"
+    },
+    {
+      "path": "tests/test_basic_dependency_planning.py",
+      "sha256": "b61b078ea31705b624ec80b389a98b8ddc8bdd8a4d9e180e38d1b1720356d0c1"
+    },
+    {
+      "path": "tests/test_compound_dependency_remap.py",
+      "sha256": "e40bd90ab89ff6994bdcc3dad10d30081ca3e0138e7856c40ebda4602b793845"
+    },
+    {
+      "path": "tests/test_dependency_pronoun_handoff.py",
+      "sha256": "5590818d11bc8971fe036a0576386e026c327c0f8d5f4e8186d68d0728bdf634"
     },
     {
       "path": "tests/test_dependency_reference_handoff.py",
       "sha256": "293ae943f9157684f8bd1f3af1f6a46b837a674fc2208f61f67cad29c32384e2"
+    },
+    {
+      "path": "tests/test_registered_default_time_planning.py",
+      "sha256": "61fb9a56ea6ae4bb3b379671cc9af89ba20b3e905465cac8611f5080ebd3fac2"
+    },
+    {
+      "path": "tests/test_semantic_description.py",
+      "sha256": "ab734b82edf9c81df7ea126db16e8bcfc5c8304000bf025acc58b04910c5918c"
+    },
+    {
+      "path": "tests/test_shared_denominator_task_scope.py",
+      "sha256": "7709a474a7d22a96bab07df13d4cd7f806f79879645aacdc277336e176da041b"
+    },
+    {
+      "path": "tests/test_synced_semantic_description.py",
+      "sha256": "5af4ba61f08da62f433c74af246c10bb4f80347a8183b70938c6c81c154e53d0"
+    },
+    {
+      "path": "tests/test_task_constraint_marker_handoff.py",
+      "sha256": "a8ff71e5c0f3796efc1bc53cf8a5ccc168846643820a0538f03a6bfd09969efc"
+    },
+    {
+      "path": "tests/test_task_dependency_empty.py",
+      "sha256": "678677941426bd86181e99e8ef1fbbe13db1b9840713c8039bd5c2252d7863a5"
     },
     {
       "path": "tests/test_trend_task_completion.py",
@@ -89,60 +106,111 @@
   ],
   "runtime": [
     {
-      "service": "Agent",
       "path": "app/domain/semantic_description.py",
-      "sha256": "a56534fb5817f751a86b0656fcba459b41ca675ff8e61a1118034a976369564c",
-      "candidate_matches": true,
-      "workspace_matches": true
+      "sha256": "a56534fb5817f751a86b0656fcba459b41ca675ff8e61a1118034a976369564c"
     },
     {
-      "service": "Agent",
-      "path": "app/adapters/http.py",
-      "sha256": "aab8999e5c17baf776a085d900f6daa61b527649436666cabc1faf1f318386c0",
-      "candidate_matches": true,
-      "workspace_matches": true
-    },
-    {
-      "service": "Agent",
       "path": "app/analysis/interpretation.py",
-      "sha256": "02555108c9fb8d08b656bfab9d288b49fca4e431448e5cfccd180e8e7bd980b5",
-      "candidate_matches": true,
-      "workspace_matches": true
+      "sha256": "02555108c9fb8d08b656bfab9d288b49fca4e431448e5cfccd180e8e7bd980b5"
     },
     {
-      "service": "Agent",
+      "path": "app/adapters/http.py",
+      "sha256": "aab8999e5c17baf776a085d900f6daa61b527649436666cabc1faf1f318386c0"
+    },
+    {
       "path": "app/services/intent_asl_contract.py",
-      "sha256": "c874282eb443922fbed33904f7e1ca91dbceb9cea09cc91abe69a92ed54d56b5",
-      "candidate_matches": true,
-      "workspace_matches": true
+      "sha256": "c874282eb443922fbed33904f7e1ca91dbceb9cea09cc91abe69a92ed54d56b5"
     },
     {
-      "service": "Agent",
       "path": "app/services/orchestrator.py",
-      "sha256": "fb2594cbac77d5d9840671df0b08090a8370fe4cc5f0fbd5ae78bfaae237a47e",
-      "candidate_matches": true,
-      "workspace_matches": true
+      "sha256": "014db0159b16eb75b8d20accf26fd22f50e193cb3ab3b063ad5999edfca4bc12"
     },
     {
-      "service": "Oagnet",
       "path": "Oagnet/agent.py",
-      "sha256": "2cfef5fa9da8ea78cee9c8eb67efd120eb58a6fd74cf5bb2ec5c77839aab779d",
-      "candidate_matches": true,
-      "workspace_matches": true
+      "sha256": "2cfef5fa9da8ea78cee9c8eb67efd120eb58a6fd74cf5bb2ec5c77839aab779d"
     },
     {
-      "service": "SQL",
       "path": "sql-translator/sql_translator_prod.py",
-      "sha256": "84acef691fe72e11dc38a5c3c37465b560de442bfa830ee80618f26d1f448a12",
-      "candidate_matches": true,
-      "workspace_matches": true
+      "sha256": "84acef691fe72e11dc38a5c3c37465b560de442bfa830ee80618f26d1f448a12"
+    },
+    {
+      "path": "app/planning/task_dag.py",
+      "sha256": "00c6a0e09a5dc257b480789d978228e4c55d9ab0ed1f1c9dee398d9ade54ffc8"
+    },
+    {
+      "path": "app/planning/compound_question.py",
+      "sha256": "8d2e69e2c47e4ff53985121869877277c3e9d34369c5eace5afcfca14edd65c5"
+    }
+  ],
+  "deployment": [
+    {
+      "status": "DEPLOYED_HEALTHY",
+      "targets": 7,
+      "verification": {
+        "changed_sources": [
+          "SQL:sql_translator_prod.py",
+          "Agent:adapters/http.py",
+          "Agent:services/orchestrator.py",
+          "Agent:analysis/interpretation.py",
+          "Oagnet:agent.py",
+          "Agent:domain/semantic_description.py",
+          "Agent:services/intent_asl_contract.py"
+        ],
+        "all_configurations_unchanged": true,
+        "all_targets_match": true,
+        "health": {
+          "SQL": 200,
+          "Oagnet": 200,
+          "Agent": 200,
+          "AgentLive": 200
+        }
+      }
+    },
+    {
+      "status": "DEPLOYED_HEALTHY",
+      "targets": 3,
+      "verification": {
+        "changed_sources": [
+          "Agent:planning/compound_question.py",
+          "Agent:planning/task_dag.py",
+          "Agent:services/orchestrator.py"
+        ],
+        "all_configurations_unchanged": true,
+        "all_targets_match": true,
+        "health": {
+          "Agent": 200,
+          "AgentLive": 200
+        }
+      }
+    }
+  ],
+  "final_health": {
+    "Agent": 200,
+    "AgentLive": 200,
+    "Oagnet": 200,
+    "SQL": 200
+  },
+  "isolated_candidates_stopped": [
+    {
+      "service": "AgentCandidate",
+      "stopped": true
+    },
+    {
+      "service": "OagnetCandidate",
+      "stopped": true
+    },
+    {
+      "service": "SQLCandidate",
+      "stopped": true
     }
   ],
   "protected_contracts": [
-    "existing intent fields",
-    "existing planner rules and other authors changes",
-    "current semantic scope and read-only execution",
-    "existing ASL/SQL rules outside the proved defects"
-  ],
-  "release_receipt_recorded": false
+    "intent fields",
+    "existing ASL/SQL rules outside demonstrated defects",
+    "Semantic Scope",
+    "read-only database access",
+    "other authors code and configuration",
+    "existing SSE main-stage order",
+    "registered 1000-row detail limit"
+  ]
 }

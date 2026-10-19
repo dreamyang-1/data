@@ -1,12 +1,102 @@
 {
-  "comparison": {
-    "Agent": {
+  "stages": {
+    "original_recovery": {
+      "Agent": {
+        "baseline_counts": {
+          "passed": 5069,
+          "failed": 269
+        },
+        "final_counts": {
+          "passed": 5083,
+          "failed": 255
+        },
+        "baseline_collection_errors": [
+          "tests/test_bound_result_operations.py",
+          "tests/test_declared_calculation_planning.py"
+        ],
+        "final_collection_errors": [
+          "tests/test_bound_result_operations.py",
+          "tests/test_declared_calculation_planning.py"
+        ],
+        "old_pass_to_new_fail": [],
+        "old_fail_to_new_pass": [
+          "tests/test_dependency_reference_handoff.py::test_materialized_reference_does_not_become_an_extra_business_filter[\\u590d\\u7528\\u4e0a\\u4e00\\u8f6e\\u67e5\\u8be2\\u7ed3\\u679c\\uff1a2025\\u5e74\\u9500\\u552e\\u989d\\u6700\\u9ad8\\u7684\\u7ecf\\u9500\\u5546\\u540d\\u79f0]",
+          "tests/test_dependency_reference_handoff.py::test_materialized_reference_does_not_become_an_extra_business_filter[value1]",
+          "tests/test_dependency_reference_handoff.py::test_mixed_named_selection_keeps_the_named_part",
+          "tests/test_dependency_reference_handoff.py::test_resolved_reference_is_not_rebound_as_a_separate_named_entity",
+          "tests/test_dependency_reference_handoff.py::test_child_declared_period_does_not_conflict_with_stale_all_history_marker[2025\\u5e74-REQUIRED]",
+          "tests/test_synced_semantic_description.py::test_active_model_reads_actual_sync_document_without_registered_url[None]",
+          "tests/test_synced_semantic_description.py::test_active_model_reads_actual_sync_document_without_registered_url[]",
+          "tests/test_synced_semantic_description.py::test_active_model_reads_actual_sync_document_without_registered_url[  ]",
+          "tests/test_synced_semantic_description.py::test_missing_sync_file_remains_unavailable_without_other_content[404]",
+          "tests/test_synced_semantic_description.py::test_missing_sync_file_remains_unavailable_without_other_content[500]",
+          "tests/test_synced_semantic_description.py::test_sync_reads_remain_fresh_and_model_specific",
+          "tests/test_synced_semantic_description.py::test_full_sync_document_reaches_actual_planning_model",
+          "tests/test_trend_task_completion.py::test_monthly_query_with_one_large_change_finishes_with_grounded_insight[values0]",
+          "tests/test_trend_task_completion.py::test_monthly_query_with_one_large_change_finishes_with_grounded_insight[values1]"
+        ],
+        "added": [],
+        "removed": [],
+        "stale_test_renames": {}
+      },
+      "Oagnet": {
+        "baseline_counts": {
+          "passed": 1820,
+          "failed": 33
+        },
+        "final_counts": {
+          "passed": 1827,
+          "failed": 26
+        },
+        "baseline_collection_errors": [],
+        "final_collection_errors": [],
+        "old_pass_to_new_fail": [],
+        "old_fail_to_new_pass": [
+          "tests/test_question_asl_recovery.py::test_missing_extraction_can_generate_from_completed_question",
+          "tests/test_question_asl_recovery.py::test_provisional_grain_error_does_not_block_question_generation",
+          "tests/test_question_asl_recovery.py::test_recovery_retains_confirmed_caller_constraints",
+          "tests/test_question_asl_recovery.py::test_question_generation_receives_existing_analysis_requirements",
+          "tests/test_question_asl_recovery.py::test_registered_scalar_metric_threshold_uses_full_catalog_formula[total_hospitals_in_region]",
+          "tests/test_question_asl_recovery.py::test_registered_scalar_metric_threshold_uses_full_catalog_formula[\\u533a\\u57df\\u5168\\u90e8\\u533b\\u9662\\u603b\\u6570]",
+          "tests/test_question_asl_recovery.py::test_registered_scalar_metric_threshold_uses_full_catalog_formula[TIMESTAMPDIFF(MONTH,hospital.first_order_date,CURRENT_DATE)]"
+        ],
+        "added": [],
+        "removed": [],
+        "stale_test_renames": {
+          "tests/test_structured_binding.py::test_original_question_cannot_reach_retrieval_or_model": "tests/test_structured_binding.py::test_completed_question_reaches_original_scoped_generator",
+          "tests/test_structured_binding.py::test_missing_extraction_never_falls_back": "tests/test_structured_binding.py::test_missing_extraction_and_unavailable_generator_remain_unresolved"
+        }
+      },
+      "SQL": {
+        "baseline_counts": {
+          "passed": 680,
+          "failed": 30
+        },
+        "final_counts": {
+          "passed": 684,
+          "failed": 26
+        },
+        "baseline_collection_errors": [],
+        "final_collection_errors": [],
+        "old_pass_to_new_fail": [],
+        "old_fail_to_new_pass": [
+          "sql-translator/test_projected_metric_having.py::test_registered_scalar_metric_having_uses_its_selected_alias[cooperation=TIMESTAMPDIFF(MONTH,dealer.first_order_date,CURRENT_DATE)]",
+          "sql-translator/test_projected_metric_having.py::test_registered_scalar_metric_having_uses_its_selected_alias[TIMESTAMPDIFF(MONTH, dealer.first_order_date, CURRENT_DATE)]",
+          "sql-translator/test_projected_metric_having.py::test_projected_having_is_executable_and_preserves_threshold",
+          "sql-translator/test_projected_metric_having.py::test_unrelated_having_and_non_mysql_dialects_are_preserved"
+        ],
+        "added": [],
+        "removed": [],
+        "stale_test_renames": {}
+      }
+    },
+    "basic_planning_on_live_schema": {
       "baseline_counts": {
-        "passed": 5069,
-        "failed": 269
+        "passed": 5090,
+        "failed": 274
       },
       "final_counts": {
-        "passed": 5083,
+        "passed": 5109,
         "failed": 255
       },
       "baseline_collection_errors": [
@@ -19,79 +109,83 @@
       ],
       "old_pass_to_new_fail": [],
       "old_fail_to_new_pass": [
-        "tests/test_dependency_reference_handoff.py::test_materialized_reference_does_not_become_an_extra_business_filter[\\u590d\\u7528\\u4e0a\\u4e00\\u8f6e\\u67e5\\u8be2\\u7ed3\\u679c\\uff1a2025\\u5e74\\u9500\\u552e\\u989d\\u6700\\u9ad8\\u7684\\u7ecf\\u9500\\u5546\\u540d\\u79f0]",
-        "tests/test_dependency_reference_handoff.py::test_materialized_reference_does_not_become_an_extra_business_filter[value1]",
-        "tests/test_dependency_reference_handoff.py::test_mixed_named_selection_keeps_the_named_part",
-        "tests/test_dependency_reference_handoff.py::test_resolved_reference_is_not_rebound_as_a_separate_named_entity",
-        "tests/test_dependency_reference_handoff.py::test_child_declared_period_does_not_conflict_with_stale_all_history_marker[2025\\u5e74-REQUIRED]",
-        "tests/test_synced_semantic_description.py::test_active_model_reads_actual_sync_document_without_registered_url[None]",
-        "tests/test_synced_semantic_description.py::test_active_model_reads_actual_sync_document_without_registered_url[]",
-        "tests/test_synced_semantic_description.py::test_active_model_reads_actual_sync_document_without_registered_url[  ]",
-        "tests/test_synced_semantic_description.py::test_missing_sync_file_remains_unavailable_without_other_content[404]",
-        "tests/test_synced_semantic_description.py::test_missing_sync_file_remains_unavailable_without_other_content[500]",
-        "tests/test_synced_semantic_description.py::test_sync_reads_remain_fresh_and_model_specific",
-        "tests/test_synced_semantic_description.py::test_full_sync_document_reaches_actual_planning_model",
-        "tests/test_trend_task_completion.py::test_monthly_query_with_one_large_change_finishes_with_grounded_insight[values0]",
-        "tests/test_trend_task_completion.py::test_monthly_query_with_one_large_change_finishes_with_grounded_insight[values1]"
-      ],
-      "added": [],
-      "removed": [],
-      "stale_test_renames": {}
+        "tests/test_basic_dependency_planning.py::test_existing_planner_handoff_keeps_real_dependency_and_query_choice[False]",
+        "tests/test_basic_dependency_planning.py::test_existing_planner_handoff_keeps_real_dependency_and_query_choice[True]",
+        "tests/test_basic_dependency_planning.py::test_unavailable_local_projection_repairs_only_planner_invented_no_query[False-False-metrics0]",
+        "tests/test_basic_dependency_planning.py::test_unavailable_local_projection_repairs_only_planner_invented_no_query[False-False-metrics3]",
+        "tests/test_basic_dependency_planning.py::test_unavailable_local_projection_repairs_only_planner_invented_no_query[False-True-metrics2]",
+        "tests/test_basic_dependency_planning.py::test_unavailable_local_projection_repairs_only_planner_invented_no_query[True-False-metrics1]",
+        "tests/test_dependency_pronoun_handoff.py::test_common_entity_and_person_pronouns_are_data_references[\\u4ed6\\u4eec\\u9500\\u552e\\u4e86\\u54ea\\u4e9b\\u4ea7\\u54c1\\uff1f]",
+        "tests/test_dependency_pronoun_handoff.py::test_common_entity_and_person_pronouns_are_data_references[\\u524d\\u8ff0\\u7b5b\\u9009\\u51fa\\u768410\\u5bb6\\u7ecf\\u9500\\u5546\\u5408\\u4f5c\\u7684\\u533b\\u9662\\u6709\\u54ea\\u4e9b\\uff1f]",
+        "tests/test_dependency_pronoun_handoff.py::test_common_entity_and_person_pronouns_are_data_references[\\u5b83\\u4eec\\u6d89\\u53ca\\u54ea\\u4e9b\\u533b\\u9662\\uff1f]",
+        "tests/test_dependency_pronoun_handoff.py::test_common_entity_and_person_pronouns_are_data_references[\\u67e5\\u8be2\\u4e0a\\u8ff0\\u524d3\\u540d\\u9500\\u552e\\u5458\\u57282025\\u5e74\\u9500\\u552e\\u8fc7\\u7684\\u4ea7\\u54c1\\u660e\\u7ec6]",
+        "tests/test_dependency_pronoun_handoff.py::test_common_entity_and_person_pronouns_are_data_references[\\u8fd9\\u4e09\\u540d\\u9500\\u552e\\u5458\\u5408\\u4f5c\\u7684\\u533b\\u9662\\u6709\\u54ea\\u4e9b\\uff1f]",
+        "tests/test_dependency_pronoun_handoff.py::test_common_entity_and_person_pronouns_are_data_references[\\u8fd9\\u4e2a\\u533b\\u9662\\u6d89\\u53ca\\u54ea\\u4e9b\\u7ecf\\u9500\\u5546\\uff1f]",
+        "tests/test_dependency_pronoun_handoff.py::test_common_entity_and_person_pronouns_are_data_references[\\u8fd9\\u4f4d\\u9500\\u552e\\u5458\\u9500\\u552e\\u4e86\\u54ea\\u4e9b\\u4ea7\\u54c1\\uff1f]",
+        "tests/test_dependency_pronoun_handoff.py::test_common_entity_and_person_pronouns_are_data_references[\\u8fd9\\u6b3e\\u4ea7\\u54c1\\u7684\\u5382\\u5bb6\\u662f\\u8c01\\uff1f]",
+        "tests/test_dependency_pronoun_handoff.py::test_dealer_pronouns_keep_the_source_role_and_stable_key[\\u8be5\\u7ecf\\u9500\\u5546]",
+        "tests/test_dependency_pronoun_handoff.py::test_dealer_pronouns_keep_the_source_role_and_stable_key[\\u8fd9\\u4e2a\\u7ecf\\u9500\\u5546]",
+        "tests/test_dependency_pronoun_handoff.py::test_dealer_pronouns_keep_the_source_role_and_stable_key[\\u8fd9\\u4e9b\\u7ecf\\u9500\\u5546]",
+        "tests/test_dependency_pronoun_handoff.py::test_dealer_pronouns_keep_the_source_role_and_stable_key[\\u8fd9\\u5bb6\\u7ecf\\u9500\\u5546]",
+        "tests/test_dependency_pronoun_handoff.py::test_dealer_pronouns_keep_the_source_role_and_stable_key[\\u90a3\\u5bb6\\u7ecf\\u9500\\u5546]"
+      ]
     },
-    "Oagnet": {
+    "latest_compound_merge_and_catalog_scope": {
       "baseline_counts": {
-        "passed": 1820,
-        "failed": 33
+        "passed": 5111,
+        "failed": 262
       },
       "final_counts": {
-        "passed": 1827,
-        "failed": 26
+        "passed": 5118,
+        "failed": 255
       },
-      "baseline_collection_errors": [],
-      "final_collection_errors": [],
+      "baseline_collection_errors": [
+        "tests/test_bound_result_operations.py",
+        "tests/test_declared_calculation_planning.py"
+      ],
+      "final_collection_errors": [
+        "tests/test_bound_result_operations.py",
+        "tests/test_declared_calculation_planning.py"
+      ],
       "old_pass_to_new_fail": [],
       "old_fail_to_new_pass": [
-        "tests/test_question_asl_recovery.py::test_missing_extraction_can_generate_from_completed_question",
-        "tests/test_question_asl_recovery.py::test_provisional_grain_error_does_not_block_question_generation",
-        "tests/test_question_asl_recovery.py::test_recovery_retains_confirmed_caller_constraints",
-        "tests/test_question_asl_recovery.py::test_question_generation_receives_existing_analysis_requirements",
-        "tests/test_question_asl_recovery.py::test_registered_scalar_metric_threshold_uses_full_catalog_formula[total_hospitals_in_region]",
-        "tests/test_question_asl_recovery.py::test_registered_scalar_metric_threshold_uses_full_catalog_formula[\\u533a\\u57df\\u5168\\u90e8\\u533b\\u9662\\u603b\\u6570]",
-        "tests/test_question_asl_recovery.py::test_registered_scalar_metric_threshold_uses_full_catalog_formula[TIMESTAMPDIFF(MONTH,hospital.first_order_date,CURRENT_DATE)]"
-      ],
-      "added": [],
-      "removed": [],
-      "stale_test_renames": {
-        "tests/test_structured_binding.py::test_original_question_cannot_reach_retrieval_or_model": "tests/test_structured_binding.py::test_completed_question_reaches_original_scoped_generator",
-        "tests/test_structured_binding.py::test_missing_extraction_never_falls_back": "tests/test_structured_binding.py::test_missing_extraction_and_unavailable_generator_remain_unresolved"
-      }
+        "tests/test_compound_dependency_remap.py::test_declared_local_compound_result_is_not_split_into_new_queries",
+        "tests/test_compound_dependency_remap.py::test_expansion_remaps_incoming_and_outgoing_dependencies_and_handoff",
+        "tests/test_compound_dependency_remap.py::test_multiple_expansions_do_not_bind_to_old_task_offsets",
+        "tests/test_registered_default_time_planning.py::test_registered_default_stays_in_extraction_without_breaking_task_grounding[\\u67e5\\u8be2\\u5404\\u7ecf\\u9500\\u5546\\u7684\\u533b\\u9662\\u6570-\\u6700\\u8fd112\\u4e2a\\u6708-True]",
+        "tests/test_shared_denominator_task_scope.py::test_shared_denominator_keeps_region_filters_without_dealer_group_or_join[False-False-False]",
+        "tests/test_shared_denominator_task_scope.py::test_shared_denominator_keeps_region_filters_without_dealer_group_or_join[True-False-True]",
+        "tests/test_shared_denominator_task_scope.py::test_shared_denominator_keeps_region_filters_without_dealer_group_or_join[True-True-False]"
+      ]
     },
-    "SQL": {
+    "final_live_grounding_merge": {
       "baseline_counts": {
-        "passed": 680,
-        "failed": 30
+        "passed": 5117,
+        "failed": 258
       },
       "final_counts": {
-        "passed": 684,
-        "failed": 26
+        "passed": 5120,
+        "failed": 255
       },
-      "baseline_collection_errors": [],
-      "final_collection_errors": [],
+      "baseline_collection_errors": [
+        "tests/test_bound_result_operations.py",
+        "tests/test_declared_calculation_planning.py"
+      ],
+      "final_collection_errors": [
+        "tests/test_bound_result_operations.py",
+        "tests/test_declared_calculation_planning.py"
+      ],
       "old_pass_to_new_fail": [],
       "old_fail_to_new_pass": [
-        "sql-translator/test_projected_metric_having.py::test_registered_scalar_metric_having_uses_its_selected_alias[cooperation=TIMESTAMPDIFF(MONTH,dealer.first_order_date,CURRENT_DATE)]",
-        "sql-translator/test_projected_metric_having.py::test_registered_scalar_metric_having_uses_its_selected_alias[TIMESTAMPDIFF(MONTH, dealer.first_order_date, CURRENT_DATE)]",
-        "sql-translator/test_projected_metric_having.py::test_projected_having_is_executable_and_preserves_threshold",
-        "sql-translator/test_projected_metric_having.py::test_unrelated_having_and_non_mysql_dialects_are_preserved"
-      ],
-      "added": [],
-      "removed": [],
-      "stale_test_renames": {}
+        "tests/test_registered_default_time_planning.py::test_registered_default_stays_in_extraction_without_breaking_task_grounding[\\u67e5\\u8be2\\u5404\\u7ecf\\u9500\\u5546\\u7684\\u533b\\u9662\\u6570-\\u6700\\u8fd112\\u4e2a\\u6708-True]",
+        "tests/test_registered_default_time_planning.py::test_registered_default_stays_in_extraction_without_breaking_task_grounding[\\u67e5\\u8be2\\u5404\\u7ecf\\u9500\\u5546\\u7684\\u533b\\u9662\\u6570-\\u6700\\u8fd114\\u4e2a\\u6708-False]",
+        "tests/test_task_constraint_marker_handoff.py::test_constraint_phrase_is_compared_as_phrase_not_characters[True]"
+      ]
     }
   },
   "critical": {
     "Agent": {
-      "passed": 97
+      "passed": 134
     },
     "Oagnet": {
       "passed": 100
@@ -100,8 +194,78 @@
       "passed": 34
     }
   },
-  "critical_total_passed": 231,
+  "critical_total_passed": 268,
   "all_full_suites_green": false,
   "new_regressions": 0,
-  "new_collection_errors": 0
+  "native_acceptance": {
+    "all_required_passed": true,
+    "cases": [
+      {
+        "scenario": "生产：独立问题与排名后查产品组合",
+        "case": "api-3c14ae58",
+        "status": "COMPLETED",
+        "task_count": 3,
+        "dependency_key_count": 3,
+        "question_groups": 2,
+        "task_statuses": [
+          "COMPLETED",
+          "COMPLETED",
+          "COMPLETED"
+        ]
+      },
+      {
+        "scenario": "生产：这家经销商指代与产品关联",
+        "case": "api-fae70f45",
+        "status": "COMPLETED",
+        "task_count": 2,
+        "dependency_key_count": 1,
+        "question_groups": null,
+        "task_statuses": [
+          "COMPLETED",
+          "COMPLETED"
+        ]
+      },
+      {
+        "scenario": "生产：覆盖率两项查询后本地计算",
+        "case": "api-601c5ff6",
+        "status": "COMPLETED",
+        "task_count": 3,
+        "dependency_key_count": 0,
+        "question_groups": null,
+        "task_statuses": [
+          "COMPLETED",
+          "COMPLETED",
+          "COMPLETED"
+        ]
+      },
+      {
+        "scenario": "隔离候选：两个独立问题",
+        "case": "api-b85d42d0",
+        "status": "COMPLETED",
+        "task_count": 2,
+        "dependency_key_count": 0,
+        "question_groups": null,
+        "task_statuses": [
+          "COMPLETED",
+          "COMPLETED"
+        ]
+      },
+      {
+        "scenario": "隔离候选：前序为空后续跳过",
+        "case": "api-9efb0b80",
+        "status": "PARTIAL_SUCCESS",
+        "task_count": 2,
+        "dependency_key_count": 0,
+        "question_groups": null,
+        "task_statuses": [
+          "COMPLETED",
+          "SKIPPED"
+        ]
+      }
+    ],
+    "business_rows_persisted": false,
+    "signed_urls_persisted": false,
+    "growth_comparisons_tested": false
+  },
+  "scope": "basic task decomposition and dependencies; growth/yoy/mom deferred"
 }
