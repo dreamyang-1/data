@@ -270,6 +270,11 @@ def _validate_question_conditions(entries, source_question):
         return re.sub(r'\s+', '', value).removesuffix('市').removesuffix('省')
     rules = RuleBasedIntentClassifier()
     def facts(clause):
+        # Numbering/header prose is not a product name. Classify only the
+        # actual clause, and use literal coverage again below across clauses.
+        action=re.search(_ACTION_PATTERN,clause)
+        if action:
+            clause=clause[action.start():]
         request = rules.classify(clause, TrustedIdentity(tenant_id='planning',user_id='planning'), 'grounding')
         values = set(re.findall(r'(?<!\d)((?:19|20)\d{2})(?=年|[-/.])', clause))
         for condition in request.filters:
@@ -277,11 +282,17 @@ def _validate_question_conditions(entries, source_question):
             for value in raw if isinstance(raw, list) else [raw]:
                 if isinstance(value, (str,int)):
                     literal = compact(str(value))
+                    if (re.search(r'商品|产品',str(condition.get('field') or ''))
+                            and re.search(r'(?:19|20)\d{2}年|第[一二三四五1-5](?:项|个?问题)|各(?:个|家)?(?:经销商|医院)',literal)):
+                        # The general rule classifier can absorb an entire
+                        # ranking clause as a hypothetical product name.
+                        continue
                     if len(literal) >= 2 and literal in compact(clause):
                         values.add(literal)
         return values
     local = [facts(clause) for clause in clauses]
     all_facts = set().union(*local)
+    local = [{value for value in all_facts if value in compact(clause)} for clause in clauses]
     prefix = pieces[0] if pieces and not _has_action(pieces[0]) else ''
     header = re.match(r'^([^：:]{1,80})[：:]', source_question)
     if header and not _has_action(header[1]):
@@ -320,6 +331,10 @@ def _normalize_grounding_numbers(text: str) -> str:
         text,
     )
     text = re.sub(r"(?<!\d)0(\d)(?=[月日号])", r"\1", text)
+    # 业务时长“一年”和“12个月”是等值表达；不要把合法单位换算
+    # 当成新增阈值。仅处理中文时长，日历年份仍逐字核对。
+    durations={'一':1,'两':2,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10}
+    text=re.sub(r'([一两二三四五六七八九十])年',lambda match:str(durations[match[1]]*12)+'个月',text)
     # “最多/最高”常被改写为“第1名/前1名”，序数措辞里的1不参与数字比对
     return re.sub(
         r"第\s*[一1]\s*[名位席]|前\s*[一1]\s*[名位席个家]|top\s*1(?!\d)",
@@ -537,7 +552,7 @@ def _has_action(text: str) -> bool:
 
 def _depends_on_previous(text: str) -> bool:
     return bool(re.search(
-        r"基于(?:上一步|前面|上述|这个结果)|从中|其中|这些结果|"
+        r"基于(?:上一步|前面|上述|这个结果)|从中|其中|这些结果|第[一二三四五1-5](?:项|个?问题)(?:中|的|里|所得|结果)|"
         r"再对(?:它|其)|(?:再|并)?(?:找出|计算|算).*(?:最高|最低|差|结果)|"
         r"最高比最低", text
     ))
@@ -840,14 +855,23 @@ def _rule_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
     if header and not _has_action(header[1]):
         common_prefix = header[1]
     for index, piece in enumerate(actionable):
-        dependency = (
-            [f"task-{index}"]
-            if index > 0 and _depends_on_previous(piece)
-            else []
-        )
+        action=re.search(_ACTION_PATTERN,piece)
+        reference_text=piece[action.start():] if action else piece
+        ordinals={'一':1,'二':2,'三':3,'四':4,'五':5}
+        references=[]
+        for ordinal,number in re.findall(r'第([一二三四五1-5])(?:项|个?问题)|问题([1-5])',reference_text):
+            token=ordinal or number
+            dependency_index=(int(token) if token.isdigit() else ordinals[token])-1
+            if dependency_index not in references:
+                references.append(dependency_index)
+        if any(dep<0 or dep>=index for dep in references):
+            raise TaskInputBindingError('问题引用必须指向已经出现的前序问题，本轮未执行查询')
+        dependency=([f'task-{dep+1}' for dep in references] if references else
+            [f'task-{index}'] if index>0 and _depends_on_previous(piece) else [])
         enriched = piece
         elliptical_analysis = bool(index and re.fullmatch(r'(?:分析|查看|展示)(?:趋势|走势)', piece))
-        inheritance_source = tasks[-1].question if dependency or elliptical_analysis else common_prefix
+        inheritance_source = (' '.join(tasks[int(dep.rsplit('-',1)[1])-1].question for dep in dependency)
+            if dependency else tasks[-1].question if elliptical_analysis else common_prefix)
         inherited_metrics = [metric for metric in shared_metrics if metric in inheritance_source]
         inherited_periods = [period for period in shared_periods if period in inheritance_source]
         if len(inherited_metrics) == 1 and inherited_metrics[0] not in enriched:
@@ -1148,6 +1172,10 @@ class CompoundQuestionJudge:
         semantic_model_id: int | None = None,
     ) -> CompoundJudgment:
         from app.domain.semantic_description import load_semantic_description
+        from app.planning.catalog_context import catalog_section
+        scoped_catalog=catalog_section(semantic_context)
+        if scoped_catalog:
+            semantic_context=semantic_context.replace(scoped_catalog,'',1)
 
         from app.services.general_rules import rule_section, without_rule_section
         general_rules = rule_section(semantic_context)
@@ -1165,13 +1193,15 @@ class CompoundQuestionJudge:
         system_content = _JUDGE_SYSTEM_PROMPT
         # 语义规范只用于识别复合指标、业务对象这类需要按规范拆分的形态；
         # 注入链路与参数提取一致：远程描述文件 > 平台粘贴段 > 内置兜底。
-        reference = await load_semantic_description(self.settings, semantic_model_id)
+        reference = (await load_semantic_description(self.settings, semantic_model_id)) if not scoped_catalog else {'source':'','content':''}
         remote_spec = (
             reference["content"]
             if reference["source"].startswith("semantic_model_")
             else ""
         )
-        if remote_spec:
+        if scoped_catalog:
+            system_content += '\n本轮当前授权目录（用于问题边界和业务对象识别）：\n'+scoped_catalog+'\n'
+        elif remote_spec:
             system_content += (
                 "\n业务语义规范（仅用于识别需要按规范拆分的复合指标与业务对象）：\n"
                 + remote_spec + "\n"
@@ -1375,6 +1405,8 @@ class CompoundTaskPlanner:
             question_groups=question_groups,
             compound_metrics=_compound_metrics_in_decompositions(decompositions),
         )
+        from app.planning.dependency_contract import reuse_dependency_rankings
+        plan=reuse_dependency_rankings(plan)
         validate_plan(plan, source_question=source_question)
         self._reject_metric_substitution(plan, source_question)
         return plan
@@ -1597,6 +1629,8 @@ class CompoundQuestionRouter:
             split_reason_code="TASK_DECOMPOSITION",
             compound_metrics=_compound_metrics_in_decompositions([decomposition]),
         )
+        from app.planning.dependency_contract import reuse_dependency_rankings
+        plan=reuse_dependency_rankings(plan)
         validate_plan(plan, source_question=question)
         return CompoundRouteResult(judgment=judgment, plan=plan)
 

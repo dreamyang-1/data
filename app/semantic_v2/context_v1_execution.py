@@ -1116,7 +1116,10 @@ class V2ContextV1ExecutionBridge:
                 if prior["request_fingerprint"] != fingerprint:
                     raise MessageIdReuseConflictError(chat.message_id)
                 if prior.get("response") is not None:
-                    return AgentResponse.model_validate(prior["response"])
+                    response=AgentResponse.model_validate(prior["response"])
+                    from app.services.orchestrator import DataAnalysisOrchestrator
+                    await DataAnalysisOrchestrator._emit_cached_progress(response)
+                    return response
                 return self._response(
                     chat,
                     status="SAFE_FALLBACK",
@@ -1428,6 +1431,8 @@ class V2ContextV1ExecutionBridge:
                 if str(label).strip()
             )
             context_chat._business_domain_labels = business_domain_labels
+            planning_catalog=getattr(catalog,'planning_context',None)
+            context_chat._planning_catalog_context=planning_catalog() if callable(planning_catalog) else ''
             await emit_progress(
                 "INTENT_RECOGNITION",
                 "RUNNING",
@@ -1624,6 +1629,7 @@ class V2ContextV1ExecutionBridge:
                     and semantic_decision.status == "REQUIRES_V1_FALLBACK"
                 ):
                     judge_semantic_context = "\n".join(filter(None, (
+                        context_chat._planning_catalog_context,
                         extract_semantic_spec_section(chat.prompt.render())
                         if chat.prompt is not None
                         else "",
@@ -1717,6 +1723,7 @@ class V2ContextV1ExecutionBridge:
                 intent_context_progress_emitted
             )
             execution_chat._business_domain_labels = business_domain_labels
+            execution_chat._planning_catalog_context=context_chat._planning_catalog_context
             # MODEL_WIDE requests intentionally keep the caller's domain list
             # empty, while the current catalog resolves that authorization to
             # the model's published domain for this execution.  Carry the

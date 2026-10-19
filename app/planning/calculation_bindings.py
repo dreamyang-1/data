@@ -4,6 +4,42 @@ import copy
 import re
 
 
+def normalize_operation_specs(decomposition):
+    """Normalize equivalent spellings without inventing operands or formulas."""
+    tasks=[]
+    for task in decomposition.tasks:
+        structured=copy.deepcopy(task.structured)
+        spec=(structured or {}).get('结果操作')
+        if isinstance(spec,dict) and isinstance(spec.get('operation'),dict):
+            operation=spec['operation']
+            steps=operation.get('operations',[]) if operation.get('type')=='pipeline' else [operation]
+            for step in steps:
+                if not isinstance(step,dict):continue
+                kind=step.get('type')
+                if kind=='derive':
+                    step['operator']={'+':'add','-':'subtract','*':'multiply','/':'divide','÷':'divide'}.get(step.get('operator'),step.get('operator'))
+                if kind in {'sort','sort_limit'} and 'descending' not in step and step.get('order') in {'asc','desc'}:
+                    step['descending']=step.pop('order')=='desc'
+                if kind in {'limit','sort_limit'} and 'count' not in step and 'n' in step:
+                    step['count']=step.pop('n')
+        tasks.append(replace(task,structured=structured))
+    return replace(decomposition,tasks=tuple(tasks))
+
+
+def validate_decomposition_operations(decomposition):
+    from app.planning.dependency_contract import projection
+    for index,task in enumerate(decomposition.tasks):
+        spec=(task.structured or {}).get('结果操作')
+        if not isinstance(spec,dict):continue
+        validate_result_operation(spec.get('operation'))
+        source=spec.get('source_task_index')
+        if type(source) is not int or source not in task.depends_on or not 0<=source<index:
+            raise ValueError('本地结果操作没有绑定有效的前序任务')
+        columns=[name for _,name in projection(decomposition.tasks[source].structured)]
+        if columns:
+            validate_operation_inputs(spec['operation'],columns)
+
+
 def validate_result_operation(operation):
     """Only the existing, bounded data operations; no SQL/code or nested plans."""
     if not isinstance(operation, dict):
@@ -44,6 +80,38 @@ def validate_result_operation(operation):
     return steps
 
 
+def validate_operation_inputs(operation, columns):
+    """Check each step against the preceding step's actual output schema."""
+    available=set(columns)
+    for step in validate_result_operation(operation):
+        kind=step['type']
+        required=[]
+        if kind=='derive':
+            required=[step['left_field'],step['right_field']]
+        elif kind=='aggregate':
+            required=[*step.get('group_by',[]),*(spec['field'] for spec in step['aggregations'])]
+        elif kind=='select':
+            required=step.get('columns',[])
+        elif kind=='monthly_growth':
+            # Month aliases and identity companion columns are resolved from
+            # the actual ASL result by the monthly input binder. The metric
+            # operand itself must already be part of the query projection.
+            required=[step['field']]
+        elif kind in {'filter','sort','sort_limit','extrema','extrema_difference'}:
+            required=[step.get('field')]
+        if any(not isinstance(field,str) or field not in available for field in required):
+            raise ValueError('结果操作引用了前序结果未包含的输入字段：'+','.join(str(field) for field in required if field not in available))
+        if kind=='derive':
+            available.add(step['result_field'])
+        elif kind=='aggregate':
+            available=set(step.get('group_by',[]))|{spec.get('alias') or f"{spec['function']}_{spec['field']}" for spec in step['aggregations']}
+        elif kind=='select':
+            available=set(required)
+        elif kind=='monthly_growth':
+            available=set(step.get('group_by',[]))|{step['result_field']}
+    return available
+
+
 def materialize_declared_result_operation(decomposition):
     """Publish a query and its declared postprocessing as separate tasks."""
     from app.domain.models import PrimaryIntent
@@ -80,6 +148,10 @@ def materialize_declared_result_operation(decomposition):
                     or spec['source_task_index']!=0 or task.depends_on))):
             raise ValueError('查询后的结果操作只引用本任务的查询结果')
         validate_result_operation(spec.get('operation'))
+        from app.planning.dependency_contract import projection
+        columns=[name for _,name in projection(task.structured)]
+        if columns:
+            validate_operation_inputs(spec['operation'],columns)
     except ValueError as exc:
         raise TaskInputBindingError(str(exc)) from exc
     query = copy.deepcopy(task.structured)

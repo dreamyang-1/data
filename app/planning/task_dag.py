@@ -109,7 +109,7 @@ _EXTRACTION_ROLE_GUIDANCE = """
 # 环比/同比问题改判趋势分析的序列特征：跨时间范围或逐期措辞说明
 # 计算落在多期时间序列上；两期式（如“11月环比10月”）不属于此类。
 _PERIOD_SERIES_WORDS = re.compile(
-    r"各月|每月|逐月|每个月|哪个月|哪个月份|各期|逐期|趋势|变化情况|增长情况|下降情况"
+    r"各月|每月|逐月|每个月|月度|哪个月|哪个月份|各期|逐期|趋势|变化情况|增长情况|下降情况"
 )
 _PERIOD_RANGE_WORDS = re.compile(
     r"到|至|~|～|最近|近[0-9一二两三四五六七八九十]|过去[0-9一二两三四五六七八九十]"
@@ -136,7 +136,7 @@ def _period_change_series_question(question: str) -> bool:
     )
 
 
-_TEMPORAL_DIMENSION_WORDS = re.compile(r"日期|时间")
+_TEMPORAL_DIMENSION_WORDS = re.compile(r"日期|时间|月份|年月")
 
 
 def _normalize_trend_time_order(structured: dict[str, Any], *, full_series: bool = False) -> None:
@@ -202,7 +202,7 @@ def _ground_location_owners(extraction: dict[str, Any] | None, question: str) ->
                 place, entity = re.escape(value.strip()), re.escape(owner)
                 if re.search(entity + r'(?:的)?(?:所在地|所在省份|所在城市|所在地区|省份|城市)'
                              + r'(?:为|是|在|等于|=|：|:)?\s*' + place, question) or re.search(
-                                 place + r'(?:市|省|地区|区域)?(?:的)?(?:各个|各家|所有|每个|每家|各)?' + entity,
+                                 place + r'(?:市|省|地区|区域)?(?:的)?(?:各个|各家|所有|每个|每家|各)?(?:合作的|覆盖的|服务的|供货的)?' + entity,
                                  question):
                     owners.add(owner)
         if len(owners) == 1:
@@ -418,6 +418,7 @@ class QuestionDecomposition:
     metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None
     # 规范指标表里依赖指标列非空的复合指标：登记名 -> 成分指标
     metric_dependencies: dict[str, tuple[str, ...]] | None = None
+    metric_units: dict[str, str] | None = None
 
 
 # 指标目录解析要识别的表头词：命中其一视为表头行，防止把下一张表的表头当指标
@@ -790,6 +791,12 @@ class SingleQuestionPlanner:
                     semantic_model_id=semantic_model_id,
                     retry_feedback=retry_feedback,
                 )
+            except TaskPlanningError as exc:
+                if attempt==attempts-1:
+                    raise TaskInputBindingError(str(exc)) from exc
+                rejected_contract=True
+                retry_feedback='任务依赖或执行结构无效：'+str(exc)+'。请修正计划，不能丢弃依赖或交付目标。'
+                continue
             except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
                 # 传输、Schema 或解析失败先整体重试一次，仍失败返回空结果
                 logger.warning(
@@ -844,24 +851,83 @@ class SingleQuestionPlanner:
             if missing_projection:
                 raise TaskInputBindingError('已有结果未包含所需明细对象，不能作为不查库任务执行；未执行查询')
             from app.planning.calculation_bindings import materialize_declared_division, materialize_declared_result_operation
-            compiled=materialize_declared_division(materialize_declared_result_operation(last_result))
-            if len(compiled.tasks)>1:
+            try:
+                from app.planning.metric_thresholds import compile_metric_thresholds
+                from app.planning.calculation_bindings import normalize_operation_specs,validate_decomposition_operations
+                normalized=normalize_operation_specs(last_result)
+                normalized=self._compile_temporal_extrema(normalized,question)
+                compiled=materialize_declared_division(materialize_declared_result_operation(
+                    compile_metric_thresholds(normalized)))
+                validate_decomposition_operations(compiled)
+                self._validate_structured_grounding(compiled, question)
                 # Run the same read-only question grounding used by the router
                 # while the existing correction attempt is still available.
                 # Do not weaken its checks or silently switch execution routes.
                 from types import SimpleNamespace
                 from app.planning.compound_question import _validate_grounding
-                try:
-                    _validate_grounding(SimpleNamespace(tasks=compiled.tasks,final_deliverable=None),question)
-                except TaskPlanningError as exc:
-                    if attempt==0:
-                        rejected_contract=True
-                        retry_feedback=('完整任务计划未通过原问题校验：'+str(exc)+'。请仅依据原问题修正任务文字和结构化参数；'
-                            '不增加条件或指标，不遗漏交付。依赖对象后需要新字段的任务仍须声明新查询，不能声称直接复用。')
-                        continue
-                    raise TaskInputBindingError(str(exc)) from exc
+                _validate_grounding(SimpleNamespace(tasks=compiled.tasks,final_deliverable=None),question)
+            except (TaskPlanningError, ValueError) as exc:
+                if attempt==0:
+                    rejected_contract=True
+                    retry_feedback=('完整任务计划未通过执行和原问题校验：'+str(exc)+'。请仅依据原问题与前序实际输出修正任务文字和结构化参数；'
+                        '不增加条件或指标，不遗漏交付。结果操作只使用已返回的输入字段和受控操作名；依赖对象后需要新字段时声明新查询。')
+                    continue
+                raise TaskInputBindingError(str(exc)) from exc
             return compiled
         return last_result
+
+    @staticmethod
+    def _compile_temporal_extrema(decomposition,question):
+        """Period extrema use the existing trend engine, never a fictitious lag column."""
+        if (len(decomposition.tasks) not in {1,2} or not _period_change_series_question(question)
+                or not re.search(r'降幅最大|增幅最大|增长最快|增长最慢|环比.{0,4}(?:最高|最低)|哪个月|哪一月|月份是哪',question)
+                or re.search(r'平均|前[二三四五六七八九十2-9]',question)):
+            return decomposition
+        query=decomposition.tasks[0]
+        structured=copy.deepcopy(query.structured or {})
+        if len(decomposition.tasks)==2:
+            compute=decomposition.tasks[1]
+            if compute.depends_on!=(0,) or database_query_choice(compute.structured) is not False:
+                return decomposition
+        elif not structured.get('结果操作') or structured.get('计算待确认'):
+            return decomposition
+        dimensions=structured.get('维度') or []
+        if (len(structured.get('指标') or [])!=1 or len(dimensions)!=1
+                or not re.search(r'日期|时间|月份|月',str(dimensions[0]))):
+            return decomposition
+        from dataclasses import replace
+        structured.pop('结果操作',None)
+        structured['意图']='趋势分析'
+        structured['输出要求']=question
+        _normalize_trend_time_order(structured,full_series=True)
+        return replace(decomposition,tasks=(replace(query,question=question,intent=PrimaryIntent.TREND_ANALYSIS,
+            structured=structured,parameters=tuple(extraction_to_parameters(structured))),),intent=PrimaryIntent.TREND_ANALYSIS)
+
+    @staticmethod
+    def _validate_structured_grounding(decomposition, question):
+        """The displayed question cannot hide a different executable period."""
+        source_years=set(re.findall(r'(?<!\d)(?:19|20)\d{2}(?=年|[-/.])',question))
+        if not source_years:
+            return
+        allowed=set(source_years)
+        if has_yoy_signal(question):
+            allowed.update(str(int(year)-1) for year in source_years)
+        observed=set()
+        for task in decomposition.tasks:
+            extraction=task.structured or {}
+            if database_query_choice(extraction) is False or task.intent in _NO_DATA_INTENTS|_METADATA_INTENTS:
+                continue
+            # Explicit compiler-generated comparison windows carry their own
+            # provenance and include the prior period required for computation.
+            if '取数含比较基期' in task.question:
+                continue
+            temporal=json.dumps([extraction.get('时间粒度'),extraction.get('过滤条件')],ensure_ascii=False)
+            years=set(re.findall(r'(?<!\d)(?:19|20)\d{2}(?=年|[-/.])',temporal))
+            if not years <= allowed:
+                raise TaskInputBindingError('结构化查询时间包含原问题未授权的年份')
+            observed.update(years)
+        if observed and not source_years <= observed:
+            raise TaskInputBindingError('结构化查询时间遗漏了原问题中的明确年份')
 
     @staticmethod
     def _local_detail_needs_new_owner(decomposition):
@@ -877,7 +943,8 @@ class SingleQuestionPlanner:
             available={item for source in sources for item in projection(source)}
             owners={owner for owner,_ in available if owner}
             owners.update(name for source in sources for owner,name in projection({'维度':source.get('维度',[])}))
-            if any(owner and owner not in owners and (owner,name) not in available
+            if any((owner,name) not in available and not any(name==old_name and (not owner or not old_owner or owner==old_owner)
+                    for old_owner,old_name in available)
                     for owner,name in projection({'展示字段':target.get('展示字段',[])})):
                 return True
         return False
@@ -893,8 +960,10 @@ class SingleQuestionPlanner:
         owners={item.get('entity') for item in structured.get('展示字段',[]) if isinstance(item,dict) and item.get('entity')}
         terms=set(decomposition.metric_catalog[0])|set(decomposition.metric_catalog[1])
         text=task.question+' '+str(structured.get('输出要求') or '')
-        return (len(owners)>1 and bool(re.search(r'最高|最低|最多|最少|第一|前[一二三四五六七八九十\d]',text))
-            and any(len(term)>=2 and term in text for term in terms))
+        extrema=bool(re.search(r'最高|最低|最多|最少|第一|前[一二三四五六七八九十\d]',text))
+        explicit_rows=bool(re.search(r'单条|单笔|某条|某笔|那一条|一条(?:销售)?订单|哪(?:条|笔|个)订单|订单.{0,6}(?:编号|号)',text))
+        object_total=bool(re.search(r'合计|汇总|加起来|加总|总和|所有订单|全部订单|总金额|累计',text))
+        return extrema and not explicit_rows and ((len(owners)>1 and any(len(term)>=2 and term in text for term in terms)) or object_total)
 
     @staticmethod
     def _unbound_calculation(decomposition):
@@ -1117,6 +1186,10 @@ class SingleQuestionPlanner:
         retry_feedback: str | None = None,
     ) -> QuestionDecomposition:
         from app.domain.semantic_description import load_semantic_description
+        from app.planning.catalog_context import catalog_section
+        scoped_catalog=catalog_section(semantic_context)
+        if scoped_catalog:
+            semantic_context=semantic_context.replace(scoped_catalog,'',1)
 
         from app.services.general_rules import rule_section, without_rule_section
         general_rules = rule_section(semantic_context)
@@ -1135,13 +1208,16 @@ class SingleQuestionPlanner:
         system_content = _SINGLE_SYSTEM_PROMPT
         # 规范只注入一次：远程按模型生成的描述文件优先，
         # 平台提示词粘贴段兼容存量，提示词文件内置规范最后兜底。
-        reference = await load_semantic_description(self.settings, semantic_model_id)
+        reference = (await load_semantic_description(self.settings, semantic_model_id)) if not scoped_catalog else {'source':'','content':''}
         remote_spec = (
             reference["content"]
             if reference["source"].startswith("semantic_model_")
             else ""
         )
-        if remote_spec:
+        if scoped_catalog:
+            system_content += _semantic_context_section(scoped_catalog,origin='本轮当前授权目录')
+            spec_for_catalog=scoped_catalog
+        elif remote_spec:
             system_content += _semantic_context_section(
                 remote_spec, origin="语义模型描述文件"
             )
@@ -1182,9 +1258,9 @@ class SingleQuestionPlanner:
                 ) + (
                     # 追问轮的任务问题必须携带具体参数值：指代留在问题文本里
                     # 会导致后续值绑定失败，这条要求放在用户消息里提高遵从度
-                    "\n（系统提示里有上一轮任务表：若本问题需要引用其中的参数"
-                    "（如实体名单），必须把采样中的具体值逐个写进任务问题文本，"
-                    "不得保留\"排名前三的经销商\"这类需要再计算的指代；"
+                    "\n（系统提示里有上一轮任务表：仅已验证完整的对象值可展开。"
+                    "部分采样不能写成完整过滤名单；需要引用其余对象时保留前序结果依赖，"
+                    "由授权完整数据集取得名单，不得从采样猜全；"
                     "若本问题与上一轮结果无关则忽略本说明。）"
                     if prior_block else ""
                 )},
@@ -1227,11 +1303,13 @@ class SingleQuestionPlanner:
             raw_tasks = [_PlannedTask(question=question, extraction=result.extraction,
                 postprocess=result.postprocess,clarification=result.clarification)]
         tasks: list[DecomposedTask] = []
-        for item in raw_tasks:
+        for task_index,item in enumerate(raw_tasks):
+            if any(type(dep) is not int or not 0<=dep<task_index for dep in item.depends_on):
+                raise TaskInputBindingError('任务依赖必须引用本问题中已经规划的前序任务')
             task_question = item.question.strip() or question
             task_intent = question_intent
             structured = self._sanitize_extraction(
-                item.extraction, intent=task_intent
+                item.extraction, intent=task_intent, metric_catalog=metric_catalog
             )
             if item.postprocess is not None or item.clarification is not None:
                 structured = structured or {}
@@ -1300,10 +1378,7 @@ class SingleQuestionPlanner:
             )
             tasks.append(DecomposedTask(
                 question=task_question,
-                depends_on=tuple(
-                    dep for dep in item.depends_on
-                    if isinstance(dep, int) and 0 <= dep < len(raw_tasks)
-                ),
+                depends_on=tuple(item.depends_on),
                 expected_output=(
                     item.expected_output.strip()
                     if item.expected_output and item.expected_output.strip()
@@ -1318,11 +1393,13 @@ class SingleQuestionPlanner:
                     else None
                 ),
             ))
+        from app.planning.metric_thresholds import metric_units
         return QuestionDecomposition(
             intent=question_intent,
             tasks=tuple(tasks),
             metric_catalog=metric_catalog,
             metric_dependencies=_parse_metric_dependencies(spec_for_catalog),
+            metric_units=metric_units(spec_for_catalog),
         )
 
     @staticmethod
@@ -1342,6 +1419,7 @@ class SingleQuestionPlanner:
         value: dict[str, Any] | None,
         *,
         intent: PrimaryIntent | None,
+        metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None,
     ) -> dict[str, Any] | None:
         """清洗模型输出的结构化提取：纯闲聊类意图强制为空，键与取值做形态归一。
 
@@ -1354,6 +1432,8 @@ class SingleQuestionPlanner:
             return None
         structured: dict[str, Any] = {}
         intent_label = _clean_extraction_text(value.get(_EXTRACTION_INTENT_KEY) or "")
+        if intent_label == '指标查询':
+            intent_label = '统计查询'
         if intent == PrimaryIntent.METRIC_DEFINITION:
             # 口径解释不在六类查询枚举里，意图键固定与任务意图显示一致
             structured[_EXTRACTION_INTENT_KEY] = "解释口径"
@@ -1380,9 +1460,9 @@ class SingleQuestionPlanner:
             intent == PrimaryIntent.DETAIL_QUERY
             and intent_label not in _CHINESE_INTENT_LABELS
         ):
-            # 明细查询只按展示字段出列：模型把返回列误提进指标/维度时，
-            # 迁入展示字段后再清空，避免下游丢列或误走聚合口径。
-            # 中文意图键与英文枚举冲突时以中文键为准，与下游意图回填规则一致。
+            # 登记指标用于明细粒度的计算/排序时仍保留指标通道；普通
+            # 属性继续迁入展示字段。无目录时沿用原有兼容行为。
+            registered, aliases = metric_catalog or (frozenset(), {})
             display = structured["展示字段"]
             known_fields = {
                 str(item.get("field") or item.get("name") or "").strip()
@@ -1390,15 +1470,21 @@ class SingleQuestionPlanner:
                 for item in display
             }
             for key in ("指标", "维度"):
+                kept: list[Any] = []
                 for item in structured[key]:
                     name = (
                         str(item.get("name") or item.get("field") or "").strip()
                         if isinstance(item, dict) else str(item).strip()
                     )
-                    if name and name not in known_fields:
+                    normalized = _normalize_metric_name(name, registered, aliases) if key == "指标" and name else ""
+                    if metric_catalog and (key == "维度" or normalized in registered):
+                        if key == "指标":
+                            item = dict(item, name=normalized) if isinstance(item, dict) else normalized
+                        kept.append(item)
+                    elif name and name not in known_fields:
                         display.append({"field": name})
                         known_fields.add(name)
-                structured[key] = []
+                structured[key] = kept
         time_granularity = value.get("时间粒度")
         structured["时间粒度"] = (
             time_granularity if isinstance(time_granularity, dict) else None

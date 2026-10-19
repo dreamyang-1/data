@@ -196,6 +196,8 @@ def align_structured_time_window(
         return None
     compact_question = str(question or "").replace(" ", "")
     wants_yoy = any(token in compact_question for token in YOY_SIGNALS)
+    from app.analysis.chain_tools.period_extrema import monthly_extremum_spec,parse_monthly_window
+    extrema=monthly_extremum_spec(question) if grain=='month' else None
 
     aligned_start: date | None = None
     aligned_end: date | None = None
@@ -212,9 +214,9 @@ def align_structured_time_window(
             aligned_start, aligned_end = window
             notes.append(f"相对范围“{time_range}”已对齐为{grain}桶边界")
 
-    if aligned_start is None and wants_yoy:
+    if aligned_start is None and (wants_yoy or extrema):
         # 绝对区间只需为同比扩展基期，无需桶对齐。
-        absolute = parse_absolute_range(time_range)
+        absolute = parse_monthly_window(time_range) if extrema else parse_absolute_range(time_range)
         if absolute is not None:
             aligned_start, aligned_end = absolute
 
@@ -223,6 +225,9 @@ def align_structured_time_window(
     if wants_yoy:
         aligned_start = _shift_months(aligned_start, -12)
         notes.append("同比计算需要上年同期基期，窗口起点已向前扩展12个月")
+    elif extrema:
+        aligned_start = _shift_months(aligned_start, -1)
+        notes.append('月度环比极值需要首月的上月基期，取数起点已向前扩展1个月；排名范围不变')
 
     rewritten = dict(time_grain)
     rewritten["time_range"] = f"{aligned_start.isoformat()}至{aligned_end.isoformat()}"

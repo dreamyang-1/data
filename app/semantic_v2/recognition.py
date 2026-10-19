@@ -58,6 +58,11 @@ BUSINESS_SEMANTIC_EXTRACTION_RULES = '''
 - 意图：统计查询对应 SCALAR_AGGREGATE/GROUPED_AGGREGATE，趋势分析对应 TIME_SERIES，
   对比分析对应 COMPARISON_SET，占比分析保留组成/占比证据，排名分析对应 RANKING，
   明细查询对应 DETAIL_ROWS 或 RELATION_LIST。根据用户目的判断，不因出现时间词就判趋势。
+  按已注册指标的数值阈值筛选对象名单时，使用统计查询，指标进 metrics，
+  阈值进 filter_expression；普通属性阈值仍按明细查询。极值先判断粒度：
+  从单条记录取最高/最低时按明细查询，依赖登记指标计算或排序时仍保留 metrics；
+  按医院、商品、人员等对象汇总后排名时使用统计/排名查询，保留指标及分组，
+  不得因“最高/最低”改为逐条记录。不把未登记的派生口径伪装为普通属性。
 - 业务域和实体：仅引用授权上下文中可证明的业务域和实体。实体证据进入 subject；没有则不绑定。
 - 指标：仅将可聚合度量放入 metrics。mention.surface 必须保持用户原词；若上下文明确给出
   同义词映射，可将 normalized_surface 写为标准指标名。未提指标或不能确认时不绑定 metrics。
