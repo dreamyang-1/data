@@ -1,0 +1,95 @@
+{
+  "classification": "PROVEN",
+  "oagnet": {
+    "baseline": {
+      "passed": 1840,
+      "failed": 13
+    },
+    "final": {
+      "passed": 1880,
+      "failed": 13
+    },
+    "collection_errors": [],
+    "old_pass_to_fail": [],
+    "old_fail_to_pass": [],
+    "new_passed": 40,
+    "known_baseline_failures": [
+      "tests/test_analysis_contract_request.py::test_analysis_contract_does_not_pollute_semantic_retrieval",
+      "tests/test_analysis_contract_request.py::test_intent_asl_contract_is_authoritative_in_model_prompt",
+      "tests/test_analysis_contract_request.py::test_execution_constraints_do_not_pollute_semantic_date_validation",
+      "tests/test_analysis_contract_request.py::test_exploration_requirements_are_enforced_after_clean_retrieval",
+      "tests/test_analysis_contract_request.py::test_structured_reference_is_vector_normalized_and_unmatched_items_are_removed",
+      "tests/test_metric_threshold_ownership.py::test_detail_metric_threshold_is_reported_as_planning_failure",
+      "tests/test_metric_threshold_ownership.py::test_detail_relationship_uses_its_declared_dated_transaction_as_subject",
+      "tests/test_relational_semantic_scope.py::test_geographic_slot_uses_source_verified_admin_field_on_result_entity",
+      "tests/test_scope_closure.py::test_real_asl_route_admits_only_the_published_dimension_binding[12]",
+      "tests/test_scope_closure.py::test_real_asl_route_admits_only_the_published_dimension_binding[22]",
+      "tests/test_scope_contract.py::test_real_query_chain_uses_only_the_explicit_domain",
+      "tests/test_surface_evidence.py::test_generation_recalls_exact_question_without_advisory_json",
+      "tests/test_temporal_metric_invariants.py::test_grouped_distinct_count_restores_missing_explicit_group_dimension"
+    ],
+    "fixture_alignment": {
+      "files": 4,
+      "affected_old_passed_cases": 6,
+      "assertions_weakened": false,
+      "reason": "User formally requires value evidence at the ASL boundary; existing field-only fixtures now include matching standard-value vectors."
+    }
+  },
+  "agent": {
+    "baseline": {
+      "passed": 5203,
+      "failed": 246
+    },
+    "full_regression": {
+      "passed": 5203,
+      "failed": 246
+    },
+    "old_pass_to_fail": [],
+    "collection_errors": [],
+    "application_runtime_files_changed": 0,
+    "note": "Agent full run preceded the last Oagnet-only caller-receipt refinement; final Oagnet full suite and Agent Critical were run again afterward."
+  },
+  "critical": {
+    "Oagnet": {
+      "passed": 302
+    },
+    "Agent": {
+      "passed": 249
+    }
+  },
+  "postdeployment": {
+    "native_original": {
+      "status": "COMPLETED",
+      "standard_asl": true,
+      "raw_shanghai_in_asl": false,
+      "visible_stream_nodes": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析"
+      ],
+      "final_complete_after_insight": true
+    },
+    "translation": {
+      "success": true,
+      "caller_alignment_passed": true,
+      "canonical_sql_literal": true,
+      "raw_sql_literal": false
+    },
+    "multi_value": [
+      "上海市",
+      "北京市"
+    ],
+    "health": {
+      "Oagnet": 200,
+      "AgentReady": 200,
+      "AgentLive": 200,
+      "SQL": 200
+    }
+  },
+  "business_rows_persisted": false,
+  "semantic_or_source_data_writes": 0,
+  "index_rebuilds": 0
+}

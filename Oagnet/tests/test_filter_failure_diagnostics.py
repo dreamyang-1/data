@@ -1,5 +1,6 @@
 """Rejected filter facts survive vector validation and the public API boundary."""
 import json
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
@@ -60,6 +61,9 @@ def test_valid_filters_and_first_failure_behavior_are_unchanged():
     content = json.dumps({"filters": FILTERS})
     agent._validate_vector_grounded_asl(content, {
         "_vector_authorized_fields": [item["field"] for item in FILTERS],
+        "attributes": [SimpleNamespace(metadata={"field_mapping": item["field"]}) for item in FILTERS],
+        "entity_attribute_values": [SimpleNamespace(metadata={
+            "source_field": item["field"], "attr_value": item["value"]}) for item in FILTERS],
     })
     with pytest.raises(ASLValidationError) as caught:
         agent._validate_vector_grounded_asl(content, {})
