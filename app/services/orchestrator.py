@@ -2368,8 +2368,10 @@ class DataAnalysisOrchestrator:
             "上述任务返回", "上一步返回", "前一任务返回", "前序任务返回", "该销售员", "该业务员",
         )) or bool(re.search(
             r"(?:上述|上一步|前述|前序)(?:任务)?(?:返回|筛选|选出|查询到)?"
-            r"(?:的)?(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户|对象|结果)"
-            r"|(?:该|这些|其|他|她)(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户)",
+            r"(?:的)?[^，,。；;！？?]{0,24}?(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户|对象|结果)"
+            r"|(?:该|这些|那些|(?:这|那)(?:[一二三四五六七八九十两0-9]+)?[家个位名款]?|其|他|她|它)"
+            r"(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户)"
+            r"|(?:他|她|它)们?(?:的|所|在|销售|合作|负责|涉及|提供|生产)",
             compact,
         ))
 
@@ -2380,7 +2382,17 @@ class DataAnalysisOrchestrator:
             r"(?:根据|基于|按照|依照|按)(.+?)(?:筛选|过滤|推荐|查找|查询|匹配|分析|统计)",
             compact,
         )
-        return match.group(1) if match else compact
+        if match:
+            return match.group(1)
+        reference = re.search(
+            r"(?:上述|上一步|前述|前序)(?:任务)?[^，,。；;！？?]{0,24}?"
+            r"(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户)"
+            r"|(?:该|这些|那些|(?:这|那)(?:[一二三四五六七八九十两0-9]+)?[家个位名款]?|其)"
+            r"(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户)"
+            r"|(?:他|她|它)们?(?=的|所|在|销售|合作|负责|涉及|提供|生产)", compact)
+        if reference:
+            return reference.group(0)
+        return compact
 
     @staticmethod
     def _dependency_column_family(text: str) -> str | None:
@@ -10941,6 +10953,8 @@ class DataAnalysisOrchestrator:
                 parsed_period = None
             if parsed_period is not None:
                 request.time_range = parsed_period
+                request.assumptions = [item for item in request.assumptions
+                    if item not in {"TIME_SCOPE=ALL_TIME", "TIME_SCOPE=ALL_AVAILABLE_HISTORY"}]
         request.asl_template = None
         request.source_dataset_id = None
         # Ensure semantic/ASL receives this child's shape, not parent wording.

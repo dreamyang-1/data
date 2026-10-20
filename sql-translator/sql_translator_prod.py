@@ -2023,6 +2023,7 @@ class SQLTranslatorProd:
         existing_tables: set,
         model_id: Optional[str] = None,
         preferred_entities: Optional[List[str]] = None,
+        metric_entities: Optional[List[str]] = None,
     ) -> Optional[str]:
         """
         从 from_entity 查找到物理表 table_name 的 JOIN 路径。
@@ -2069,6 +2070,24 @@ class SQLTranslatorProd:
                 continue
             join_clause = self._find_join_path(from_entity, cand, model_id)
             if join_clause:
+                # Equal-length routes can mean different business relations.
+                # For a filter, prefer the metric's registered fact owner;
+                # shorter paths and explicit hierarchy anchors retain priority.
+                for anchor in metric_entities or []:
+                    if anchor in {from_entity, cand}:
+                        continue
+                    lead = self._find_join_path(from_entity, anchor, model_id)
+                    tail = self._find_join_path(anchor, cand, model_id)
+                    if not lead or not tail:
+                        continue
+                    fact_path = f"{lead} {tail}"
+                    fact_tables = self._extract_tables_from_join(fact_path)
+                    if (
+                        self._get_entity_base_table(from_entity, model_id) not in fact_tables
+                        and len(fact_tables) == len(self._extract_tables_from_join(join_clause))
+                    ):
+                        join_clause = fact_path
+                        break
                 new_joins = self._filter_existing_joins(join_clause, existing_tables)
                 if new_joins:
                     return new_joins
@@ -2639,6 +2658,34 @@ class SQLTranslatorProd:
                 group_parts.append(companion[0])
         return f"GROUP BY {', '.join(group_parts)}" if group_parts else ""
 
+    def _projected_metric_having(self, conditions, metrics, model_id=None, dialect=None):
+        """MySQL HAVING resolves projected scalar metrics through their aliases.
+
+        A catalog expression can select an ungrouped source column, while
+        repeating that column in HAVING produces error 1054. Reuse the selected
+        metric's output; preserve all other predicates and dialect behavior.
+        """
+        if not conditions:
+            return conditions
+        effective_dialect = dialect or sql_dialects.mysql_dialect()
+        if effective_dialect.key not in {'mysql', 'mariadb'}:
+            return conditions
+        compact = lambda value: re.sub(r'\s+', '', str(value)).casefold()
+        mappings = {}
+        for metric in metrics:
+            code = str(metric['name'])
+            definition = self._get_metric(code, model_id) or {}
+            formula = str((definition.get('calculation_rule') or {}).get('calc_formula') or '')
+            formula = re.sub(r'^\s*[A-Za-z_][A-Za-z0-9_]*\s*=\s*', '', formula).strip()
+            if formula and not re.search(r'\b(?:COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT|STDDEV\w*|VARIANCE)\s*\(', formula, re.I):
+                mappings[compact(formula)] = effective_dialect.order_alias(str(metric.get('alias') or code))
+        result = []
+        for condition in conditions:
+            match = re.fullmatch(r'\s*(.+?)\s*(>=|<=|!=|=|>|<)\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*', condition)
+            alias = mappings.get(compact(match[1])) if match else None
+            result.append(f'{alias} {match[2]} {match[3]}' if alias else condition)
+        return result
+
     def _build_having_clause(self, having_conditions: List[str]) -> str:
         if not having_conditions:
             return ""
@@ -3113,7 +3160,8 @@ class SQLTranslatorProd:
         return None
 
     def _detect_additional_joins(self, entity_code: str, dimensions: List[Dict],
-                                  filters: List[Dict] = None, having: List[str] = None, model_id: Optional[str] = None) -> List[str]:
+                                  filters: List[Dict] = None, having: List[str] = None, model_id: Optional[str] = None,
+                                  metric_entities: Optional[List[str]] = None) -> List[str]:
         """检测维度和过滤条件是否需要额外的 JOIN"""
         additional_joins = []
         existing_tables = self._get_existing_join_tables(entity_code, model_id)
@@ -3200,12 +3248,14 @@ class SQLTranslatorProd:
                 if field and '.' in field:
                     table_name = field.split('.')[0]
                     if table_name not in existing_tables:
+                        metric_options = {'metric_entities': metric_entities} if metric_entities else {}
                         new_joins = self._find_join_to_table(
                             entity_code,
                             table_name,
                             existing_tables,
                             model_id,
                             preferred_entities=dimension_anchor_entities,
+                            **metric_options,
                         )
                         if new_joins and new_joins not in additional_joins:
                             additional_joins.append(new_joins)
@@ -3750,7 +3800,18 @@ class SQLTranslatorProd:
             joins.add(clauses)
             existing_tables.update(joins.tables)
 
-        additional_joins = self._detect_additional_joins(entity_code, dimensions, filters, having, model_id)
+        metric_owners = set()
+        for metric in metrics:
+            definition = self._get_metric(metric.get('name'), model_id) or {}
+            owners = definition.get('source_dependency', {}).get('bind_entity') or []
+            metric_owners.update(owners if isinstance(owners, list) else [owners])
+            if not owners:
+                metric_owners.add(None)
+        metric_options = {}
+        if len(metric_owners) == 1 and None not in metric_owners and entity_code not in metric_owners:
+            metric_options['metric_entities'] = list(metric_owners)
+        additional_joins = self._detect_additional_joins(
+            entity_code, dimensions, filters, having, model_id, **metric_options)
         include_joins(additional_joins)
 
         # 检测时间条件引用的表 - 如果 anchor 包含表名也需要 JOIN
@@ -3809,7 +3870,8 @@ class SQLTranslatorProd:
             "" if is_detail_projection
             else self._build_group_by_clause(dimensions, entity_code, model_id, dialect)
         )
-        having_clause = self._build_having_clause(having)
+        having_clause = self._build_having_clause(
+            self._projected_metric_having(having, metrics, model_id, dialect))
         order_by_clause = self._build_order_by_clause(sort, metrics, dimensions, model_id, dialect)
 
         select_keyword = (

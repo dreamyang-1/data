@@ -235,7 +235,8 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 # ---------------------------------------------------------------------------
 
 
-def validate_plan(plan: TaskPlan, *, source_question: str | None = None) -> None:
+def validate_plan(plan: TaskPlan, *, source_question: str | None = None,
+                  registered_default_times: tuple[str, ...] = ()) -> None:
     if not 2 <= len(plan.tasks) <= 12:
         raise TaskPlanningError("任务计划必须包含2到12个原子任务")
     task_ids = [task.task_id for task in plan.tasks]
@@ -254,7 +255,7 @@ def validate_plan(plan: TaskPlan, *, source_question: str | None = None) -> None
             )
         known.add(task.task_id)
     if source_question is not None:
-        _validate_grounding(plan, source_question)
+        _validate_grounding(plan, source_question, registered_default_times)
 
 
 def _unique_mentions(text: str, candidates: tuple[str, ...]) -> list[str]:
@@ -272,6 +273,25 @@ def _business_identifiers(text: str) -> list[str]:
     return list(dict.fromkeys(_BUSINESS_IDENTIFIER_PATTERN.findall(normalized)))
 
 
+def _cn_rank_number(match: re.Match[str]) -> str:
+    """中文序数写法转阿拉伯数字，“前五位”“前十名”与“前5位”“10名”等价。"""
+    text = match.group(1)
+    digits = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+              "六": 6, "七": 7, "八": 8, "九": 9}
+    if "十" in text:
+        tens_part, _, ones_part = text.partition("十")
+        if (tens_part and any(ch not in digits for ch in tens_part)) or (
+            ones_part and any(ch not in digits for ch in ones_part)
+        ):
+            return match.group(0)
+        tens = digits.get(tens_part, 1) if tens_part else 1
+        ones = digits.get(ones_part, 0) if ones_part else 0
+        return str(tens * 10 + ones)
+    if any(ch not in digits for ch in text):
+        return match.group(0)
+    return str(digits[text])
+
+
 def _normalize_grounding_numbers(text: str) -> str:
     """口语日期写法与规范写法等价"""
     text = re.sub(
@@ -280,30 +300,18 @@ def _normalize_grounding_numbers(text: str) -> str:
         text,
     )
     text = re.sub(r"(?<!\d)0(\d)(?=[月日号])", r"\1", text)
+    # “前五位/排名前三”常被改写成“前5位/前3”，前/第后面的中文数字转阿拉伯数字再比对
+    text = re.sub(
+        r"(?<=[前第])([一二两三四五六七八九十]{1,3})(?![一二两三四五六七八九十\d年])",
+        _cn_rank_number,
+        text,
+    )
     # “最多/最高”常被改写为“第1名/前1名”，序数措辞里的1不参与数字比对
     return re.sub(
         r"第\s*[一1]\s*[名位席]|前\s*[一1]\s*[名位席个家]|top\s*1(?!\d)",
         "首位",
         text,
     )
-
-
-def _goal_signals(text: str) -> set[str]:
-    patterns = {
-        "TREND": r"趋势|走势|按(?:日|周|月|季|年)变化",
-        "COMPARE": r"同比|环比|对比|比较|差多少|增长率",
-        "COMPOSITION": r"占比|构成|份额|结构",
-        "ANOMALY": r"异常|突增|突降|离群|不正常",
-        "ROOT_CAUSE": r"归因|原因|为什么|影响因素",
-        "FORECAST": r"预测|预估|预计|推算",
-        "DETAIL": r"明细|名单|逐笔|每一条|列表",
-        "RANK": r"(?:前|后)[\d一二三四五六七八九十百]+|最高|最低|排名|排序|降序|升序|从高到低|从低到高",
-        "DEFINITION": r"口径|定义|公式|怎么算",
-        "LINEAGE": r"血缘|来源表|来源字段|来自哪",
-        "QUALITY": r"数据质量|缺失|重复|空值|对账|延迟",
-        "DELIVERY": r"报告|报表|导出|下载|生成(?:excel|xlsx|pdf|word|docx)",
-    }
-    return {name for name, pattern in patterns.items() if re.search(pattern, text)}
 
 
 def _qualified_facet_parts(question: str) -> tuple[str, list[str]] | None:
@@ -350,8 +358,17 @@ def _qualified_facet_parts(question: str) -> tuple[str, list[str]] | None:
     return prefix, [left.group(0) + suffix, right.group(0) + suffix]
 
 
-def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
-    """拒绝模型自造的日期、数字、指标和带引号的过滤值。"""
+def _validate_grounding(plan: TaskPlan, source_question: str,
+                       registered_default_times: tuple[str, ...] = ()) -> None:
+    """拒绝模型自造的日期、数字、指标和带引号的过滤值。
+
+    只做防自造的正向校验：任务文本不得引入原问题没有的数字、指标、
+    时间条件、引号过滤值和业务型号。"遗漏"方向只比对无参数载体的信号
+    （排除/限定语气、并列分支结构、业务型号编码）——任务问题文本是
+    允许改写的展示字段，年份、排名、指标、时间等要求合法落在结构化
+    参数（时间粒度、排序、限制、指标通道）里而不复读进文本，文本级
+    强比对只会把整个规划误杀（实测多轮复现），下游合同以结构化参数为准。
+    """
     source_for_grounding = re.sub(
         r"(?:^|[;；\n])\s*[一二三四五1-5][、.)．]\s*",
         " ",
@@ -378,8 +395,12 @@ def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
     source_quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", source_question))
     source_identifiers = set(_business_identifiers(source_question))
     for task in plan.tasks:
+        grounding_question = task.question
+        for default in registered_default_times:
+            pattern = r"\s*".join(re.escape(char) for char in default)
+            grounding_question = re.sub(pattern, "", grounding_question)
         compact = _normalize_grounding_numbers(
-            re.sub(r"\s+", "", task.question).casefold()
+            re.sub(r"\s+", "", grounding_question).casefold()
         )
         if not set(re.findall(r"\d+(?:\.\d+)?", compact)).issubset(source_numbers):
             raise TaskPlanningError("子任务包含原问题中不存在的数字或日期")
@@ -388,23 +409,16 @@ def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
         if not {value for value in temporal_terms if value in compact}.issubset(source_temporal):
             raise TaskPlanningError("子任务包含原问题中不存在的时间条件")
         quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", task.question))
-        if not quoted.issubset(source_quoted):
+        if not all(value in source_quoted or value in source_question for value in quoted):
             raise TaskPlanningError("子任务包含原问题中不存在的过滤值")
         task_identifiers = set(_business_identifiers(task.question))
         if not task_identifiers.issubset(source_identifiers):
             raise TaskPlanningError("子任务包含原问题中不存在的业务型号或编码")
 
-    # 落地校验是双向的：只防自造不够，计划悄悄丢掉用户要求的一部分同样要拒绝。
-    if not source_numbers.issubset(set(re.findall(r"\d+(?:\.\d+)?", planned_compact))):
-        raise TaskPlanningError("任务计划遗漏原问题中的数字或日期")
-    if not source_metrics.issubset({value for value in metric_terms if value in planned_compact}):
-        raise TaskPlanningError("任务计划遗漏原问题中的指标")
-    if not source_temporal.issubset({value for value in temporal_terms if value in planned_compact}):
-        raise TaskPlanningError("任务计划遗漏原问题中的时间条件")
-    if not source_quoted.issubset(set(re.findall(
-        r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", " ".join(task.question for task in plan.tasks)
-    ))):
-        raise TaskPlanningError("任务计划遗漏原问题中的过滤值")
+    # "遗漏"方向的文本比对只保留无参数载体的信号：排除/限定语气、并列分支
+    # 结构、业务型号编码没有独立的结构化参数通道，任务文本丢了就真丢了；
+    # 数字、排名、指标、时间等信号合法落在时间粒度/排序/限制/指标通道里，
+    # 文本级强比对只会把整个规划误杀（实测多轮复现），不做反向比对。
     planned_identifiers = set(
         _business_identifiers(" ".join(task.question for task in plan.tasks))
     )
@@ -421,14 +435,6 @@ def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
         if any(count != 1 for count in coverage.values()):
             raise TaskPlanningError("任务计划遗漏或重复了并列业务分支")
 
-    source_goals = _goal_signals(source_compact)
-    if plan.final_deliverable == "COMBINED_REPORT":
-        # 交付动作由根DAG在所有分析子任务成功后统一执行；
-        # 要求每个子任务都带“报告”会错误地触发每份数据集各导一次。
-        source_goals.discard("DELIVERY")
-    planned_goals = _goal_signals(planned_compact)
-    if not source_goals.issubset(planned_goals):
-        raise TaskPlanningError("任务计划遗漏原问题中的分析目标")
     constraint_markers = {
         marker for marker in ("不要", "不看", "不查", "排除", "剔除", "只看", "仅看")
         if marker in source_compact
@@ -1324,7 +1330,9 @@ class CompoundTaskPlanner:
                 final_deliverable=judgment.final_deliverable,
                 question_groups=question_groups,
             )
-        validate_plan(plan, source_question=source_question)
+        validate_plan(plan, source_question=source_question, registered_default_times=tuple(
+            dict.fromkeys(default for decomposition in decompositions
+                          for default in decomposition.grounding_default_times)))
         self._reject_metric_substitution(plan, source_question)
         return plan
 
@@ -1550,7 +1558,8 @@ class CompoundQuestionRouter:
             split_reason_code="TASK_DECOMPOSITION",
             compound_metrics=_compound_metrics_in_decompositions([decomposition]),
         )
-        validate_plan(plan, source_question=question)
+        validate_plan(plan, source_question=question,
+                      registered_default_times=decomposition.grounding_default_times)
         return CompoundRouteResult(judgment=judgment, plan=plan)
 
 

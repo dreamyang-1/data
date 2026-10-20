@@ -1,8 +1,8 @@
 """Read the current platform-registered description; never use a local snapshot.
 
-The platform download menu uses semantic_model.semantic_desc_file_url. File
-names and storage locations are platform metadata, not derived from model IDs.
-Only the logical reference label uses the ID (for existing prompt consumers).
+Platform uploads use semantic_model.semantic_desc_file_url. The existing
+model_sync producer writes files/semantic_model_<id>.md without registering
+that URL. Read either producer's actual file; registered locations take priority.
 """
 from __future__ import annotations
 
@@ -44,8 +44,18 @@ def _description_url(settings: Any, model_id: int) -> str:
                 (model_id,),
             )
             row = cursor.fetchone()
-            value = row.get("semantic_desc_file_url") if row else None
-            return value.strip() if isinstance(value, str) else ""
+            if not row:
+                # Deleted/missing models may still have old files on storage.
+                return ""
+            value = row.get("semantic_desc_file_url")
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+            if value is not None and not isinstance(value, str):
+                return ""
+            # model_sync.refresh_model owns this filename contract. This is a
+            # real remote document, not a static or synthesized catalog fallback.
+            base = (getattr(settings, "semantic_description_base_url", "") or "").rstrip("/")
+            return f"{base}/files/semantic_model_{model_id}.md" if base else ""
     finally:
         connection.close()
 

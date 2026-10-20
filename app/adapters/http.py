@@ -1350,13 +1350,42 @@ class HttpDataRetrievalAdapter:
         # from being copied into a display-name filter (or vice versa).
         return key_kind(expected_normalized) == key_kind(actual_normalized)
 
-    @staticmethod
-    def _merge_dependency_filters(request: CanonicalAnalysisRequest) -> None:
+    @classmethod
+    def _merge_dependency_filters(cls, request: CanonicalAnalysisRequest) -> None:
         """Put immutable upstream values in structured input, not just prose."""
         if not request.dependency_constraints:
             return
         extraction = request._planner_extraction
         structured = extraction.structured if extraction is not None else None
+        families = {cls._constraint_field_family(item.source_column)
+                    for item in request.dependency_constraints} - {None}
+        resolved_references = set()
+
+        def resolve_reference(item):
+            # A planner may express an unresolved predecessor reference as a
+            # name value. The complete, scoped key set below owns that binding.
+            # Preserve real literals, exclusions and filters on other objects.
+            if (cls._constraint_field_family(str(item.get('field') or '')) not in families
+                    or str(item.get('operator') or item.get('op') or '=').upper() not in {'=', 'EQ', 'IN'}):
+                return item
+            value = item.get('value')
+            values = value if isinstance(value, list) else [value]
+            retained = [v for v in values if not (
+                isinstance(v, str) and v not in request.original_question
+                and re.match(r'^(?:复用|根据|基于)?(?:上述|上一轮|上一步|前序|前一)(?:任务)?'
+                             r'(?:的)?(?:查询)?(?:返回)?(?:的)?(?:结果|名单)(?:[：:]|中(?:的)?|$)', v.strip()))]
+            if len(retained) == len(values):
+                return item
+            resolved_references.update(v for v in values if isinstance(v, str) and v not in retained)
+            return {**item, 'value': retained if isinstance(value, list) else retained[0]} if retained else None
+
+        request.filters = [resolved for item in request.filters
+                           if (resolved := resolve_reference(item)) is not None]
+        if structured is not None:
+            structured['过滤条件'] = [resolved for item in structured.get('过滤条件') or []
+                                    if (resolved := resolve_reference(item)) is not None]
+        request.semantic_entity_mentions = [value for value in request.semantic_entity_mentions
+                                           if value not in resolved_references]
         for constraint in request.dependency_constraints:
             item = {"field": constraint.source_column, "operator": "IN",
                     "value": list(constraint.values)}
@@ -2398,9 +2427,23 @@ class HttpDataRetrievalAdapter:
                 or contract_for_request(request) is not None):
             raise AdapterError("SURFACE_HANDOFF_CONSTRAINTS_UNSUPPORTED",
                                "confirmed bindings or execution constraints require explicit handoff")
+        completed_question = request.rewritten_question or request.original_question
+        # The ordinary entry uses the original question generator, where
+        # extracted slots are advisory. Carry this confirmed business meaning
+        # in its wording too, as the multi-task entry already does.
+        conditions = (structured_extraction or {}).get('过滤条件') or []
+        if (scope.semantic_model_id == 81 and '医院' in completed_question
+                and re.search(r'订单|销售', completed_question)
+                and '科室按商品适用科室筛选订单' not in completed_question
+                and any(isinstance(item, dict) and item.get('entity') == '商品科室关联'
+                        and item.get('field') == '科室编码' for item in conditions)):
+            completed_question += '，科室按商品适用科室筛选订单'
+            if any(isinstance(item, dict) and item.get('entity') == '医院'
+                   and item.get('field') in {'城市', '省份'} for item in conditions):
+                completed_question += '，地区按医院所在地筛选'
         plan = await generate_surface_asl(
             self.client, self.settings,
-            completed_question=request.rewritten_question or request.original_question,
+            completed_question=completed_question,
             mentions=mentions, authorized_scope=scope, identity=identity,
             application_id=request.application_id, request_id=request.request_id,
             time_range=request.time_range,

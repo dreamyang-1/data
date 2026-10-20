@@ -601,11 +601,26 @@ def validate_intent_asl_contract_completeness(
                         return True
             return False
 
+        def has_materialized_dependency_equivalent(item: dict[str, Any]) -> bool:
+            if not request.dependency_constraints:
+                return False
+            # Reuse the executor's reference normalization as an equivalence
+            # proof. Original turn facts remain untouched; every materialized
+            # key and any retained literal must be present in the contract.
+            from app.adapters.http import HttpDataRetrievalAdapter
+            candidate = request.model_copy(deep=True, update={"filters": [dict(item)]})
+            HttpDataRetrievalAdapter._merge_dependency_filters(candidate)
+            return item not in candidate.filters and all(
+                filter_signature(resolved) in actual_signatures
+                for resolved in candidate.filters
+            )
+
         missing_filters = [
             item for item in expected_filters.value
             if isinstance(item, dict)
             and filter_signature(item) not in actual_signatures
             and not has_grounded_equivalent(item)
+            and not has_materialized_dependency_equivalent(item)
         ]
         if missing_filters:
             add(

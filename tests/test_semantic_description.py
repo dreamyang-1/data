@@ -171,7 +171,10 @@ def test_metadata_query_binds_id_and_closes_connection(monkeypatch, row):
     sql, params = cursor.execute.call_args.args
     assert "WHERE id = %s AND is_deleted = 0" in sql and params == (121,)
     assert "semantic_desc_file_url" in sql
-    assert result == (row.get("semantic_desc_file_url") or "").strip() if row else result == ""
+    # The existing model_sync producer does not register a platform URL.
+    expected = ((row.get("semantic_desc_file_url") or "").strip()
+                or "https://descriptions.example/files/semantic_model_121.md") if row else ""
+    assert result == expected
     connection.close.assert_called_once()
 
 

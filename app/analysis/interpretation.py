@@ -210,7 +210,7 @@ class InsightInterpretationLayer:
         ])
         if abnormal_changes:
             abnormal_summary = "；".join(
-                f"{item['from']}至{item['to']}变化{abs(float(item['delta'])):,.2f}"
+                f"{item['from']}至{item['to']}变化{abs(float(item['absolute_change'])):,.2f}"
                 for item in abnormal_changes[:2]
             )
             insights.append(InterpretedInsight(
