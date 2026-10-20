@@ -10,8 +10,14 @@ from __future__ import annotations
 
 import copy
 import re
+from datetime import date
 from typing import Any
 
+from app.analysis.chain_tools.temporal_window import (
+    align_structured_time_window,
+    extend_window_for_pop_baseline,
+    has_yoy_signal,
+)
 from app.domain.models import (
     AtomicTask,
     PlannerExtraction,
@@ -168,6 +174,25 @@ def _retrieval_extraction(structured: dict[str, Any], **overrides: Any) -> dict[
     return cloned
 
 
+def _trend_retrieval_window(question: str, structured: dict[str, Any]) -> dict[str, Any] | None:
+    """趋势取数窗口的方法派生扩展：环比基期前推一个粒度桶。
+
+    用户展示窗口保持不变，取数窗口按方法需要扩展并在
+    window_alignment 里披露扩展原因；滚动式先复用链路已有的
+    桶对齐（含同比基期扩展），解析不出绝对区间时不扩展。
+    """
+    granularity = structured.get("时间粒度")
+    if not isinstance(granularity, dict):
+        return None
+    if not str(granularity.get("time_range") or "").strip():
+        return None
+    aligned = align_structured_time_window(
+        question, granularity, intent="TREND_ANALYSIS", today=date.today(),
+    )
+    extended = extend_window_for_pop_baseline(aligned or granularity)
+    return extended or aligned
+
+
 def _query_clause(time_text: str, grouping: str, metric_text: str) -> str:
     middle = f"{time_text}{grouping}的" if (time_text or grouping) else ""
     return f"查询{middle}{metric_text}"
@@ -254,12 +279,18 @@ def build_analysis_task_plan(
 
     if not retrieval_specs:
         # 趋势/占比/异常/预测及未命中两期拆分的对比：原取数任务保持不变，
-        # 只把意图口径降为指标查询，分析计算交给独立分析任务
+        # 只把意图口径降为指标查询，分析计算交给独立分析任务；
+        # 趋势取数窗口按环比基期方法需要前推一个粒度并披露扩展原因
+        retrieval_structured = _retrieval_extraction(structured)
+        if intent is PrimaryIntent.TREND_ANALYSIS:
+            extended_window = _trend_retrieval_window(question, structured)
+            if extended_window is not None:
+                retrieval_structured["时间粒度"] = extended_window
         retrieval_specs.append({
             "task_id": "task-1",
             "question": source_text or _query_clause(time_text, "", metric_text),
             "name": (task_name or source_text or _query_clause(time_text, "", metric_text))[:60],
-            "structured": _retrieval_extraction(structured),
+            "structured": retrieval_structured,
         })
 
     analysis_structured = copy.deepcopy(structured)
@@ -271,10 +302,12 @@ def build_analysis_task_plan(
         "sub_tools": playbook["sub_tools"],
         "merge": merge_mode,
         "periods": binding_periods,
+        "source_question": str(question or "").strip(),
     }
     retrieval_ids = [spec["task_id"] for spec in retrieval_specs]
     analysis_question = _analysis_question(
         intent, metric_text, time_text, dimensions, binding_periods,
+        source_question=str(question or ""),
     )
     tasks = [
         AtomicTask(
@@ -307,9 +340,12 @@ def _analysis_question(
     time_text: str,
     dimensions: list[str],
     periods: list[dict[str, str]],
+    *,
+    source_question: str = "",
 ) -> str:
     if intent is PrimaryIntent.TREND_ANALYSIS:
-        return f"对{time_text}{metric_text}进行趋势分析（含环比、同比），识别涨跌与拐点"
+        yoy_clause = "、同比" if has_yoy_signal(source_question) else ""
+        return f"对{time_text}{metric_text}进行趋势分析（含环比{yoy_clause}），识别涨跌与拐点"
     if intent is PrimaryIntent.COMPARISON_ANALYSIS:
         if periods:
             pair = "与".join(item["label"] for item in periods)

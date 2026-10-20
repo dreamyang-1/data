@@ -1,0 +1,222 @@
+"""Basic arithmetic must survive planning, task binding and persisted DAG inputs."""
+import copy
+from unittest.mock import AsyncMock
+
+import pytest
+
+from app.domain.models import AtomicTask, PrimaryIntent, TaskPlan
+from app.planning.calculation_bindings import materialize_computation_binding, resolve_compound_formulas
+from app.planning.compound_question import deduplicate_plan
+from app.services.calculation_execution import calculate
+from minio_followup_store import DatasetReference, DatasetScope
+from test_complex_execution_correctness import service, context, persist, IDENTITY
+
+
+def reference(name, columns, rows, **provenance):
+    return DatasetReference(dataset_id=name, bucket='test', object_name=name,
+        scope=DatasetScope('test','test','test','test'), columns=tuple(columns), row_count=len(rows),
+        byte_size=0,snapshot_id='',data_as_of='',created_at='',expires_at='',source_type='TEST',source_ref='',
+        transformation_log=({
+        'type':'query_provenance', 'source_truncated':False,
+        'source_total_row_count':len(rows), 'source_quality_status':'PASS', **provenance},))
+
+
+def binding(operator, left='付款金额', right='核销金额', sources=('q', 'q'), label='结果'):
+    return {'operation':operator, 'left':{'source_task_id':sources[0], 'column':left},
+            'right':{'source_task_id':sources[1], 'column':right}, 'result_field':label, 'format':'number'}
+
+
+def execute(contract, inputs):
+    task=AtomicTask(task_id='compute', question='按已登记公式计算', depends_on=list(inputs),
+                    extraction={'是否查询数据库':'否','计算绑定':contract})
+    return calculate(task, inputs, lambda *args, **kwargs: None)
+
+
+@pytest.mark.parametrize('operator,left,right,expected', [
+    ('add',10,3,13), ('subtract',10,3,7), ('multiply',10,3,30), ('divide',10,4,2.5),
+    ('add',-3,3,0), ('subtract',3,10,-7), ('multiply',10,0,0), ('divide',10,-4,-2.5),
+])
+def test_all_four_operations_on_one_query(operator,left,right,expected):
+    rows=[{'部门编码':'D1','付款金额':left,'核销金额':right}]
+    source=reference('query',list(rows[0]),rows)
+    before=copy.deepcopy(rows)
+    columns,result,operation,evidence,quality=execute(binding(operator),{'q':(source,rows)})
+    assert result[0]['结果']==expected and result[0]['部门编码']=='D1'
+    assert operation['operator']==operator and quality=='PASS'
+    assert evidence['left']['dataset_id']==evidence['right']['dataset_id']=='query'
+    assert not any(name.startswith('_') for name in columns)
+    assert rows==before
+
+
+@pytest.mark.parametrize('operator,expected',[
+    ('add',{'D1':13,'D2':25}), ('subtract',{'D1':7,'D2':15}),
+    ('multiply',{'D1':30,'D2':100}), ('divide',{'D1':10/3,'D2':4}),
+])
+def test_same_named_measures_align_by_code_across_reordered_queries(operator,expected):
+    left=[{'部门编码':'D1','金额':10},{'部门编码':'D2','金额':20}]
+    right=[{'部门编码':'D2','金额':5},{'部门编码':'D1','金额':3}]
+    a,b=reference('a',list(left[0]),left),reference('b',list(right[0]),right)
+    original=copy.deepcopy(right)
+    _,rows,_,evidence,_=execute(binding(operator,'金额','金额',('a','b')),{'a':(a,left),'b':(b,right)})
+    assert {row['部门编码']:row['结果'] for row in rows}==pytest.approx(expected)
+    assert evidence['right']['column']=='金额' and right==original and b.columns==tuple(right[0])
+
+
+@pytest.mark.parametrize('operator,left_scalar,expected',[
+    ('subtract',True,{'D1':8,'D2':5}), ('subtract',False,{'D1':-8,'D2':-5}),
+    ('multiply',True,{'D1':20,'D2':50}), ('divide',False,{'D1':0.2,'D2':0.5}),
+])
+def test_scalar_broadcast_preserves_operand_direction(operator,left_scalar,expected):
+    grouped=[{'部门编码':'D1','金额':2},{'部门编码':'D2','金额':5}]; scalar=[{'金额':10}]
+    a=(reference('groups',list(grouped[0]),grouped),grouped)
+    b=(reference('scalar',['金额'],scalar),scalar)
+    inputs={'a':b if left_scalar else a,'b':a if left_scalar else b}
+    _,rows,*_=execute(binding(operator,'金额','金额',('a','b')),inputs)
+    assert {row['部门编码']:row['结果'] for row in rows}==pytest.approx(expected)
+
+
+@pytest.mark.parametrize('value',[None,True,'NaN','Infinity','unknown'])
+def test_invalid_numbers_are_not_silently_replaced_with_zero(value):
+    rows=[{'付款金额':value,'核销金额':2}]
+    with pytest.raises(ValueError):
+        execute(binding('subtract'),{'q':(reference('q',list(rows[0]),rows),rows)})
+
+
+def test_zero_divisor_and_old_positive_ratio_contract_remain_protected():
+    for number in (0,-2):
+        rows=[{'付款金额':10,'核销金额':number}]; source=reference('q',list(rows[0]),rows)
+        contract=binding('divide')
+        contract['numerator']=contract.pop('left');contract['denominator']=contract.pop('right')
+        with pytest.raises(ValueError,match='分母'):
+            execute(contract,{'q':(source,rows)})
+        if number==0:
+            with pytest.raises(ValueError,match='分母'):
+                execute(binding('divide'),{'q':(source,rows)})
+
+
+@pytest.mark.parametrize('mode',['mismatched','duplicate','truncated','failed_quality'])
+def test_arithmetic_cannot_hide_incomplete_or_incompatible_inputs(mode):
+    left=[{'部门编码':'D1','付款金额':10}]
+    right=[{'部门编码':'D2' if mode=='mismatched' else 'D1','核销金额':3}]
+    if mode=='duplicate':right*=2
+    a=reference('a',list(left[0]),left)
+    b=reference('b',list(right[0]),right,source_truncated=mode=='truncated',
+                source_quality_status='FAIL' if mode=='failed_quality' else 'PASS')
+    with pytest.raises(ValueError):
+        execute(binding('subtract',sources=('a','b')),{'a':(a,left),'b':(b,right)})
+
+
+@pytest.mark.parametrize('operator',['add','subtract','multiply','divide'])
+def test_binding_and_deduplication_remap_both_operand_roles(operator):
+    contract=binding(operator,sources=('task-2','task-1'))
+    raw={'计算绑定':copy.deepcopy(contract)}
+    for role,index in [('left',1),('right',0)]:
+        raw['计算绑定'][role].pop('source_task_id');raw['计算绑定'][role]['source_task_index']=index
+    normalized=materialize_computation_binding(raw,task_index=2,task_offset=3,dependencies=['task-4','task-5'])
+    assert normalized['计算绑定']['left']['source_task_id']=='task-5'
+    assert normalized['计算绑定']['right']['source_task_id']=='task-4'
+    plan=TaskPlan(planner='STRUCTURED_MODEL',tasks=[
+        AtomicTask(task_id='task-1',question='查询付款金额和核销金额'),
+        AtomicTask(task_id='task-2',question='查询付款金额和核销金额'),
+        AtomicTask(task_id='task-3',question='计算，不再查询数据库',depends_on=['task-1','task-2'],
+                   extraction={'计算绑定':contract})])
+    reduced,aliases=deduplicate_plan(plan)
+    assert aliases=={'task-2':'task-1'}
+    assert reduced.tasks[-1].extraction['计算绑定']['left']['source_task_id']=='task-1'
+    assert contract['left']['source_task_id']=='task-2'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('operator,symbol',[
+    ('add','+'),('subtract','减去'),('multiply','乘以'),('divide','÷')])
+async def test_registered_formulas_determine_operand_order(operator,symbol):
+    spec=f'| 指标 | 同义词 | 业务口径 | 单位 | 依赖指标 |\n| 差额 | 无 | 付款金额 {symbol} 核销金额 | 元 | 核销金额, 付款金额 |'
+    result=await resolve_compound_formulas(service().settings,None,spec,{'差额':('核销金额','付款金额')},['差额'])
+    roles=('numerator','denominator') if operator=='divide' else ('left','right')
+    assert result['差额']['operation']==operator
+    assert result['差额'][roles[0]]['column']=='付款金额'
+    assert result['差额'][roles[1]]['column']=='核销金额'
+
+
+@pytest.mark.parametrize('operator,symbol,count',[
+    ('add','+',2),('subtract','减去',2),('multiply','×',2),('divide','÷',3)])
+def test_auto_expansion_keeps_new_arithmetic_components_in_one_population(operator,symbol,count):
+    from app.planning.task_plan_stages import TaskBoundary, complete_boundaries
+    spec=f'| 指标 | 同义词 | 业务口径 | 单位 | 依赖指标 |\n| 公式结果 | 无 | 付款金额 {symbol} 核销金额 | 元 | 核销金额, 付款金额 |'
+    tasks=complete_boundaries([TaskBoundary(question='查询2026年各部门公式结果',
+        metric_targets=['公式结果'],grain=['部门'])],spec=spec,
+        catalog=(frozenset({'公式结果','付款金额','核销金额'}),{}),
+        dependencies={'公式结果':('核销金额','付款金额')})
+    assert len(tasks)==count
+    if operator!='divide':
+        assert tasks[0].metric_targets==['核销金额','付款金额']
+        assert tasks[-1].depends_on==[0]
+    else:
+        assert tasks[-1].depends_on==[0,1]  # Preserve the published ratio split.
+
+
+@pytest.mark.asyncio
+async def test_original_receivable_question_is_planned_before_bound_subtraction(monkeypatch):
+    from app.domain import semantic_description
+    from test_task_planning_stages import setup_planner
+    from app.planning.compound_question import CompoundQuestionRouter, CompoundJudgment
+    question='查询2026年各部门开票应收金额，结果需要展示部门名称'
+    planner,calls=setup_planner(monkeypatch,{'tasks':[{'question':question,
+        'metric_targets':['开票应收金额'],'grain':['部门']}]})
+    spec=('| 指标 | 同义词 | 业务口径 | 单位 | 指标层级 | 依赖指标 |\n'
+          '| 开票应收金额 | 无 | 付款金额减去核销金额的差值总和 | 元 | 复合口径指标 | 核销金额, 付款金额 |\n'
+          '| 付款金额 | 无 | 付款金额合计 | 元 | 原子指标 | 无 |\n'
+          '| 核销金额 | 无 | 核销金额合计 | 元 | 原子指标 | 无 |')
+    monkeypatch.setattr(semantic_description,'load_semantic_description',AsyncMock(return_value={
+        'available':True,'source':'semantic_model_133.md','content':spec}))
+    router=CompoundQuestionRouter(planner.settings);router._single=planner
+    outcome=await router.plan_with_judgment(CompoundJudgment(is_compound=False),question,semantic_model_id=133)
+    assert outcome.plan is not None and len(outcome.plan.tasks)==2
+    assert len(calls)==2
+    contract=outcome.plan.tasks[-1].extraction['计算绑定']
+    assert contract['operation']=='subtract'
+    assert contract['left']['source_task_id']=='task-1'
+    assert contract['right']['source_task_id']=='task-1'
+    assert outcome.plan.tasks[0].extraction['指标']==[{'name':'核销金额'},{'name':'付款金额'}]
+    assert all(task.extraction['维度']==['部门'] for task in outcome.plan.tasks)
+
+
+@pytest.mark.asyncio
+async def test_persisted_calculation_results_can_feed_later_arithmetic_tasks():
+    agent=service();chat,_=context()
+    await persist(agent,chat,['部门','付款金额','核销金额','系数'],[
+        {'部门':'D1','付款金额':100,'核销金额':30,'系数':2},
+        {'部门':'D2','付款金额':40,'核销金额':50,'系数':3}],conversation='q',
+        column_bindings={'部门':'department.department_code'})
+    sources={'q':'q'}
+    for name,contract,expected in [
+        ('difference',binding('subtract'),[70,-10]),
+        ('product',binding('multiply','结果','系数',('difference','difference'),label='乘积'),[140,-30]),
+        ('sum',binding('add','乘积','付款金额',('product','product'),label='合计'),[240,10]),
+        ('quotient',binding('divide','合计','系数',('sum','sum'),label='商'),[120,10/3]),
+    ]:
+        dependencies=list(dict.fromkeys(contract[role]['source_task_id'] for role in ('left','right')))
+        result=await agent._respond_pure_computation(chat,IDENTITY,AtomicTask(task_id=name,
+            question='根据上一步结果计算，不再查询数据库',depends_on=dependencies,
+            extraction={'是否查询数据库':'否','计算绑定':contract}),sources)
+        assert result.status=='COMPLETED'
+        assert [row[contract['result_field']] for row in result.evidence[0].payload['preview']]==pytest.approx(expected)
+        sources[name]=result.conversation_id
+
+
+@pytest.mark.asyncio
+async def test_derived_single_group_is_not_mistaken_for_a_global_scalar():
+    agent=service();chat,_=context()
+    await persist(agent,chat,['部门','付款金额','核销金额'],[
+        {'部门':'D1','付款金额':100,'核销金额':30}],conversation='q',
+        column_bindings={'部门':'department.department_code'})
+    result=await agent._respond_pure_computation(chat,IDENTITY,AtomicTask(task_id='difference',
+        question='计算差额',depends_on=['q'],extraction={'计算绑定':binding('subtract')}),{'q':'q'})
+    assert result.status=='COMPLETED'
+    await persist(agent,chat,['部门','税额'],[{'部门':'D2','税额':5},{'部门':'D1','税额':2}],
+        conversation='tax',column_bindings={'部门':'department.department_code'})
+    next_task=AtomicTask(task_id='net',question='按部门扣除税额',depends_on=['difference','tax'],
+        extraction={'计算绑定':binding('subtract','结果','税额',('difference','tax'),label='净额')})
+    next_result=await agent._respond_pure_computation(chat,IDENTITY,next_task,
+        {'difference':result.conversation_id,'tax':'tax'})
+    assert next_result.status=='FAILED' and not next_result.dataset_id

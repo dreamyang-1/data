@@ -477,6 +477,16 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
         # valid-sample scope across its inputs. Return those inputs together.
         joint = (task._whole_object_scope and len(compound)==1 and not other
                  and len({(key[1],key[2]) for key in queries})==1)
+        if len(compound)==1 and not other and len({(key[1],key[2]) for key in queries})==1:
+            from app.planning.calculation_bindings import registered_arithmetic_binding
+            formula = registered_arithmetic_binding(canonical_formula_spec(spec,catalog),
+                                                    compound[0],dependencies[compound[0]])
+            if formula and formula['operation'] in {'add','subtract','multiply'}:
+                # Components of this one request share scope and grain. Ask
+                # the existing query service for them together, preserving its
+                # common population instead of inventing missing groups/zeros
+                # while combining two independently aggregated populations.
+                joint = True
         query_groups = [queries] if joint else [[key] for key in queries]
         for query_group in query_groups:
             names = [key[0] for key in query_group]

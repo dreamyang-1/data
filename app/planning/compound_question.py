@@ -495,7 +495,8 @@ def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
         extraction = copy.deepcopy(task.extraction)
         if extraction:
             binding = extraction.get('计算绑定') or {}
-            operands = [binding.get('numerator'), binding.get('denominator'), extraction.get('结果操作')]
+            operands = [binding.get(role) for role in ('numerator', 'denominator', 'left', 'right')]
+            operands.append(extraction.get('结果操作'))
             for operand in operands:
                 if isinstance(operand, dict) and operand.get('source_task_id') in resolved:
                     operand['source_task_id'] = resolved[operand['source_task_id']]

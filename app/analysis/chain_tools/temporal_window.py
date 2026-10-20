@@ -273,6 +273,43 @@ def align_structured_time_window(
     return rewritten
 
 
+def extend_window_for_pop_baseline(time_grain: dict[str, Any]) -> dict[str, Any] | None:
+    """环比基期扩展：把绝对取数区间的起点向前推一个粒度桶。
+
+    趋势分析要算出展示窗口首期的环比，必须多读一期基期数据；扩展只
+    作用于发给 ASL 的时间粒度副本，扩展原因记入 window_alignment 披露。
+    输入无法解析为绝对区间（含"X至Y"或"X、Y"列举式）时不改写。
+    """
+    if not isinstance(time_grain, dict):
+        return None
+    time_range = str(time_grain.get("time_range") or "").strip()
+    if not time_range:
+        return None
+    grain = normalize_grain(time_grain.get("unit")) or "month"
+    absolute = parse_absolute_range(time_range)
+    if absolute is None:
+        covering = disjunctive_periods_to_range(time_range)
+        if covering is not None:
+            absolute = parse_absolute_range(covering)
+    if absolute is None:
+        return None
+    bucket_months = _BUCKET_MONTHS.get(grain)
+    if bucket_months is None:
+        return None
+    start, end = absolute
+    start = _shift_months(start, -bucket_months)
+    rewritten = dict(time_grain)
+    rewritten["time_range"] = f"{start.isoformat()}至{end.isoformat()}"
+    alignment = dict(rewritten.get("window_alignment") or {})
+    alignment.setdefault("derived_from", time_range)
+    alignment["reasons"] = [
+        *alignment.get("reasons", []),
+        "环比计算需要上一期基期，取数窗口起点已向前扩展1个粒度",
+    ]
+    rewritten["window_alignment"] = alignment
+    return rewritten
+
+
 def month_bucket_index(label: str) -> int | None:
     """把月桶标签解析成全局月序号（year*12+month-1）。
 
