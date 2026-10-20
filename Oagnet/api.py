@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field, StrictInt, field_validator, model_validat
 from asl_contract import ASLValidationError, IntentASLContract
 from surface_evidence import StructuredReference, SurfaceEvidence
 from scope_contract import CONTRACT_VERSION, normalize_domains, require_candidate_scope, semantic_record_types
+from metric_definition_lookup import MetricDefinitionLookupRequest, lookup_metric_definitions
 
 from capacity_control import (
     AslCapacityController,
@@ -445,6 +446,15 @@ _SEMANTIC_DISPLAY_SPECS = {
     "field": ("attribute", "attr_name", "attr_code", ("attr_name", "attr_code")),
     "filter": ("entity_attribute_value", "attr_name", "attr_code", ("attr_value",)),
 }
+
+
+@app.post('/vector/metric-definitions/lookup')
+def metric_definition_lookup(req: MetricDefinitionLookupRequest):
+    try:
+        return lookup_metric_definitions(req, _store, embed_query)
+    except ValueError as exc:
+        raise HTTPException(502, detail={'code': 'SEMANTIC_SCOPE_MISMATCH',
+                                       'message': 'Metric definition scope could not be verified'}) from exc
 
 
 @app.post(

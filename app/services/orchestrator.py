@@ -1849,7 +1849,9 @@ class DataAnalysisOrchestrator:
                             ),
                             display_model="CompositeIntentRecognitionDisplayV2",
                             display_version="V2",
-                            presentation_scenario="ANALYTIC",
+                            presentation_scenario=("METADATA" if all(
+                                intent == PrimaryIntent.METRIC_DEFINITION for intent in task_intents
+                            ) else "ANALYTIC"),
                             is_composite=True,
                             task_count=len(plan.tasks),
                         )
@@ -4205,7 +4207,7 @@ class DataAnalysisOrchestrator:
         }
 
         async def run(task: AtomicTask) -> tuple[str, AgentResponse | Exception]:
-            blocked = dependency_skip(
+            blocked = None if task.primary_intent == PrimaryIntent.METRIC_DEFINITION else dependency_skip(
                 task.depends_on, responses,
                 {task_id: f"任务{index + 1}" for task_id, index in task_index_by_id.items()},
             )
@@ -4233,7 +4235,8 @@ class DataAnalysisOrchestrator:
             )
             task_query_choice = self._structured_database_query_choice(task.extraction)
             pure_computation = bool(
-                task.depends_on and task_query_choice is not True
+                task.primary_intent != PrimaryIntent.METRIC_DEFINITION
+                and task.depends_on and task_query_choice is not True
                 and ("不再查询数据库" in task.question
                      or task_query_choice is False and len(task.depends_on) > 1
                      or bool((task.extraction or {}).get('计算绑定') or (task.extraction or {}).get('结果操作')))
@@ -4242,7 +4245,7 @@ class DataAnalysisOrchestrator:
             # entity query. Display aliases in predecessor prose cannot turn
             # it into an enrichment branch before its operation is validated.
             source_tasks = [item for item in plan.tasks if item.task_id in task.depends_on]
-            requires_new_entity = bool(task.depends_on) and not pure_computation and task_query_choice is not False and (
+            requires_new_entity = task.primary_intent != PrimaryIntent.METRIC_DEFINITION and bool(task.depends_on) and not pure_computation and task_query_choice is not False and (
                 task_query_choice is True or (
                     structured_query_changed(task.extraction, [item.extraction for item in source_tasks])
                     if projection(task.extraction)
@@ -4406,7 +4409,7 @@ class DataAnalysisOrchestrator:
                         value = await self._respond_pure_computation(
                             child, identity, task, conversation_by_task, responses
                         )
-                    elif len(task.depends_on) >= 2 and self._is_join_task(task.question):
+                    elif task.primary_intent != PrimaryIntent.METRIC_DEFINITION and len(task.depends_on) >= 2 and self._is_join_task(task.question):
                         value = await self._execute_cross_branch_join(
                             task, chat, identity, responses, conversation_by_task
                         )
@@ -4521,7 +4524,7 @@ class DataAnalysisOrchestrator:
                 task_question=task.question, is_child_task=True,
             ):
                 await emit_progress(
-                    "DATA_RETRIEVAL",
+                    "METADATA_RETRIEVAL" if task.primary_intent == PrimaryIntent.METRIC_DEFINITION else "DATA_RETRIEVAL",
                     progress_status,
                     message, task_terminal=True, task_result_status=status,
                 )
@@ -4618,6 +4621,26 @@ class DataAnalysisOrchestrator:
         fully_completed_count = sum(
             result.status == "COMPLETED" for result in task_results
         )
+        if all(task.primary_intent == PrimaryIntent.METRIC_DEFINITION for task in plan.tasks):
+            # Explanations have no data evidence to analyze. Preserve each
+            # answer and task status without synthesizing a query report.
+            response = AgentResponse(request_id=uuid4(), conversation_id=chat.conversation_id,
+                status='COMPLETED' if fully_completed_count == len(plan.tasks) else
+                    'PARTIAL_SUCCESS' if completed_count else 'SAFE_FALLBACK',
+                intent=PrimaryIntent.METRIC_DEFINITION, intent_source='TASK_PLANNER', intent_confidence=1,
+                answer='\n\n'.join(answer_parts), execution_shape='COMPOSITE',
+                task_plan=plan, task_results=task_results, evidence=evidence,
+                reliability=ReliabilityReport(level='HIGH' if all_high else 'LIMITED',
+                    score=sum(scores)/len(scores) if scores else 0,
+                    gates={'metadata_found': bool(evidence)}))
+            await self._persist_dag_root_context(chat=chat, identity=identity, plan=plan,
+                responses=responses, conversation_by_task=conversation_by_task, root_message_id=root_message_id)
+            if dag_pending is not None:
+                await self.sessions.clear_dag_pending(identity.tenant_id, identity.user_id,
+                    chat.application_id, chat.conversation_id, expected_version=int(dag_pending.get('state_version', 0)))
+            await self.sessions.delete_dag_checkpoint(identity.tenant_id, identity.user_id,
+                chat.application_id, chat.conversation_id, root_message_id)
+            return response
         shared_clarification = self._shared_report_time_clarification(
             plan, responses
         )
@@ -7919,7 +7942,7 @@ class DataAnalysisOrchestrator:
         # rendering intent diagnostics.  The former late-only recovery allowed
         # the UI to announce stale dimensions/clarification even when the same
         # turn subsequently obtained a SQL-verified canonical semantic frame.
-        if (
+        if request.primary_intent != PrimaryIntent.METRIC_DEFINITION and (
             "metric" in request.missing_slots
             or any(metric.metric_id is None for metric in request.metrics)
         ):
@@ -7929,7 +7952,7 @@ class DataAnalysisOrchestrator:
         # slots separately so raw LLM/rule candidates can never be presented as
         # if they were current vector-catalog facts. This is display-only and
         # intentionally cannot mutate the executable request.
-        if self.question_rewriter is not None and not nondata_direct:
+        if self.question_rewriter is not None and not nondata_direct and request.primary_intent != PrimaryIntent.METRIC_DEFINITION:
             await self.question_rewriter.ground_display_slots(request)
 
         if not nondata_direct:
@@ -7954,6 +7977,8 @@ class DataAnalysisOrchestrator:
             presentation_scenario=(
                 "CHAT"
                 if request.primary_intent == PrimaryIntent.CHAT
+                else "METADATA"
+                if request.primary_intent == PrimaryIntent.METRIC_DEFINITION
                 else "CLARIFICATION"
                 if request.missing_slots
                 else "ANALYTIC"
@@ -7974,6 +7999,10 @@ class DataAnalysisOrchestrator:
                 column_count=file_inspection.get("column_count"),
                 sheet_count=file_inspection.get("sheet_count"),
             )
+
+        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
+            response = await self._metadata_answer(request, identity, chat.semantic_model_id)
+            return await self._finish_terminal(request, response)
 
         if (chat.use_longterm_memory and self.memories is not None
                 and has_stable_user_principal(identity.tenant_id, identity.user_id)):
@@ -10525,6 +10554,8 @@ class DataAnalysisOrchestrator:
 
     @classmethod
     def _task_reuses_dependency_result(cls, task: AtomicTask) -> bool:
+        if task.primary_intent == PrimaryIntent.METRIC_DEFINITION:
+            return False
         choice = cls._structured_database_query_choice(task.extraction)
         return choice is False or choice is None and "不再查询数据库" in task.question
 
@@ -13002,9 +13033,11 @@ class DataAnalysisOrchestrator:
         completes lets that second clarification advance with the existing CAS
         version instead of trying to recreate state from version zero.
         """
-        if response.analysis_plan is None:
+        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
+            response.analysis_plan = None
+        elif response.analysis_plan is None:
             response.analysis_plan = self.analysis_planner.build(request)
-        if not response.analysis_process:
+        if not response.analysis_process and request.primary_intent != PrimaryIntent.METRIC_DEFINITION:
             response.analysis_process = self._build_analysis_process(request, response)
         response.semantic_model_id = request.semantic_model_id
         response.database_id = request.database_id
@@ -14538,6 +14571,14 @@ class DataAnalysisOrchestrator:
         return steps
 
     async def _metadata_answer(self, request: CanonicalAnalysisRequest, identity: TrustedIdentity, semantic_model_id: int | None) -> AgentResponse:
+        lookup = getattr(self.adapters.semantic, 'lookup_definitions', None)
+        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION and callable(lookup):
+            from app.services.metric_definition_answer import definition_response
+            try:
+                results = await lookup(request, identity)
+            except AdapterError as exc:
+                return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
+            return definition_response(request, results)
         if request.primary_intent == PrimaryIntent.DATA_LINEAGE and not request.metrics:
             # Legacy's downstream protocol supports metric lineage only. Do not
             # disguise this external contract gap as missing user information.

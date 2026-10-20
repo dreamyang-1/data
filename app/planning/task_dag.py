@@ -262,9 +262,9 @@ def _semantic_context_section(semantic_context: str, *, origin: str = "智能体
         "规范中未出现的对象、指标、维度或取值不得自行引入，"
         "用户说法是某个登记指标的同义词时归一为该指标的登记原名；"
         "与任何登记指标都对应不上时置空，不得把用户提到的属性说法"
-        "归到语义相近的注册指标名上，只有与规范内任何指标都无关、"
-        "也无法由规范内指标派生的纯概念词才按指标口径解释处理"
-        "（意图输出METRIC_DEFINITION，指标名保留用户原文）：\n"
+        "归到语义相近的注册指标名上。用户只问含义、口径或公式时，"
+        "无论指标是否登记，都按METRIC_DEFINITION解释，不查询实际数值；"
+        "未登记且无法派生的纯概念词也保留原文用于口径检索：\n"
         + semantic_context.strip()
         + "\n"
     )
@@ -1218,8 +1218,8 @@ class SingleQuestionPlanner:
                 + "、".join(off_meta)
                 + "”不在注入规范指标层级表中。若该说法可由规范内指标派生，"
                 "按正常任务意图处理并输出派生来源指标的登记原名，派生口径写入“输出要求”；"
-                "仅当该说法与规范内任何指标都无关、也无法派生时，才按指标口径解释处理"
-                "（意图输出METRIC_DEFINITION，指标名保留用户原文）。"
+                "但任务本身只要求解释口径时保持METRIC_DEFINITION及用户指标原文，"
+                "不得因为存在派生公式就改成取数或计算任务。"
             )
         return "\n".join(parts) if parts else None
 
@@ -1365,6 +1365,12 @@ class SingleQuestionPlanner:
         raw_tasks = []
         for boundary, parameters_for_task in zip(boundaries, parameters):
             value = copy.deepcopy(parameters_for_task)
+            if boundary.definition_only:
+                value = value if isinstance(value, dict) else {}
+                value['意图'] = '解释口径'
+                value['是否查询数据库'] = '否'
+                value.pop('计算绑定', None)
+                value.pop('结果操作', None)
             if isinstance(value, dict):
                 if boundary._cohort_key:
                     value['维度'] = [boundary._cohort_key]
@@ -1431,7 +1437,7 @@ class SingleQuestionPlanner:
                 if boundary_plan_complete and '不再查询数据库' not in boundary.question:
                     value.pop('计算绑定', None)
                     value.pop('结果操作', None)
-                    if boundary.depends_on:
+                    if boundary.depends_on and not boundary.definition_only:
                         value['是否查询数据库'] = '是'
                 elif boundary_plan_complete and not boundary.postprocess and any(
                         name in dependencies for name in boundary.metric_targets):
@@ -1440,7 +1446,7 @@ class SingleQuestionPlanner:
                     # pipeline invented during parameter extraction.
                     value.pop('结果操作', None)
                 required = [name for name in boundary.metric_targets if name in metric_catalog[0]]
-                if required or (boundary_plan_complete and not boundary.metric_targets):
+                if not boundary.definition_only and (required or (boundary_plan_complete and not boundary.metric_targets)):
                     # A declared output measure remains a measure even when
                     # its rows are presented as a detail result.
                     value['指标'] = [{'name': name} for name in required]
@@ -1455,7 +1461,7 @@ class SingleQuestionPlanner:
                     if boundary.expected_output not in requirement:
                         value['输出要求'] = (requirement + '；' if requirement else '') + boundary.expected_output
             planned_task = boundary.model_dump(exclude={
-                'metric_targets', 'grain', 'sample_requirements', 'component_input', 'preserve_ranking'})
+                'metric_targets', 'grain', 'sample_requirements', 'component_input', 'preserve_ranking', 'definition_only'})
             if isinstance(value, dict):
                 planned_task['name'] = component_task_title(boundary, value)
             raw_tasks.append(_PlannedTask(**planned_task, extraction=value))

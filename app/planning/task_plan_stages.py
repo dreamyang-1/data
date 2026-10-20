@@ -22,6 +22,7 @@ class TaskBoundary(BaseModel):
     preserve_ranking: bool = False
     postprocess: dict[str, Any] | None = None
     clarification: dict[str, Any] | None = None
+    definition_only: bool = False
     # Derived only from the selected metric's current registered definition.
     # It is not an ASL field binding and cannot be supplied by a model.
     _whole_object_scope: tuple[str, str, str] | None = PrivateAttr(default=None)
@@ -51,6 +52,7 @@ metric_targets仅记录任务要交付的规范登记指标名；grain记录结�
 11. postprocess仅用于明确可执行的既有数据操作，格式为{"source_task_index":0,"operation":{...}}；operation只支持derive、aggregate、filter、select、sort、sort_limit、limit或其pipeline。不得自造distribution、distribution_analysis、binning等操作。普通分布描述并入最终计算任务的交付物，由现有结果分析完成，不另造无法执行的分析任务。需要确认的计算口径保留clarification。禁止添加数据库字段、编程代码或未给出的业务条件。
 12. 区分入选对象的条件和对象内部的计算范围。若登记口径要求“该订单下全部商品”，原问题又按采购商品选择订单，必须先查询包含指定商品且满足医院、时间等条件的完整去重订单号名单，再依赖该名单统计每张订单全部商品的金额、数量，最后计算分布。商品条件仅用于入选名单，不可继续限制整单成分；不能把商品均价当成整单均价。其他客户/合同等对象同理。后续问题明确写“根据上述任务返回的完整名单”，不得把预览采样当名单。
 13. 平方、开根、对数、取余等数值计算使用后续本地计算任务，保留原始登记指标或字段作为输入，不把“平方金额”等临时结果名当成未登记数据库指标。方差、标准差、中位数、分位数、相关系数等先取得完整样本并保留正确粒度，再用aggregate；不能对已经求和的一个总数假装完成样本统计。总体与样本口径按原问题明确要求保留。纯数字运算可用无数据库依赖的计算任务。
+14. 只问指标含义、统计口径、公式或如何计算而未要求实际数值时，是说明交付，任务设置definition_only:true；保留用户要解释的指标，question写成“解释…的统计口径”。即使指标已登记或存在成分依赖，也不拆取数、计算或分析任务。查询数值并解释口径的组合请求分别保留数据任务和definition_only任务，不能把数据请求整体改成解释。
 '''
 
 # Postprocessing belongs to planning; the extraction phase must not have to
@@ -81,6 +83,7 @@ PARAMETER_PROMPT = '''任务边界已经确定。请为给定任务逐项提取e
 不得新增、删除、合并任务，不得修改任务问题、依赖和交付物；按task_index对应原任务。
 任务意图在本次提取中顺带给出，不另做一次识别调用；它用于执行路由，不能删除规划已确定的指标或结果粒度。
 每个任务的参数以该任务范围为准，原问题只用于解释共享上下文；不可把其他独立任务的筛选条件混入。
+definition_only=true的任务只解释口径，意图固定为“解释口径”，是否查询数据库为“否”；保留指标名称，不提取实际取数、计算绑定或结果操作。指标已经登记不影响解释意图。
 任务要求交付已注册指标时，即使是明细输出，也必须保留该指标的计算语义。需要聚合的指标按指标查询提取；原始属性明细继续按明细查询提取。
 逐对象样本需要保留任务指定的分组和唯一业务键；指标登记的聚合后有效样本条件不能改成逐行过滤。
 expected_output是必须完成的交付物，把分析目标保留在输出要求。计算任务必须给出当前规范支持的公式及前序任务输入，不得只写“根据结果计算”。
@@ -233,7 +236,7 @@ def _attach_result_analysis(boundaries, catalog):
             return set(boundary_targets(item, catalog))
         analysis_targets = targets(task) or set(targets_in_text(
             task.expected_output or task.question,registered,aliases)) or set(targets_in_text(task.question,registered,aliases))
-        narrative = ('不再查询数据库' in task.question and len(task.depends_on) == 1
+        narrative = (not task.definition_only and '不再查询数据库' in task.question and len(task.depends_on) == 1
                      and re.search(r'分布|洞察|描述', task.question)
                      and analysis_targets == targets(result[task.depends_on[0]]) and bool(analysis_targets))
         executable = False
@@ -269,6 +272,8 @@ def _bind_local_calculations(boundaries, *, spec, catalog, dependencies):
     def targets(task):
         return set(boundary_targets(task, catalog))
     for index, task in enumerate(result):
+        if task.definition_only:
+            continue
         if any(type(dep) is not int or dep < 0 or dep >= index for dep in task.depends_on):
             raise ValueError('任务依赖必须引用排在其前面的任务')
         postprocess = task.postprocess or {}
@@ -355,6 +360,8 @@ def _complete_object_scopes(boundaries, *, spec, catalog, dependencies, source_q
     known = grouping_labels(spec)
     scopes = {}
     for index, task in enumerate(boundaries):
+        if task.definition_only:
+            continue
         for name in boundary_targets(task, catalog):
             if name not in dependencies:
                 continue
@@ -440,6 +447,9 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
         if any(type(dep) is not int or dep < 0 or dep >= old_index for dep in source.depends_on):
             raise ValueError('任务依赖必须引用排在其前面的任务')
         task = source.model_copy(deep=True)
+        if task.definition_only:
+            task.postprocess = None
+            task.clarification = None
         targets = boundary_targets(task, catalog)
         # A planner may list formula inputs while its deliverable still asks
         # for the composite result. Recover that final target before extraction.
@@ -457,7 +467,7 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
                 '秒','分钟','小时','日','周','月','季度','半年','年','月份'}]
         # Metadata and local calculations are not new database component queries.
         local = '不再查询数据库' in task.question
-        metadata = re.search(r'^(?:请)?(?:解释|说明|介绍|定义|查看口径|查询血缘)', task.question)
+        metadata = task.definition_only or re.search(r'^(?:请)?(?:解释|说明|介绍|定义|查看口径|查询血缘)', task.question)
         compound = [name for name in task.metric_targets if name in dependencies
                     and all(part in registered for part in dependencies[name])]
         if local or metadata or not compound or task.clarification:

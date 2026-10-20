@@ -985,6 +985,10 @@ async def chat_stream(
             if bool(event.get("off_topic")):
                 # 语义识别判成业务无关的问题，规划节点对这轮不再点亮
                 off_topic_flag = True
+            if stage == 'METADATA_RETRIEVAL' and bool(event.get('is_child_task')):
+                # Cross the ordering barriers without displaying a data-query
+                # node for a definition task. Mixed siblings keep their stages.
+                return composite_child_orderer.push(dict(event, stage='DATA_RETRIEVAL', metadata_only=True))
             if bool(event.get("is_child_task")):
                 try:
                     composite_mode = composite_mode or int(
@@ -1299,7 +1303,11 @@ async def chat_stream(
                         yield rendered_event
             deferred_planning.clear()
             response_scenario = (
-                "ANALYTIC"
+                "METADATA"
+                if response.intent == PrimaryIntent.METRIC_DEFINITION and (
+                    response.execution_shape != 'COMPOSITE' or all(
+                        task.intent == PrimaryIntent.METRIC_DEFINITION for task in response.task_results))
+                else "ANALYTIC"
                 if response.execution_shape == "COMPOSITE"
                 else "CHAT"
                 if response.intent == PrimaryIntent.CHAT
@@ -1310,7 +1318,7 @@ async def chat_stream(
                 else presentation_scenario
             )
             presentation_scenario = response_scenario
-            if response_scenario in {"CHAT", "CLARIFICATION"} or response.execution_shape == "COMPOSITE":
+            if response_scenario in {"CHAT", "CLARIFICATION", "METADATA"} or response.execution_shape == "COMPOSITE":
                 async for rendered_event in stream_thinking({
                     "stage": "FINAL_OUTPUT",
                     "status": "COMPLETED",
@@ -1709,7 +1717,7 @@ class _CompositeChildProgressOrderer:
 
     def _label(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return _ordered_composite_child_progress_events(
-            events, labelled_tasks=self.labelled_tasks
+            [event for event in events if not event.get('metadata_only')], labelled_tasks=self.labelled_tasks
         )
 
     def _open_validation_if_ready(self) -> list[dict[str, Any]]:

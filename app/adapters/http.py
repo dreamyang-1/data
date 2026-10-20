@@ -461,6 +461,38 @@ class HttpSemanticAdapter:
             )
         return metrics
 
+    async def lookup_definitions(self, request, identity):
+        """Explanation-only lookup; never invoke the SQL metadata service."""
+        HttpDataRetrievalAdapter._enforce_bound_scope(request, request.semantic_model_id, None)
+        HttpDataRetrievalAdapter._require_supported_retrieval_scope(request)
+        names = list(dict.fromkeys(metric.input for metric in request.metrics if metric.input))
+        if not names:
+            return []
+        data = await self.client.post(self.settings.asl_generator_base_url,
+            '/vector/metric-definitions/lookup', {
+                'semantic_model_id': request.semantic_model_id,
+                'business_domain_ids': list(request.business_domain_ids),
+                'query': request.rewritten_question or request.original_question,
+                'metric_names': names,
+            }, identity=identity, application_id=request.application_id)
+        if (not isinstance(data, dict) or data.get('success') is not True
+                or data.get('semantic_model_id') != request.semantic_model_id
+                or data.get('business_domain_ids') != list(request.business_domain_ids)
+                or not isinstance(data.get('results'), list)):
+            raise AdapterError('SEMANTIC_SCOPE_UNCONFIRMED', 'Vector definition scope was not confirmed')
+        results = data['results']
+        if [item.get('input') for item in results if isinstance(item, dict)] != names:
+            raise AdapterError('SEMANTIC_RESPONSE_INVALID', 'Vector definitions did not cover the requested metrics')
+        for item in results:
+            if item.get('status') not in {'RESOLVED', 'NOT_FOUND', 'AMBIGUOUS'}:
+                raise AdapterError('SEMANTIC_RESPONSE_INVALID', 'Invalid vector definition status')
+            if item['status'] == 'RESOLVED':
+                definition = item.get('definition') or {}
+                if (definition.get('semantic_model_id') != request.semantic_model_id
+                        or request.business_domain_ids and definition.get('business_domain_id') not in request.business_domain_ids):
+                    raise AdapterError('SEMANTIC_SCOPE_MISMATCH', 'Vector metric belongs to another scope')
+        return results
+
     async def scoped_metadata(self, request, metric, identity):
         """Keep the current request grant through definition/lineage retrieval."""
         from urllib.parse import urlencode
