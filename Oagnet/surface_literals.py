@@ -52,6 +52,30 @@ def numeric_literal(value):
     return int(number) if number == number.to_integral() else format(number, "f")
 
 
+def typed_numeric_threshold_proof(predicate, generated_predicates):
+    """Reuse an already typed ASL threshold only for the identical predicate.
+
+    Caller text is checked without changing either the caller or the ASL.
+    Equality/name/identifier filters continue through vector value grounding.
+    """
+    if predicate.get('operator') not in {'>', '>=', '<', '<='}:
+        return predicate
+    surface = predicate.get('value')
+    if not isinstance(surface, str) or not re.fullmatch(r'[+-]?(?:0|[1-9]\d*)(?:\.\d+)?', surface):
+        return predicate
+    expected = Decimal(surface)
+    for actual in generated_predicates:
+        value = actual.get('value')
+        if (actual.get('field') != predicate.get('field')
+                or actual.get('operator') != predicate.get('operator')
+                or type(value) not in {int, float}):
+            continue
+        number = Decimal(str(value))
+        if number.is_finite() and expected == number:
+            return dict(predicate, value=value)
+    return predicate
+
+
 def planner_reference(extraction, fallback):
     """Consume the already-sent planner JSON, not stale classifier role guesses.
 

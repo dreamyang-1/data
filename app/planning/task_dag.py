@@ -337,8 +337,10 @@ def _repair_unavailable_local_projection(decomposition, question):
         structured = task.structured or {}
         local = str(structured.get('是否查询数据库') or '').startswith('否') or _NO_DATABASE_QUERY.search(task.question)
         wanted = [(owner, field) for owner, field in projection(structured) if owner]
-        if not (local and task.depends_on and wanted) or structured.get('指标'):
+        if not (local and task.depends_on and wanted) or structured.get('计算绑定'):
             continue
+        if structured.get('指标') and not structured.get('结果操作'):
+            continue  # Preserve existing metric calculations without a projection operation.
         available = {item for dep in task.depends_on if 0 <= dep < index
                      for item in projection(tasks[dep].structured)}
         if all(item in available for item in wanted):
@@ -346,6 +348,8 @@ def _repair_unavailable_local_projection(decomposition, question):
         corrected = copy.deepcopy(structured)
         corrected['是否查询数据库'] = '是'
         corrected['意图'] = '明细查询'
+        corrected['指标'] = []
+        corrected.pop('结果操作', None)
         # Render this child's fields and conditions, not the predecessor's
         # repeated Top N wording (which would become a new ranking constraint).
         text = '查询' + '、'.join(f'{owner}的{field}' for owner, field in wanted)
@@ -817,8 +821,11 @@ class SingleQuestionPlanner:
                     semantic_model_id=semantic_model_id,
                     retry_feedback=retry_feedback,
                 )
-            except TaskInputBindingError:
-                raise
+            except TaskInputBindingError as exc:
+                if attempt == attempts - 1:
+                    raise
+                retry_feedback = '任务规划或计算结构无效，请修正后重新输出完整计划：' + str(exc)
+                continue
             except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
                 # 传输、Schema 或解析失败先整体重试一次，仍失败返回空结果
                 logger.warning(
@@ -857,12 +864,16 @@ class SingleQuestionPlanner:
                     decomposition, unsplit_compound
                 )
                 last_result = decomposition
-            from app.planning.calculation_bindings import materialize_declared_division, materialize_declared_result_operation
+            from app.planning.calculation_bindings import materialize_declared_division, materialize_declared_result_operation, materialize_computation_binding
             try:
                 if not decomposition.boundary_plan_complete:
                     # Compatibility for legacy combined planners only. New
                     # boundaries already include local result operations.
                     last_result = materialize_declared_result_operation(materialize_declared_division(last_result))
+                for index, task in enumerate(last_result.tasks):
+                    if task.depends_on:
+                        materialize_computation_binding(task.structured, task_index=index,
+                            dependencies=[f'task-{dep + 1}' for dep in task.depends_on])
             except TaskInputBindingError as exc:
                 if attempt == attempts - 1:
                     raise
@@ -1336,8 +1347,12 @@ class SingleQuestionPlanner:
                     # A declared output measure remains a measure even when
                     # its rows are presented as a detail result.
                     value['指标'] = [{'name': name} for name in required]
-                    existing = value.get('维度') or []
-                    value['维度'] = existing + [name for name in boundary.grain if name not in existing]
+                    # Detail fields already come from parameter extraction.
+                    # A planning grain such as "医院" is an entity, not an
+                    # additional display field called "医院".
+                    if required or not value.get('展示字段'):
+                        existing = value.get('维度') or []
+                        value['维度'] = existing + [name for name in boundary.grain if name not in existing]
                 if boundary.expected_output:
                     requirement = str(value.get('输出要求') or '').strip()
                     if boundary.expected_output not in requirement:
@@ -1623,6 +1638,6 @@ class SingleQuestionPlanner:
             "是" if query_choice is True else "否" if query_choice is False else None
         )
         for key in ('计算绑定', '结果操作', '计算待确认'):
-            if isinstance(value.get(key), dict):
+            if isinstance(value.get(key), dict) and value[key]:
                 structured[key] = copy.deepcopy(value[key])
         return structured

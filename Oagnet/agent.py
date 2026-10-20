@@ -5810,6 +5810,11 @@ def _contract_filter_present(
             same_value = members(actual_value) == members(expected_value)
         else:
             same_value = actual_value == expected_value
+            if not same_value and allowed_fields and str(item.get('field') or '') in allowed_fields:
+                from surface_literals import typed_numeric_threshold_proof
+                numeric_proof = typed_numeric_threshold_proof(
+                    dict(expected, field=item['field'], operator=expected_operator), [item])
+                same_value = actual_value == numeric_proof.get('value')
         if not same_value:
             continue
         if allowed_fields is not None and str(item.get("field") or "") not in allowed_fields:
@@ -6267,6 +6272,11 @@ def _repair_contract_filter(
         domain_scope=domain_scope,
         query_object=query_object,
     )
+    if len(candidates) == 1:
+        from surface_literals import typed_numeric_threshold_proof
+        typed_proof = typed_numeric_threshold_proof(dict(expected, field=candidates[0],
+            operator=_contract_operator(expected.get('operator'), negative=negative)), ast.get('filters') or [])
+        expected = dict(expected, value=typed_proof.get('value'))
     expected_value = expected.get("value")
     expected_operator = _contract_operator(expected.get("operator"), negative=negative)
     negative_ops = {"NE", "!=", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE"}
@@ -9007,8 +9017,38 @@ def _allow_partial_surface_projections(
     return json.dumps(ast, ensure_ascii=False), repairs
 
 
+def _ground_executable_vector_values(
+    ast, knowledge, intent_asl_contract, *, store, semantic_model_id, domain_ids,
+):
+    """Keep vector proof for both generated predicates and caller surface words."""
+    from vector_filter_grounding import ground_filter_values
+    options = dict(store=store, embed=embed_query,
+                   semantic_model_id=semantic_model_id, domain_ids=domain_ids)
+    repairs = ground_filter_values(ast, knowledge, **options)
+    # The model may already emit 上海市 while the confirmed caller still says
+    # 上海. Prove that alias against the SAME field's vectors too, so downstream
+    # completeness checks receive the normal canonicalization receipt.
+    contract = intent_asl_contract or {}
+    for negative, slot in [(False, 'filters'), (True, 'negative_filters')]:
+        for expected in contract.get(slot) or []:
+            candidates = _contract_filter_candidates(
+                str(expected.get('field') or ''), knowledge,
+                query_object=contract.get('query_object'),
+            )
+            if len(candidates) != 1:
+                continue
+            proof = {'filters': [dict(expected, field=candidates[0],
+                operator=_contract_operator(expected.get('operator'), negative=negative))]}
+            from surface_literals import typed_numeric_threshold_proof
+            proof['filters'][0] = typed_numeric_threshold_proof(proof['filters'][0], ast.get('filters') or [])
+            for repair in ground_filter_values(proof, knowledge, **options):
+                if repair not in repairs:
+                    repairs.append(repair)
+    return repairs
+
+
 def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
-    """Require every executable ASL field to exist in the vector recall scope."""
+    """Require executable business fields AND values in the vector recall scope."""
     ast = json.loads(content)
     vector_fields = set(knowledge.get("_vector_authorized_fields") or [])
     from related_scope import related_fields
@@ -9071,6 +9111,8 @@ def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
         )
         if any(field not in vector_fields for field in fields):
             raise ValueError("ASL having field was not validated by vector semantic scope")
+    from vector_filter_grounding import ground_filter_values
+    ground_filter_values(ast, knowledge, validate_only=True)
 
 
 def _verify_missing_asl_fields_in_vector_store(
@@ -9206,6 +9248,11 @@ def _recover_question_asl(
         ast = json.loads(result)
         if ast.get('ambiguity'):
             return None
+        knowledge['_vector_filter_repairs'] = _ground_executable_vector_values(
+            ast, knowledge, intent_asl_contract, store=store,
+            semantic_model_id=semantic_model_id, domain_ids=domain_ids,
+        )
+        result = json.dumps(ast, ensure_ascii=False)
         _validate_vector_grounded_asl(result, knowledge)
         _validate_intent_asl_contract(result, intent_asl_contract, knowledge)
         return result, knowledge
@@ -9278,7 +9325,8 @@ def main(
     if generated is not None:
         result, knowledge = generated
         repairs = [{'type': 'RESTORE_QUESTION_ASL_GENERATION',
-                    'source': 'SCOPED_QUESTION_AND_CATALOG'}]
+                    'source': 'SCOPED_QUESTION_AND_CATALOG'},
+                   *knowledge.get('_vector_filter_repairs', [])]
     elif not isinstance(structured_extraction, dict):
         result = _ambiguity_asl([issue(
             "结构化提取", None,
@@ -9338,7 +9386,6 @@ def main(
         result = json.dumps(ast, ensure_ascii=False)
         if not ast.get("ambiguity"):
             try:
-                _validate_vector_grounded_asl(result, knowledge)
                 result = _validate_asl_output(result, knowledge, "", metric_codes or None)
                 if intent_asl_contract is not None:
                     # 契约过滤修复：bind 只按结构化参数「过滤条件」绑定，任务级
@@ -9389,6 +9436,13 @@ def main(
                         ensure_ascii=False, sort_keys=True)
                     if dimensions_after != dimensions_before:
                         result = json.dumps(contract_ast, ensure_ascii=False)
+                grounded_ast = json.loads(result)
+                repairs.extend(_ground_executable_vector_values(
+                    grounded_ast, knowledge, intent_asl_contract, store=store,
+                    semantic_model_id=semantic_model_id, domain_ids=domain_ids,
+                ))
+                result = json.dumps(grounded_ast, ensure_ascii=False)
+                _validate_vector_grounded_asl(result, knowledge)
                 _validate_intent_asl_contract(result, intent_asl_contract, knowledge)
             except (ASLValidationError, ValueError) as exc:
                 ast["ambiguity"].append(issue(

@@ -1,0 +1,34 @@
+[
+  {
+    "service": "Agent",
+    "path": "app/planning/task_dag.py",
+    "git_path": "app/planning/task_dag.py",
+    "source_sha256": "acf9d74cdffa528fa7672ebc39847e2aaafd925a2685edb9cfb7fec9a840652a",
+    "git_sha256": "1115593e418e6703d68675d245a6452233718188b7710a263b9aac84ce04b07f",
+    "release_sha256": "919f33eb2abc6f6ddad4774db93e5b1fba3340f0e0ee3cfcd3e620374af065ab"
+  },
+  {
+    "service": "Agent",
+    "path": "app/services/orchestrator.py",
+    "git_path": "app/services/orchestrator.py",
+    "source_sha256": "fba488092b3864659df0e550eb32ff8cfd34ec933aa63c4ed9448d8b2912a1dd",
+    "git_sha256": "b8db4b8c47c37f441a155caffa2213e121f80e8c55b2683a181c55e8a557f3a6",
+    "release_sha256": "0ae3a07904ee315c69a49c6c640b77768c849afeb4a8910c2b173e5613dce858"
+  },
+  {
+    "service": "Oagnet",
+    "path": "agent.py",
+    "git_path": "Oagnet/agent.py",
+    "source_sha256": "54663e2dd54293b13e2b8e455c8b691d0a20dd87f605ee6ff1c07d315933d3aa",
+    "git_sha256": "7fed25a9b2e97f52c258d5f119fb7083ce7cb65f2721ecaefab19ce725134d46",
+    "release_sha256": "7fed25a9b2e97f52c258d5f119fb7083ce7cb65f2721ecaefab19ce725134d46"
+  },
+  {
+    "service": "Oagnet",
+    "path": "surface_literals.py",
+    "git_path": "Oagnet/surface_literals.py",
+    "source_sha256": "4e844d4d3d0210310f21b93f42c24571c328b07915a884417f3ace612273a53e",
+    "git_sha256": "a114af8c243063bdb0b75593141330d57815f10d7304d30782986f411af76851",
+    "release_sha256": "a114af8c243063bdb0b75593141330d57815f10d7304d30782986f411af76851"
+  }
+]
