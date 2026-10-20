@@ -2691,6 +2691,59 @@ class SQLTranslatorProd:
             return ""
         return f"HAVING {' AND '.join(having_conditions)}"
 
+    def _metric_global_filter_stages(self, rules, metrics, main_table, model_id):
+        """Compile catalog measure predicates at the same grain as SELECT.
+
+        A registered aggregate measure is an expression, never a source-row
+        column. Only selected metrics and their declared dependencies can
+        supply replacements; quoted values and qualified fields stay intact.
+        """
+        rules = _normalize_global_filters(rules)
+        if not rules:
+            return [], [], []
+        definitions = {}
+        def collect(code):
+            if code in definitions:
+                return
+            definition = self._get_metric(code, model_id)
+            if not definition:
+                return
+            definitions[code] = definition
+            for dependency in definition.get('calculation_rule', {}).get('depend_metrics', []) or []:
+                collect(dependency)
+        for metric in metrics:
+            collect(metric['name'])
+        quoted = r"'(?:''|\\.|[^'\\])*'|\"(?:\"\"|\\.|[^\"\\])*\"|`(?:``|[^`])*`"
+        names = '|'.join(re.escape(code) for code in sorted(definitions, key=len, reverse=True))
+        tokens = re.compile('(?P<quoted>' + quoted + ')|(?P<metric>(?<![\\w.])(?:'
+                            + names + ')(?![\\w.(]))') if names else None
+        expressions = {}
+        def expand(match):
+            code = match.group('metric')
+            if code is None:
+                return match[0]
+            if code not in expressions:
+                expression = self._expanded_metric_formula(code, model_id)
+                # The assignment protects comparisons inside the expanded
+                # expression from the legacy formula parser's first '=' split.
+                expression = self._parse_calc_formula('_condition = ' + expression, main_table)
+                expression = re.sub(r'\s+AS\s+(?:`[^`]+`|"[^"]+"|\w+)\s*$', '', expression, flags=re.I)
+                expressions[code] = '(' + expression + ')'
+            return expressions[code]
+        normalized, row_rules, aggregate_conditions = [], [], []
+        for rule in rules:
+            rule = dict(rule)
+            condition = rule['condition']
+            condition = tokens.sub(expand, condition) if tokens else condition
+            rule['condition'] = condition
+            normalized.append(rule)
+            unquoted = re.sub(quoted, '', condition)
+            if re.search(r'\b(?:COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT|STDDEV\w*|VARIANCE)\s*\(', unquoted, re.I):
+                aggregate_conditions.append(('NOT (' if rule['filter_type'] == 'exclude' else '(') + condition + ')')
+            else:
+                row_rules.append(rule)
+        return normalized, row_rules, aggregate_conditions
+
     def _build_filter_clause(self, filters: List[Dict], global_filters: List[Dict], table_alias: str) -> str:
         """构建 WHERE 子句（含全局过滤条件）"""
         all_conditions = []
@@ -3826,6 +3879,9 @@ class SQLTranslatorProd:
             global_filters = self._get_metric_global_filters(metric['name'], model_id)
             all_global_filters.extend(global_filters)
 
+        all_global_filters, row_global_filters, aggregate_global_conditions = self._metric_global_filter_stages(
+            all_global_filters, metrics, main_table, model_id)
+
         global_filter_joins, global_filter_anchors = self._detect_global_filter_joins(
             entity_code, all_global_filters, existing_tables, model_id)
         include_joins(global_filter_joins)
@@ -3847,7 +3903,7 @@ class SQLTranslatorProd:
             if tc:
                 time_conditions.append(tc)
 
-        filter_clause = self._build_filter_clause(filters, all_global_filters, main_table)
+        filter_clause = self._build_filter_clause(filters, row_global_filters, main_table)
         if ast.get('related_filters'):
             from related_scope_sql import compile_related_filters
             related_conditions = compile_related_filters(self, ast, model_id)
@@ -3871,7 +3927,7 @@ class SQLTranslatorProd:
             else self._build_group_by_clause(dimensions, entity_code, model_id, dialect)
         )
         having_clause = self._build_having_clause(
-            self._projected_metric_having(having, metrics, model_id, dialect))
+            self._projected_metric_having([*having, *aggregate_global_conditions], metrics, model_id, dialect))
         order_by_clause = self._build_order_by_clause(sort, metrics, dimensions, model_id, dialect)
 
         select_keyword = (

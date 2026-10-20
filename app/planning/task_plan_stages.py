@@ -5,7 +5,7 @@ import copy
 import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class TaskBoundary(BaseModel):
@@ -22,6 +22,10 @@ class TaskBoundary(BaseModel):
     preserve_ranking: bool = False
     postprocess: dict[str, Any] | None = None
     clarification: dict[str, Any] | None = None
+    # Derived only from the selected metric's current registered definition.
+    # It is not an ASL field binding and cannot be supplied by a model.
+    _whole_object_scope: tuple[str, str, str] | None = PrivateAttr(default=None)
+    _cohort_key: str | None = PrivateAttr(default=None)
 
 
 class TaskBoundaries(BaseModel):
@@ -45,6 +49,7 @@ metric_targets仅记录任务要交付的规范登记指标名；grain记录结�
 9. name是动词加业务目标的陈述句，expected_output写明可验收结果。metric_targets必须使用规范登记原名；解释口径、血缘或闲聊任务不展开指标依赖。
 10. 若已有上一轮完整结果可提供参数，不重复原查询；采样不能当成完整名单。仅在完整性已确认时复用具体参数。
 11. postprocess仅用于明确可执行的既有数据操作，格式为{"source_task_index":0,"operation":{...}}；operation只支持derive、aggregate、filter、select、sort、sort_limit、limit或其pipeline。不得自造distribution、distribution_analysis、binning等操作。普通分布描述并入最终计算任务的交付物，由现有结果分析完成，不另造无法执行的分析任务。需要确认的计算口径保留clarification。禁止添加数据库字段、编程代码或未给出的业务条件。
+12. 区分入选对象的条件和对象内部的计算范围。若登记口径要求“该订单下全部商品”，原问题又按采购商品选择订单，必须先查询包含指定商品且满足医院、时间等条件的完整去重订单号名单，再依赖该名单统计每张订单全部商品的金额、数量，最后计算分布。商品条件仅用于入选名单，不可继续限制整单成分；不能把商品均价当成整单均价。其他客户/合同等对象同理。后续问题明确写“根据上述任务返回的完整名单”，不得把预览采样当名单。
 '''
 
 
@@ -57,6 +62,7 @@ PARAMETER_PROMPT = '''任务边界已经确定。请为给定任务逐项提取e
 expected_output是必须完成的交付物，把分析目标保留在输出要求。计算任务必须给出当前规范支持的公式及前序任务输入，不得只写“根据结果计算”。
 sample_requirements是父复合指标登记的有效样本口径，必须在每个成分任务中保留，按相同分组聚合后筛选，不能只约束其中一份输入或改成逐行剔除负数。
 component_input=true表示复合指标的成分统计取数，按指标查询提取；指标及分组按计划保留，不能改成原始金额/数量明细。成分统计不提前排序取前N，最终排名由计算任务完成；明确的前置入选范围仍通过任务依赖传递。
+先选对象再汇总完整对象的任务，只沿用前序完整对象名单，不继承用来筛选入选对象的商品等明细条件。按订单号汇总全部商品时，查询维度和展示字段只保留订单号，不能再按商品分组；时间范围在前置名单中落实，不把整单拆成时间内的部分明细。
 只使用当前规范中的业务对象；物理字段和关系最终绑定交给原有ASL链路。无法确定业务含义时沿用现有澄清方式，不编造参数。
 输出格式：{"tasks":[{"task_index":0,"extraction":{...}}]}，每个任务恰好一项。
 '''
@@ -68,6 +74,47 @@ def metric_definition(spec: str, name: str) -> str:
         if len(cells) >= 3 and cells[0] == name:
             return cells[2]
     return ''
+
+
+def registered_metric_conditions(spec: str, targets, catalog) -> tuple[str, ...]:
+    """Exact numeric predicates from the selected metric's current definition.
+
+    These are grounding evidence for task wording, never ASL bindings. A
+    number by itself does not authorize a different field/operator/threshold.
+    """
+    registered, aliases = catalog
+    operators = {'大于等于':'>=','小于等于':'<=','不等于':'!=','大于':'>','小于':'<','等于':'=',
+                 '>=':'>=','<=':'<=','!=':'!=','<>':'!=','>':'>','<':'<','=':'='}
+    result = []
+    for predicate in registered_metric_predicates(spec,targets,catalog):
+        canonical=predicate['field'];number=str(predicate['value'][0]);operator=predicate['op']
+        names = [canonical,*(alias for alias,name in aliases.items() if name==canonical)]
+        for name in names:
+            for spelling,normalized in operators.items():
+                if normalized == operator:
+                    result.append(name + spelling + number)
+    return tuple(dict.fromkeys(result))
+
+
+def registered_metric_predicates(spec: str, targets, catalog) -> list[dict]:
+    registered, aliases = catalog
+    terms = sorted(set(registered) | set(aliases), key=len, reverse=True)
+    if not terms:
+        return ()
+    operators = {'大于等于':'>=','小于等于':'<=','不等于':'!=','大于':'>','小于':'<','等于':'=',
+                 '>=':'>=','<=':'<=','!=':'!=','<>':'!=','>':'>','<':'<','=':'='}
+    pattern = re.compile('(' + '|'.join(re.escape(term) for term in terms) + r')\s*('
+        + '|'.join(re.escape(op) for op in operators) + r')\s*([+-]?\d+(?:\.\d+)?)')
+    result = []
+    for target in dict.fromkeys(targets):
+        if target not in registered:
+            continue
+        for field,operator,number in pattern.findall(metric_definition(spec,target)):
+            value=float(number) if '.' in number else int(number)
+            predicate={'field':aliases.get(field,field),'op':operators[operator],'value':[value]}
+            if predicate not in result:
+                result.append(predicate)
+    return result
 
 
 def canonical_formula_spec(spec: str, catalog) -> str:
@@ -141,9 +188,11 @@ def _attach_result_analysis(boundaries, catalog):
         task.depends_on = list(dict.fromkeys(indices[dep] for dep in task.depends_on))
         def targets(item):
             return set(boundary_targets(item, catalog))
+        analysis_targets = targets(task) or set(targets_in_text(
+            task.expected_output or task.question,registered,aliases)) or set(targets_in_text(task.question,registered,aliases))
         narrative = ('不再查询数据库' in task.question and len(task.depends_on) == 1
                      and re.search(r'分布|洞察|描述', task.question)
-                     and targets(task) == targets(result[task.depends_on[0]]) and bool(targets(task)))
+                     and analysis_targets == targets(result[task.depends_on[0]]) and bool(analysis_targets))
         executable = False
         if task.postprocess:
             from app.planning.calculation_bindings import validate_result_operation
@@ -157,6 +206,8 @@ def _attach_result_analysis(boundaries, catalog):
             parent = result[parent_index]
             goal = task.expected_output or task.question
             parent.expected_output = (goal + ('；取数交付：' + parent.expected_output if parent.expected_output else ''))[:300]
+            if not re.search(r'分布|洞察|描述',parent.question):
+                parent.question += '，交付要求：' + goal
             indices[old_index] = parent_index
             continue
         if task.postprocess and 'source_task_index' in task.postprocess:
@@ -179,17 +230,42 @@ def _bind_local_calculations(boundaries, *, spec, catalog, dependencies):
             raise ValueError('任务依赖必须引用排在其前面的任务')
         postprocess = task.postprocess or {}
         compound_targets = [name for name in targets(task) if name in dependencies]
+        if compound_targets and postprocess:
+            from app.planning.calculation_bindings import validate_result_operation
+            try:
+                validate_result_operation(postprocess.get('operation'))
+            except ValueError:
+                task.postprocess = None
+                postprocess = {}
+        if compound_targets and task.depends_on:
+            available = set().union(*(targets(result[dep]) for dep in task.depends_on))
+            keys = {key for name in compound_targets for key in re.findall(
+                r'(?:先)?按([^，。；、/÷]{1,24}?)(?:分别)?汇总',metric_definition(spec,name))}
+            key_lists_only = bool(keys) and all(not targets(result[dep]) and any(re.search(
+                re.escape(key) + r'(?:完整|去重|的)*(?:名单|列表)',
+                (result[dep].expected_output or '') + result[dep].question) for key in keys)
+                for dep in task.depends_on)
+            if key_lists_only and any(not set(dependencies[name]).issubset(available) for name in compound_targets):
+                # Declared local code cannot obtain monetary/quantity inputs
+                # from a predecessor that only promises object identities.
+                task.postprocess = None
+                postprocess = {}
         if task.depends_on and '不再查询数据库' in task.question and not postprocess:
             available = set().union(*(targets(result[dep]) for dep in task.depends_on))
             formula_ready = bool(compound_targets) and all(
                 set(dependencies[name]).issubset(available) for name in compound_targets)
-            narrative_ready = bool(targets(task)) and targets(task).issubset(available) and bool(
+            analysis_targets = targets(task) or set(targets_in_text(
+                task.expected_output or task.question,registered,aliases)) or set(targets_in_text(task.question,registered,aliases))
+            narrative_ready = bool(analysis_targets) and analysis_targets.issubset(available) and bool(
                 re.search(r'分布|洞察|描述', task.question))
             if not formula_ready and not narrative_ready:
                 # A phrase cannot make unavailable data appear in an upstream
                 # result. With no executable operation/formula, retain a query.
                 task.question = task.question.replace('，不再查询数据库', '').replace('不再查询数据库', '')
-        if not (task.depends_on and postprocess.get('source_task_index') in task.depends_on):
+        available = set().union(*(targets(result[dep]) for dep in task.depends_on)) if task.depends_on else set()
+        formula_ready = bool(compound_targets) and all(
+            set(dependencies[name]).issubset(available) for name in compound_targets)
+        if not (task.depends_on and (postprocess.get('source_task_index') in task.depends_on or formula_ready)):
             continue
         if '不再查询数据库' not in task.question:
             task.question += '，不再查询数据库'
@@ -206,23 +282,113 @@ def _bind_local_calculations(boundaries, *, spec, catalog, dependencies):
             definition = metric_definition(spec,name)
             grain = re.findall(r'(?:先)?按([^，。；、/÷]{1,24}?)(?:分别)?汇总',definition)
             task.grain = list(dict.fromkeys([*task.grain,*grain]))
-            if len(task.depends_on) == 1:
-                source = result[task.depends_on[0]]
-                if set(dependencies[name]).issubset(targets(source)):
+            for dep in task.depends_on:
+                source = result[dep]
+                if set(dependencies[name]).intersection(targets(source)):
                     source.grain = list(dict.fromkeys([*source.grain,*grain]))
                     source.component_input = True
-                    source.preserve_ranking = True  # existing input scope stays authoritative
                     if re.search(r'[<>]|大于|小于|排除|剔除|仅|有效',definition):
                         source.sample_requirements = list(dict.fromkeys([*source.sample_requirements,definition]))
     return result
 
 
+def _whole_object_scope(definition: str, known_groups: set[str]):
+    """Recognize an explicit registered whole-object aggregation, not a name guess."""
+    match = re.search(r'(?:先)?按([^，。；、/÷]{1,24}?)(?:分别)?汇总该'
+                      r'([^，。；、/÷]{1,12}?)下(?:的)?(?:全部|所有)'
+                      r'([^，。；、/÷]{1,12}?)的', definition)
+    if match and all(label in known_groups for label in (match[1], match[3])):
+        return match[1], match[2], match[3]
+    return None
+
+
+def _complete_object_scopes(boundaries, *, spec, catalog, dependencies, source_question='', default_times=()):
+    """Separate member eligibility from a registered whole-object denominator.
+
+    This runs while only task boundaries exist. Ordinary formulas and unfiltered
+    whole-object queries retain their existing plan. Scope comes from the current
+    registered definition; physical keys/values still go through authorized ASL.
+    """
+    known = grouping_labels(spec)
+    scopes = {}
+    for index, task in enumerate(boundaries):
+        for name in boundary_targets(task, catalog):
+            if name not in dependencies:
+                continue
+            scope = _whole_object_scope(metric_definition(spec, name), known)
+            if not scope:
+                continue
+            local = '不再查询数据库' in task.question
+            sources = task.depends_on if local else [index]
+            for source in sources:
+                if (not local or set(boundary_targets(boundaries[source], catalog))
+                        .intersection(dependencies[name])):
+                    scopes[source] = scope
+    result, indices = [], {}
+    for old_index, original in enumerate(boundaries):
+        task = original.model_copy(deep=True)
+        task.depends_on = list(dict.fromkeys(indices[dep] for dep in task.depends_on))
+        if task.postprocess and 'source_task_index' in task.postprocess:
+            old_source = task.postprocess['source_task_index']
+            if old_source in indices:
+                task.postprocess['source_task_index'] = indices[old_source]
+        scope = scopes.get(old_index)
+        if scope:
+            key, parent, member = scope
+            # A declared key-list dependency is already the eligibility query.
+            selectors = [dep for dep in task.depends_on if not boundary_targets(result[dep], catalog)
+                         and key in (result[dep].question + (result[dep].expected_output or ''))]
+            selected_members = re.search(r'采购|购买|包含|含有|涉及|销售过|买过|卖过', task.question)
+            if selectors or selected_members:
+                if not selectors:
+                    selection_question = source_question or task.question
+                    for default in dict.fromkeys(default_times):
+                        if default not in selection_question:
+                            selection_question += '，时间范围：' + default
+                    selection = TaskBoundary(
+                        question=f'筛选符合下述问题中入选条件的{parent}，仅查询去重{key}完整名单，不计算均价或分析分布：{selection_question}',
+                        name=f'筛选入选{parent}完整名单', depends_on=list(task.depends_on),
+                        metric_targets=[], grain=[key],
+                        expected_output=f'符合原问题入选条件的完整去重{key}名单；不取预览或前N条')
+                    selectors = [len(result)]
+                    result.append(selection)
+                for selector in selectors:
+                    result[selector]._cohort_key = key
+                task.depends_on = selectors
+                targets = '、'.join(boundary_targets(task, catalog))
+                task.question = (f'根据上述任务返回的{key}完整名单，按{key}汇总该{parent}下全部{member}的{targets}，'
+                                 f'只沿用入选{key}名单，不继承用于入选的{member}筛选条件或另截取部分明细')
+                task.expected_output = (f'按{key}返回整{parent}全部{member}的{targets}'
+                    if task.component_input and not any(name in dependencies for name in boundary_targets(task,catalog))
+                    else task.expected_output or original.question)
+                task.grain = [key]
+                task._whole_object_scope = scope
+        indices[old_index] = len(result)
+        result.append(task)
+    return result
+
+
 def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, dependencies,
-                        source_question: str = '') -> list[TaskBoundary]:
+                        source_question: str = '', default_times=()) -> list[TaskBoundary]:
     """Expand registered dependencies while no intent or extraction exists yet."""
     registered, aliases = catalog
+    fixed = []
+    for original in boundaries:
+        task = original.model_copy(deep=True)
+        references = {str(dep) for dep in task.depends_on} | {str(dep+1) for dep in task.depends_on}
+        def reference(match):
+            return '前序任务' if (match[1] or match[2]) in references else match[0]
+        # Inserting a required eligibility/component task changes positions.
+        # The typed edges are authoritative; do not retain obsolete text indices.
+        task.question = re.sub(r'任务(\d+)|第(\d+)个任务',reference,task.question)
+        if task.expected_output:
+            task.expected_output = re.sub(r'任务(\d+)|第(\d+)个任务',reference,task.expected_output)
+        fixed.append(task)
+    boundaries = fixed
     boundaries = _bind_local_calculations(boundaries,spec=spec,catalog=catalog,dependencies=dependencies)
     boundaries = _attach_result_analysis(boundaries, catalog)
+    boundaries = _complete_object_scopes(boundaries,spec=spec,catalog=catalog,dependencies=dependencies,
+                                          source_question=source_question,default_times=default_times)
     known_groups = grouping_labels(spec)
     result = []
     terminal_by_old = {}
@@ -288,8 +454,14 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
         other_keys = [(name, tuple(task.grain), '') for name in other]
         queries.extend(key for key in other_keys if key not in queries)
         component_indices = {}
-        for key in queries:
-            name, grouping, _ = key
+        # A registered whole-object formula shares membership, grouping and
+        # valid-sample scope across its inputs. Return those inputs together.
+        joint = (task._whole_object_scope and len(compound)==1 and not other
+                 and len({(key[1],key[2]) for key in queries})==1)
+        query_groups = [queries] if joint else [[key] for key in queries]
+        for query_group in query_groups:
+            names = [key[0] for key in query_group]
+            name, grouping, sample = '、'.join(names), query_group[0][1], query_group[0][2]
             grain = list(grouping)
             wording = task.question
             for target in sorted(task.metric_targets, key=len, reverse=True):
@@ -300,16 +472,20 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
             question = f'统计{name}，范围与分组：{wording}'
             if grain:
                 question += '，按' + '、'.join(grain) + '汇总'
-            component_indices[key] = len(result)
+            for key in query_group:
+                component_indices[key] = len(result)
             external_edges.append(len(result))
-            result.append(TaskBoundary(question=question, name=f'统计{name}', depends_on=list(task.depends_on),
-                metric_targets=[name], grain=grain, sample_requirements=[key[2]] if key[2] else [], component_input=True,
-                expected_output='按' + '、'.join(grain) + '返回' + name if grain else name))
+            component = TaskBoundary(question=question, name=f'统计{name}', depends_on=list(task.depends_on),
+                metric_targets=names, grain=grain, sample_requirements=[sample] if sample else [], component_input=True,
+                expected_output='按' + '、'.join(grain) + '返回' + name if grain else name)
+            component._whole_object_scope = task._whole_object_scope
+            result.append(component)
         terminals = [component_indices[key] for key in other_keys]
         for name in compound:
-            indices = [component_indices[key] for key in keys_by_metric[name]]
+            indices = list(dict.fromkeys(component_indices[key] for key in keys_by_metric[name]))
             terminals.append(len(result))
-            result.append(TaskBoundary(question=f'根据上述任务的查询结果计算{name}，完成原要求：{task.question}，不再查询数据库',
+            goal = task.expected_output if task._whole_object_scope else task.question
+            result.append(TaskBoundary(question=f'根据上述任务的查询结果计算{name}，完成原要求：{goal}，不再查询数据库',
                 name=f'计算{name}', depends_on=indices, metric_targets=[name], grain=grains[name],
                 expected_output=task.expected_output or task.question))
         terminal_by_old[old_index] = terminals

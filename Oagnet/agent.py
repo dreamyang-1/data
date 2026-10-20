@@ -5799,7 +5799,18 @@ def _contract_filter_present(
     expected_operator = str(expected.get("operator") or "").upper()
     negative_ops = {"NE", "!=", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE"}
     for item in ast.get("filters") or []:
-        if not isinstance(item, dict) or item.get("value") != expected_value:
+        if not isinstance(item, dict):
+            continue
+        actual_value = item.get("value")
+        actual_operator = str(item.get("operator") or "").upper()
+        if expected_operator in {"IN", "NOT IN"} and actual_operator == expected_operator:
+            def members(value):
+                return {json.dumps(member, ensure_ascii=False, sort_keys=True)
+                        for member in (value if isinstance(value, list) else [value])}
+            same_value = members(actual_value) == members(expected_value)
+        else:
+            same_value = actual_value == expected_value
+        if not same_value:
             continue
         if allowed_fields is not None and str(item.get("field") or "") not in allowed_fields:
             continue
@@ -5845,6 +5856,12 @@ def _contract_filter_candidates(
     authorized = _known_physical_fields(knowledge)
     _entities, attributes_by_entity = _scoped_entity_attributes(knowledge)
     scored: list[tuple[int, str]] = []
+
+    # A dependency already names its exact scoped vector field. Natural
+    # business-name lookup below deliberately excludes relationship IDs; do not
+    # apply that display-name heuristic to an explicitly bound physical key.
+    if label in authorized:
+        return [label]
 
     def administrative_role(value: str) -> str | None:
         compact = value.removeprefix(_contract_label("业务"))
@@ -6193,6 +6210,38 @@ def _canonical_contract_filter_value(
     return next(iter(administrative)) if len(administrative) == 1 else value
 
 
+def _contract_metric_having(expected: dict, knowledge: dict, *, negative: bool = False) -> str | None:
+    """A registered aggregate predicate is HAVING, not an entity-value filter."""
+    from query_binding_review import _metadata, _object
+    label = _contract_label(str(expected.get("field") or ""))
+    matches = [_metadata(item) for item in knowledge.get("metrics", [])
+               if label in {_contract_label(term) for term in _metric_terms(_metadata(item))}]
+    values = expected.get("value")
+    values = values if isinstance(values, list) else [values]
+    operator = _contract_operator(expected.get("operator"), negative=negative)
+    if (len(matches) != 1 or len(values) != 1 or type(values[0]) not in (int, float)
+            or operator not in {"=", "!=", ">", ">=", "<", "<="}):
+        return None
+    import math
+    if not math.isfinite(values[0]):
+        return None
+    metadata = matches[0]
+    rule = _object(metadata.get("calculation_rule"))
+    formula = str(rule.get("calc_formula") or metadata.get("calc_formula") or "")
+    aggregate = re.fullmatch(r"\s*(?:[^=]+\s*=\s*)?(SUM|COUNT|AVG|MIN|MAX)\s*\(\s*"
+                             r"(DISTINCT\s+)?([A-Za-z_]\w*\.[A-Za-z_]\w*)\s*\)\s*", formula, re.I)
+    if not aggregate or aggregate[3] not in set(knowledge.get("_vector_authorized_fields") or _known_physical_fields(knowledge)):
+        return None
+    distinct = "DISTINCT " if aggregate[2] else ""
+    return f"{aggregate[1].upper()}({distinct}{aggregate[3]}) {operator} {values[0]}"
+
+
+def _contract_metric_having_present(ast: dict, expression: str) -> bool:
+    def normalized(value):
+        return re.sub(r"[\s\x60]", "", str(value)).casefold().strip("()")
+    return any(normalized(value) == normalized(expression) for value in ast.get("having") or [])
+
+
 def _repair_contract_filter(
     ast: dict,
     expected: dict,
@@ -6204,6 +6253,12 @@ def _repair_contract_filter(
     query_object: str | None = None,
 ) -> dict | None:
     """Apply one metadata-backed filter requirement or fail precisely."""
+
+    metric_predicate = _contract_metric_having(expected, knowledge, negative=negative)
+    if metric_predicate is not None:
+        if not _contract_metric_having_present(ast, metric_predicate):
+            ast.setdefault("having", []).append(metric_predicate)
+        return {"type": "APPLY_REGISTERED_METRIC_HAVING", "expression": metric_predicate}
 
     candidates = _contract_filter_candidates(
         str(expected.get("field") or ""),
@@ -8312,6 +8367,9 @@ def _validate_intent_asl_contract(
 
     for expected in contract.get("filters") or []:
         validation_expected = canonical_expected_filter(expected)
+        metric_predicate = _contract_metric_having(validation_expected, knowledge or {})
+        if metric_predicate is not None and _contract_metric_having_present(ast, metric_predicate):
+            continue
         candidates = ([validation_expected['field']]
             if validation_expected.get('field') != expected.get('field')
             and validation_expected.get('field') in _known_physical_fields(knowledge or {})
@@ -8333,6 +8391,9 @@ def _validate_intent_asl_contract(
             )
     for expected in contract.get("negative_filters") or []:
         validation_expected = canonical_expected_filter(expected)
+        metric_predicate = _contract_metric_having(validation_expected, knowledge or {}, negative=True)
+        if metric_predicate is not None and _contract_metric_having_present(ast, metric_predicate):
+            continue
         candidates = ([validation_expected['field']]
             if validation_expected.get('field') != expected.get('field')
             and validation_expected.get('field') in _known_physical_fields(knowledge or {})
