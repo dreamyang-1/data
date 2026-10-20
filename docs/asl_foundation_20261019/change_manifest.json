@@ -1,6 +1,6 @@
 {
   "base_commit": "56ebf6b5eb242245ab96395822f0123fa021fd80",
-  "code_head": "db390a11598b9c2cca2215a5930481599bdd167d",
+  "code_head": "36867ef3365e43f0ec000ffa18569a91495aa9bf",
   "preserved_remote_baseline_commits": [
     "15589252951dab310f9f1ff162cdda4e3c1c5687",
     "0547c2ab7b358b261226f7fe87a0d46ce9655ccd",
@@ -21,7 +21,7 @@
     },
     {
       "path": "app/adapters/http.py",
-      "sha256": "aab8999e5c17baf776a085d900f6daa61b527649436666cabc1faf1f318386c0"
+      "sha256": "725c6cb0c21166846b2202b5772688f9d43cc9dd1a2cfc1fcadf143b456f3a9b"
     },
     {
       "path": "app/analysis/interpretation.py",
@@ -33,7 +33,7 @@
     },
     {
       "path": "app/planning/compound_question.py",
-      "sha256": "8d2e69e2c47e4ff53985121869877277c3e9d34369c5eace5afcfca14edd65c5"
+      "sha256": "0d8904c64ab3a1fac78a4017a59b9cb4224d6698d5020b6fdcdb8a46a529a41f"
     },
     {
       "path": "app/planning/structured_extraction_prompt.txt",
@@ -41,7 +41,7 @@
     },
     {
       "path": "app/planning/task_dag.py",
-      "sha256": "00c6a0e09a5dc257b480789d978228e4c55d9ab0ed1f1c9dee398d9ade54ffc8"
+      "sha256": "7e8ab4c06c6bc7fd703603b4ea10d6e276c30dbf019ea5ee97faf831a15bcc42"
     },
     {
       "path": "app/services/intent_asl_contract.py",
@@ -53,7 +53,7 @@
     },
     {
       "path": "sql-translator/sql_translator_prod.py",
-      "sha256": "84acef691fe72e11dc38a5c3c37465b560de442bfa830ee80618f26d1f448a12"
+      "sha256": "c3f6588f11df0b9bdffcbd028ec13b02bec620666929e6c5c9e35d6035eff847"
     },
     {
       "path": "sql-translator/test_projected_metric_having.py",
@@ -73,7 +73,7 @@
     },
     {
       "path": "tests/test_dependency_reference_handoff.py",
-      "sha256": "293ae943f9157684f8bd1f3af1f6a46b837a674fc2208f61f67cad29c32384e2"
+      "sha256": "1ddf76536b6949df656faa8ee5245ed6bec1983598afaf50d93714f498e8e3d8"
     },
     {
       "path": "tests/test_registered_default_time_planning.py",
@@ -102,6 +102,34 @@
     {
       "path": "tests/test_trend_task_completion.py",
       "sha256": "b977ff695a226865c8eeb84a1620f4bf2a4f79f52d6d6fdf7360da76214a5fc3"
+    },
+    {
+      "path": "tests/test_shared_denominator_regenerated_spec.py",
+      "sha256": "0899a0605064fdc5f994b64355603395081f28e227fdc7cf7aa6f150a4cb225a"
+    },
+    {
+      "path": "tests/test_grounded_filter_quotation.py",
+      "sha256": "5899dd29c8488e4ebe5e7bbbecb7e8b4dc8abd1af5ab13a6593e304b303d4274"
+    },
+    {
+      "path": "tests/test_confirmed_hospital_department_scope.py",
+      "sha256": "6f86c68cc354b4b848c903ec0973e8f642c75f5d4393c0e7d96c4eea4af79844"
+    },
+    {
+      "path": "tests/test_regional_compound_question_handoff.py",
+      "sha256": "70e1a6874e53a458765c58c065402498bf50cd7a827eae6eebc05d789be4d29d"
+    },
+    {
+      "path": "sql-translator/test_metric_filter_relation_path.py",
+      "sha256": "f49f0e81b5f47d0e77561344901eb7764d3de32357a781987b4ed531bd12869f"
+    },
+    {
+      "path": "tests/test_inferred_hospital_location_role.py",
+      "sha256": "027fcaaee8c94704dccf6411941aca0825ce2414eca2dfae2011ec664718b0f1"
+    },
+    {
+      "path": "tests/test_single_hospital_scope_surface_handoff.py",
+      "sha256": "e5b61e089d39c0ecc334f7fb7113b0446ccf87945edd7a7dafa8dd0e368834bf"
     }
   ],
   "runtime": [
@@ -115,7 +143,7 @@
     },
     {
       "path": "app/adapters/http.py",
-      "sha256": "aab8999e5c17baf776a085d900f6daa61b527649436666cabc1faf1f318386c0"
+      "sha256": "725c6cb0c21166846b2202b5772688f9d43cc9dd1a2cfc1fcadf143b456f3a9b"
     },
     {
       "path": "app/services/intent_asl_contract.py",
@@ -131,15 +159,15 @@
     },
     {
       "path": "sql-translator/sql_translator_prod.py",
-      "sha256": "84acef691fe72e11dc38a5c3c37465b560de442bfa830ee80618f26d1f448a12"
+      "sha256": "c3f6588f11df0b9bdffcbd028ec13b02bec620666929e6c5c9e35d6035eff847"
     },
     {
       "path": "app/planning/task_dag.py",
-      "sha256": "00c6a0e09a5dc257b480789d978228e4c55d9ab0ed1f1c9dee398d9ade54ffc8"
+      "sha256": "7e8ab4c06c6bc7fd703603b4ea10d6e276c30dbf019ea5ee97faf831a15bcc42"
     },
     {
       "path": "app/planning/compound_question.py",
-      "sha256": "8d2e69e2c47e4ff53985121869877277c3e9d34369c5eace5afcfca14edd65c5"
+      "sha256": "0d8904c64ab3a1fac78a4017a59b9cb4224d6698d5020b6fdcdb8a46a529a41f"
     }
   ],
   "deployment": [
@@ -212,5 +240,138 @@
     "other authors code and configuration",
     "existing SSE main-stage order",
     "registered 1000-row detail limit"
-  ]
+  ],
+  "repeat_code_commit": "36867ef3365e43f0ec000ffa18569a91495aa9bf",
+  "repeat_deployment": {
+    "targets": 3,
+    "status": "DEPLOYED_HEALTHY",
+    "verification": {
+      "changed_sources": [
+        "Agent:planning/compound_question.py",
+        "Agent:planning/task_dag.py",
+        "Agent:adapters/http.py"
+      ],
+      "all_configurations_unchanged": true,
+      "all_targets_match": true,
+      "health": {
+        "Agent": 200,
+        "AgentLive": 200
+      }
+    },
+    "health": {
+      "Agent": 200,
+      "AgentLive": 200,
+      "Oagnet": 200,
+      "SQL": 200
+    }
+  },
+  "scope_code_commits": [
+    {
+      "service": "Agent",
+      "commit": "2138f981819e613aec33ea41093b5a0f4086c167",
+      "files": [
+        {
+          "path": "app/planning/task_dag.py",
+          "sha256": "bac76e2f749b4b8cb8a08d0287e288eb74fa1866ef75f66dc44384572445ca1f"
+        },
+        {
+          "path": "tests/test_confirmed_hospital_department_scope.py",
+          "sha256": "6f86c68cc354b4b848c903ec0973e8f642c75f5d4393c0e7d96c4eea4af79844"
+        },
+        {
+          "path": "tests/test_regional_compound_question_handoff.py",
+          "sha256": "70e1a6874e53a458765c58c065402498bf50cd7a827eae6eebc05d789be4d29d"
+        }
+      ]
+    },
+    {
+      "service": "SQL",
+      "commit": "8318bf9f825dc8cfd2262fc9dee9ef96f0b32394",
+      "files": [
+        {
+          "path": "sql-translator/sql_translator_prod.py",
+          "sha256": "c3f6588f11df0b9bdffcbd028ec13b02bec620666929e6c5c9e35d6035eff847"
+        },
+        {
+          "path": "sql-translator/test_metric_filter_relation_path.py",
+          "sha256": "f49f0e81b5f47d0e77561344901eb7764d3de32357a781987b4ed531bd12869f"
+        }
+      ]
+    },
+    {
+      "service": "Agent",
+      "commit": "8c2a875c294b6a9195621207716d6193eed48db5",
+      "files": [
+        {
+          "path": "app/planning/task_dag.py",
+          "sha256": "7e8ab4c06c6bc7fd703603b4ea10d6e276c30dbf019ea5ee97faf831a15bcc42"
+        },
+        {
+          "path": "tests/test_inferred_hospital_location_role.py",
+          "sha256": "027fcaaee8c94704dccf6411941aca0825ce2414eca2dfae2011ec664718b0f1"
+        }
+      ]
+    },
+    {
+      "service": "Agent",
+      "commit": "36867ef3365e43f0ec000ffa18569a91495aa9bf",
+      "files": [
+        {
+          "path": "app/adapters/http.py",
+          "sha256": "725c6cb0c21166846b2202b5772688f9d43cc9dd1a2cfc1fcadf143b456f3a9b"
+        },
+        {
+          "path": "tests/test_single_hospital_scope_surface_handoff.py",
+          "sha256": "e5b61e089d39c0ecc334f7fb7113b0446ccf87945edd7a7dafa8dd0e368834bf"
+        }
+      ]
+    }
+  ],
+  "scope_deployment": {
+    "targets": 2,
+    "status": "DEPLOYED_HEALTHY",
+    "verification": {
+      "changed_sources": [
+        "SQL:sql_translator_prod.py",
+        "Agent:planning/task_dag.py"
+      ],
+      "all_configurations_unchanged": true,
+      "all_targets_match": true,
+      "health": {
+        "SQL": 200,
+        "Agent": 200,
+        "AgentLive": 200
+      }
+    }
+  },
+  "location_role_deployment": {
+    "targets": 1,
+    "status": "DEPLOYED_HEALTHY",
+    "verification": {
+      "changed_sources": [
+        "Agent:planning/task_dag.py"
+      ],
+      "all_configurations_unchanged": true,
+      "all_targets_match": true,
+      "health": {
+        "Agent": 200,
+        "AgentLive": 200
+      }
+    }
+  },
+  "single_hospital_deployment": {
+    "targets": 1,
+    "status": "DEPLOYED_HEALTHY",
+    "verification": {
+      "changed_sources": [
+        "Agent:adapters/http.py"
+      ],
+      "all_configurations_unchanged": true,
+      "all_targets_match": true,
+      "health": {
+        "Agent": 200,
+        "AgentLive": 200
+      }
+    }
+  }
 }

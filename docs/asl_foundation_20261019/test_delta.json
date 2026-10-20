@@ -267,5 +267,377 @@
     "signed_urls_persisted": false,
     "growth_comparisons_tested": false
   },
-  "scope": "basic task decomposition and dependencies; growth/yoy/mom deferred"
+  "scope": "basic task decomposition and dependencies; growth/yoy/mom deferred",
+  "repeat_validation_20261020": {
+    "date": "2026-10-20",
+    "code_commit": "36867ef3365e43f0ec000ffa18569a91495aa9bf",
+    "critical": {
+      "Agent": {
+        "passed": 167
+      },
+      "Oagnet": {
+        "passed": 100
+      },
+      "SQL": {
+        "passed": 75
+      }
+    },
+    "critical_total_passed": 342,
+    "comparison": {
+      "baseline_counts": {
+        "passed": 5127,
+        "failed": 259
+      },
+      "final_counts": {
+        "passed": 5131,
+        "failed": 255
+      },
+      "baseline_provenance": [
+        "complete suite at 887ff38",
+        "three newly added quotation tests at the same code revision"
+      ],
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [
+        "tests/test_dependency_reference_handoff.py::test_materialized_reference_does_not_become_an_extra_business_filter[\\u590d\\u7528\\u4e0a\\u4e00\\u8f6e\\u67e5\\u8be2\\u7ed3\\u679c\\u4e2d\\u7684\\u7ecf\\u9500\\u5546\\u540d\\u79f0]",
+        "tests/test_dependency_reference_handoff.py::test_materialized_reference_does_not_become_an_extra_business_filter[value3]",
+        "tests/test_shared_denominator_regenerated_spec.py::test_current_registered_definition_keeps_component_scope_after_regeneration[regenerated-True]",
+        "tests/test_grounded_filter_quotation.py::test_task_quoting_does_not_invent_a_literal_already_in_the_user_question[\\u6d88\\u5316\\u5185\\u79d1-\\u6d88\\u5316\\u5185\\u79d1-False-True]"
+      ],
+      "collection_errors": [
+        "tests/test_bound_result_operations.py",
+        "tests/test_declared_calculation_planning.py"
+      ]
+    },
+    "native_cases": [
+      {
+        "scenario": "dealer",
+        "case": "api-9b4d1b89",
+        "status": "COMPLETED",
+        "task_count": 2,
+        "task_statuses": [
+          "COMPLETED",
+          "COMPLETED"
+        ],
+        "dependency_key_count": 1,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 86.58,
+        "single_query_final_heading_present": true
+      },
+      {
+        "scenario": "coverage",
+        "case": "api-42eda20c",
+        "status": "COMPLETED",
+        "task_count": 3,
+        "task_statuses": [
+          "COMPLETED",
+          "COMPLETED",
+          "COMPLETED"
+        ],
+        "dependency_key_count": 0,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 83.69,
+        "single_query_final_heading_present": true
+      },
+      {
+        "scenario": "empty",
+        "case": "api-577cf730",
+        "status": "PARTIAL_SUCCESS",
+        "task_count": 2,
+        "task_statuses": [
+          "COMPLETED",
+          "SKIPPED"
+        ],
+        "dependency_key_count": 0,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 92.34,
+        "single_query_final_heading_present": true
+      },
+      {
+        "scenario": "mixed",
+        "case": "api-1fa870be",
+        "status": "COMPLETED",
+        "task_count": 3,
+        "task_statuses": [
+          "COMPLETED",
+          "COMPLETED",
+          "COMPLETED"
+        ],
+        "dependency_key_count": 3,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 107.104,
+        "single_query_final_heading_present": true
+      },
+      {
+        "scenario": "independent",
+        "case": "api-40b0f2ec",
+        "status": "PARTIAL_SUCCESS",
+        "task_count": 4,
+        "task_statuses": [
+          "COMPLETED",
+          "COMPLETED",
+          "COMPLETED",
+          "SKIPPED"
+        ],
+        "dependency_key_count": 0,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 110.395,
+        "single_query_final_heading_present": true
+      },
+      {
+        "scenario": "paraphrase",
+        "case": "api-aedc0e2f",
+        "status": "COMPLETED",
+        "task_count": 2,
+        "task_statuses": [
+          "COMPLETED",
+          "COMPLETED"
+        ],
+        "dependency_key_count": 3,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 86.248,
+        "single_query_final_heading_present": true
+      },
+      {
+        "scenario": "average",
+        "case": "api-11d7a259",
+        "status": "COMPLETED",
+        "task_count": 1,
+        "task_statuses": [],
+        "dependency_key_count": 0,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 55.607,
+        "single_query_final_heading_present": false
+      },
+      {
+        "scenario": "cooperation",
+        "case": "api-7c9c5b41",
+        "status": "COMPLETED",
+        "task_count": 1,
+        "task_statuses": [],
+        "dependency_key_count": 0,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 56.852,
+        "single_query_final_heading_present": false
+      },
+      {
+        "scenario": "xinhua_salesperson",
+        "case": "api-faed708e",
+        "status": "PARTIAL_SUCCESS",
+        "task_count": 2,
+        "task_statuses": [
+          "COMPLETED",
+          "SKIPPED"
+        ],
+        "dependency_key_count": 0,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 64.088,
+        "single_query_final_heading_present": true
+      },
+      {
+        "scenario": "hospital_original",
+        "case": "api-39c5aa3c",
+        "status": "COMPLETED",
+        "task_count": 1,
+        "task_statuses": [],
+        "dependency_key_count": 0,
+        "issues": [],
+        "passed": true,
+        "elapsed_seconds": 65.67,
+        "single_query_final_heading_present": false
+      }
+    ],
+    "all_native_passed": true,
+    "description": {
+      "available": true,
+      "characters": 8966,
+      "source": "semantic_model_81.md",
+      "remote_file_matches_reader": true,
+      "full_file_reaches_planner": true,
+      "full_file_reaches_insight": true,
+      "semantic_digest": "03b3f4ea74d5a79c84e59b1a90dd958af5b0057cf366f388c4941a3573e780b1",
+      "shared_denominator_marker_present": false,
+      "cooperation_definition_present": true,
+      "catalog_fallback_injected": false
+    },
+    "scope_test_comparison": {
+      "Agent": {
+        "baseline_counts": {
+          "passed": 5134,
+          "failed": 259
+        },
+        "final_counts": {
+          "passed": 5138,
+          "failed": 255
+        },
+        "old_pass_to_new_fail": [],
+        "old_fail_to_new_pass": [
+          "tests/test_confirmed_hospital_department_scope.py::test_confirmed_product_department_meaning_reaches_original_asl_reference[81-\\u4e1a\\u52a1\\u79d1\\u5ba4-\\u4e0a\\u6d77\\u5730\\u533a\\u54ea\\u4e2a\\u533b\\u9662\\u6d88\\u5316\\u5185\\u79d12025\\u5e749\\u6708\\u7684\\u8ba2\\u5355\\u6570\\u91cf\\u6700\\u591a\\uff1f\\u8be5\\u533b\\u9662\\u9500\\u552e\\u4e86\\u54ea\\u4e9b\\u4ea7\\u54c1\\uff1f-True]",
+          "tests/test_confirmed_hospital_department_scope.py::test_confirmed_product_department_meaning_reaches_original_asl_reference[81-sales_order.business_department-\\u4e0a\\u6d77\\u5730\\u533a\\u54ea\\u4e2a\\u533b\\u9662\\u6d88\\u5316\\u5185\\u79d12025\\u5e749\\u6708\\u7684\\u8ba2\\u5355\\u6570\\u91cf\\u6700\\u591a\\uff1f\\u8be5\\u533b\\u9662\\u9500\\u552e\\u4e86\\u54ea\\u4e9b\\u4ea7\\u54c1\\uff1f-True]",
+          "tests/test_regional_compound_question_handoff.py::test_independent_monthly_and_regional_compound_metric_keep_all_question_groups[\\u4e0a\\u6d77]",
+          "tests/test_regional_compound_question_handoff.py::test_independent_monthly_and_regional_compound_metric_keep_all_question_groups[\\u6c5f\\u82cf]"
+        ],
+        "collection_errors": [
+          "tests/test_bound_result_operations.py",
+          "tests/test_declared_calculation_planning.py"
+        ]
+      },
+      "SQL": {
+        "baseline_counts": {
+          "passed": 687,
+          "failed": 30
+        },
+        "final_counts": {
+          "passed": 691,
+          "failed": 26
+        },
+        "old_pass_to_new_fail": [],
+        "old_fail_to_new_pass": [
+          "sql-translator/test_metric_filter_relation_path.py::test_product_department_filters_order_products_for_either_subject[hospital]",
+          "sql-translator/test_metric_filter_relation_path.py::test_registered_shorter_paths_are_preserved[province]",
+          "sql-translator/test_metric_filter_relation_path.py::test_registered_shorter_paths_are_preserved[department]",
+          "sql-translator/test_metric_filter_relation_path.py::test_explicit_catalog_hierarchy_anchor_keeps_priority"
+        ],
+        "collection_errors": []
+      },
+      "Agent_baseline_provenance": [
+        "full suite at 12df890, excluding the five replaced medical assertions",
+        "seven current medical/regional tests at the same 12df890 code"
+      ],
+      "critical": {
+        "Agent": {
+          "passed": 152
+        },
+        "Oagnet": {
+          "passed": 100
+        },
+        "SQL": {
+          "passed": 75
+        }
+      },
+      "critical_total_passed": 327
+    },
+    "location_role_test_comparison": {
+      "baseline_counts": {
+        "passed": 5143,
+        "failed": 257
+      },
+      "final_counts": {
+        "passed": 5145,
+        "failed": 255
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [
+        "tests/test_inferred_hospital_location_role.py::test_only_inferred_hospital_business_qualifier_is_normalized[81-\\u533b\\u9662-\\u4e1a\\u52a1\\u5e02-\\u67e5\\u8be2\\u4e0a\\u6d77\\u5730\\u533a\\u5404\\u533b\\u96622025\\u5e74\\u8ba2\\u5355\\u7b14\\u6570-\\u57ce\\u5e02]",
+        "tests/test_inferred_hospital_location_role.py::test_only_inferred_hospital_business_qualifier_is_normalized[81-\\u533b\\u9662-\\u4e1a\\u52a1\\u7701-\\u67e5\\u8be2\\u4e0a\\u6d77\\u5730\\u533a\\u5404\\u533b\\u96622025\\u5e74\\u8ba2\\u5355\\u7b14\\u6570-\\u7701\\u4efd]"
+      ],
+      "collection_errors": [
+        "tests/test_bound_result_operations.py",
+        "tests/test_declared_calculation_planning.py"
+      ],
+      "critical": {
+        "passed": 159
+      },
+      "baseline_provenance": [
+        "complete Agent suite at 8318bf9",
+        "seven new tests at the same 8318bf9 code"
+      ]
+    },
+    "single_hospital_test_comparison": {
+      "baseline_counts": {
+        "passed": 5150,
+        "failed": 258
+      },
+      "final_counts": {
+        "passed": 5153,
+        "failed": 255
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [
+        "tests/test_single_hospital_scope_surface_handoff.py::test_single_question_keeps_original_wording_and_confirmed_business_scope[81-\\u5546\\u54c1\\u79d1\\u5ba4\\u5173\\u8054-\\u79d1\\u5ba4\\u7f16\\u7801-\\u57ce\\u5e02-False-True]",
+        "tests/test_single_hospital_scope_surface_handoff.py::test_single_question_keeps_original_wording_and_confirmed_business_scope[81-\\u5546\\u54c1\\u79d1\\u5ba4\\u5173\\u8054-\\u79d1\\u5ba4\\u7f16\\u7801-\\u7701\\u4efd-False-True]",
+        "tests/test_single_hospital_scope_surface_handoff.py::test_single_question_keeps_original_wording_and_confirmed_business_scope[81-\\u5546\\u54c1\\u79d1\\u5ba4\\u5173\\u8054-\\u79d1\\u5ba4\\u7f16\\u7801-None-False-True]"
+      ],
+      "collection_errors": [
+        "tests/test_bound_result_operations.py",
+        "tests/test_declared_calculation_planning.py"
+      ],
+      "critical": {
+        "passed": 167
+      },
+      "baseline_provenance": [
+        "complete Agent suite at 8c2a875",
+        "eight new tests at the same 8c2a875 code"
+      ]
+    },
+    "department_path_translation": {
+      "sql_executed": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "subjects": [
+        {
+          "subject": "hospital",
+          "success": true,
+          "tables": [
+            "hospital",
+            "sales_order",
+            "product",
+            "product_dept_relation"
+          ],
+          "uses_product_fact_path": true,
+          "sql_template": "SELECT hospital.hospital_name AS `医院名称`, hospital.hospital_code AS `医院（编码）`, COUNT(DISTINCT sales_order.order_key) AS `OrderCount` FROM hospital LEFT JOIN sales_order ON hospital.hospital_id = sales_order.hospital_id LEFT JOIN product ON sales_order.product_code = product.product_code LEFT JOIN product_dept_relation ON product.product_code = product_dept_relation.product_code WHERE product_dept_relation.dept_code = '[value]' AND sales_order.created_date >= '[value]' AND sales_order.created_date < '[value]' GROUP BY hospital.hospital_code, hospital.hospital_name ORDER BY `OrderCount` DESC LIMIT 1"
+        },
+        {
+          "subject": "sales_order",
+          "success": true,
+          "tables": [
+            "sales_order",
+            "hospital",
+            "product",
+            "product_dept_relation"
+          ],
+          "uses_product_fact_path": true,
+          "sql_template": "SELECT hospital.hospital_name AS `医院名称`, hospital.hospital_code AS `医院（编码）`, COUNT(DISTINCT sales_order.order_key) AS `OrderCount` FROM sales_order LEFT JOIN hospital ON hospital.hospital_id = sales_order.hospital_id LEFT JOIN product ON sales_order.product_code = product.product_code LEFT JOIN product_dept_relation ON product.product_code = product_dept_relation.product_code WHERE product_dept_relation.dept_code = '[value]' AND sales_order.created_date >= '[value]' AND sales_order.created_date < '[value]' GROUP BY hospital.hospital_code, hospital.hospital_name ORDER BY `OrderCount` DESC LIMIT 1"
+        }
+      ]
+    },
+    "intermediate_failed_cases": [
+      {
+        "scenario": "empty",
+        "case": "api-2f562ba6",
+        "status": "PARTIAL_SUCCESS"
+      },
+      {
+        "scenario": "independent",
+        "case": "api-1b8c6e47",
+        "status": "COMPLETED"
+      },
+      {
+        "scenario": "empty",
+        "case": "api-f303f63f",
+        "status": "NEEDS_CLARIFICATION",
+        "reason": "inferred business city"
+      },
+      {
+        "scenario": "hospital_original",
+        "case": "api-6b45c60c",
+        "status": "COMPLETED",
+        "reason": "wrong administrative department and dealer location path"
+      }
+    ],
+    "business_rows_persisted": false,
+    "signed_urls_persisted": false
+  }
 }
