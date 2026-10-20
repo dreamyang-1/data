@@ -576,6 +576,13 @@ class TaskPlanningError(RuntimeError):
     pass
 
 
+class TaskInputBindingError(TaskPlanningError):
+    """A calculation cannot name inputs outside its task dependency contract."""
+
+
+from app.planning.calculation_bindings import materialize_computation_binding
+
+
 def _registered_default_times(source: str, spec: str) -> tuple[str, ...]:
     """Only the current model's declared defaults can supplement user text."""
     if re.search(
@@ -682,6 +689,8 @@ class _PlannedTask(BaseModel):
         default=None,
         description=_EXTRACTION_SCHEMA_DESCRIPTION,
     )
+    postprocess: dict[str, Any] | None = None
+    clarification: dict[str, Any] | None = None
 
 
 class _SinglePlan(BaseModel):
@@ -737,6 +746,16 @@ _SINGLE_SYSTEM_PROMPT += (
     "意图取值限定为规范中的中文枚举，业务语义规范以下方注入内容为准）：\n"
     + extraction_parser_prompt()
 )
+
+_SINGLE_SYSTEM_PROMPT += """
+计算执行合同（仅为extraction的内部执行参数，不改变数据库字段绑定）：
+每个纯计算任务必须明确实际运算，不能只写“根据结果计算”。
+两个指标相除使用extraction.计算绑定：{"operation":"divide","numerator":{"source_task_index":0,"column":"分子指标登记名"},"denominator":{"source_task_index":1,"column":"分母指标登记名"},"result_field":"结果指标名","format":"number或percent"}。
+同一查询结果逐行相除时，两操作数引用同一个前序任务。source_task_index为本问题从0开始的任务下标，必须在depends_on中；不能引用自身或猜测数据集ID。分子、分母顺序严格依据当前规范中的公式，不能按依赖指标列的排列顺序猜测。即使复合指标尚未拆分，也在其extraction里给出上述计算绑定的column、operation、result_field和format，此时不填source_task_index，拆分器负责关联成分任务。
+其他计算可使用extraction.结果操作：{"source_task_index":0,"operation":{"type":"pipeline","operations":[...]}}。只允许derive（left_field/right_field/operator/result_field，operator为add/subtract/multiply/divide）、aggregate（group_by和aggregations，每项field/function/alias）、filter、select、sort、sort_limit、limit；不得输出SQL、Python或任意表达式。
+排序操作格式为{"type":"sort","field":"实际结果列名","descending":true}；取前N格式为{"type":"limit","count":N}；合并排序取前N格式为{"type":"sort_limit","field":"实际结果列名","descending":true,"count":N}。最终按计算结果排名时，成分取数任务不得先按其他指标取前N；只在用户明确先选定对象范围时保留该范围限制。
+排名必须保留最终计算字段的排序方向和限制人数；按人或组织计算时，所有相应取数任务都保留对象分组及必要展示字段，不能变成全局总计；共用分母按规范保留原有范围。公式或字段依据不明时不要编造计算绑定。
+"""
 
 
 class SingleQuestionPlanner:
@@ -808,6 +827,14 @@ class SingleQuestionPlanner:
                     decomposition, unsplit_compound
                 )
                 last_result = decomposition
+            from app.planning.calculation_bindings import materialize_declared_division, materialize_declared_result_operation
+            try:
+                last_result = materialize_declared_result_operation(materialize_declared_division(last_result))
+            except TaskInputBindingError as exc:
+                if attempt == attempts - 1:
+                    raise
+                retry_feedback = '计算操作不完整或无效，请修正后重新输出完整计划：' + str(exc)
+                continue
             return _respect_shared_region_denominator(last_result, question)
         return last_result
 
@@ -898,6 +925,8 @@ class SingleQuestionPlanner:
             component_start = len(new_tasks)
             for comp in components:
                 comp_structured = copy.deepcopy(structured)
+                comp_structured.pop('计算绑定', None)
+                comp_structured.pop('结果操作', None)
                 comp_structured["指标"] = [{"name": comp}]
                 comp_structured['是否查询数据库'] = '是'
                 for sort_item in comp_structured.get("排序") or []:
@@ -905,9 +934,15 @@ class SingleQuestionPlanner:
                         sort_item["field"] = comp
                 comp_structured["限制"] = None
                 inherited_dependencies.add(len(new_tasks))
+                dimensions = [str(item.get('name') or item.get('field') or '') if isinstance(item, dict) else str(item)
+                              for item in comp_structured.get('维度') or []]
+                grouping = '各' + '、'.join(dimensions) + '的' if dimensions else ''
+                display = [str(item.get('field') or item.get('name') or '') if isinstance(item, dict) else str(item)
+                           for item in comp_structured.get('展示字段') or []]
                 new_tasks.append(DecomposedTask(
-                    question=("根据上述任务的查询结果，" if task.depends_on else "") + f"统计{condition}{comp}",
-                    name=f"统计{condition}{comp}",
+                    question=("根据上述任务的查询结果，" if task.depends_on else "") + f"统计{condition}{grouping}{comp}"
+                        + ('，同时返回' + '、'.join(display) if display else ''),
+                    name=f"统计{condition}{grouping}{comp}"[:60],
                     intent=task.intent,
                     depends_on=task.depends_on,
                     parameters=tuple(extraction_to_parameters(comp_structured)),
@@ -917,8 +952,16 @@ class SingleQuestionPlanner:
             calc_structured["指标"] = [{"name": metric}]
             calc_structured["意图"] = "指标计算"
             calc_structured['是否查询数据库'] = '否'
+            binding = calc_structured.get('计算绑定')
+            if isinstance(binding, dict):
+                for role in ('numerator', 'denominator'):
+                    operand = binding.get(role)
+                    if not isinstance(operand, dict) or operand.get('column') not in components:
+                        raise TaskInputBindingError('复合指标运算必须绑定登记的成分指标')
+                    operand.pop('source_task_id', None)
+                    operand['source_task_index'] = component_start + components.index(operand['column'])
             new_tasks.append(DecomposedTask(
-                question=f"根据上述任务的查询结果计算{metric}，不再查询数据库",
+                question=f"根据上述任务的查询结果计算{metric}，完成原要求：{task.question}，不再查询数据库",
                 depends_on=tuple(range(component_start, component_start + len(components))),
                 name=f"计算{metric}",
                 intent=task.intent,
@@ -1178,6 +1221,13 @@ class SingleQuestionPlanner:
                 item.extraction, intent=task_intent,
                 metric_catalog=metric_catalog,
             )
+            if item.clarification:
+                structured = structured or {}
+                structured['计算待确认'] = copy.deepcopy(item.clarification)
+                structured.pop('结果操作', None)
+            elif item.postprocess:
+                structured = structured or {}
+                structured['结果操作'] = copy.deepcopy(item.postprocess)
             _ground_location_owners(structured, task_question)
             _ground_inferred_hospital_location(structured, question, semantic_model_id)
             task_question = _confirmed_hospital_department_scope(
@@ -1237,11 +1287,39 @@ class SingleQuestionPlanner:
                     else None
                 ),
             ))
+        dependencies = _parse_metric_dependencies(spec_for_catalog)
+        required = list(dict.fromkeys(
+            item.get('name') if isinstance(item, dict) else item
+            for task in tasks if task.intent not in _METADATA_INTENTS
+            for item in (task.structured or {}).get('指标') or []
+            if (item.get('name') if isinstance(item, dict) else item) in dependencies
+            and not (task.structured or {}).get('计算绑定')))
+        if required:
+            from app.planning.calculation_bindings import resolve_compound_formulas
+            formulas = await resolve_compound_formulas(self.settings, self._transport,
+                spec_for_catalog, dependencies, required)
+            for task in tasks:
+                structured = task.structured or {}
+                for item in structured.get('指标') or []:
+                    name = item.get('name') if isinstance(item, dict) else item
+                    if name not in formulas or structured.get('计算绑定'):
+                        continue
+                    binding = copy.deepcopy(formulas[name])
+                    if database_query_choice(structured) is False or '不再查询数据库' in task.question:
+                        for role in ('numerator', 'denominator'):
+                            column = binding[role]['column']
+                            sources = [index for index in task.depends_on
+                                if any((metric.get('name') if isinstance(metric, dict) else metric) == column
+                                       for metric in (tasks[index].structured or {}).get('指标') or [])]
+                            if len(sources) != 1:
+                                raise ValueError('计算公式无法唯一绑定成分任务')
+                            binding[role]['source_task_index'] = sources[0]
+                    structured['计算绑定'] = binding
         return QuestionDecomposition(
             intent=question_intent,
             tasks=tuple(tasks),
             metric_catalog=metric_catalog,
-            metric_dependencies=_parse_metric_dependencies(spec_for_catalog),
+            metric_dependencies=dependencies,
             grounding_default_times=_registered_default_times(question, spec_for_catalog),
             shared_region_denominator=_shared_region_denominator_from_spec(spec_for_catalog),
         )
@@ -1370,4 +1448,7 @@ class SingleQuestionPlanner:
         structured["是否查询数据库"] = (
             "是" if query_choice is True else "否" if query_choice is False else None
         )
+        for key in ('计算绑定', '结果操作', '计算待确认'):
+            if isinstance(value.get(key), dict):
+                structured[key] = copy.deepcopy(value[key])
         return structured
