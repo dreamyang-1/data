@@ -99,7 +99,7 @@
     "business_rows_persisted": false
   },
   "known_blockers": [
-    "Production post-deployment acceptance is pending. Company names remain unavailable because current reference data do not match salesperson company codes."
+    "Company reference data do not match salesperson company codes; company names are explicitly reported as unavailable. No catalog or business-data changes were made."
   ],
   "sql_legacy_timeout": [
     "test_single_domain_execution.py::test_request_local_indexes_survive_interleaved_domains"
@@ -130,5 +130,59 @@
       "status": null,
       "error": "Existing service reports NameError for build_analysis_task_plan; verify fresh process after restart."
     }
+  },
+  "production_acceptance": {
+    "status": "DEPLOYED_AND_ACCEPTED",
+    "deployed_commit": "269abbafd46f65cce858b65f73a909dd3b4bf7f9",
+    "modified_runtime_files": 6,
+    "protected_configurations": 10,
+    "configurations_unchanged": true,
+    "source_fingerprints_verified": true,
+    "health": {
+      "SQL": 200,
+      "Oagnet": 200,
+      "Agent": 200,
+      "AgentLive": 200
+    },
+    "main_nodes": [
+      "意图识别",
+      "任务拆分与规划",
+      "解析校验",
+      "调度执行",
+      "结果校验",
+      "数据洞察分析",
+      "最终输出"
+    ],
+    "ranked_query": {
+      "status": "COMPLETED",
+      "task_count": 3,
+      "input_group_counts": [
+        89,
+        89
+      ],
+      "output_count": 5,
+      "identities_match_oracle": true,
+      "values_match_oracle": true,
+      "company_missing_disclosed": true
+    },
+    "analysis_query": {
+      "status": "COMPLETED",
+      "task_count": 2,
+      "query_row_counts": [
+        6
+      ],
+      "analysis_tool_completed": true,
+      "predeployment_runtime_exception_resolved": true,
+      "available_source_months": 6,
+      "month_coverage_matches_source": true
+    },
+    "legacy_asl_query": {
+      "status": "COMPLETED",
+      "group_count": 89,
+      "company_default_exclusion_removed": true,
+      "salesperson_identity_rule_preserved": true
+    },
+    "business_rows_persisted": false,
+    "signed_urls_persisted": false
   }
 }
