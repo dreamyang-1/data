@@ -3643,7 +3643,7 @@ class DataAnalysisOrchestrator:
 
     async def _respond_dataset_computation(self, chat, identity, task, references):
         """The shared executor consumes formulas and result operations, not prose claims."""
-        from app.services.calculation_execution import calculate
+        from app.services.calculation_execution import calculate, output_column_bindings
         from app.services.computation_delivery import computation_material
         try:
             if isinstance(references, list):
@@ -3661,6 +3661,7 @@ class DataAnalysisOrchestrator:
                 parent_dataset_ids=[ref.dataset_id for ref, _ in references.values()],
                 transformation_log=({'type': 'query_provenance', 'source_truncated': False,
                     'source_quality_status': quality, 'source_total_row_count': len(rows),
+                    'column_bindings': output_column_bindings(columns, references),
                     'operation': operation, 'input_binding': input_binding},),
                 ttl_seconds=self.settings.dataset_ttl_seconds)
             await self.sessions.put_dataset_reference(reference.to_dict(),

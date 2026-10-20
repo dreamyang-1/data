@@ -13,6 +13,17 @@ def _provenance(reference):
                  if item.get('type') == 'query_provenance'), {})
 
 
+def output_column_bindings(columns, inputs):
+    """Keep proven identities on arithmetic outputs for subsequent DAG tasks."""
+    bindings = {}
+    for column in columns:
+        values = {_provenance(ref).get('column_bindings', {}).get(column) for ref, _ in inputs.values()}
+        values.discard(None)
+        if len(values) == 1:
+            bindings[column] = values.pop()
+    return bindings
+
+
 def _column(reference, declared, *, role=None):
     if isinstance(declared, str) and declared in reference.columns:
         return declared
@@ -79,11 +90,11 @@ def _legacy_division(task, inputs):
             'result_field': label, 'format': 'percent' if re.search('率|占比|比例', label) else 'number'}
 
 
-def _check_compatible(first, second, *, same_unit):
+def _check_compatible(first, second, *, same_unit, same_period=True):
     left = _provenance(first).get('fingerprint_components', {})
     right = _provenance(second).get('fingerprint_components', {})
     if left and right:
-        if left.get('time_range') != right.get('time_range'):
+        if same_period and left.get('time_range') != right.get('time_range'):
             raise ValueError('计算输入的时间范围不一致')
         left_units = {m.get('unit') for m in left.get('metrics', []) if isinstance(m, dict) and m.get('unit')}
         right_units = {m.get('unit') for m in right.get('metrics', []) if isinstance(m, dict) and m.get('unit')}
@@ -91,11 +102,14 @@ def _check_compatible(first, second, *, same_unit):
             raise ValueError('计算输入的单位不兼容')
 
 
-def _divide(binding, inputs):
-    if binding.get('operation') != 'divide' or binding.get('format', 'number') not in {'number', 'percent'}:
+def _arithmetic(binding, inputs):
+    from app.planning.calculation_bindings import arithmetic_roles
+    operand_roles = arithmetic_roles(binding)
+    operator = binding['operation']
+    if binding.get('format', 'number') not in {'number', 'percent'}:
         raise ValueError('不支持的计算公式或输出格式')
     roles = {}
-    for role in ('numerator', 'denominator'):
+    for role in operand_roles:
         operand = binding.get(role)
         if not isinstance(operand, dict) or set(operand) - {'source_task_id', 'column'}:
             raise ValueError('计算操作数必须绑定前序任务和字段')
@@ -105,9 +119,11 @@ def _divide(binding, inputs):
         reference, rows = inputs[name]
         column = _column(reference, operand.get('column'))
         roles[role] = (reference, rows, column)
-    first, left, left_column = roles['numerator']
-    second, right, right_column = roles['denominator']
-    _check_compatible(first, second, same_unit=binding.get('format') == 'percent')
+    first, left, left_column = roles[operand_roles[0]]
+    second, right, right_column = roles[operand_roles[1]]
+    ratio_contract = operand_roles == ('numerator', 'denominator')
+    _check_compatible(first, second, same_unit=operator in {'add', 'subtract'} or binding.get('format') == 'percent',
+                      same_period=ratio_contract)
     label = binding.get('result_field')
     if not isinstance(label, str) or not label.strip() or label.startswith('_'):
         raise ValueError('缺少计算结果字段名')
@@ -123,19 +139,35 @@ def _divide(binding, inputs):
         operands = [(left[0 if len(left) == 1 else index][left_column],
                      right[0 if len(right) == 1 else index][right_column]) for index in range(len(rows))]
     else:
+        # The same measure in two queries can have different values (e.g. two
+        # periods). Keep both values distinct; identity alignment still uses
+        # the original proven code fields and validates all shared attributes.
+        if left_column == right_column:
+            alias = f'{right_column}（{binding[operand_roles[1]]["source_task_id"]}）'
+            while alias in first.columns or alias in second.columns:
+                alias += '右'
+            second = copy.copy(second)
+            object.__setattr__(second, 'columns', tuple(alias if col == right_column else col for col in second.columns))
+            right = [{(alias if col == right_column else col): value for col, value in row.items()} for row in right]
+            right_column = alias
         columns, rows = aligned_input([(first, left), (second, right)])
         operands = [(row[left_column], row[right_column]) for row in rows]
     if label in columns:
         raise ValueError('计算结果不能覆盖输入字段')
     for row, (left_value, right_value) in zip(rows, operands):
-        numerator, denominator = numeric_value(left_value), numeric_value(right_value)
-        if denominator <= 0:
-            raise ValueError('计算分母必须大于零')
-        row['_calculation_left'], row['_calculation_right'] = float(numerator), float(denominator)
-    operation = {'type': 'derive', 'operator': 'divide', 'left_field': '_calculation_left',
+        left_number, right_number = numeric_value(left_value), numeric_value(right_value)
+        if operator == 'divide':
+            if ratio_contract and right_number <= 0:
+                raise ValueError('计算分母必须大于零')
+            if right_number == 0:
+                raise ValueError('计算分母为零')
+        row['_calculation_left'], row['_calculation_right'] = left_number, right_number
+    operation = {'type': 'derive', 'operator': operator, 'left_field': '_calculation_left',
                  'right_field': '_calculation_right', 'result_field': label}
     result_columns, result_rows = apply_followup_operation(
         [*columns, '_calculation_left', '_calculation_right'], rows, operation)
+    for row in result_rows:
+        numeric_value(row.get(label))
     visible = [column for column in result_columns if not column.startswith('_')]
     rows = [{column: row.get(column) for column in visible} for row in result_rows]
     evidence = {role: {'source_task_id': binding[role]['source_task_id'], 'dataset_id': ref.dataset_id,
@@ -178,7 +210,7 @@ def calculate(task, inputs, legacy_resolver):
     binding = binding or (_legacy_division(task, inputs) if legacy else None)
     percent_label = None
     if binding is not None:
-        columns, rows, operation, input_binding = _divide(binding, inputs)
+        columns, rows, operation, input_binding = _arithmetic(binding, inputs)
         if binding.get('format') == 'percent':
             percent_label = binding['result_field']
         if legacy and not structured.get('排序') and structured.get('限制') is None:

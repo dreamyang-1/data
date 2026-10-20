@@ -1,7 +1,28 @@
-"""Compile an explicitly declared quotient into existing query/compute tasks."""
+"""Bind registered arithmetic to existing query/compute tasks."""
 from dataclasses import replace
 import copy
 import re
+
+
+ARITHMETIC_OPERATORS = {
+    'add': r'\+|加上|加',
+    'subtract': r'−|－|-|减去|减',
+    'multiply': r'\*|×|乘以|乘',
+    'divide': r'/|÷|除以',
+}
+
+
+def arithmetic_roles(binding):
+    """Retain the published ratio schema while allowing ordinary binary math."""
+    if not isinstance(binding, dict) or binding.get('operation') not in ARITHMETIC_OPERATORS:
+        raise ValueError('计算绑定必须声明受控运算')
+    if binding['operation'] == 'divide' and any(key in binding for key in ('numerator', 'denominator')):
+        if any(key in binding for key in ('left', 'right')):
+            raise ValueError('计算操作数不能混用两套字段')
+        return ('numerator', 'denominator')
+    if any(key in binding for key in ('numerator', 'denominator')):
+        raise ValueError('加减乘运算必须使用左右操作数')
+    return ('left', 'right')
 
 
 async def resolve_compound_formulas(settings, transport, spec_text, dependencies, required):
@@ -22,7 +43,7 @@ async def resolve_compound_formulas(settings, transport, spec_text, dependencies
     # formula must never be inferred from component order or dependency text.
     required = [name for name in required if any(
         line.strip().startswith('| ' + name + ' |') and len(line.strip().strip('|').split('|')) >= 4
-        and re.search(r'÷|除以|/', line.strip().strip('|').split('|')[2])
+        and re.search('|'.join(ARITHMETIC_OPERATORS.values()), line.strip().strip('|').split('|')[2])
         for line in rows)]
     if not required:
         return {}
@@ -30,11 +51,14 @@ async def resolve_compound_formulas(settings, transport, spec_text, dependencies
     for name in required:
         row = next((line for line in rows if line.strip().startswith('| ' + name + ' |')), '')
         cells = [cell.strip() for cell in row.strip().strip('|').split('|')]
-        choices = [(left, right) for left in dependencies[name] for right in dependencies[name]
-                   if left != right and re.search(re.escape(left) + r'\s*(?:/|÷|除以)\s*' + re.escape(right), row)]
+        choices = [(operator, left, right) for operator, pattern in ARITHMETIC_OPERATORS.items()
+                   for left in dependencies[name] for right in dependencies[name]
+                   if left != right and re.search(re.escape(left) + r'\s*(?:' + pattern + r')\s*'
+                                                  + re.escape(right), cells[2])]
         if len(choices) == 1 and len(dependencies[name]) == 2:
-            left, right = choices[0]
-            exact[name] = {'operation':'divide','numerator':{'column':left},'denominator':{'column':right},
+            operator, left, right = choices[0]
+            roles = ('numerator', 'denominator') if operator == 'divide' else ('left', 'right')
+            exact[name] = {'operation':operator,roles[0]:{'column':left},roles[1]:{'column':right},
                            'result_field':name,'format':'percent' if len(cells)>3 and '%' in cells[3] else 'number'}
     if len(exact) == len(required):
         return exact
@@ -42,10 +66,10 @@ async def resolve_compound_formulas(settings, transport, spec_text, dependencies
     body = {'model': settings.intent_model_name, 'temperature': 0, 'enable_thinking': False,
         'response_format': {'type': 'json_object'}, 'messages': [
         {'role': 'system', 'content': '只绑定给定规范行中的计算公式，不回答业务问题。'
-         '输出JSON {"bindings":[{"metric":"登记指标名","operation":"divide",'
-         '"numerator":"分子成分登记名","denominator":"分母成分登记名","format":"number或percent"}]}。'
-         '分子分母必须按公式含义绑定到该指标的依赖指标登记原名，不能使用依赖指标的排列顺序。'
-         '只支持明确的两成分相除，不能确定或不支持时不输出该项。不得添加其他指标。'},
+         '输出JSON {"bindings":[{"metric":"登记指标名","operation":"add或subtract或multiply或divide",'
+         '"left":"左成分登记名","right":"右成分登记名","format":"number或percent"}]}。'
+         'divide也兼容numerator、denominator字段。操作数顺序必须按公式含义绑定到该指标的依赖指标登记原名，不能使用依赖指标的排列顺序。'
+         '只支持明确的两个成分加减乘除；多步公式不能压缩成一个运算。不能确定或不支持时不输出该项。不得添加其他指标。'},
         {'role': 'user', 'content': json_text({'required': required, 'components': {name: dependencies[name] for name in required},
                                             'registered_rows': rows})}]}
     async with httpx.AsyncClient(base_url=settings.intent_model_base_url.rstrip('/'),
@@ -61,16 +85,18 @@ async def resolve_compound_formulas(settings, transport, spec_text, dependencies
     result = {}
     for item in data.get('bindings', []):
         if not isinstance(item, dict) or any(not isinstance(item.get(key), str)
-                for key in ('metric', 'operation', 'numerator', 'denominator', 'format')):
+                for key in ('metric', 'operation', 'format')):
             raise ValueError('公式绑定格式错误')
+        roles = arithmetic_roles(item)
         name = item.get('metric')
-        if (name not in required or name in result or item.get('operation') != 'divide'
+        if (name not in required or name in result
                 or item.get('format') not in {'number', 'percent'}
-                or {item.get('numerator'), item.get('denominator')} != set(dependencies[name])
+                or any(not isinstance(item.get(role), str) for role in roles)
+                or {item.get(role) for role in roles} != set(dependencies[name])
                 or len(dependencies[name]) != 2):
             raise ValueError('公式绑定超出当前指标的登记成分')
-        result[name] = {'operation': 'divide', 'numerator': {'column': item['numerator']},
-            'denominator': {'column': item['denominator']}, 'result_field': name, 'format': item['format']}
+        result[name] = {'operation': item['operation'], **{role: {'column': item[role]} for role in roles},
+                        'result_field': name, 'format': item['format']}
     if set(result) != set(required):
         raise ValueError('未获得当前复合指标的明确计算公式')
     return {**exact, **result}
@@ -126,9 +152,11 @@ def materialize_computation_binding(extraction, *, task_index, task_offset=0, de
             raise TaskInputBindingError('计算输入必须属于声明的依赖任务')
     binding = result.get('计算绑定')
     if binding is not None:
-        if not isinstance(binding, dict) or binding.get('operation') != 'divide':
-            raise TaskInputBindingError('计算绑定必须声明受控运算')
-        for role in ('numerator', 'denominator'):
+        try:
+            roles = arithmetic_roles(binding)
+        except ValueError as exc:
+            raise TaskInputBindingError(str(exc)) from exc
+        for role in roles:
             operand = binding.get(role)
             if not isinstance(operand, dict) or not isinstance(operand.get('column'), str) or not operand['column'].strip():
                 raise TaskInputBindingError('计算绑定缺少输入字段')

@@ -773,8 +773,8 @@ class _PlannedTask(BaseModel):
 _CALCULATION_PARAMETER_PROMPT = """
 计算执行合同（仅为extraction的内部执行参数，不改变数据库字段绑定）：
 每个纯计算任务必须明确实际运算，不能只写“根据结果计算”。
-两个指标相除使用extraction.计算绑定：{"operation":"divide","numerator":{"source_task_index":0,"column":"分子指标登记名"},"denominator":{"source_task_index":1,"column":"分母指标登记名"},"result_field":"结果指标名","format":"number或percent"}。
-同一查询结果逐行相除时，两操作数引用同一个前序任务。source_task_index为本问题从0开始的任务下标，必须在depends_on中；不能引用自身或猜测数据集ID。分子、分母顺序严格依据当前规范中的公式，不能按依赖指标列的排列顺序猜测。即使复合指标尚未拆分，也在其extraction里给出上述计算绑定的column、operation、result_field和format，此时不填source_task_index，拆分器负责关联成分任务。
+两个指标加减乘除使用extraction.计算绑定：{"operation":"add或subtract或multiply或divide","left":{"source_task_index":0,"column":"左操作数指标登记名"},"right":{"source_task_index":1,"column":"右操作数指标登记名"},"result_field":"结果指标名","format":"number或percent"}。原有除法也兼容operation=divide配合numerator和denominator操作数。
+同一查询结果逐行运算时，两操作数引用同一个前序任务；跨任务运算时分别引用各自来源。source_task_index为本问题从0开始的任务下标，必须在depends_on中；不能引用自身或猜测数据集ID。左右操作数或分子、分母顺序严格依据当前规范中的公式，不能按依赖指标列的排列顺序猜测。多步公式拆成有依赖的计算任务，后一步可以引用前一步的结果字段。即使复合指标尚未拆分，也在其extraction里给出上述计算绑定的column、operation、result_field和format，此时不填source_task_index，拆分器负责关联成分任务。
 其他计算可使用extraction.结果操作：{"source_task_index":0,"operation":{"type":"pipeline","operations":[...]}}。只允许derive（left_field/right_field/operator/result_field，operator为add/subtract/multiply/divide）、aggregate（group_by和aggregations，每项field/function/alias）、filter、select、sort、sort_limit、limit；不得输出SQL、Python或任意表达式。
 排序操作格式为{"type":"sort","field":"实际结果列名","descending":true}；取前N格式为{"type":"limit","count":N}；合并排序取前N格式为{"type":"sort_limit","field":"实际结果列名","descending":true,"count":N}。最终按计算结果排名时，成分取数任务不得先按其他指标取前N；只在用户明确先选定对象范围时保留该范围限制。
 排名必须保留最终计算字段的排序方向和限制人数；按人或组织计算时，所有相应取数任务都保留对象分组及必要展示字段，不能变成全局总计；共用分母按规范保留原有范围。公式或字段依据不明时不要编造计算绑定。
@@ -1001,7 +1001,8 @@ class SingleQuestionPlanner:
             calc_structured['是否查询数据库'] = '否'
             binding = calc_structured.get('计算绑定')
             if isinstance(binding, dict):
-                for role in ('numerator', 'denominator'):
+                from app.planning.calculation_bindings import arithmetic_roles
+                for role in arithmetic_roles(binding):
                     operand = binding.get(role)
                     if not isinstance(operand, dict) or operand.get('column') not in components:
                         raise TaskInputBindingError('复合指标运算必须绑定登记的成分指标')
@@ -1487,7 +1488,8 @@ class SingleQuestionPlanner:
                         continue
                     binding = copy.deepcopy(formulas[name])
                     if database_query_choice(structured) is False or '不再查询数据库' in task.question:
-                        for role in ('numerator', 'denominator'):
+                        from app.planning.calculation_bindings import arithmetic_roles
+                        for role in arithmetic_roles(binding):
                             column = binding[role]['column']
                             sources = [index for index in task.depends_on
                                 if any((metric.get('name') if isinstance(metric, dict) else metric) == column
