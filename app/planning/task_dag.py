@@ -499,6 +499,17 @@ def _confirmed_hospital_department_scope(task_question, source_question, structu
     return task_question
 
 
+def _ground_inferred_hospital_location(structured, source_question, model_id):
+    """Use hospital geography when the model invents a business-area qualifier."""
+    if (model_id != 81 or not structured
+            or re.search(r'业务(?:省份?|城?市|地区|区域)', source_question)):
+        return
+    for item in structured.get('过滤条件') or []:
+        if (isinstance(item, dict) and item.get('entity') == '医院'
+                and item.get('field') in {'业务市', '业务省'}):
+            item['field'] = {'业务市': '城市', '业务省': '省份'}[item['field']]
+
+
 def _normalize_metric_name(
     name: str, registered: frozenset[str], aliases: dict[str, str]
 ) -> str:
@@ -1168,6 +1179,7 @@ class SingleQuestionPlanner:
                 metric_catalog=metric_catalog,
             )
             _ground_location_owners(structured, task_question)
+            _ground_inferred_hospital_location(structured, question, semantic_model_id)
             task_question = _confirmed_hospital_department_scope(
                 task_question, question, structured, semantic_model_id
             )
