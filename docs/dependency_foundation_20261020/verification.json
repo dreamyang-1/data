@@ -1,0 +1,50 @@
+[
+  {
+    "case": "dependency-final-numeric",
+    "status": "COMPLETED",
+    "task_count": 2,
+    "depends_on": {
+      "task-1": [],
+      "task-2": [
+        "task-1"
+      ]
+    },
+    "seconds": 94.409,
+    "seven_stages_in_order": true,
+    "no_business_rows_persisted": true
+  },
+  {
+    "case": "calculation-final-verified",
+    "status": "COMPLETED",
+    "task_count": 3,
+    "depends_on": {
+      "task-1": [],
+      "task-2": [],
+      "task-3": [
+        "task-1",
+        "task-2"
+      ]
+    },
+    "seconds": 88.775,
+    "seven_stages_in_order": true,
+    "no_business_rows_persisted": true
+  },
+  {
+    "case": "independent-final",
+    "status": "COMPLETED",
+    "task_count": 2,
+    "depends_on": {
+      "task-1": [],
+      "task-2": []
+    },
+    "seconds": 77.016,
+    "seven_stages_in_order": true,
+    "no_business_rows_persisted": true
+  },
+  {
+    "case": "calculation-first-attempt",
+    "status": "NEEDS_CLARIFICATION",
+    "reason": "城市字段绑定一次追问；同口径订单笔数单查及整题复测随后完成，未放松ASL标准值规则",
+    "classification": "non_reproduced_binding_uncertainty; not evidence of a scheduling or calculation failure"
+  }
+]

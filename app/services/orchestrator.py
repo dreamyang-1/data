@@ -1314,6 +1314,21 @@ class DataAnalysisOrchestrator:
                                     _apply_sort_type(outcome.single_extraction.structured)
                         except TaskPlanningError as exc:
                             logger.warning("multi-question plan rejected: %s", exc)
+                            await emit_progress("INTENT_RECOGNITION", "COMPLETED", "已接收数据请求，任务规划尚未就绪。")
+                            await emit_progress("TASK_PLANNING", "FAILED", "任务规划自动纠错后仍未形成完整计划，本次未执行查询。")
+                            for stage in ("ASL_GENERATION", "DATA_RETRIEVAL", "RELIABILITY_CHECK", "INSIGHT_ANALYSIS"):
+                                await emit_progress(stage, "SKIPPED", "本环节未执行：前置任务规划未完成。")
+                            await emit_progress("FINAL_OUTPUT", "COMPLETED", "本次任务未完成，未将部分查询作为完整答案。")
+                            return AgentResponse(
+                                request_id=uuid4(), conversation_id=chat.conversation_id,
+                                status="SAFE_FALLBACK", intent=PrimaryIntent.DETAIL_QUERY,
+                                intent_source="TASK_PLANNING_ERROR", intent_confidence=1.0,
+                                answer="本次任务规划未能生成完整的可执行计划，尚未执行查询。"
+                                    "未将多个任务降为单次查询；无需重复补充已明确的条件。",
+                                evidence=[EvidenceItem(evidence_id="task-planning-rejected",
+                                    kind="TASK_PLANNING_REJECTED", source_ref="task-planner",
+                                    payload={"reason": str(exc), "sql_executed": False})],
+                            )
                     # 拆分模型判成闲聊/超范围的单任务不亮规划节点，
                     # 拆分结束后直接走受控聊天回复
                     nondata_direct = (
