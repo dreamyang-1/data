@@ -3374,15 +3374,27 @@ class DataAnalysisOrchestrator:
         sub_tools = binding.get("sub_tools") or {}
         for fact_key, sub_tool in sub_tools.items():
             sub_facts = facts.get(fact_key)
-            if isinstance(sub_facts, dict):
+            if not isinstance(sub_facts, dict):
+                continue
+            summary = self._analysis_sub_tool_summary(fact_key, sub_facts)
+            if sub_facts.get("status") == "NOT_COMPUTABLE":
                 await emit_progress(
-                    "ANALYSIS_TOOL", "COMPLETED",
-                    f"{sub_tool}调用完成。输出事实{len(sub_facts)}项。",
+                    "ANALYSIS_TOOL", "DEGRADED",
+                    f"{sub_tool}：{summary}。",
                     analysis_tool=str(sub_tool),
                 )
+            else:
+                await emit_progress(
+                    "ANALYSIS_TOOL", "COMPLETED",
+                    f"{sub_tool}调用完成。{summary}",
+                    analysis_tool=str(sub_tool),
+                )
+        main_summary = self._analysis_main_tool_summary(
+            str(binding.get("analysis_type") or ""), analysis_output.method, facts
+        )
         await emit_progress(
             "ANALYSIS_TOOL", "COMPLETED",
-            f"{tool}调用完成。方法：{analysis_output.method}；输出分析结论与事实{len(facts)}项。",
+            f"{tool}调用完成。{main_summary}",
             analysis_tool=tool,
         )
         try:
@@ -3444,11 +3456,96 @@ class DataAnalysisOrchestrator:
             )],
         )
 
+    @staticmethod
+    def _analysis_sub_tool_summary(fact_key: str, sub_facts: dict[str, Any]) -> str:
+        """子工具调用行的结果摘要：逐期环比/同比的具体计算值。
+
+        展示与引擎 facts 一一对应，只读不重算；不可计算时如实给出原因，
+        不用"输出事实N项"这类计数掩盖真实结果。
+        """
+        if fact_key == "period_over_period":
+            changes = sub_facts.get("changes") or []
+            parts = []
+            for item in changes[:4]:
+                rate = item.get("change_rate")
+                rate_text = "基期为0，变化率不可计算" if rate is None else f"{rate:+.2%}"
+                parts.append(f"{item.get('to')}较{item.get('from')} {rate_text}")
+            if not parts:
+                return "无可展示的环比期间"
+            suffix = "；".join(parts)
+            if len(changes) > 4:
+                suffix += f"；共{len(changes)}期"
+            return "逐期环比：" + suffix + "。"
+        if fact_key == "year_over_year":
+            if sub_facts.get("status") == "NOT_COMPUTABLE":
+                return "不可计算：" + str(sub_facts.get("reason") or "缺少上年同期数据")
+            computable = [
+                item for item in sub_facts.get("changes") or []
+                if item.get("status") == "COMPUTABLE"
+            ]
+            parts = []
+            for item in computable[:4]:
+                rate = item.get("change_rate")
+                rate_text = "基期为0" if rate is None else f"{rate:+.2%}"
+                parts.append(f"{item.get('label')}同比 {rate_text}")
+            suffix = "；".join(parts)
+            if len(computable) > 4:
+                suffix += f"；共{len(computable)}个月"
+            missing = sub_facts.get("month_count", 0) - len(computable)
+            if missing > 0:
+                suffix += f"；{missing}个月缺上年基期未参与"
+            return ("逐月同比：" + suffix + "。") if parts else "无可计算的同比月份"
+        return f"输出事实{len(sub_facts)}项。"
+
+    @staticmethod
+    def _analysis_main_tool_summary(analysis_type: str, method: str, facts: dict[str, Any]) -> str:
+        """分析主工具调用行的摘要：方法名加该分析类型的关键结论。
+
+        关键结论缺失时回退到事实计数，不在展示层编造数值。
+        """
+        if analysis_type == "trend":
+            parts = [f"方法：{method}"]
+            start, end = facts.get("start"), facts.get("end")
+            change, rate = facts.get("absolute_change"), facts.get("change_rate")
+            if start is not None and end is not None and change is not None:
+                rate_text = "变化率不可计算" if rate is None else f"{rate:+.2%}"
+                parts.append(f"整体变化 {change:+g}（{rate_text}）")
+            points = facts.get("change_points") or []
+            if points:
+                parts.append("转折点：" + "、".join(
+                    f"{item.get('label')}（{'峰值' if item.get('type') == 'PEAK' else '谷值'}）"
+                    for item in points[:3]
+                ))
+            return "；".join(parts) + "。"
+        if analysis_type == "comparison":
+            base_label, current_label = facts.get("base_label"), facts.get("current_label")
+            change, rate = facts.get("absolute_change"), facts.get("change_rate")
+            if base_label and current_label and change is not None:
+                rate_text = "基期为0，变化率不可计算" if rate is None else f"{rate:+.2%}"
+                return (
+                    f"方法：{method}；{current_label}较{base_label} "
+                    f"变化 {change:+g}（{rate_text}）。"
+                )
+        if analysis_type == "root_cause":
+            candidates = facts.get("ranked_candidates") or []
+            if candidates:
+                top = candidates[0]
+                return (
+                    f"方法：{method}；最大贡献项：{top.get('label')}"
+                    f"（贡献 {top.get('contribution'):+g}）。"
+                )
+        return f"方法：{method}；输出分析结论与事实{len(facts)}项。"
+
     def _analysis_task_request(
         self, chat: ChatRequest, identity: TrustedIdentity, task: AtomicTask,
         binding: dict[str, Any],
     ) -> CanonicalAnalysisRequest:
-        """按分析绑定构造引擎请求：意图取自分析任务，指标取自提取参数。"""
+        """按分析绑定构造引擎请求：意图取自分析任务，指标取自提取参数。
+
+        引擎的环比/同比信号检测读 original_question，这里用用户原问题
+        而不是分析任务文本（任务文本里的方法描述会误触信号）；趋势
+        分析按模板默认补环比信号，同比只在用户明确提及时由源问题触发。
+        """
         intent = PrimaryIntent(str(binding.get("intent"))) if binding.get("intent") else (
             task.primary_intent or PrimaryIntent.COMPARISON_ANALYSIS
         )
@@ -3457,15 +3554,16 @@ class DataAnalysisOrchestrator:
             name = item.get("name") if isinstance(item, dict) else item
             if isinstance(name, str) and name.strip():
                 metrics.append(MetricRef(input=name.strip(), canonical_name=name.strip()))
-        root_context = getattr(chat, "_analysis_root_context", None) or {}
-        original = str(
-            root_context.get("original_question") or chat.question or task.question
-        )
+        source_question = str(binding.get("source_question") or "").strip()
+        original = source_question or str(chat.question or task.question)
+        signal_question = original
+        if str(binding.get("analysis_type") or "") == "trend" and "环比" not in signal_question:
+            signal_question += "（需计算环比）"
         request = CanonicalAnalysisRequest(
             conversation_id=chat.conversation_id,
             tenant_id=identity.tenant_id, user_id=identity.user_id,
             application_id=chat.application_id,
-            original_question=original,
+            original_question=signal_question,
             rewritten_question=task.question,
             primary_intent=intent,
             intent_source="ANALYSIS_TASK_PLANNER",
@@ -3474,6 +3572,7 @@ class DataAnalysisOrchestrator:
             semantic_model_id=chat.semantic_model_id,
             knowledge_base_names=list(chat.knowledge_base_names or []),
         )
+        request.assumptions.append("ANALYSIS_SOURCE_QUESTION=" + original[:200])
         return request
 
     def _merge_analysis_inputs(

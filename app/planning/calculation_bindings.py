@@ -25,6 +25,24 @@ def arithmetic_roles(binding):
     return ('left', 'right')
 
 
+def registered_arithmetic_binding(spec, name, components):
+    """Read one binary formula without treating dependency order as math."""
+    row = next((line for line in spec.splitlines() if line.strip().startswith('| ' + name + ' |')), '')
+    cells = [cell.strip() for cell in row.strip().strip('|').split('|')]
+    if len(cells) < 4 or len(components) != 2:
+        return None
+    choices = [(operator, left, right) for operator, pattern in ARITHMETIC_OPERATORS.items()
+               for left in components for right in components
+               if left != right and re.search(re.escape(left) + r'\s*(?:' + pattern + r')\s*'
+                                              + re.escape(right), cells[2])]
+    if len(choices) != 1:
+        return None
+    operator, left, right = choices[0]
+    roles = ('numerator', 'denominator') if operator == 'divide' else ('left', 'right')
+    return {'operation':operator,roles[0]:{'column':left},roles[1]:{'column':right},
+            'result_field':name,'format':'percent' if '%' in cells[3] else 'number'}
+
+
 async def resolve_compound_formulas(settings, transport, spec_text, dependencies, required):
     """Bind registered formula roles in a small schema, independently of task prose.
 
@@ -49,17 +67,9 @@ async def resolve_compound_formulas(settings, transport, spec_text, dependencies
         return {}
     exact = {}
     for name in required:
-        row = next((line for line in rows if line.strip().startswith('| ' + name + ' |')), '')
-        cells = [cell.strip() for cell in row.strip().strip('|').split('|')]
-        choices = [(operator, left, right) for operator, pattern in ARITHMETIC_OPERATORS.items()
-                   for left in dependencies[name] for right in dependencies[name]
-                   if left != right and re.search(re.escape(left) + r'\s*(?:' + pattern + r')\s*'
-                                                  + re.escape(right), cells[2])]
-        if len(choices) == 1 and len(dependencies[name]) == 2:
-            operator, left, right = choices[0]
-            roles = ('numerator', 'denominator') if operator == 'divide' else ('left', 'right')
-            exact[name] = {'operation':operator,roles[0]:{'column':left},roles[1]:{'column':right},
-                           'result_field':name,'format':'percent' if len(cells)>3 and '%' in cells[3] else 'number'}
+        binding = registered_arithmetic_binding(spec_text, name, dependencies[name])
+        if binding is not None:
+            exact[name] = binding
     if len(exact) == len(required):
         return exact
     required = [name for name in required if name not in exact]

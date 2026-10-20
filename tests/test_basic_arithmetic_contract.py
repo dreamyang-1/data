@@ -138,6 +138,23 @@ async def test_registered_formulas_determine_operand_order(operator,symbol):
     assert result['差额'][roles[1]]['column']=='核销金额'
 
 
+@pytest.mark.parametrize('operator,symbol,count',[
+    ('add','+',2),('subtract','减去',2),('multiply','×',2),('divide','÷',3)])
+def test_auto_expansion_keeps_new_arithmetic_components_in_one_population(operator,symbol,count):
+    from app.planning.task_plan_stages import TaskBoundary, complete_boundaries
+    spec=f'| 指标 | 同义词 | 业务口径 | 单位 | 依赖指标 |\n| 公式结果 | 无 | 付款金额 {symbol} 核销金额 | 元 | 核销金额, 付款金额 |'
+    tasks=complete_boundaries([TaskBoundary(question='查询2026年各部门公式结果',
+        metric_targets=['公式结果'],grain=['部门'])],spec=spec,
+        catalog=(frozenset({'公式结果','付款金额','核销金额'}),{}),
+        dependencies={'公式结果':('核销金额','付款金额')})
+    assert len(tasks)==count
+    if operator!='divide':
+        assert tasks[0].metric_targets==['核销金额','付款金额']
+        assert tasks[-1].depends_on==[0]
+    else:
+        assert tasks[-1].depends_on==[0,1]  # Preserve the published ratio split.
+
+
 @pytest.mark.asyncio
 async def test_original_receivable_question_is_planned_before_bound_subtraction(monkeypatch):
     from app.domain import semantic_description
@@ -154,12 +171,13 @@ async def test_original_receivable_question_is_planned_before_bound_subtraction(
         'available':True,'source':'semantic_model_133.md','content':spec}))
     router=CompoundQuestionRouter(planner.settings);router._single=planner
     outcome=await router.plan_with_judgment(CompoundJudgment(is_compound=False),question,semantic_model_id=133)
-    assert outcome.plan is not None and len(outcome.plan.tasks)==3
+    assert outcome.plan is not None and len(outcome.plan.tasks)==2
     assert len(calls)==2
     contract=outcome.plan.tasks[-1].extraction['计算绑定']
     assert contract['operation']=='subtract'
-    assert contract['left']['source_task_id']=='task-2'
+    assert contract['left']['source_task_id']=='task-1'
     assert contract['right']['source_task_id']=='task-1'
+    assert outcome.plan.tasks[0].extraction['指标']==[{'name':'核销金额'},{'name':'付款金额'}]
     assert all(task.extraction['维度']==['部门'] for task in outcome.plan.tasks)
 
 
