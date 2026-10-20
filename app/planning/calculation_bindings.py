@@ -4,8 +4,151 @@ import copy
 import re
 
 
+async def resolve_compound_formulas(settings, transport, spec_text, dependencies, required):
+    """Bind registered formula roles in a small schema, independently of task prose.
+
+    Dependency order is not operand order. The current description is the only
+    source; results can only reference that metric's registered components.
+    """
+    import httpx
+    if not required:
+        return {}
+    rows = [line for line in spec_text.splitlines() if line.lstrip().startswith('|')
+            and any(line.strip().startswith('| ' + name + ' |') for name in required)]
+    if not rows:
+        raise ValueError('复合指标缺少当前规范中的公式证据')
+    # Older published descriptions can declare dependencies without a formula.
+    # Keep their existing plan and legacy supported calculation path; a new
+    # formula must never be inferred from component order or dependency text.
+    required = [name for name in required if any(
+        line.strip().startswith('| ' + name + ' |') and len(line.strip().strip('|').split('|')) >= 4
+        and re.search(r'÷|除以|/', line.strip().strip('|').split('|')[2])
+        for line in rows)]
+    if not required:
+        return {}
+    exact = {}
+    for name in required:
+        row = next((line for line in rows if line.strip().startswith('| ' + name + ' |')), '')
+        cells = [cell.strip() for cell in row.strip().strip('|').split('|')]
+        choices = [(left, right) for left in dependencies[name] for right in dependencies[name]
+                   if left != right and re.search(re.escape(left) + r'\s*(?:/|÷|除以)\s*' + re.escape(right), row)]
+        if len(choices) == 1 and len(dependencies[name]) == 2:
+            left, right = choices[0]
+            exact[name] = {'operation':'divide','numerator':{'column':left},'denominator':{'column':right},
+                           'result_field':name,'format':'percent' if len(cells)>3 and '%' in cells[3] else 'number'}
+    if len(exact) == len(required):
+        return exact
+    required = [name for name in required if name not in exact]
+    body = {'model': settings.intent_model_name, 'temperature': 0, 'enable_thinking': False,
+        'response_format': {'type': 'json_object'}, 'messages': [
+        {'role': 'system', 'content': '只绑定给定规范行中的计算公式，不回答业务问题。'
+         '输出JSON {"bindings":[{"metric":"登记指标名","operation":"divide",'
+         '"numerator":"分子成分登记名","denominator":"分母成分登记名","format":"number或percent"}]}。'
+         '分子分母必须按公式含义绑定到该指标的依赖指标登记原名，不能使用依赖指标的排列顺序。'
+         '只支持明确的两成分相除，不能确定或不支持时不输出该项。不得添加其他指标。'},
+        {'role': 'user', 'content': json_text({'required': required, 'components': {name: dependencies[name] for name in required},
+                                            'registered_rows': rows})}]}
+    async with httpx.AsyncClient(base_url=settings.intent_model_base_url.rstrip('/'),
+        timeout=settings.multi_question_model_timeout_seconds, transport=transport) as client:
+        response = await client.post('/chat/completions', json=body,
+            headers={'Authorization': 'Bearer ' + settings.intent_model_api_key.get_secret_value()})
+        response.raise_for_status()
+    import json
+    from app.planning.task_dag import _strip_json_fences
+    data = json.loads(_strip_json_fences(response.json()['choices'][0]['message']['content']))
+    if not isinstance(data, dict) or not isinstance(data.get('bindings'), list):
+        raise ValueError('公式绑定必须返回明确的绑定列表')
+    result = {}
+    for item in data.get('bindings', []):
+        if not isinstance(item, dict) or any(not isinstance(item.get(key), str)
+                for key in ('metric', 'operation', 'numerator', 'denominator', 'format')):
+            raise ValueError('公式绑定格式错误')
+        name = item.get('metric')
+        if (name not in required or name in result or item.get('operation') != 'divide'
+                or item.get('format') not in {'number', 'percent'}
+                or {item.get('numerator'), item.get('denominator')} != set(dependencies[name])
+                or len(dependencies[name]) != 2):
+            raise ValueError('公式绑定超出当前指标的登记成分')
+        result[name] = {'operation': 'divide', 'numerator': {'column': item['numerator']},
+            'denominator': {'column': item['denominator']}, 'result_field': name, 'format': item['format']}
+    if set(result) != set(required):
+        raise ValueError('未获得当前复合指标的明确计算公式')
+    return {**exact, **result}
+
+
+def json_text(value):
+    import json
+    return json.dumps(value, ensure_ascii=False)
+
+
+def normalize_result_operation(operation):
+    """Adapt the planner's order/limit spellings to the existing dataset API."""
+    value = copy.deepcopy(operation)
+    steps = value.get('operations', []) if isinstance(value, dict) and value.get('type') == 'pipeline' else [value]
+    if not isinstance(steps, list):
+        return value
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        if step.get('type') in {'sort', 'sort_limit'} and 'order' in step:
+            direction = step.pop('order')
+            if str(direction).lower() not in {'asc', 'desc'}:
+                raise ValueError('结果排序方向无效')
+            descending = str(direction).lower() == 'desc'
+            if 'descending' in step and step['descending'] != descending:
+                raise ValueError('结果排序方向存在冲突')
+            step['descending'] = descending
+        if step.get('type') == 'sort_limit' and 'limit' in step:
+            count = step.pop('limit')
+            if 'count' in step and step['count'] != count:
+                raise ValueError('结果人数限制存在冲突')
+            step['count'] = count
+    return value
+
+
+def materialize_computation_binding(extraction, *, task_index, task_offset=0, dependencies):
+    """Resolve local indices once, before exposing the plan or running tasks."""
+    from app.planning.task_dag import TaskInputBindingError
+    result = copy.deepcopy(extraction)
+    if not isinstance(result, dict):
+        return result
+    def bind(source):
+        if not isinstance(source, dict):
+            raise TaskInputBindingError('计算操作数必须是对象')
+        if 'source_task_index' in source:
+            index = source.pop('source_task_index')
+            if type(index) is not int or not 0 <= index < task_index:
+                raise TaskInputBindingError('计算输入必须引用本问题内前序任务')
+            source['source_task_id'] = f'task-{task_offset + index + 1}'
+        elif 'source_task_id' not in source and len(dependencies) == 1:
+            source['source_task_id'] = dependencies[0]
+        if source.get('source_task_id') not in dependencies:
+            raise TaskInputBindingError('计算输入必须属于声明的依赖任务')
+    binding = result.get('计算绑定')
+    if binding is not None:
+        if not isinstance(binding, dict) or binding.get('operation') != 'divide':
+            raise TaskInputBindingError('计算绑定必须声明受控运算')
+        for role in ('numerator', 'denominator'):
+            operand = binding.get(role)
+            if not isinstance(operand, dict) or not isinstance(operand.get('column'), str) or not operand['column'].strip():
+                raise TaskInputBindingError('计算绑定缺少输入字段')
+            bind(operand)
+    spec = result.get('结果操作')
+    if spec is not None:
+        if not isinstance(spec, dict):
+            raise TaskInputBindingError('结果操作必须是对象')
+        bind(spec)
+        try:
+            spec['operation'] = normalize_result_operation(spec.get('operation'))
+            validate_result_operation(spec.get('operation'))
+        except ValueError as exc:
+            raise TaskInputBindingError(str(exc)) from exc
+    return result
+
+
 def validate_result_operation(operation):
     """Only the existing, bounded data operations; no SQL/code or nested plans."""
+    operation = normalize_result_operation(operation)
     if not isinstance(operation, dict):
         raise ValueError('结果操作必须是受控操作对象')
     if operation.get('type') == 'pipeline':
@@ -20,6 +163,12 @@ def validate_result_operation(operation):
     def fields(values):
         return all(isinstance(value, str) and value.strip() for value in values)
     for step in steps:
+        if step['type'] in {'sort', 'sort_limit'}:
+            if not fields([step.get('field')]) or type(step.get('descending', True)) is not bool:
+                raise ValueError('排序操作缺少明确字段或方向')
+        if step['type'] in {'limit', 'sort_limit'}:
+            if type(step.get('count')) is not int or not 1 <= step['count'] <= 10000:
+                raise ValueError('结果限制必须是1至10000的整数')
         if step['type'] == 'monthly_growth':
             from app.services.period_computation import monthly_window
             monthly_window(step)
@@ -84,6 +233,8 @@ def materialize_declared_result_operation(decomposition):
         raise TaskInputBindingError(str(exc)) from exc
     query = copy.deepcopy(task.structured)
     query.pop('结果操作')
+    query['排序'] = []
+    query['限制'] = None
     query['输出要求'] = '返回后续结果操作需要的原始指标和分组字段，不在文字中声称计算完成'
     query['是否查询数据库'] = '是'
     question=task.question
@@ -99,7 +250,9 @@ def materialize_declared_result_operation(decomposition):
     compute = DecomposedTask(question=f'根据上述任务的查询结果完成{task.expected_output or task.name or "结果计算"}，不再查询数据库',
         name='计算查询结果',depends_on=(0,),expected_output=task.expected_output,
         intent=PrimaryIntent.COMPARISON_ANALYSIS,structured={'意图':'指标计算','是否查询数据库':'否',
-        '结果操作':{'source_task_index':0,'operation':copy.deepcopy(spec['operation'])}})
+        '结果操作':{'source_task_index':0,'operation':copy.deepcopy(spec['operation'])},
+        '排序':copy.deepcopy((task.structured or {}).get('排序') or []),
+        '限制':(task.structured or {}).get('限制')})
     names=[item.get('name') if isinstance(item,dict) else item for item in query.get('指标',[])]
     name=('统计'+'、'.join(value for value in names if isinstance(value,str))+'计算输入')[:60]
     return replace(decomposition,tasks=(replace(task,structured=query,question=question,
@@ -149,6 +302,8 @@ def materialize_declared_division(decomposition):
         return decomposition
     left, right, label = binding['numerator']['column'], binding['denominator']['column'], binding['result_field']
     query = copy.deepcopy(task.structured)
+    query['排序'] = []
+    query['限制'] = None
     query['输出要求'] = f'仅返回{left}和{right}，派生结果由后续计算任务生成'
     query['是否查询数据库'] = '是'
     for role in ('numerator','denominator'):
@@ -156,7 +311,9 @@ def materialize_declared_division(decomposition):
     compute = DecomposedTask(question=f'根据上述任务的查询结果计算{label}，{left}除以{right}，不再查询数据库',
         name=f'计算{label}'[:60], depends_on=(0,), expected_output=label,
         intent=PrimaryIntent.COMPARISON_ANALYSIS, structured={
-            '意图':'指标计算','指标':[{'name':label}], '是否查询数据库':'否','计算绑定':binding})
+            '意图':'指标计算','指标':[{'name':label}], '是否查询数据库':'否','计算绑定':binding,
+            '排序':copy.deepcopy((task.structured or {}).get('排序') or []),
+            '限制':(task.structured or {}).get('限制')})
     source = replace(task, name=f'统计{left}和{right}'[:60],structured=query,
                      expected_output=f'{left}和{right}')
     return replace(decomposition,tasks=(source,compute))

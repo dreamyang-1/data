@@ -84,6 +84,7 @@ from app.services.clarification_policy import (
     semantic_ambiguity_has_safe_time_default,
 )
 from app.services.dependency_error_messages import render_dependency_error
+from app.services.query_output_bindings import calculation_columns
 from app.planning.dependency_contract import (
     key_kind, projection, structured_query_changed, sql_column_bindings, missing_display_fields,
 )
@@ -2727,6 +2728,7 @@ class DataAnalysisOrchestrator:
         conversation_id: str,
         *,
         exclude_source_type: str | None = None,
+        dataset_id: str | None = None,
     ) -> dict[str, Any] | None:
         """取任务会话里最近落盘的结果集引用；子任务响应不一定携带dataset_id。"""
         raw_items = await self.sessions.get_recent_dataset_references(
@@ -2734,6 +2736,8 @@ class DataAnalysisOrchestrator:
             conversation_id, limit=self.settings.dataset_recent_limit,
         )
         for item in raw_items:
+            if dataset_id and item.get('dataset_id') != dataset_id:
+                continue
             if exclude_source_type and item.get("source_type") == exclude_source_type:
                 continue
             return item
@@ -2785,229 +2789,43 @@ class DataAnalysisOrchestrator:
             return None
 
     async def _respond_pure_computation(
-        self,
-        chat: ChatRequest,
-        identity: TrustedIdentity,
-        task: AtomicTask,
-        conversation_by_task: dict[str, str],
-        responses: dict[str, Any] | None = None,
+        self, chat: ChatRequest, identity: TrustedIdentity, task: AtomicTask,
+        conversation_by_task: dict[str, str], responses: dict[str, Any] | None = None,
     ) -> AgentResponse:
-        """复合指标拆出的计算任务：不查库，对前序任务结果集做确定性计算后回复。"""
-        await emit_progress(
-            "ASL_GENERATION",
-            "COMPLETED",
-            "该任务基于前序任务的查询结果计算，不再调用数据库。",
-        )
-        fallback = self._pure_computation_unavailable(chat)
+        """Execute a declared calculation against its exact predecessor artifacts."""
+        await emit_progress("ASL_GENERATION", "COMPLETED",
+                            "该任务基于前序任务的查询结果计算，不再调用数据库。")
         if self.dataset_store is None:
-            return fallback
-        references = []
-        for dependency_id in task.depends_on:
-            dependency_conversation = conversation_by_task.get(
-                dependency_id, chat.conversation_id
-            )
-            raw = await self._latest_task_dataset_reference(
-                identity, chat, dependency_conversation,
-            )
-            if raw is None:
-                # 结果被截断的任务不落盘，全量数据在SQL导出的XLSX里，导入后重试
-                dependency_response = (responses or {}).get(dependency_id)
-                result_file_url = getattr(dependency_response, "result_file_url", None)
-                if result_file_url:
-                    raw = await self._import_dependency_result_file(
-                        chat, identity, dependency_conversation, result_file_url
-                    )
-            if raw is None:
-                logger.warning(
-                    "pure computation fallback: %s dataset reference not found",
-                    dependency_id,
-                )
-                return fallback
-            source = restore_reference(raw)
-            try:
-                loaded = await asyncio.to_thread(
-                    self.dataset_store.load_dataset,
-                    source,
-                    current_scope=source.scope,
-                )
-            except Exception as exc:
-                logger.warning("pure computation source load failed: %s", exc)
-                return fallback
-            references.append((source, loaded.rows))
-        single_rows = [item for item in references if item[0].row_count == 1]
-        multi_rows = [item for item in references if item[0].row_count > 1]
-        if len(references) == 1 or (not single_rows and len(multi_rows) == len(references)):
-            return await self._respond_dataset_computation(chat, identity, task, references)
-        if len(single_rows) != 1 or not multi_rows:
-            logger.warning(
-                "pure computation fallback: unexpected dataset shape %s",
-                [(item[0].row_count, item[0].columns) for item in references],
-            )
-            return fallback
-        denominator_reference, denominator_rows = single_rows[0]
-        denominator = next(
-            (
-                float(value) for value in denominator_rows[0].values()
-                if isinstance(value, (int, float))
-                or (isinstance(value, str) and value.replace(".", "", 1).isdigit())
-            ),
-            0.0,
-        )
-        if denominator <= 0:
-            logger.warning("pure computation fallback: denominator %s", denominator)
-            return fallback
-        numerator_reference, numerator_rows = max(multi_rows, key=lambda item: item[0].row_count)
-        # 导出文件里可能带 _sheet_name 这类内部列，计算与落盘前剔除
-        data_columns = [
-            column for column in numerator_reference.columns if column != "_sheet_name"
-        ]
-        metric_column = next(
-            (
-                column for column in reversed(data_columns)
-                if all(
-                    isinstance(row.get(column), (int, float))
-                    or (isinstance(row.get(column), str) and row.get(column).replace(".", "", 1).isdigit())
-                    for row in numerator_rows
-                    if row.get(column) is not None
-                )
-                and any(row.get(column) is not None for row in numerator_rows)
-            ),
-            None,
-        )
-        if metric_column is None:
-            logger.warning(
-                "pure computation fallback: no numeric column in %s",
-                numerator_reference.columns,
-            )
-            return fallback
-        coverage_name = next(
-            (
-                word for word in ("区域医院覆盖率", "覆盖率", "占比", "比例")
-                if word in task.question
-            ),
-            "覆盖率",
-        )
-        computed: list[tuple[dict[str, Any], float]] = []
-        for row in numerator_rows:
-            raw_value = row.get(metric_column) or 0
-            try:
-                ratio = float(raw_value) / denominator
-            except (TypeError, ValueError):
-                ratio = 0.0
-            computed.append((row, ratio))
-        computed.sort(key=lambda item: item[1], reverse=True)
-        coverage_rows = [
-            {
-                **{key: value for key, value in row.items() if key in data_columns},
-                coverage_name: f"{ratio * 100:.2f}%",
-            }
-            for row, ratio in computed
-        ]
-        scope = DatasetScope(
-            tenant_id=identity.tenant_id,
-            user_id=identity.user_id,
-            application_id=chat.application_id,
-            conversation_id=chat.conversation_id,
-            authorized_semantic_scope_fingerprint=chat.authorized_semantic_scope.fingerprint(),
-        )
+            return self._pure_computation_unavailable(chat)
+        references = {}
         try:
-            reference = await asyncio.to_thread(
-                self.dataset_store.save_dataset,
-                scope=scope,
-                columns=(*data_columns, coverage_name),
-                rows=coverage_rows,
-                snapshot_id="",
-                data_as_of=datetime.fromisoformat(numerator_reference.data_as_of),
-                source_type="DERIVED_COMPUTATION",
-                source_ref=f"{numerator_reference.dataset_id}/{denominator_reference.dataset_id}",
-                semantic_model_id=chat.semantic_model_id,
-                parent_dataset_ids=[numerator_reference.dataset_id, denominator_reference.dataset_id],
-                transformation_log=({
-                    "type": "derive",
-                    "operation": f"{metric_column} / {denominator:g}",
-                    "source_truncated": False,
-                },),
-                ttl_seconds=self.settings.dataset_ttl_seconds,
-            )
-            await self.sessions.put_dataset_reference(
-                reference.to_dict(), recent_limit=self.settings.dataset_recent_limit
-            )
+            for dependency_id in task.depends_on:
+                conversation = conversation_by_task.get(dependency_id, chat.conversation_id)
+                dependency = (responses or {}).get(dependency_id)
+                dataset_id = getattr(dependency, 'dataset_id', None)
+                raw = await self._latest_task_dataset_reference(
+                    identity, chat, conversation, **({'dataset_id': dataset_id} if dataset_id else {}))
+                if raw is None and getattr(dependency, 'result_file_url', None):
+                    raw = await self._import_dependency_result_file(
+                        chat, identity, conversation, dependency.result_file_url)
+                if raw is None:
+                    raise ValueError('计算依赖任务没有可用的完整数据集：' + dependency_id)
+                reference = restore_reference(raw)
+                expected_scope = DatasetScope(identity.tenant_id, identity.user_id,
+                    chat.application_id, conversation, chat.authorized_semantic_scope.fingerprint())
+                if reference.semantic_model_id is not None and reference.semantic_model_id != chat.semantic_model_id:
+                    raise ValueError('计算输入的语义模型不匹配')
+                loaded = await asyncio.to_thread(self.dataset_store.load_dataset,
+                    reference, current_scope=expected_scope)
+                references[dependency_id] = (reference, loaded.rows)
+            return await self._respond_dataset_computation(chat, identity, task, references)
         except Exception as exc:
-            logger.warning("pure computation dataset persist failed: %s", exc)
-            return fallback
-        zero_count = sum(1 for _, ratio in computed if ratio <= 0)
-        # 合并回复里不单独成节，只以一行结论呈现；问题里的流程性措辞去掉
-        subject = task.question
-        for phrase in ("根据上述任务的查询结果计算", "，不再查询数据库", "不再查询数据库"):
-            subject = subject.replace(phrase, "")
-        subject = subject.strip(" ：:，。")
-        top_parts = "、".join(
-            f"{row.get(data_columns[0])} {ratio * 100:.2f}%"
-            for row, ratio in computed[:3]
-        )
-        answer = (
-            f"**{subject}**：共 {reference.row_count} 行，最高为{top_parts}。"
-        )
-        # 计算结论随任务输入一起交给整体汇总，避免整体分析仍停留在预览口径
-        chat._dag_deferred_insight = {
-            "question": subject,
-            "intent": "统计分析",
-            "summary": answer.replace("**", ""),
-            "warnings": [],
-            "presentation": {
-                "table": self._markdown_result_table([*data_columns, coverage_name], coverage_rows[:20]),
-                "chart": "",
-                "notes": ([f"计算结果共 {reference.row_count} 行，当前展示前20行。"] if reference.row_count > 20 else []),
-            },
-            "facts": {**QwenAnalysisSynthesizer._bounded({
-                "computation": {
-                    "operation": f"{metric_column} / {denominator:g}",
-                    "denominator": denominator,
-                    "row_count": reference.row_count,
-                    "zero_count": zero_count,
-                    "top": [
-                        {
-                            **{column: row.get(column) for column in data_columns},
-                            coverage_name: f"{ratio * 100:.2f}%",
-                        }
-                        for row, ratio in computed[:10]
-                    ],
-                },
-            }), "query_data": {
-                "columns": [*data_columns, coverage_name], "rows": coverage_rows,
-                "returned_row_count": len(coverage_rows), "total_row_count": len(coverage_rows),
-                "total_row_count_confirmed": True, "sample_only": False,
-            }},
-        }
-        return AgentResponse(
-            request_id=uuid4(),
-            conversation_id=chat.conversation_id,
-            status="COMPLETED",
-            intent=PrimaryIntent.CHAT,
-            intent_source="TASK_DAG_COMPUTATION",
-            answer=answer,
-            # The computed artifact is the deliverable, not the input workbooks.
-            dataset_id=reference.dataset_id,
-            reliability=ReliabilityReport(
-                level="HIGH",
-                score=1.0,
-                gates={
-                    "no_data_claim": True,
-                    "deterministic_computation": True,
-                    "denominator_positive": True,
-                },
-            ),
-            evidence=[EvidenceItem(
-                evidence_id="derived-computation",
-                kind="ANALYSIS_RESULT",
-                source_ref=reference.dataset_id,
-                payload={
-                    "operation": f"{metric_column} / {denominator:g}",
-                    "row_count": reference.row_count,
-                    "preview": coverage_rows[:20],
-                },
-            )],
-        )
+            logger.warning('calculation input unavailable task=%s: %s', task.task_id, exc)
+            response = self._pure_computation_unavailable(chat)
+            response.evidence = [EvidenceItem(evidence_id='calculation-input-unavailable',
+                kind='ANALYSIS_RESULT', source_ref='task-dag',
+                payload={'task_id': task.task_id, 'code': 'CALCULATION_INPUT_UNAVAILABLE'})]
+            return response
 
     @staticmethod
     def _pure_computation_unavailable(chat: ChatRequest) -> AgentResponse:
@@ -3030,52 +2848,51 @@ class DataAnalysisOrchestrator:
         )
 
     async def _respond_dataset_computation(self, chat, identity, task, references):
-        """Execute bounded dataset operations and publish the exact final artifact."""
-        from app.services.computation_delivery import aligned_input, computation_material
-        from minio_followup_store import dataset_source_complete
+        """The shared executor consumes formulas and result operations, not prose claims."""
+        from app.services.calculation_execution import calculate
+        from app.services.computation_delivery import computation_material
         try:
-            if not all(dataset_source_complete(ref, len(rows)) and len(rows) == ref.row_count
-                       for ref, rows in references):
-                raise ValueError('计算输入不是完整数据集')
-            columns, rows = aligned_input(references)
-            operation = plan_dataset_followup(task.question, columns, rows, source_complete=True)
-            if operation is None:
-                raise ValueError('未能将计算要求映射为明确的受控数据操作')
-            scope = DatasetScope(tenant_id=identity.tenant_id, user_id=identity.user_id,
-                application_id=chat.application_id, conversation_id=chat.conversation_id,
-                authorized_semantic_scope_fingerprint=chat.authorized_semantic_scope.fingerprint())
-            source = references[0][0]
-            if len(references) > 1:
-                source = await asyncio.to_thread(self.dataset_store.save_dataset,
-                    scope=scope, columns=columns, rows=rows, snapshot_id='',
-                    data_as_of=datetime.fromisoformat(source.data_as_of), source_type='DERIVED_COMPUTATION',
-                    source_ref='/'.join(ref.dataset_id for ref, _ in references),
-                    semantic_model_id=chat.semantic_model_id,
-                    parent_dataset_ids=[ref.dataset_id for ref, _ in references],
-                    transformation_log=({'type':'inner_join','source_truncated':False},),
-                    ttl_seconds=self.settings.dataset_ttl_seconds)
-                await self.sessions.put_dataset_reference(source.to_dict(), recent_limit=self.settings.dataset_recent_limit)
-            result = await asyncio.to_thread(self.dataset_store.execute_followup, source,
-                current_scope=source.scope, operation=operation,
-                ttl_seconds=self.settings.dataset_ttl_seconds, preview_rows=20)
-            loaded = await asyncio.to_thread(self.dataset_store.load_dataset, result.reference,
-                current_scope=result.reference.scope)
-            if len(loaded.rows) != result.reference.row_count:
-                raise ValueError('计算结果与保存的全量数据不一致')
-            await self.sessions.put_dataset_reference(result.reference.to_dict(), recent_limit=self.settings.dataset_recent_limit)
-            chat._dag_deferred_insight = computation_material(task.question, result.reference, loaded.rows,
-                operation, self._markdown_result_table)
+            if isinstance(references, list):
+                references = dict(zip(task.depends_on, references))
+            columns, rows, operation, input_binding, quality = calculate(
+                task, references, plan_dataset_followup)
+            scope = DatasetScope(identity.tenant_id, identity.user_id, chat.application_id,
+                chat.conversation_id, chat.authorized_semantic_scope.fingerprint())
+            first = next(iter(references.values()))[0]
+            reference = await asyncio.to_thread(self.dataset_store.save_dataset,
+                scope=scope, columns=columns, rows=rows, snapshot_id='',
+                data_as_of=datetime.fromisoformat(first.data_as_of), source_type='DERIVED_COMPUTATION',
+                source_ref='/'.join(ref.dataset_id for ref, _ in references.values()),
+                semantic_model_id=chat.semantic_model_id, business_domain_ids=chat.business_domain_ids,
+                parent_dataset_ids=[ref.dataset_id for ref, _ in references.values()],
+                transformation_log=({'type': 'query_provenance', 'source_truncated': False,
+                    'source_quality_status': quality, 'source_total_row_count': len(rows),
+                    'operation': operation, 'input_binding': input_binding},),
+                ttl_seconds=self.settings.dataset_ttl_seconds)
+            await self.sessions.put_dataset_reference(reference.to_dict(),
+                recent_limit=self.settings.dataset_recent_limit)
+            chat._dag_deferred_insight = computation_material(task.question, reference, rows,
+                operation, self._markdown_result_table, columns=columns)
+            evidence_operation = operation
+            if not (task.extraction or {}).get('计算绑定') and operation.get('type') == 'derive' and any(
+                word in task.question for word in ('覆盖率', '占比', '比例')):
+                evidence_operation = str(operation['left_field']) + ' / ' + str(operation['right_field'])
             return AgentResponse(request_id=uuid4(), conversation_id=chat.conversation_id,
                 status='COMPLETED', intent=PrimaryIntent.CHAT, intent_source='TASK_DAG_COMPUTATION',
-                answer=chat._dag_deferred_insight['summary'], dataset_id=result.reference.dataset_id,
-                reliability=ReliabilityReport(level='HIGH', score=1,
-                    gates={'deterministic_computation':True,'full_result':True}),
+                answer=chat._dag_deferred_insight['summary'], dataset_id=reference.dataset_id,
+                reliability=ReliabilityReport(level='HIGH' if quality == 'PASS' else 'LIMITED', score=1,
+                    gates={'deterministic_computation': True, 'full_result': True},
+                    warnings=['计算输入包含已有质量提示。'] if quality != 'PASS' else []),
                 evidence=[EvidenceItem(evidence_id='derived-computation', kind='ANALYSIS_RESULT',
-                    source_ref=result.reference.dataset_id, payload={'operation':operation,
-                    'row_count':len(loaded.rows),'preview':list(loaded.rows[:20])})])
+                    source_ref=reference.dataset_id, payload={'operation': evidence_operation,
+                        'input_binding': input_binding, 'row_count': len(rows), 'preview': list(rows[:20])})])
         except Exception as exc:
-            logger.warning('dataset computation not completed: %s', exc)
-            return self._pure_computation_unavailable(chat)
+            logger.warning('dataset computation not completed task=%s: %s', task.task_id, exc)
+            response = self._pure_computation_unavailable(chat)
+            response.evidence = [EvidenceItem(evidence_id='calculation-contract-unavailable',
+                kind='ANALYSIS_RESULT', source_ref='task-dag',
+                payload={'task_id': task.task_id, 'code': 'CALCULATION_CONTRACT_INVALID'})]
+            return response
 
     async def _route_compound_followup(
         self,
@@ -3364,7 +3181,8 @@ class DataAnalysisOrchestrator:
             pure_computation = bool(
                 task.depends_on and task_query_choice is not True
                 and ("不再查询数据库" in task.question
-                     or task_query_choice is False and len(task.depends_on) > 1)
+                     or task_query_choice is False and len(task.depends_on) > 1
+                     or bool((task.extraction or {}).get('计算绑定') or (task.extraction or {}).get('结果操作')))
             )
             # A declared local computation consumes data, not a database
             # entity query. Display aliases in predecessor prose cannot turn
@@ -3488,6 +3306,10 @@ class DataAnalysisOrchestrator:
                 )
             )
             child._business_domain_labels = chat._business_domain_labels
+            if any(task.task_id in item.depends_on
+                   and bool((item.extraction or {}).get('计算绑定') or (item.extraction or {}).get('结果操作'))
+                   for item in plan.tasks):
+                child._dag_calculation_input = True
             if not task.depends_on and task.task_id not in task_answers:
                 # 无依赖子任务参与等价复用判定：与父会话最近落盘查询
                 # 指纹一致时直接复用那次的数据集
@@ -3538,7 +3360,8 @@ class DataAnalysisOrchestrator:
                         assumptions_token = _INTERNAL_ASSUMPTIONS.set(
                             (*self._report_task_internal_assumptions(plan, task),
                              *(("DAG_INHERITED_SOURCE_DATASET",) if child.dataset_id else ()),
-                             *(("DAG_BOUND_STRUCTURED_QUERY",) if bound_structured_query else ()))
+                             *(("DAG_BOUND_STRUCTURED_QUERY",) if bound_structured_query else ()),
+                             *(("DAG_CALCULATION_INPUT",) if getattr(child, '_dag_calculation_input', False) else ()))
                         )
                         try:
                             value = await self._handle(child, identity)
@@ -10721,6 +10544,9 @@ class DataAnalysisOrchestrator:
                 "descending": AnalysisOperator.BOTTOM_N not in request.operators,
                 "ranking_limit": request.ranking_limit,
                 "column_bindings": sql_column_bindings(query_result.sql, query_result.dataset.columns),
+                "source_quality_status": query_result.dataset.quality_status,
+                "source_total_row_count": query_result.dataset.total_row_count or query_result.dataset.row_count,
+                "calculation_columns": calculation_columns(request, query_result),
             }
             reference = await asyncio.to_thread(
                 self.dataset_store.save_dataset,
@@ -10878,7 +10704,7 @@ class DataAnalysisOrchestrator:
         Catalog grounding still owns identifiers and values; ordinary followups,
         pending answers, independent children and computation remain unchanged.
         """
-        if "DAG_BOUND_STRUCTURED_QUERY" not in _INTERNAL_ASSUMPTIONS.get() or extraction is None:
+        if not {"DAG_BOUND_STRUCTURED_QUERY", "DAG_CALCULATION_INPUT"}.intersection(_INTERNAL_ASSUMPTIONS.get()) or extraction is None:
             return
         structured = extraction.structured
         if not structured:

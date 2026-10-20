@@ -1,0 +1,30 @@
+[
+  {
+    "path": "app/services/orchestrator.py",
+    "sha256": "eec6a26c04523e379772b10d95668d7402f4d0d07330d9dba0253ccecd823185"
+  },
+  {
+    "path": "app/services/computation_delivery.py",
+    "sha256": "ca54e360c0a2b588d7149a00dbd039af8935a085953d2f8831a51610d2878528"
+  },
+  {
+    "path": "app/planning/task_dag.py",
+    "sha256": "916abfef00f95367fc91d281f3bf80c1e4070838c7166d060eeeac55c5945f41"
+  },
+  {
+    "path": "app/planning/compound_question.py",
+    "sha256": "28f488205af7121defd58c6217d6e676cdcf85308c8b2c2c397143ebaf340460"
+  },
+  {
+    "path": "app/planning/calculation_bindings.py",
+    "sha256": "4d3b8add5842e859e4f6925490d04507fcc2a311b8cfb11e0fe956c822e43371"
+  },
+  {
+    "path": "app/services/calculation_execution.py",
+    "sha256": "09a8734d9dc8438450ae1e2e4e7697a8bdcd2856ee37109e8101ebbff2475b86"
+  },
+  {
+    "path": "tests/test_calculation_task_contract.py",
+    "sha256": "01d0abf1d80450e84c8566ab7f2403827fbdcdfef48c1885598355abbe71f4d2"
+  }
+]

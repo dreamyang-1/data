@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import re
 from dataclasses import dataclass
@@ -31,6 +32,7 @@ from app.planning.task_dag import (
     _normalize_metric_name,
     _strip_json_fences,
     database_query_choice,
+    materialize_computation_binding,
 )
 
 
@@ -470,13 +472,22 @@ def query_fingerprint(question: str) -> str:
 
 def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
     """合并完全相同的原子查询，被合并任务保留别名供最终输出引用。"""
-    canonical_by_key: dict[tuple[str, tuple[str, ...], bool | None], str] = {}
+    canonical_by_key: dict[tuple, str] = {}
     aliases: dict[str, str] = {}
     unique: list[AtomicTask] = []
     resolved: dict[str, str] = {}
     for task in plan.tasks:
         dependencies = tuple(dict.fromkeys(resolved.get(dep, dep) for dep in task.depends_on))
-        key = (query_fingerprint(task.question), dependencies, database_query_choice(task.extraction))
+        extraction = copy.deepcopy(task.extraction)
+        if extraction:
+            binding = extraction.get('计算绑定') or {}
+            operands = [binding.get('numerator'), binding.get('denominator'), extraction.get('结果操作')]
+            for operand in operands:
+                if isinstance(operand, dict) and operand.get('source_task_id') in resolved:
+                    operand['source_task_id'] = resolved[operand['source_task_id']]
+        calculation = {key: extraction[key] for key in ('计算绑定', '结果操作') if extraction and key in extraction}
+        key = (query_fingerprint(task.question), dependencies, database_query_choice(extraction),
+               json.dumps(calculation, ensure_ascii=False, sort_keys=True) if calculation else '')
         existing = canonical_by_key.get(key)
         if existing is not None:
             aliases[task.task_id] = existing
@@ -484,7 +495,7 @@ def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
             continue
         canonical_by_key[key] = task.task_id
         resolved[task.task_id] = task.task_id
-        unique.append(task.model_copy(update={"depends_on": list(dependencies)}))
+        unique.append(task.model_copy(update={"depends_on": list(dependencies), 'extraction': extraction}))
     # TaskPlan 公开契约要求至少两个节点；全部重复的计划由编排器按单任务执行，
     # 不为这种情况放松公开契约。
     if len(unique) == len(plan.tasks):
@@ -1275,7 +1286,8 @@ class CompoundTaskPlanner:
                     depends_on=depends_on,
                     expected_output=expected_output,
                     parameters=list(task.parameters),
-                    extraction=task.structured,
+                    extraction=materialize_computation_binding(task.structured,
+                        task_index=local_index, task_offset=offset, dependencies=depends_on),
                     primary_intent=task.intent or decomposition.intent,
                 ))
             question_groups.append(QuestionTaskGroup(
@@ -1547,7 +1559,8 @@ class CompoundQuestionRouter:
                 depends_on=[f"task-{dep + 1}" for dep in task.depends_on],
                 expected_output=task.expected_output,
                 parameters=list(task.parameters),
-                extraction=task.structured,
+                extraction=materialize_computation_binding(task.structured, task_index=index,
+                    dependencies=[f"task-{dep + 1}" for dep in task.depends_on]),
                 primary_intent=task.intent or decomposition.intent,
             )
             for index, task in enumerate(decomposition.tasks)
