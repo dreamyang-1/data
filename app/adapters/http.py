@@ -1373,7 +1373,7 @@ class HttpDataRetrievalAdapter:
             retained = [v for v in values if not (
                 isinstance(v, str) and v not in request.original_question
                 and re.match(r'^(?:复用|根据|基于)?(?:上述|上一轮|上一步|前序|前一)(?:任务)?'
-                             r'(?:的)?(?:查询)?(?:返回)?(?:的)?(?:结果|名单)(?:[：:]|$)', v.strip()))]
+                             r'(?:的)?(?:查询)?(?:返回)?(?:的)?(?:结果|名单)(?:[：:]|中(?:的)?|$)', v.strip()))]
             if len(retained) == len(values):
                 return item
             resolved_references.update(v for v in values if isinstance(v, str) and v not in retained)

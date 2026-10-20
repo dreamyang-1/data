@@ -28,7 +28,9 @@ def request_for(value, *, field='经销商名称', constrained=True, operator='=
 
 
 @pytest.mark.parametrize('value', ['复用上一轮查询结果：2025年销售额最高的经销商名称',
-    ['根据上述任务结果：选出的经销商名称']])
+    ['根据上述任务结果：选出的经销商名称'],
+    '复用上一轮查询结果中的经销商名称',
+    ['根据上述任务结果中的经销商名称']])
 def test_materialized_reference_does_not_become_an_extra_business_filter(value):
     request = request_for(value)
     HttpDataRetrievalAdapter._merge_dependency_filters(request)
@@ -45,6 +47,8 @@ def test_materialized_reference_does_not_become_an_extra_business_filter(value):
     {'value': '复用上一轮查询结果：医院', 'field': '医院名称'},
     {'value': '复用上一轮查询结果：经销商', 'operator': 'NOT IN'},
     {'value': '复用上一轮查询结果：公司甲', 'question': '仅查询名称为“复用上一轮查询结果：公司甲”的经销商产品'},
+    {'value': '复用上一轮查询结果中的经销商名称',
+     'question': '仅查询名称为“复用上一轮查询结果中的经销商名称”的经销商产品'},
 ])
 def test_explicit_filters_and_unbound_references_are_preserved(overrides):
     request = request_for(**overrides)

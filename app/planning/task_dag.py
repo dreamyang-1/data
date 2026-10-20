@@ -448,6 +448,30 @@ def _parse_metric_dependencies(spec_text: str) -> dict[str, tuple[str, ...]]:
     return dependencies
 
 
+def _shared_region_denominator_from_spec(spec_text: str) -> bool:
+    """Recognize the same published rule after the document is regenerated."""
+    if '[dealer_shared_region_denominator:v1]' in spec_text:
+        return True
+    dependencies = _parse_metric_dependencies(spec_text)
+    if '区域全部医院总数' not in dependencies.get('区域医院覆盖率', ()):
+        return False
+    definitions = {}
+    in_metrics = False
+    for line in spec_text.splitlines():
+        cells = [cell.strip() for cell in line.strip().strip('|').split('|')]
+        if not line.strip().startswith('|'):
+            in_metrics = False
+        elif cells[0] in _TABLE_HEADER_WORDS:
+            in_metrics = cells[0] in {'指标', '指标名称'} and '业务口径' in cells
+        elif in_metrics and len(cells) >= 3:
+            definitions[cells[0]] = re.sub(r'\s+', '', cells[2])
+    return (
+        '所有经销商共用同一分母' in definitions.get('区域医院覆盖率', '')
+        and '销售订单无关' in definitions.get('区域全部医院总数', '')
+        and '不接受经销商条件' in definitions.get('区域全部医院总数', '')
+    )
+
+
 def _normalize_metric_name(
     name: str, registered: frozenset[str], aliases: dict[str, str]
 ) -> str:
@@ -1171,7 +1195,7 @@ class SingleQuestionPlanner:
             metric_catalog=metric_catalog,
             metric_dependencies=_parse_metric_dependencies(spec_for_catalog),
             grounding_default_times=_registered_default_times(question, spec_for_catalog),
-            shared_region_denominator='[dealer_shared_region_denominator:v1]' in spec_for_catalog,
+            shared_region_denominator=_shared_region_denominator_from_spec(spec_for_catalog),
         )
 
     @staticmethod

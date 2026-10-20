@@ -409,7 +409,7 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
         if not {value for value in temporal_terms if value in compact}.issubset(source_temporal):
             raise TaskPlanningError("子任务包含原问题中不存在的时间条件")
         quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", task.question))
-        if not quoted.issubset(source_quoted):
+        if not all(value in source_quoted or value in source_question for value in quoted):
             raise TaskPlanningError("子任务包含原问题中不存在的过滤值")
         task_identifiers = set(_business_identifiers(task.question))
         if not task_identifiers.issubset(source_identifiers):
