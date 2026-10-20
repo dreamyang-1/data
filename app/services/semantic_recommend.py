@@ -7,8 +7,8 @@ Resp 包装、VO 字段）与 Java 版保持一致，后端可直接调用或整
 - 元数据库只读查询（semantic_model_table / semantic_model_field /
   semantic_model_entity_type / semantic_model_entity_sub_table_mapping /
   semantic_model_relation_config），pymysql 按请求开短连接。
-  所有查询过滤软删除行（is_deleted = 0）——注意：Java 版
-  （MyBatis-Plus 无逻辑删除配置）不过滤，这是 Python 版的有意修复。
+  所有查询过滤软删除行（is_deleted = 0）；Java 版由 BaseEntity 的
+  MyBatis-Plus @TableLogic 处理软删除，不能把物理留存误判为删除失败。
 - 大模型增强经 49 网关 /chat/workflow_chat（与 Java ChatModelBaseApi
   .translateWords 同一入口），失败或空答案静默降级为纯规则结果（留 WARNING 日志）。
   覆盖：实体表推荐（重排 + 实体名）、属性推荐（属性名提炼，不含字母数字）、
@@ -16,13 +16,13 @@ Resp 包装、VO 字段）与 Java 版保持一致，后端可直接调用或整
   模型名必须是网关 LLM_MODELS 支持的名称（当前为 qwen3.7-max；
   qwen3-max 不在列表，网关会静默返回空答案）。
 - 全部为只读接口，不落库、不改数据。
-- detect_relations 一次请求固定 4 条 SQL
-  （entities/relations/tables/fields_batch 各一条），不随实体数增长。
+- detect_relations 批量读取实体、关系、表、子表映射及字段；字段每 500 张表
+  分批，不逐实体执行字段查询。仅使用当前模型、数据源内的有效映射。
 - 两跳间接推断（2026-10-19 用户需求）：实体 A 与 C 无直接证据，但存在
   B 使 A-B、B-C 均有直接证据（已配置关系或规则命中字段对）时，生成
   经 B 的间接关系候选（VO 附 indirect/viaEntityTypeId/viaEntityName，
   语义描述注明中间实体）。detect_relations 不增加 SQL；recommend_relations
-  仅在无已配置且无直接推导时额外装载全部实体（+2 条 SQL，最多 6 条）。
+  仅在无已配置且无直接推导时额外批量装载全部实体映射。
   间接候选不改变"不做无中生有"契约——每一跳都必须有物理/配置证据，
   且关联检测的间接候选可被大模型复核否决。
 """
@@ -168,6 +168,13 @@ class PymysqlMetadataReader:
             (semantic_model_id,),
         )
 
+    def sub_table_mappings(self, semantic_model_id: int) -> list[dict[str, Any]]:
+        return self._fetch(
+            "SELECT entity_type_id, sub_table_name FROM semantic_model_entity_sub_table_mapping "
+            "WHERE semantic_model_id = %s AND is_deleted = 0",
+            (semantic_model_id,),
+        )
+
 
 # ====================== 49 模型网关 ======================
 
@@ -289,6 +296,8 @@ def _is_foreign_key_to(
 def _build_semantic_description(
     source_name: str, target_name: str, cardinality: str, relation_name: str
 ) -> str:
+    if not cardinality:
+        return f"【{source_name}】与【{target_name}】存在同名业务键候选，需确认业务含义及关系基数后配置"
     if cardinality == "1:1":
         return f"1个【{source_name}】{relation_name}1个【{target_name}】"
     if cardinality == "N:1":
@@ -300,7 +309,7 @@ def _build_semantic_description(
         return f"多个【{source_name}】{relation_name}多个【{target_name}】"
     return (
         f"1个【{source_name}】{relation_name}多个【{target_name}】，"
-        f"一个【{target_name}】被多个【{source_name}】{relation_name}"
+        f"一个【{target_name}】被1个【{source_name}】{relation_name}"
     )
 
 
@@ -691,19 +700,35 @@ class SemanticRecommendService:
         if source is None or target is None:
             raise SemanticRecommendError("实体类型不存在")
 
+        relations = self._reader.relations(semantic_model_id)
+        info_map = self._entity_table_info_map([source, target], semantic_model_id)
+
+        def resolve_field(value: str | None, entity_id: str) -> tuple[str | None, str | None]:
+            table, column = _split_table_column(value)
+            if column:
+                return table, column
+            # 旧记录可能只保存列名。只在对应实体主表中精确匹配，不猜表名。
+            info = info_map.get(entity_id)
+            if info and table:
+                matches = [(item["tableName"], f["name"])
+                           for item in [info, *info.get("mappedTables", [])]
+                           for f in item["fields"] if f.get("name") == table]
+                if len(matches) == 1:
+                    return matches[0]
+            return None, None
+
         result: list[dict[str, Any]] = []
 
         # 1. 已配置关系（同模型、两实体间任意方向），按关系分组聚合字段对
         existing: dict[str, dict[str, Any]] = {}
-        relations = self._reader.relations(semantic_model_id)
         for relation in relations:
             src_id = relation.get("source_entity_type_id")
             tgt_id = relation.get("target_entity_type_id")
             if {src_id, tgt_id} != {source_entity_type_id, target_entity_type_id}:
                 continue
             reversed_pair = target_entity_type_id == src_id
-            src_table, src_column = _split_table_column(relation.get("source_table_column_name"))
-            tgt_table, tgt_column = _split_table_column(relation.get("target_table_column_name"))
+            src_table, src_column = resolve_field(relation.get("source_table_column_name"), src_id)
+            tgt_table, tgt_column = resolve_field(relation.get("target_table_column_name"), tgt_id)
             pair = {
                 "sourceTableName": src_table,
                 "sourceColumnName": src_column,
@@ -743,13 +768,11 @@ class SemanticRecommendService:
                     ),
                 }
                 existing[group_key] = vo
-            vo["fieldPairs"].append(pair)
+            if pair not in vo["fieldPairs"]:
+                vo["fieldPairs"].append(pair)
         result.extend(existing.values())
 
         # 2. 物理层推导候选 + 大模型语义增强
-        info_map = self._entity_table_info_map(
-            [source, target], semantic_model_id
-        )
         inferred = self._infer_relation_candidates(
             source, target,
             info_map.get(source_entity_type_id),
@@ -758,6 +781,16 @@ class SemanticRecommendService:
         self._enhance_relation_candidates_with_llm(
             source["name"], target["name"], inferred
         )
+        # 相同物理字段优先采用已配置关系的基数，避免并列展示相互矛盾的推断。
+        for candidate in inferred:
+            for configured in existing.values():
+                keys = ("sourceTableName", "sourceColumnName", "targetTableName", "targetColumnName")
+                signature = lambda pairs: {tuple(p.get(k) for k in keys) for p in pairs}
+                if (signature(candidate["fieldPairs"]) == signature(configured["fieldPairs"])
+                        and candidate["cardinality"] != configured["cardinality"]):
+                    candidate["cardinality"] = configured["cardinality"]
+                    candidate["semanticDescription"] = configured["semanticDescription"]
+                    break
         result.extend(inferred)
 
         # 3. 两跳间接推断（2026-10-19 用户需求）：A 与 C 无已配置且无直接
@@ -784,12 +817,15 @@ class SemanticRecommendService:
     ) -> dict[str, dict[str, Any] | None]:
         """批量装载一组实体的主表与字段信息（entity_id -> info 或 None）。
 
-        一次 tables 查询 + 一次批量 fields 查询，替代原逐实体
+        tables/sub_table_mappings 查询 + 批量 fields 查询，替代原逐实体
         `_load_entity_table_fields`（每实体各查一次表清单和字段）。
         表匹配语义与原实现一致：按实体 data_source_id 过滤后
         取第一张与 main_table_name 同名的表。
         """
         all_tables = self._reader.tables(semantic_model_id, None)
+        load_mappings = getattr(self._reader, "sub_table_mappings", None)
+        mappings = load_mappings(semantic_model_id) if load_mappings else []
+        mapped_tables: dict[str, list[dict[str, Any]]] = {}
         table_by_entity: dict[str, dict[str, Any] | None] = {}
         needed_ids: list[int] = []
         seen_ids: set[int] = set()
@@ -809,6 +845,16 @@ class SemanticRecommendService:
                 None,
             )
             table_by_entity[entity["id"]] = table
+            names = {m.get("sub_table_name") for m in mappings if m.get("entity_type_id") == entity["id"]}
+            mapped_tables[entity["id"]] = [
+                t for t in all_tables
+                if t.get("name") in names and t.get("name") != main_table_name.strip()
+                and (data_source_id is None or t.get("data_source_id") == data_source_id)
+            ]
+            for mapped in mapped_tables[entity["id"]]:
+                if mapped.get("id") is not None and mapped["id"] not in seen_ids:
+                    seen_ids.add(mapped["id"])
+                    needed_ids.append(mapped["id"])
             if table and table.get("id") is not None and table["id"] not in seen_ids:
                 seen_ids.add(table["id"])
                 needed_ids.append(table["id"])
@@ -827,6 +873,16 @@ class SemanticRecommendService:
             info_map[entity["id"]] = {
                 "tableName": table["name"], "fields": fields, "primary": primary,
             }
+            if mapped_tables.get(entity["id"]):
+                info_map[entity["id"]]["mappedTables"] = [
+                    {
+                        "tableName": t["name"],
+                        "fields": fields_by_table.get(t["id"], []),
+                        "primary": next((f for f in fields_by_table.get(t["id"], [])
+                                         if (f.get("name") or "").lower() == "id"), None),
+                    }
+                    for t in mapped_tables[entity["id"]]
+                ]
         return info_map
 
     def _enhance_detect_relations_with_llm(
@@ -989,58 +1045,88 @@ class SemanticRecommendService:
         self, source: dict[str, Any], target: dict[str, Any],
         source_info: dict[str, Any] | None, target_info: dict[str, Any] | None,
     ) -> list[dict[str, Any]]:
-        """物理层推导：主键-外键命名规则（表A的id ↔ 表B的A_id）、同名字段（*_id）。
+        """按当前实体的物理字段推导候选，不依赖已删除的关系配置。
 
         source/target 为实体行（只用 name）；*_info 为主表信息
         （tableName/fields/primary，由 _entity_table_info_map 预构建）。
         """
         candidates: list[dict[str, Any]] = []
-        if (not source_info or not target_info
-                or source_info["primary"] is None
-                or target_info["primary"] is None):
+        if not source_info or not target_info:
+            return candidates
+        if (source.get("data_source_id") is not None
+                and target.get("data_source_id") is not None
+                and source["data_source_id"] != target["data_source_id"]):
             return candidates
         src = source_info
         tgt = target_info
+        if src.get("mappedTables") or tgt.get("mappedTables"):
+            seen: set[tuple] = set()
+            for source_table in [src, *src.get("mappedTables", [])]:
+                for target_table in [tgt, *tgt.get("mappedTables", [])]:
+                    for candidate in self._infer_relation_candidates(
+                        source, target,
+                        {k: v for k, v in source_table.items() if k != "mappedTables"},
+                        {k: v for k, v in target_table.items() if k != "mappedTables"},
+                    ):
+                        signature = tuple(tuple(p[k] for k in (
+                            "sourceTableName", "sourceColumnName", "targetTableName", "targetColumnName"
+                        )) for p in candidate["fieldPairs"])
+                        if signature not in seen:
+                            seen.add(signature)
+                            candidates.append(candidate)
+            return candidates
 
         # 源表主键 ↔ 目标表外键（源:目标 = 1:N）
         pk_fk_pairs = [
             self._build_pair(src["tableName"], src["primary"], tgt["tableName"], field)
             for field in tgt["fields"]
-            if _is_foreign_key_to(
+            if src["primary"] and _is_foreign_key_to(
                 field.get("name"), src["tableName"], src["primary"].get("name")
             )
+            and not any(f.get("name") == field.get("name") for f in src["fields"])
         ]
         # 目标表主键 ↔ 源表外键（源:目标 = N:1）
         fk_pk_pairs = [
             self._build_pair(src["tableName"], field, tgt["tableName"], tgt["primary"])
             for field in src["fields"]
-            if _is_foreign_key_to(
+            if tgt["primary"] and _is_foreign_key_to(
                 field.get("name"), tgt["tableName"], tgt["primary"].get("name")
             )
+            and not any(f.get("name") == field.get("name") for f in tgt["fields"])
         ]
-        if pk_fk_pairs:
+        for pair in pk_fk_pairs:
             candidates.append(self._build_inferred_candidate(
-                pk_fk_pairs, "1:N", source["name"], target["name"]
+                [pair], "1:N", source["name"], target["name"]
             ))
-        if fk_pk_pairs:
+        for pair in fk_pk_pairs:
             candidates.append(self._build_inferred_candidate(
-                fk_pk_pairs, "N:1", source["name"], target["name"]
+                [pair], "N:1", source["name"], target["name"]
             ))
 
-        # 同名外键字段（共享同一维度，如两表都有 customer_id）
+        # 同名业务键也能在删除/重建实体后重新推荐；字段名不能证明唯一性。
         same_name_pairs: dict[str, list[dict[str, Any]]] = {}
         for src_field in src["fields"]:
             src_name = src_field.get("name") or ""
-            if not src_name.lower().endswith("_id") or src_name.lower() == "id":
+            if not src_name.lower().endswith(("_id", "_code", "_no", "_key")):
                 continue
             for tgt_field in tgt["fields"]:
                 if (tgt_field.get("name") or "").lower() == src_name.lower():
+                    def type_family(field: dict[str, Any]) -> str:
+                        field_type = (field.get("type") or "").lower().split("(")[0].strip()
+                        if field_type in {"char", "varchar", "text", "string", "nvarchar", "nchar"}:
+                            return "text"
+                        if field_type in {"tinyint", "smallint", "int", "integer", "bigint", "decimal", "numeric", "number"}:
+                            return "number"
+                        return field_type
+                    left_type, right_type = type_family(src_field), type_family(tgt_field)
+                    if left_type and right_type and left_type != right_type:
+                        continue
                     same_name_pairs.setdefault(src_name, []).append(
                         self._build_pair(src["tableName"], src_field, tgt["tableName"], tgt_field)
                     )
         for pairs in same_name_pairs.values():
             candidates.append(self._build_inferred_candidate(
-                pairs, "N:N", source["name"], target["name"]
+                pairs, "", source["name"], target["name"]
             ))
         return candidates
 
@@ -1152,7 +1238,7 @@ class SemanticRecommendService:
                 )
             hops.extend(
                 (c["fieldPairs"], c["cardinality"])
-                for c in rule_candidates
+                for c in rule_candidates if c["cardinality"]
             )
             if hops:
                 bridge_map[entity["id"]] = (entity, hops)
@@ -1179,7 +1265,7 @@ class SemanticRecommendService:
                         (c["fieldPairs"], c["cardinality"])
                         for c in self._infer_relation_candidates(
                             bridge, target, bridge_info, target_info
-                        )
+                        ) if c["cardinality"]
                     )
                 if not second_hops:
                     continue
@@ -1232,7 +1318,7 @@ class SemanticRecommendService:
                 + "任务：为每个候选生成 1) 一个简洁贴切的中文动词关系名（如：开设、隶属、供货、包含，2-6 个字，不要泛泛的\"关联\"）；"
                 + "2) 一句按基数生成的语义描述，句式示例：1:N 时为\"1个【" + source_name
                 + "】<关系名>多个【" + target_name
-                + "】，一个【" + target_name + "】被多个【" + source_name + "】<关系名>\"；N:1、N:N、1:1 按此规则类推。\n"
+                + "】，一个【" + target_name + "】被1个【" + source_name + "】<关系名>\"；N:1、N:N、1:1 按此规则类推。基数为空时必须说明待确认，不得推断数量。\n"
                 + "只输出 JSON 数组，不要任何解释或 markdown 代码块，格式："
                 + "[{\"candidate\":1,\"relationName\":\"关系名\",\"semanticDescription\":\"语义描述\"}]，"
                 + "candidate 对应候选序号，必须覆盖每一个候选。\n"
@@ -1254,7 +1340,7 @@ class SemanticRecommendService:
                         source_name, target_name, candidate["cardinality"], relation_name.strip()
                     )
                 description = item.get("semanticDescription")
-                if isinstance(description, str) and description.strip():
+                if candidate["cardinality"] and isinstance(description, str) and description.strip():
                     candidate["semanticDescription"] = description.strip()
         except Exception as exc:
             logger.warning("大模型增强关系推荐失败，降级为模板描述: %s", exc)
