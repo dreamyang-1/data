@@ -15,6 +15,19 @@ def numeric_value(value):
     return result
 
 
+def identifier_field(field):
+    return isinstance(field, str) and field.lower().endswith(('_code', '_id', '_no', '_number'))
+
+
+def has_group_identity(reference):
+    provenance = next((item for item in getattr(reference, 'transformation_log', ())
+                       if item.get('type') == 'query_provenance'), {})
+    bindings = provenance.get('column_bindings', {})
+    return any(identifier_field(bindings.get(name)) or any(
+        tag in str(name).lower() for tag in ('编码', '编号', '_code', '_id', '（id）', '(id)'))
+        for name in reference.columns)
+
+
 def aligned_input(references):
     """Align same-grain metric datasets on unique codes, not display names."""
     source, first = references[0]
@@ -29,7 +42,7 @@ def aligned_input(references):
         # never a display name or a guessed semantic alias.
         renames = {}
         for left_name, physical in left_bindings.items():
-            if left_name not in columns or not str(physical).lower().endswith(('_code', '_id')):
+            if left_name not in columns or not identifier_field(physical):
                 continue
             matches = [name for name, field in right_bindings.items() if field == physical and name in reference.columns]
             if len(matches) == 1 and matches[0] != left_name:
@@ -50,7 +63,7 @@ def aligned_input(references):
         def proven_identity(name):
             field = left_bindings.get(name)
             return (isinstance(field, str) and field == right_bindings.get(name)
-                    and field.lower().endswith(('_code', '_id')))
+                    and identifier_field(field))
         keys = [name for name in columns if name in common and any(
             tag in str(name).lower() for tag in ('编码', '编号', '_code', '_id', '（id）', '(id)'))
             or name in common and proven_identity(name)]

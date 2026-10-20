@@ -5,7 +5,7 @@ import copy
 import re
 
 from minio_followup_store import apply_followup_operation, dataset_source_complete
-from app.services.computation_delivery import aligned_input, numeric_value
+from app.services.computation_delivery import aligned_input, has_group_identity, numeric_value
 
 
 def _provenance(reference):
@@ -114,8 +114,11 @@ def _divide(binding, inputs):
     if first.dataset_id == second.dataset_id:
         columns, rows = list(first.columns), [dict(row) for row in left]
         operands = [(row[left_column], row[right_column]) for row in rows]
-    elif len(left) == 1 or len(right) == 1:
-        main, source_rows = (second, right) if len(left) == 1 and len(right) > 1 else (first, left)
+    elif ((len(left) == 1 and not has_group_identity(first))
+          or (len(right) == 1 and not has_group_identity(second))):
+        left_scalar = len(left) == 1 and not has_group_identity(first)
+        right_scalar = len(right) == 1 and not has_group_identity(second)
+        main, source_rows = (second, right) if left_scalar and not right_scalar else (first, left)
         columns, rows = list(main.columns), [dict(row) for row in source_rows]
         operands = [(left[0 if len(left) == 1 else index][left_column],
                      right[0 if len(right) == 1 else index][right_column]) for index in range(len(rows))]
