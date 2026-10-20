@@ -42,3 +42,16 @@ def test_business_names_still_need_same_field_vector_standard():
         agent._ground_executable_vector_values({'filters':[{'field':'sales_order.status','operator':'=','value':'有效'}]},
             knowledge(),{'filters':[{'field':'状态','operator':'=','value':'有效'}]},
             store=None,semantic_model_id=130,domain_ids=[])
+
+
+@pytest.mark.parametrize('actual,surface',[(0,'0'),(12.5,'12.5'),(-2,'-2')])
+def test_contract_repair_does_not_replace_a_correct_numeric_literal_with_text(actual,surface):
+    ast={'filters':[{'field':'sales_order.quantity','operator':'>','value':actual}]}
+    expected={'field':'销售数量','operator':'>','value':surface}
+    original=deepcopy((ast,expected))
+    agent._repair_contract_filter(ast,expected,knowledge(),negative=False)
+    assert ast==original[0] and type(ast['filters'][0]['value']) is type(actual)
+    assert agent._contract_filter_present(ast,expected,negative=False,allowed_fields={'sales_order.quantity'})
+    agent._ground_executable_vector_values(ast,knowledge(),{'filters':[expected]},
+        store=None,semantic_model_id=130,domain_ids=[])
+    assert expected==original[1]

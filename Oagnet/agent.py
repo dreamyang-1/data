@@ -5810,6 +5810,11 @@ def _contract_filter_present(
             same_value = members(actual_value) == members(expected_value)
         else:
             same_value = actual_value == expected_value
+            if not same_value and allowed_fields and str(item.get('field') or '') in allowed_fields:
+                from surface_literals import typed_numeric_threshold_proof
+                numeric_proof = typed_numeric_threshold_proof(
+                    dict(expected, field=item['field'], operator=expected_operator), [item])
+                same_value = actual_value == numeric_proof.get('value')
         if not same_value:
             continue
         if allowed_fields is not None and str(item.get("field") or "") not in allowed_fields:
@@ -6267,6 +6272,11 @@ def _repair_contract_filter(
         domain_scope=domain_scope,
         query_object=query_object,
     )
+    if len(candidates) == 1:
+        from surface_literals import typed_numeric_threshold_proof
+        typed_proof = typed_numeric_threshold_proof(dict(expected, field=candidates[0],
+            operator=_contract_operator(expected.get('operator'), negative=negative)), ast.get('filters') or [])
+        expected = dict(expected, value=typed_proof.get('value'))
     expected_value = expected.get("value")
     expected_operator = _contract_operator(expected.get("operator"), negative=negative)
     negative_ops = {"NE", "!=", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE"}
