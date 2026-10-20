@@ -103,6 +103,9 @@ def test_business_explanations_in_tips_receive_review_too():
     '平均金额为负通常关联退货或冲销。',
     '负值说明当前口径未排除退货或冲销订单。',
     '当前排名包含退货/冲销等负向订单。',
+    '平均每单金额受极端订单影响较大，缺乏明细无法评估稳定性。',
+    '仅有22笔订单，属于典型的小批量高单价模式。',
+    '总金额更高，显示出更强的业务体量支撑能力。',
 ])
 def test_reproduced_unsupported_claims_are_detected(text):
     assert report_issues(text, contract())
@@ -230,3 +233,112 @@ def test_deterministic_rejection_keeps_factual_sentence_in_same_paragraph():
     assert clean.claims[0].statement == '平均成交金额20元/笔。'
     assert clean.final_answer['overview'] == '平均成交金额20元/笔。'
     assert clean.final_answer['result_task_ids'] == ['calc']
+
+
+@pytest.mark.parametrize('text', [
+    '当前结果为2025年完整数据，但受数据水位限制。',
+    '年末极少量订单可能未完全入库。',
+    '当前数据水位意味着年末可能存在少量未及时入库的订单。',
+    '排名可能随新订单录入发生剧烈变化。',
+    '2025年末可能仍有少量订单尚未入库。',
+    '最终排名可能随年末数据入库发生微调。',
+    '当前数据未完整覆盖2025全年，排名存在微调可能。',
+])
+def test_partial_watermark_does_not_prove_missing_volume_or_rank_impact(text):
+    data = {'tasks': [material()], 'semantic_reference': REFERENCE,
+            'planning_context': {'result_validation': {
+                'warnings': ['请求时间范围未被当前业务数据水位完整覆盖，不能据此判断水位后的业务事实。']}}}
+    assert report_issues(text, build_report_contract(data))
+
+
+def test_query_row_completeness_and_valid_watermark_limits_are_preserved():
+    data = {'facts': {}, 'evidence': {'query': {'payload': {
+        'requested_time_coverage': 'PARTIAL_AFTER_SOURCE_WATERMARK'}}}}
+    result = build_report_contract(data)
+    assert result['time_coverage_limited'] is True
+    assert not report_issues('本次完整返回89条记录，没有截断。全年数据未完整覆盖，后续新增订单可能改变排名。', result)
+    assert not report_issues('不能声称2025年完整数据，也无法断言年末只有少量未入库订单。', result)
+    assert not build_report_contract({'completed_question': '请求时间范围未被当前业务数据水位完整覆盖'})['time_coverage_limited']
+
+
+def complete_ratio_material():
+    item = material()
+    item['depends_on'] = ['source']
+    item['facts']['query_data'].update(
+        rows=[{'平均成交金额': -21199.9957}, {'平均成交金额': -11000}],
+        total_row_count_confirmed=True, total_row_count=2, sample_only=False)
+    return item
+
+
+def test_grounded_ratio_describes_returned_rows_without_inventing_cause_or_rounding():
+    from app.analysis.report_contract import grounded_ratio_text
+    data = {'tasks': [complete_ratio_material()], 'semantic_reference': REFERENCE}
+    saved = copy.deepcopy(data)
+    result = grounded_ratio_text(data, build_report_contract(data))
+    text = ''.join(result['facts'])
+    assert '仅在本次返回的2条有效计算结果中' in text
+    assert '最高为-11,000元/笔，最低为-21,199.9957元/笔' in text
+    assert '相差10,199.9957元/笔' in text
+    assert data == saved
+    data['tasks'][0]['facts']['query_data']['rows'][0]['平均成交金额'] = 205704.03453538462
+    rounded = ''.join(grounded_ratio_text(data, build_report_contract(data))['facts'])
+    assert '205,704.0345元/笔' in rounded and '03453538462' not in rounded
+
+
+@pytest.mark.parametrize('change', [
+    {'sample_only': True}, {'total_row_count_confirmed': False},
+    {'total_row_count': 89},
+])
+def test_sampled_or_incomplete_ratio_keeps_existing_analysis_path(change):
+    from app.analysis.report_contract import grounded_ratio_text
+    item = complete_ratio_material()
+    item['facts']['query_data'].update(change)
+    data = {'tasks': [item], 'semantic_reference': REFERENCE}
+    assert grounded_ratio_text(data, build_report_contract(data)) is None
+
+
+def test_mixed_goal_is_not_replaced_by_ratio_only_summary():
+    from app.analysis.report_contract import grounded_ratio_text
+    data = {'tasks': [complete_ratio_material(),
+                     {'task_id': 'independent', 'status': 'COMPLETED', 'facts': {}}],
+            'semantic_reference': REFERENCE}
+    assert grounded_ratio_text(data, build_report_contract(data)) is None
+
+
+def test_grounded_ratio_keeps_missing_value_and_watermark_limits():
+    from app.analysis.report_contract import grounded_ratio_text
+    item = complete_ratio_material()
+    item['facts']['query_data']['rows'][1]['平均成交金额'] = None
+    item['warnings'] = ['请求时间范围未被当前业务数据水位完整覆盖，不能据此判断水位后的业务事实。']
+    data = {'tasks': [item], 'semantic_reference': REFERENCE}
+    result = grounded_ratio_text(data, build_report_contract(data))
+    assert '1条有效计算结果' in ''.join(result['facts'])
+    assert '1条结果缺少有限数值' in ''.join(result['warnings'])
+    assert '缺失数据的数量及其对最终数值、排名的影响尚不能确定' in ''.join(result['warnings'])
+
+
+@pytest.mark.asyncio
+async def test_complete_ratio_prose_does_not_trust_model_review_or_change_delivery(monkeypatch):
+    monkeypatch.setattr('app.analysis.synthesis._semantic_reference', reference)
+    calls = []
+    async def handler(request):
+        data = json.loads(json.loads(request.content)['messages'][1]['content'])
+        calls.append(data)
+        if 'items' in data:
+            output = {'reviews': [{'id': item['id'], 'kind': 'FACT', 'supported': True}
+                                  for item in data['items']]}
+        else:
+            output = report('这体现项目采购风格。最低平均金额为-21199.99元/笔。')
+            output['final_answer']['chart_suggestions'] = [{
+                'task_id': 'calc', 'chart_type': 'bar',
+                'label_column': '人员', 'value_column': '平均成交金额'}]
+        return httpx.Response(200, json={'choices': [{'message': {'content': json.dumps(output, ensure_ascii=False)}}]})
+    model = QwenAnalysisSynthesizer(Settings(env='test', intent_model_api_key='test'), httpx.MockTransport(handler))
+    item = complete_ratio_material()
+    saved = copy.deepcopy(item)
+    text, output = await model.synthesize_combined('平均成交金额', [item])
+    assert calls and '-21,199.9957元/笔' in text
+    assert '采购风格' not in text and '-21199.99元/笔' not in text
+    assert output.final_answer['result_task_ids'] == ['calc']
+    assert output.final_answer['chart_suggestions'][0]['task_id'] == 'calc'
+    assert item == saved

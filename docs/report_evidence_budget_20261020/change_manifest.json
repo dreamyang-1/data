@@ -8,15 +8,17 @@
     },
     {
       "path": "app/analysis/synthesis.py",
-      "sha256": "46823775c2e7141e51ea3ab911509bee195b3d38e602cadec46df37cf3517f7d",
+      "sha256": "0d98aadab6870a8cc4d4a0bc35b77d53e78884ed7c1f9b0d7296c6bd22d33c66",
       "development_before_sha256": "1760302e3501382f7dc8483a97459da0b3f41bde39684ec5bcd59b84c5809256",
-      "runtime": true
+      "runtime": true,
+      "followup_before_sha256": "46823775c2e7141e51ea3ab911509bee195b3d38e602cadec46df37cf3517f7d"
     },
     {
       "path": "app/analysis/report_contract.py",
-      "sha256": "2817584d925944da1061df730e0a7fa24481d724c8d3be1f6f1ffbe4f8f39bf2",
+      "sha256": "8b10eab1a37a9414d160dcc5757873d727af83e9658c93c0b8e994f00e2a0759",
       "development_before_sha256": null,
-      "runtime": true
+      "runtime": true,
+      "followup_before_sha256": "2817584d925944da1061df730e0a7fa24481d724c8d3be1f6f1ffbe4f8f39bf2"
     },
     {
       "path": "app/adapters/http.py",
@@ -50,9 +52,10 @@
     },
     {
       "path": "tests/test_report_evidence_budget.py",
-      "sha256": "6a66da5f575294c209603c2593716c8d421ed933060e938d0254de3d0b893ffa",
+      "sha256": "e424d1644c2b270dd0f79618b51b288ede01337f8e93668db0fb6bbef053102c",
       "development_before_sha256": null,
-      "runtime": false
+      "runtime": false,
+      "followup_before_sha256": "6a66da5f575294c209603c2593716c8d421ed933060e938d0254de3d0b893ffa"
     },
     {
       "path": "tests/test_http_retry_budget.py",

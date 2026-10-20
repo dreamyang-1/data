@@ -204,7 +204,7 @@ class QwenAnalysisSynthesizer:
     ) -> tuple[str, SynthesisOutput]:
         from app.analysis.report_contract import (
             REPORT_CONTRACT_PROMPT, build_report_contract, output_issues, remove_unsupported_text,
-            EVIDENCE_REVIEW_PROMPT, review_candidates, apply_evidence_review,
+            EVIDENCE_REVIEW_PROMPT, review_candidates, apply_evidence_review, grounded_ratio_text,
         )
         contract = build_report_contract(prompt_input)
         data = {**prompt_input, "report_contract": contract}
@@ -249,6 +249,18 @@ class QwenAnalysisSynthesizer:
         clean = remove_unsupported_text(latest, contract)
         if not review_finished:
             clean = apply_evidence_review(clean, review_candidates(clean), None)
+        # Repeated native reviews accepted unsupported interpretations and
+        # incorrect rounding as facts. Complete aggregate-ratio deliverables
+        # therefore use executed values for prose, retaining table/chart choices.
+        grounded = grounded_ratio_text(prompt_input, contract)
+        if grounded:
+            clean.claims = [
+                SynthesisClaim(statement=text, certainty=ClaimCertainty.VERIFIED_FACT)
+                for text in grounded['facts']
+            ] + [SynthesisClaim(statement=text, certainty=ClaimCertainty.LIMITATION)
+                 for text in grounded['warnings']]
+            clean.final_answer.update(overview=grounded['facts'][0],
+                                      findings=grounded['facts'][1:], tips=grounded['warnings'])
         return self._render(clean), clean
 
     async def _generate_once(

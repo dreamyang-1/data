@@ -5,6 +5,7 @@ This affects presentation only. It never changes data, SQL or semantic bindings.
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 
@@ -38,6 +39,15 @@ def build_report_contract(data: dict) -> dict:
     materials = data.get('tasks') or [data]
     ratios = []
     returned_units = {}
+    validation = (data.get('planning_context') or {}).get('result_validation') or {}
+    warnings = [*(data.get('warnings') or []), *(validation.get('warnings') or [])]
+    for material in materials:
+        warnings.extend(material.get('warnings') or [])
+    coverage_limited = any('请求时间范围未被当前业务数据水位完整覆盖' in str(warning) for warning in warnings)
+    for source in (data.get('evidence') or {}).values():
+        coverage = (source.get('payload') or {}).get('requested_time_coverage')
+        if isinstance(coverage, str) and coverage.startswith('PARTIAL_'):
+            coverage_limited = True
     causal = bool(materials) and all((item.get('facts') or {}).get('causality_established') is True for item in materials)
     for material in materials:
         facts = material.get('facts') or {}
@@ -55,8 +65,68 @@ def build_report_contract(data: dict) -> dict:
                            'unit': f'{numerator}/{denominator}' if numerator and denominator else None})
     return {'executed_ratios': ratios, 'returned_metric_units': returned_units,
             'causality_established': causal,
+            'time_coverage_limited': coverage_limited,
             'missing_data_rank_impact_verified': False,
             'aggregate_counts_prove_stability': False}
+
+
+def grounded_ratio_text(data: dict, contract: dict) -> dict | None:
+    """Describe complete ratio deliverables from executed values, not guesses.
+
+    Mixed goals, incomplete/sample data and actual causal analyses keep their
+    existing synthesis path. This replaces prose only, never table selection.
+    """
+    tasks = data.get('tasks') or []
+    depended = {task_id for task in tasks for task_id in task.get('depends_on', [])}
+    leaves = [task for task in tasks if task.get('task_id') not in depended]
+    ratios = contract['executed_ratios']
+    if (not leaves or contract['causality_established']
+            or any(task.get('status') != 'COMPLETED' for task in tasks)
+            or any(not any(r['task_id'] == task.get('task_id') for r in ratios) for task in leaves)):
+        return None
+    facts, warnings = [], []
+    for task in leaves:
+        query = (task.get('facts') or {}).get('query_data') or {}
+        rows = query.get('rows')
+        if (query.get('total_row_count_confirmed') is not True
+                or query.get('sample_only') is not False or not isinstance(rows, list)
+                or query.get('total_row_count') != len(rows)):
+            return None
+        for ratio in [r for r in ratios if r['task_id'] == task['task_id']]:
+            metric = ratio['metric']
+            if not metric or metric not in query.get('columns', []):
+                return None
+            unit = ratio.get('unit') or ''
+            facts.append(f"“{metric}”按“{ratio['numerator']} ÷ {ratio['denominator']}”计算"
+                         + (f"，单位为{unit}" if unit else "")
+                         + f"；本次计算结果共返回{len(rows)}条记录，对应属性见结果表。")
+            values = []
+            for row in rows:
+                try:
+                    value = Decimal(str(row.get(metric)).replace(',', ''))
+                except (InvalidOperation, ValueError):
+                    continue
+                if value.is_finite():
+                    values.append(value)
+            if values:
+                def number(value):
+                    return format(value, ',.4f').rstrip('0').rstrip('.')
+                high, low = max(values), min(values)
+                facts.append(f"仅在本次返回的{len(values)}条有效计算结果中，“{metric}”"
+                             f"最高为{number(high)}{unit}，最低为{number(low)}{unit}，"
+                             f"两者相差{number(high - low)}{unit}。")
+            if len(values) != len(rows):
+                warnings.append(f"“{metric}”有{len(rows) - len(values)}条结果缺少有限数值，未参与上述数值比较。")
+    if contract.get('time_coverage_limited'):
+        warnings.append('请求时段未被当前业务数据水位完整覆盖，本次结果仅反映已入库数据；'
+                        '缺失数据的数量及其对最终数值、排名的影响尚不能确定。')
+    validation = (data.get('planning_context') or {}).get('result_validation') or {}
+    for warning in [*(validation.get('warnings') or []),
+                    *(warning for task in tasks for warning in task.get('warnings', []))]:
+        if '水位完整覆盖' not in warning and '本次问题仍有未完成或受限的部分' not in warning:
+            warnings.append(warning)
+    warnings.append('上述计算结果不能单独证明业务原因、经营能力或均价稳定性；需要相应明细或进一步分析才能判断。')
+    return {'facts': facts, 'warnings': list(dict.fromkeys(warnings))}
 
 
 REPORT_CONTRACT_PROMPT = """
@@ -67,6 +137,7 @@ REPORT_CONTRACT_PROMPT = """
 - 汇总订单笔数多只能说明笔数多，不能证明均价稳定、不受单笔极值影响或未来持续领先；均价高不能证明大项目、大客户、产品结构或采购方式。没有相应明细、时间序列或直接原因证据，就停留在可复算的观察，不补写业务故事，也不要用【推测】包装无依据的故事。
 - 正常的去重订单计数不能被描述为“分母偏小”；同一订单有正负行也不能推出去重分母有误。负金额仅说明该口径金额为负，没有订单类型证据时，不断言已发生退货或冲销。少量订单可以提示样本量有限，但没有逐单金额和敏感性分析，不宣称单笔异常已经造成极大影响。
 - 缺失属性、未匹配记录与参与计算的缺失指标要区分。没有重算或敏感性分析，不能断言缺失对排名“影响极小”“不影响”“可忽略”。如实说明已知缺失及尚不能判断的影响，不把未知影响说成已发生的错误。
+- time_coverage_limited=true 表示已验证数据水位未覆盖请求时段。完整返回的行数只说明本次结果未截断，不能据此声称全年数据完整。未入库订单的数量和后续排名变化幅度未知，不能写“少量/极少量未入库”“排名将剧烈变化”或“仅微调”。
 - 数值贡献、相关性和业务原因是不同证据。causality_established=false 时不得宣称已确认原因；可以解释已执行的除法和数值差异。对实际数据的比较、贡献分解和明确附带条件的建议继续正常给出。
 """
 
@@ -79,8 +150,17 @@ def report_issues(text: str, contract: dict) -> list[str]:
         if not sentence:
             continue
         # Negative examples and explicit limits are valid, not causal claims.
-        if re.search(r'不能|无法|不足以|尚未|尚不能|未证实|未验证|不代表|不意味着|不能排除', sentence):
+        if re.search(r'不能|无法|不足以|尚未(?:证实|验证|证明|确定|确认|查明)|尚不能|未证实|未验证|不代表|不意味着', sentence):
             continue
+        if contract.get('time_coverage_limited'):
+            if re.search(r'(?:20\d{2}年|全年).{0,6}完整数据|覆盖.{0,60}完整数据', sentence):
+                issues.append('实际水位未覆盖请求时段，完整返回行数不能证明全年数据完整')
+            if (re.search(r'年末|入库|水位|未覆盖|未纳入', sentence)
+                    and re.search(r'少量|少数|极少|很少|大量|大批', sentence)):
+                issues.append('未入库数据数量未知，不能根据水位判断缺少多少订单')
+            if (re.search(r'新订单|新增|补录|数据更新|后续|排名', sentence)
+                    and re.search(r'剧烈|大幅|轻微|极小|很小|微调', sentence)):
+                issues.append('没有敏感性分析，不能量化后续数据对排名或指标的影响幅度')
         known_units = [item['unit'] for item in contract['executed_ratios'] if item.get('unit')]
         known_units += list(contract.get('returned_metric_units', {}).values())
         if known_units and not all(unit.endswith('/单位') for unit in known_units) and re.search(r'每单位|元\s*[/／]\s*单位', sentence):
@@ -105,13 +185,15 @@ def report_issues(text: str, contract: dict) -> list[str]:
         # user review. A second LLM saying "supported" is not new distribution,
         # sensitivity or time-series evidence.
         if contract['executed_ratios']:
+            if re.search(r'(?:典型|属于|体现|反映).{0,24}(?:模式|能力)|(?:更强|更高|较强).{0,18}(?:经营|业务|支撑|获取).{0,8}能力', sentence):
+                issues.append('汇总金额和笔数只能描述规模，不能证明经营模式或能力')
             if re.search(r'(?:表现|均价|均值|结果).{0,12}(?:稳健|稳定)|(?:稳定性|代表性|敏感度).{0,12}(?:更强|更高|较高|较低|较强|较弱)|(?:易受|可能拉高).{0,16}(?:订单|均值)|(?:大额|超大).{0,12}订单.{0,10}可能拉高', sentence):
                 issues.append('仅有聚合金额和笔数，不能判断稳定性、均值代表性或异常值敏感度')
             if re.search(r'(?:可能存在|存在|影响).{0,8}(?:轻微偏差|轻微|略高|很小|极小)|(?:逆转|反转).{0,12}(?:较低|很低|不大)', sentence):
                 issues.append('没有重新计算或敏感性证据，不能判断偏差幅度或排名逆转概率')
         if contract['executed_ratios'] and re.search(r'分母.{0,10}(?:偏小|偏大|低估|高估)', sentence):
             issues.append('去重计数和正负金额不能证明分母偏差，需删除没有重算证据的判断')
-        if re.search(r'(?:单笔|极端|异常).{0,20}(?:影响极大|高度敏感|严重影响|影响显著)', sentence):
+        if re.search(r'(?:单笔|极端|异常).{0,20}(?:影响(?:极大|很大|较大|显著)|高度敏感|严重影响)', sentence):
             issues.append('没有逐笔分布或敏感性分析，不能断言极值已造成显著影响')
         if re.search(r'(?:说明|表明|证明|体现).{0,20}(?:业务稳定|业绩稳定|持续稳定|均价稳定)|(?:不受|并非|不是).{0,15}(?:单笔|偶发|极端|一次性)', sentence):
             issues.append('聚合笔数/均值不能证明稳定性或排除极值影响')
