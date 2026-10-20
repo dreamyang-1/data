@@ -22,6 +22,11 @@ def literal_computation(structured):
     if any((structured.get('时间粒度') or {}).get(key) for key in ('unit','time_range','anchor')):
         return False
     binding=structured.get('计算绑定')
+    if binding is None:
+        from app.planning.literal_calculation import constant_pipeline
+        columns=constant_pipeline(structured.get('结果操作'))
+        return bool(columns) and all((item.get('name') if isinstance(item,dict) else item) in columns
+            for item in structured.get('指标') or [])
     if not isinstance(binding,dict) or structured.get('结果操作'):
         return False
     try:
@@ -243,7 +248,8 @@ def _steps(columns, rows, operation):
             for row in rows:
                 operands = derive_operands(step,row)
                 if step.get('operator') in {'divide','floor_divide','modulo'} and operands[1] == 0:
-                    raise ValueError('计算分母为零')
+                    from app.numeric_operations import NumericOperationError
+                    raise NumericOperationError('计算除数不能为零')
         columns, rows = apply_followup_operation(columns, rows, step)
         if step['type']=='derive':
             for row in rows:numeric_value(row.get(step['result_field']))
@@ -261,7 +267,9 @@ def calculate(task, inputs, legacy_resolver):
             raise ValueError('计算输入未通过质量检查')
     structured = task.extraction or {}
     binding, spec = structured.get('计算绑定'), structured.get('结果操作')
-    if not inputs:
+    from app.planning.literal_calculation import constant_pipeline
+    constant_result=constant_pipeline(spec) if not inputs and binding is None else None
+    if not inputs and constant_result is None:
         from app.planning.calculation_bindings import arithmetic_roles
         if not isinstance(binding,dict) or not all(isinstance(binding.get(role),dict) and
                 set(binding[role])=={'value'} for role in arithmetic_roles(binding)):
@@ -283,6 +291,10 @@ def calculate(task, inputs, legacy_resolver):
                 if ranking:
                     columns, rows = _steps(columns, rows, {'type': 'pipeline', 'operations': ranking})
                     operation = {'type': 'pipeline', 'operations': [operation, *ranking]}
+    elif constant_result is not None:
+        operation=spec['operation']
+        columns, rows = _steps([], [{}], operation)
+        input_binding={'source':'NUMERIC_CONSTANTS'}
     elif spec is not None:
         if not isinstance(spec, dict) or set(spec) - {'source_task_id', 'operation'}:
             raise ValueError('结果操作必须绑定指定任务，不能覆盖数据集身份')

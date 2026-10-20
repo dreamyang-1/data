@@ -935,7 +935,7 @@ class SingleQuestionPlanner:
                     decomposition, unsplit_compound
                 )
                 last_result = decomposition
-            from app.planning.calculation_bindings import materialize_declared_division, materialize_declared_result_operation, materialize_computation_binding
+            from app.planning.calculation_bindings import materialize_declared_division, materialize_declared_result_operation, materialize_computation_binding, validate_computation_column_lineage
             try:
                 if not decomposition.boundary_plan_complete:
                     # Compatibility for legacy combined planners only. New
@@ -955,6 +955,7 @@ class SingleQuestionPlanner:
                                 sorted((task.structured or {}).keys()),
                             )
                             raise
+                validate_computation_column_lineage(last_result)
             except TaskInputBindingError as exc:
                 if attempt == attempts - 1:
                     raise

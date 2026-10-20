@@ -10,6 +10,23 @@ import re
 from typing import Any
 
 
+def numbered_dependency_anchor(question: str) -> str | None:
+    """Recognize numbered result references separately from question headings.
+
+    The same anchor is used to request predecessor keys and to compile the
+    actual query parameter, so a declared dependency cannot become mere order
+    because a user writes “问题一选出的” instead of “上述任务返回的”.
+    """
+    number=r'(?:[一二三四五六七八九十百两]+|\d+)'
+    reference=(r'(?:(?:问题|任务)\s*'+number+r'|第\s*'+number+r'\s*(?:个)?(?:问题|任务|问)'
+        r'|[qQ]\s*\d+|(?:上|前)(?:一|1)?个?(?:问题|任务|问))')
+    usage=r'(?:所?(?:返回|筛选出?|选出|查询到?|查出|得到|确定|选定|提供)的?|的|中(?:的)?|里(?:的)?|结果(?:中|里)?的?)'
+    match=re.search(reference+r'\s*'+usage+r'(?P<tail>[^，,。；;！？?\n]{0,24})',question)
+    if not match:return None
+    tail=re.split(r'查询|统计|计算|分析|查找|匹配|求合计',match['tail'],maxsplit=1)[0]
+    return question[match.start():match.start('tail')]+tail
+
+
 def key_kind(value: str) -> str:
     value = re.sub(r"[\s（）()\[\]【】]", "", value.lower()).rsplit(".", 1)[-1]
     if re.search(r"(?:^|_)(?:id|key)$|编号$|标识$|^订单号$", value):
