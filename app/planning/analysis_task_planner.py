@@ -18,6 +18,7 @@ from app.domain.models import (
     PrimaryIntent,
     TaskPlan,
 )
+from app.planning.task_dag import extraction_to_parameters
 
 # 分析意图 -> 执行模板：分析类型键、对外工具名、引擎 facts 键对应的子工具名。
 # 子工具行只在引擎 facts 实际产出对应键时发射，展示与真实计算一致。
@@ -281,6 +282,7 @@ def build_analysis_task_plan(
             question=spec["question"],
             name=spec["name"],
             extraction=spec["structured"],
+            parameters=tuple(extraction_to_parameters(spec["structured"])),
             primary_intent=PrimaryIntent.METRIC_QUERY,
             expected_output=f"{spec['name']}的查询结果",
         )
@@ -292,6 +294,7 @@ def build_analysis_task_plan(
         name=analysis_question[:60],
         depends_on=retrieval_ids,
         extraction=analysis_structured,
+        parameters=tuple(extraction_to_parameters(analysis_structured)),
         primary_intent=intent,
         expected_output=f"{playbook['tool']}输出的分析结论与计算事实",
     ))

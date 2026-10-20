@@ -80,8 +80,8 @@
   {
     "service": "Agent",
     "path": "app/planning/analysis_task_planner.py",
-    "source_sha256": "cc965753733df663f370fb48e1ec3ab1d1a3596125a40dd9d3e0bf77f6f9f885",
-    "release_sha256": "cc965753733df663f370fb48e1ec3ab1d1a3596125a40dd9d3e0bf77f6f9f885"
+    "source_sha256": "55e7bf4d420f07ebe861b7f3ff72310922c76cd07f815d8bcff174ca6b9102b0",
+    "release_sha256": "55e7bf4d420f07ebe861b7f3ff72310922c76cd07f815d8bcff174ca6b9102b0"
   },
   {
     "service": "Agent",
@@ -104,8 +104,8 @@
   {
     "service": "Agent",
     "path": "app/services/orchestrator.py",
-    "source_sha256": "fe1986fddb075b5acf4b6c12699d5c05c164eb5c02f09e8c178728668db06e46",
-    "release_sha256": "4a6788a26295cf4e93fe4bfab69aa091eff97e52f37c36543d5c48b2df251582"
+    "source_sha256": "d7b3a17c6b20725a4a51cf40edf2b5d43e4f61b8d99419e6afb49540f1877a32",
+    "release_sha256": "1ca2cd7ea78b9e5f7c9c624ecaec7453554ea190658bb9f5ee034e4938ebe3ef"
   },
   {
     "service": "Agent",

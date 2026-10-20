@@ -99,9 +99,36 @@
     "business_rows_persisted": false
   },
   "known_blockers": [
-    "Current remote rollback removes analysis scheduling and three intent mappings; release stopped before any write pending the user decision."
+    "Production post-deployment acceptance is pending. Company names remain unavailable because current reference data do not match salesperson company codes."
   ],
   "sql_legacy_timeout": [
     "test_single_domain_execution.py::test_request_local_indexes_survive_interleaved_domains"
-  ]
+  ],
+  "resume_validation": {
+    "baseline": {
+      "passed": 5297,
+      "failed": 232
+    },
+    "final": {
+      "passed": 5297,
+      "failed": 232
+    },
+    "old_pass_new_fail": [],
+    "collection_errors": [],
+    "critical": {
+      "passed": 342
+    },
+    "focused": {
+      "passed": 52
+    },
+    "preserved_remote_changes": [
+      "Analysis task parameters generated from existing structured extraction",
+      "Existing analysis-expansion exception handling"
+    ],
+    "user_decision": "Retain analysis functionality and publish the merged fixes",
+    "predeployment_analysis_api": {
+      "status": null,
+      "error": "Existing service reports NameError for build_analysis_task_plan; verify fresh process after restart."
+    }
+  }
 }

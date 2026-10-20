@@ -1640,13 +1640,20 @@ class DataAnalysisOrchestrator:
                             plan = outcome.plan
                             if plan is None and outcome.single_extraction is not None:
                                 # 分析类单任务展开为取数+分析多任务DAG：
-                                # 取数、分析都是独立任务节点，随任务表下发
-                                plan = build_analysis_task_plan(
-                                    planning_question,
-                                    outcome.single_extraction,
-                                    task_question=outcome.single_task_question,
-                                    task_name=outcome.single_task_name,
-                                )
+                                # 取数、分析都是独立任务节点，随任务表下发；
+                                # 展开异常不拖垮规划，回退单任务路径
+                                try:
+                                    plan = build_analysis_task_plan(
+                                        planning_question,
+                                        outcome.single_extraction,
+                                        task_question=outcome.single_task_question,
+                                        task_name=outcome.single_task_name,
+                                    )
+                                except Exception as exc:
+                                    logger.warning(
+                                        "analysis task expansion skipped: %s", exc,
+                                    )
+                                    plan = None
                             logger.info(
                                 "node=task_planning status=COMPLETED elapsed=%.2fs plan=%s tasks=%s",
                                 time.perf_counter() - task_planning_started,
