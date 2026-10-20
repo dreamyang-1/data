@@ -66,7 +66,15 @@ PLANNING_PROMPT += ('\n数值计算任务可直接声明postprocess，不能只�
     '组合运算使用最多5步的pipeline或拆成有依赖的计算任务，后续可引用前面结果列；不得输出表达式或代码。'
     '纯数值任务没有数据依赖时留待参数阶段生成数值计算绑定。'
     '可用一元运算：'+','.join(sorted(UNARY))+'；二元运算：'+','.join(sorted(BINARY))+
-    '；统计函数：'+','.join(sorted(AGGREGATES))+'。\n')
+    '；统计函数：'+','.join(sorted(AGGREGATES))+'。'
+    '第90百分位用{"field":"订单笔数","function":"percentile","percentile":90,"alias":"P90"}；'
+    'quantile则使用q:0.9，不省略用户指定的分位点。'
+    '相关系数例：{"field":"订单笔数","other_field":"含税销售总额","function":"correlation","alias":"相关系数"}。'
+    '按全体样本平均值筛选原始对象时，aggregate声明retain_rows:true，把平均值附在每个原始样本上，'
+    '然后filter使用field:"订单笔数",operator:"gt",value_field:"平均订单笔数"，'
+    '最后select使用columns:["业务员"]；普通aggregate会把样本压缩，不能用于保留对象名单。'
+    '均值的aggregate、filter和select应全部声明在同一个本地计算任务的pipeline中；'
+    '取数任务只返回登记指标，不能只在取数任务的question或expected_output里承诺计算平均值，而漏掉实际aggregate操作。\n')
 
 
 PARAMETER_PROMPT = '''任务边界已经确定。请为给定任务逐项提取extraction，只输出JSON。

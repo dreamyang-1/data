@@ -194,6 +194,17 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         if request.time_range is not None
         else "OPTIONAL"
     )
+    # Metric queries can also explicitly request identity/display columns.
+    # Dropping those here makes the unchanged completeness gate reject a
+    # correctly extracted dependent query before ASL generation even begins.
+    projection_requested=bool(request.turn_admission is not None and
+        request.turn_admission.current_turn_facts.explicit_slots.get('projection'))
+    from app.planning.dependency_contract import key_kind
+    required_projections=list(dict.fromkeys(request.fields if detail_like else
+        [field for field in request.fields if key_kind(field)=='display']
+        if projection_requested and request.dimensions else []))
+    # Identity keys in an aggregate must remain grouping keys. Merely placing
+    # an ungrouped order ID in display projections cannot prove sample grain.
     return {
         "version": CONTRACT_VERSION,
         "intent": request.primary_intent.value,
@@ -206,7 +217,7 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         "metric_required": metric_required,
         "required_metrics": [metric.canonical_name or metric.input for metric in request.metrics],
         "required_metric_codes": metric_codes,
-        "required_projections": list(dict.fromkeys(request.fields if detail_like else [])),
+        "required_projections": required_projections,
         "required_groupings": required_groupings if not detail_like else [],
         "projection_mode": (
             "DISTINCT"

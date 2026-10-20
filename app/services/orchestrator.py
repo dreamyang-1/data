@@ -1514,8 +1514,8 @@ class DataAnalysisOrchestrator:
                 if self._should_dispatch_mcp_file_analysis(chat)
                 else None
             )
-            from app.numeric_operations import parse_literal_binding
-            literal_binding=parse_literal_binding(chat.question) if confirmed_pending_choice is None and dag_pending is None else None
+            from app.planning.literal_calculation import parse_literal_computation
+            literal_structured=parse_literal_computation(chat.question) if confirmed_pending_choice is None and dag_pending is None else None
             if mcp_response is not None:
                 response = mcp_response
                 if dag_pending is not None:
@@ -1525,9 +1525,9 @@ class DataAnalysisOrchestrator:
                         chat.application_id,
                         chat.conversation_id,
                     )
-            elif literal_binding is not None:
+            elif literal_structured is not None:
                 chat._planner_extraction=PlannerExtraction(intent=PrimaryIntent.COMPARISON_ANALYSIS,
-                    structured={'是否查询数据库':'否','计算绑定':literal_binding})
+                    structured=literal_structured)
                 chat._task_table=[{'任务':'task-1','名称':'计算明确数值','是否查询数据库':'否','依赖':[],'执行状态':'待执行'}]
                 chat._task_table_message_id=chat.message_id
                 await emit_progress('INTENT_RECOGNITION','COMPLETED','已识别为明确数值的计算任务。')
@@ -2815,6 +2815,9 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _dag_references_dependency_result(question: str) -> bool:
+        from app.planning.dependency_contract import numbered_dependency_anchor
+        if numbered_dependency_anchor(question):
+            return True
         compact = re.sub(r"\s+", "", question).lower()
         return bool(re.search(
             r"(?:根据|基于|按照|依照|按)(?:上述|上一步|前述|前面|这些|该|其)?"
@@ -2834,6 +2837,10 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _dependency_anchor_text(question: str) -> str:
+        from app.planning.dependency_contract import numbered_dependency_anchor
+        numbered=numbered_dependency_anchor(question)
+        if numbered:
+            return re.sub(r'\s+','',numbered).lower()
         compact = re.sub(r"\s+", "", question).lower()
         key_list = re.search(
             r"(?:根据|基于|按照|依照)(?:上述|上一步|前述|前序)(?:任务)?"
@@ -2948,6 +2955,7 @@ class DataAnalysisOrchestrator:
         columns: tuple[str, ...],
         rows: tuple[dict[str, Any], ...],
         source_extraction: dict[str, Any] | None = None,
+        column_bindings: dict[str, str] | None = None,
     ) -> str:
         anchor = cls._dependency_anchor_text(question)
         anchor_family = cls._dependency_column_family(anchor)
@@ -2960,18 +2968,22 @@ class DataAnalysisOrchestrator:
             if len(families) == 1:
                 anchor_family = next(iter(families))
         if anchor_family:
+            bindings=column_bindings or {}
             family_matches = [
                 column for column in columns
-                if cls._dependency_column_family(column) == anchor_family
+                if cls._dependency_column_family(bindings.get(column,column)) == anchor_family
+                or cls._dependency_column_family(column) == anchor_family
             ]
-            if len(family_matches) == 1:
-                return family_matches[0]
             stable_matches = [
                 column for column in family_matches
-                if cls._is_stable_dependency_key(column)
+                if cls._is_stable_dependency_key(bindings.get(column,column))
             ]
             if len(stable_matches) == 1:
                 return stable_matches[0]
+            if stable_matches and len({bindings.get(column,column) for column in stable_matches})==1:
+                return stable_matches[0]
+            if len(family_matches) == 1:
+                return family_matches[0]
 
         direct_matches = [column for column in columns if column.lower() in anchor]
         if len(direct_matches) == 1:
@@ -3063,13 +3075,14 @@ class DataAnalysisOrchestrator:
             rows = tuple(dict(row) for row in loaded.rows)
             if not dataset_source_complete(reference, len(rows)) or not rows or len(rows) > 1000:
                 raise DependencyConstraintError("DEPENDENCY_SOURCE_DATASET_INCOMPLETE_OR_TOO_LARGE")
-            column = self._select_dependency_column(
-                task.question, reference.columns, rows,
-                (source_extractions or {}).get(dependency_id),
-            )
             bindings = next((item.get("column_bindings", {})
                              for item in reference.transformation_log
                              if item.get("type") == "query_provenance"), {})
+            column = self._select_dependency_column(
+                task.question, reference.columns, rows,
+                (source_extractions or {}).get(dependency_id),
+                column_bindings=bindings,
+            )
             bound_field = bindings.get(column, column)
             values: list[str | int | float | bool] = []
             seen: set[str] = set()
@@ -3309,14 +3322,21 @@ class DataAnalysisOrchestrator:
         success=response.status=='COMPLETED'
         if success:
             preview=response.evidence[0].payload.get('preview') or []
-            if preview:response.answer=self._markdown_result_table(list(preview[0]),preview)
+            operation=response.evidence[0].payload.get('operation') or {}
+            steps=operation.get('operations',[]) if operation.get('type')=='pipeline' else [operation]
+            decimal_places={step['result_field']:step.get('digits',0) for step in steps
+                if step.get('type')=='derive' and step.get('operator')=='round'}
+            display=[{key:(f'{value:.{max(0,decimal_places[key])}f}' if key in decimal_places else value)
+                for key,value in row.items()} for row in preview]
+            if preview:response.answer=self._markdown_result_table(list(preview[0]),display)
             response.intent=PrimaryIntent.COMPARISON_ANALYSIS
             chat._last_result_dataset_id=response.dataset_id
         if chat._task_table:
             chat._task_table[0]['执行状态']='已完成' if success else '执行失败'
         await emit_progress('DATA_RETRIEVAL','COMPLETED' if success else 'FAILED',
             '数值计算完成，未调用数据库。' if success else response.answer,task_table=chat._task_table)
-        await emit_progress('RELIABILITY_CHECK','COMPLETED','已检查数值定义域和结果有限性。')
+        await emit_progress('RELIABILITY_CHECK','COMPLETED' if success else 'FAILED',
+            '已检查数值定义域和结果有限性。' if success else '该运算未生成可用数值结果。')
         await emit_progress('INSIGHT_ANALYSIS','COMPLETED' if success else 'SKIPPED',
             '结果由确定性计算生成。' if success else '未生成可用数值结果。')
         await emit_progress('FINAL_OUTPUT','COMPLETED',response.answer)

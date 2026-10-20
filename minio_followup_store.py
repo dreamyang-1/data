@@ -1357,7 +1357,12 @@ def apply_followup_operation(
         field_name = _require_column(operation.get("field"), declared)
         operator = str(operation.get("operator", "eq")).lower()
         target = operation.get("value")
-        rows = [row for row in rows if _compare(row.get(field_name), operator, target)]
+        if 'value_field' in operation:
+            if 'value' in operation:raise InvalidFollowupOperation('filter cannot mix value and value_field')
+            other=_require_column(operation['value_field'],declared)
+            rows=[row for row in rows if _compare(row.get(field_name),operator,row.get(other))]
+        else:
+            rows = [row for row in rows if _compare(row.get(field_name), operator, target)]
         return declared, rows
 
     if op == "select":
@@ -1483,6 +1488,8 @@ def apply_followup_operation(
         return (*declared, result_field), rows
 
     if op == "aggregate":
+        retain=operation.get('retain_rows',False)
+        if type(retain) is not bool:raise InvalidFollowupOperation('retain_rows must be boolean')
         group_by = tuple(
             _require_column(value, declared) for value in operation.get("group_by", ())
         )
@@ -1530,6 +1537,11 @@ def apply_followup_operation(
                     except (ValueError, ArithmeticError) as exc:
                         raise InvalidFollowupOperation(str(exc)) from exc
             output.append(result)
+        if retain:
+            additions=[alias for _,_,alias,_ in validated_specs]
+            if any(alias in declared for alias in additions):raise InvalidFollowupOperation('retained aggregation aliases must be new columns')
+            lookup={tuple(item[key] for key in group_by):item for item in output}
+            return (*declared,*additions),[{**row,**{alias:lookup[tuple(row.get(key) for key in group_by)][alias] for alias in additions}} for row in rows]
         return tuple(output_names), output
 
     raise InvalidFollowupOperation(

@@ -6522,6 +6522,7 @@ def _repair_contract_grouping(
     knowledge: dict,
     *,
     query_object: str | None = None,
+    prefer_display: bool = False,
 ) -> str | None:
     """Append the unique metadata-resolved dimension for a missed grouping.
 
@@ -6541,6 +6542,7 @@ def _repair_contract_grouping(
     candidates = _contract_projection_candidates(
         str(grouping), query_object, knowledge,
         preferred_fields=selected_names,
+        prefer_display=prefer_display,
     )
     if len(candidates) != 1 or candidates[0] in selected_names:
         return None
@@ -9248,6 +9250,9 @@ def _recover_question_asl(
         ast = json.loads(result)
         if ast.get('ambiguity'):
             return None
+        for projection in (intent_asl_contract or {}).get('required_projections') or []:
+            _repair_contract_grouping(ast,str(projection),knowledge,
+                query_object=intent_asl_contract.get('query_object'),prefer_display=True)
         knowledge['_vector_filter_repairs'] = _ground_executable_vector_values(
             ast, knowledge, intent_asl_contract, store=store,
             semantic_model_id=semantic_model_id, domain_ids=domain_ids,
@@ -9431,6 +9436,18 @@ def main(
                             contract_ast, str(grouping), knowledge,
                             query_object=intent_asl_contract.get("query_object"),
                         )
+                    # A grouped metric may explicitly request its entity's
+                    # display name as well. Append only the unique field from
+                    # this same scoped catalog, then retain every normal
+                    # vector and contract validation below.
+                    for projection in intent_asl_contract.get("required_projections") or []:
+                        added=_repair_contract_grouping(
+                            contract_ast,str(projection),knowledge,
+                            query_object=intent_asl_contract.get("query_object"),
+                            prefer_display=True)
+                        if added:
+                            repairs.append({'type':'ADD_REQUIRED_PROJECTION','resolved_field':added,
+                                'source':'RECALLED_SEMANTIC_METADATA'})
                     dimensions_after = json.dumps(
                         contract_ast.get("dimensions") or [],
                         ensure_ascii=False, sort_keys=True)

@@ -6,6 +6,7 @@ field references continue to be resolved by the existing dataset contract.
 from __future__ import annotations
 
 from decimal import Decimal, DecimalException, localcontext, ROUND_FLOOR, ROUND_CEILING, ROUND_DOWN, ROUND_HALF_UP
+import copy
 import math
 import re
 
@@ -218,7 +219,32 @@ def evaluate(operator, first, second=None, *, digits=0):
         raise NumericOperationError('运算超出实数定义域或有限数值范围') from exc
 
 
+def normalize_aggregation(spec):
+    """Normalize known statistical parameter spellings without dropping options."""
+    if not isinstance(spec,dict):raise NumericOperationError('统计参数必须是对象')
+    spec=copy.deepcopy(spec);function=spec.get('function')
+    def assign(key,value):
+        if key in spec and spec[key]!=value:raise NumericOperationError('统计参数的两种写法存在冲突')
+        spec[key]=value
+    if function in PAIRED and 'right_field' in spec:
+        assign('other_field',spec.pop('right_field'))
+    params=spec.pop('params',{})
+    if not isinstance(params,dict):raise NumericOperationError('统计params必须是参数对象')
+    for key,value in params.items():
+        if key not in {'q','percentile','p','ddof'}:raise NumericOperationError('存在不支持的统计参数')
+        assign(key,value)
+    if 'p' in spec:
+        p=literal(spec.pop('p'))
+        if function not in {'quantile','percentile'} or not 0<=p<=1:
+            raise NumericOperationError('分位概率p必须在0到1之间')
+        assign('q' if function=='quantile' else 'percentile',float(p if function=='quantile' else p*100))
+    if ('q' in spec and function!='quantile') or ('percentile' in spec and function!='percentile'):
+        raise NumericOperationError('quantile使用q参数，percentile使用percentile参数')
+    return spec
+
+
 def validate_aggregation(spec):
+    spec=normalize_aggregation(spec)
     function=spec.get('function')
     if not isinstance(function,str) or function not in AGGREGATES:
         raise NumericOperationError('聚合计算缺少明确函数或字段')
@@ -238,6 +264,7 @@ def validate_aggregation(spec):
 
 
 def aggregate_numeric(rows,spec):
+    spec=normalize_aggregation(spec)
     validate_aggregation(spec);function=spec['function'];field=spec['field']
     if function=='count_distinct':
         values=[row.get(field) for row in rows if row.get(field) is not None]

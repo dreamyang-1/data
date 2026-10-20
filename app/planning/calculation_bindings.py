@@ -168,6 +168,11 @@ def json_text(value):
 def normalize_result_operation(operation):
     """Adapt the planner's order/limit spellings to the existing dataset API."""
     value = copy.deepcopy(operation)
+    if isinstance(value,dict) and 'pipeline' in value:
+        pipeline=value.pop('pipeline')
+        if value.get('type','pipeline')!='pipeline':raise ValueError('结果流水线类型存在冲突')
+        if 'operations' in value and value['operations']!=pipeline:raise ValueError('结果流水线存在两份不同的操作')
+        value['type']='pipeline';value['operations']=pipeline
     if isinstance(value,dict) and value.get('type')=='pipeline' and 'steps' in value:
         steps=value.pop('steps')
         if 'operations' in value and value['operations']!=steps:
@@ -179,6 +184,30 @@ def normalize_result_operation(operation):
     for step in steps:
         if not isinstance(step, dict):
             continue
+        if step.get('type')=='aggregate' and isinstance(step.get('aggregations'),list):
+            from app.numeric_operations import normalize_aggregation
+            step['aggregations']=[normalize_aggregation(spec) for spec in step['aggregations']]
+        if step.get('type')=='select' and 'fields' in step:
+            columns=step.pop('fields')
+            if 'columns' in step and step['columns']!=columns:raise ValueError('结果投影字段存在冲突')
+            step['columns']=columns
+        if step.get('type')=='filter':
+            if 'conditions' in step:
+                conditions=step.pop('conditions')
+                if not isinstance(conditions,list) or len(conditions)!=1 or not isinstance(conditions[0],dict):
+                    raise ValueError('筛选conditions仅兼容一个明确条件，多条件请分别声明filter步骤')
+                if 'condition' in step and step['condition']!=conditions[0]:raise ValueError('结果筛选条件存在冲突')
+                step['condition']=conditions[0]
+            condition=step.pop('condition',None)
+            if condition is not None:
+                if not isinstance(condition,dict) or set(condition)-{'left_field','field','operator','right_field','value_field','value'}:
+                    raise ValueError('结果筛选条件不受支持')
+                for source,target in [('left_field','field'),('field','field'),('operator','operator'),('right_field','value_field'),('value_field','value_field'),('value','value')]:
+                    if source in condition:
+                        if target in step and step[target]!=condition[source]:raise ValueError('结果筛选条件存在冲突')
+                        step[target]=condition[source]
+            operator=step.get('operator','eq')
+            step['operator']={'>':'gt','>=':'gte','<':'lt','<=':'lte','=':'eq','==':'eq','!=':'ne'}.get(operator,operator)
         if step.get('type') in {'sort', 'sort_limit'} and 'order' in step:
             direction = step.pop('order')
             if str(direction).lower() not in {'asc', 'desc'}:
@@ -192,6 +221,16 @@ def normalize_result_operation(operation):
             if 'count' in step and step['count'] != count:
                 raise ValueError('结果人数限制存在冲突')
             step['count'] = count
+    # An aggregate consumed alongside its original sample must retain those
+    # rows; ordinary aggregate-only statistics continue to reduce the data.
+    for index,step in enumerate(steps[:-1]):
+        following=steps[index+1]
+        if not isinstance(step,dict) or step.get('type')!='aggregate' or not isinstance(following,dict) or following.get('type')!='filter':continue
+        specs=step.get('aggregations') or [];aliases={s.get('alias') or str(s.get('function'))+'_'+str(s.get('field')) for s in specs}
+        inputs={s.get('field') for s in specs};used={following.get('field'),following.get('value_field')}
+        if used.intersection(inputs-aliases-set(step.get('group_by') or [])) and used.intersection(aliases):
+            if step.get('retain_rows') is False:raise ValueError('筛选需要原始样本，不能在聚合后丢弃样本行')
+            step['retain_rows']=True
     return value
 
 
@@ -281,6 +320,8 @@ def validate_result_operation(operation):
             from app.numeric_operations import validate_derive
             validate_derive(step)
         elif step['type'] == 'aggregate':
+            if 'retain_rows' in step and type(step['retain_rows']) is not bool:
+                raise ValueError('retain_rows必须是布尔值')
             groups,specs = step.get('group_by',[]),step.get('aggregations')
             if (not isinstance(groups,list) or not fields(groups) or len(groups)>20
                     or not isinstance(specs,list) or not 1<=len(specs)<=20):
@@ -291,7 +332,41 @@ def validate_result_operation(operation):
                     raise ValueError('聚合计算缺少明确函数或字段')
                 from app.numeric_operations import validate_aggregation
                 validate_aggregation(spec)
+        elif step['type']=='filter':
+            if not fields([step.get('field')]) or step.get('operator','eq') not in {'eq','ne','gt','gte','lt','lte','in','contains','is_null','not_null'}:
+                raise ValueError('结果筛选缺少有效字段或比较操作')
+            if 'value_field' in step and ('value' in step or not fields([step['value_field']])):
+                raise ValueError('筛选右侧必须选择结果列或字面量之一')
+        elif step['type']=='select':
+            if not isinstance(step.get('columns'),list) or not step['columns'] or not fields(step['columns']):
+                raise ValueError('结果投影缺少明确columns')
     return steps
+
+
+def validate_computation_column_lineage(decomposition):
+    """A column comparison needs an actual upstream result, not an output promise."""
+    from app.planning.dependency_contract import projection
+    from app.planning.task_dag import TaskInputBindingError
+    schemas={}
+    for index,task in enumerate(decomposition.tasks):
+        structured=materialize_computation_binding(task.structured,task_index=index,
+            dependencies=[f'task-{dep+1}' for dep in task.depends_on]) or {}
+        columns={name for _,name in projection(structured)}
+        spec=structured.get('结果操作')
+        if isinstance(spec,dict):
+            columns=set(schemas.get(spec.get('source_task_id')) or [])
+            for step in validate_result_operation(spec['operation']):
+                if columns and step.get('type')=='filter' and step.get('value_field') and step['value_field'] not in columns:
+                    raise TaskInputBindingError('筛选比较列“'+step['value_field']+'”未由前序查询或计算产生；'
+                        '请在本地计算任务中先aggregate并retain_rows:true，再filter，不能只在取数任务描述中承诺计算均值')
+                if step['type']=='aggregate':
+                    aliases={item.get('alias') or item['function']+'_'+item['field'] for item in step['aggregations']}
+                    columns=(columns if step.get('retain_rows') else set(step.get('group_by') or []))|aliases
+                elif step['type']=='derive':columns.add(step['result_field'])
+                elif step['type']=='select':columns=set(step['columns'])
+        binding=structured.get('计算绑定')
+        if isinstance(binding,dict):columns.add(binding.get('result_field'))
+        schemas[f'task-{index+1}']=columns
 
 
 def materialize_declared_result_operation(decomposition):
