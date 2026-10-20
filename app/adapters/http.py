@@ -2427,9 +2427,23 @@ class HttpDataRetrievalAdapter:
                 or contract_for_request(request) is not None):
             raise AdapterError("SURFACE_HANDOFF_CONSTRAINTS_UNSUPPORTED",
                                "confirmed bindings or execution constraints require explicit handoff")
+        completed_question = request.rewritten_question or request.original_question
+        # The ordinary entry uses the original question generator, where
+        # extracted slots are advisory. Carry this confirmed business meaning
+        # in its wording too, as the multi-task entry already does.
+        conditions = (structured_extraction or {}).get('过滤条件') or []
+        if (scope.semantic_model_id == 81 and '医院' in completed_question
+                and re.search(r'订单|销售', completed_question)
+                and '科室按商品适用科室筛选订单' not in completed_question
+                and any(isinstance(item, dict) and item.get('entity') == '商品科室关联'
+                        and item.get('field') == '科室编码' for item in conditions)):
+            completed_question += '，科室按商品适用科室筛选订单'
+            if any(isinstance(item, dict) and item.get('entity') == '医院'
+                   and item.get('field') in {'城市', '省份'} for item in conditions):
+                completed_question += '，地区按医院所在地筛选'
         plan = await generate_surface_asl(
             self.client, self.settings,
-            completed_question=request.rewritten_question or request.original_question,
+            completed_question=completed_question,
             mentions=mentions, authorized_scope=scope, identity=identity,
             application_id=request.application_id, request_id=request.request_id,
             time_range=request.time_range,
