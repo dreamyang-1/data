@@ -1,0 +1,107 @@
+{
+  "scope": "V1 metric denominator selection and planning; no V2 cutover",
+  "tests": {
+    "focused_passed": 87,
+    "critical_passed": 360,
+    "full_regression": {
+      "before": {
+        "passed": 5334,
+        "failed": 232
+      },
+      "after": {
+        "passed": 5352,
+        "failed": 232
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_case_count": 18,
+      "collection_errors": 0
+    }
+  },
+  "native_cases": [
+    {
+      "case": "original130-r6",
+      "model": 130,
+      "status": "COMPLETED",
+      "task_count": 3,
+      "task_statuses": [
+        "COMPLETED",
+        "COMPLETED",
+        "COMPLETED"
+      ],
+      "input_group_counts": [
+        89,
+        89
+      ],
+      "calculation_rows": 5,
+      "denominator": "订单笔数",
+      "grouping": [
+        "业务员"
+      ],
+      "seven_visible_stages_ordered": true,
+      "seconds": 91.214
+    },
+    {
+      "case": "lowest130-r6",
+      "model": 130,
+      "status": "COMPLETED",
+      "task_count": 3,
+      "task_statuses": [
+        "COMPLETED",
+        "COMPLETED",
+        "COMPLETED"
+      ],
+      "input_group_counts": [
+        89,
+        89
+      ],
+      "calculation_rows": 3,
+      "denominator": "订单笔数",
+      "grouping": [
+        "业务员"
+      ],
+      "seven_visible_stages_ordered": true,
+      "seconds": 95.854
+    }
+  ],
+  "real_model_plan_controls": [
+    {
+      "case": "paraphrase",
+      "question": "按销售人员统计2025年平均每笔订单金额，列出最高五名及销售公司。",
+      "metric": [
+        "平均每单销售金额"
+      ],
+      "denominator": "订单笔数",
+      "task_count": 3,
+      "seconds": 15.694,
+      "passed": true,
+      "sql_executed": false
+    },
+    {
+      "case": "price",
+      "question": "查询2025年各业务员的订单级均价，并返回所属销售公司，按该指标降序返回前五名。",
+      "metric": [
+        "订单级均价"
+      ],
+      "denominator": "销售总数量",
+      "task_count": 2,
+      "seconds": 16.57,
+      "passed": true,
+      "sql_executed": false
+    }
+  ],
+  "review": {
+    "modified_existing_method": "SingleQuestionPlanner._model_decompose",
+    "production_runtime_files": 2,
+    "canonical_metric_names_hardcoded": false,
+    "vector_matching_rules_changed": false,
+    "catalog_or_index_writes": 0,
+    "business_database_writes": 0,
+    "raw_business_rows_committed": 0,
+    "signed_urls_committed": 0,
+    "unrelated_concurrent_changes_preserved": true
+  },
+  "publication": {
+    "status": "NOT_PUBLISHED"
+  }
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "path": "app/planning/task_dag.py",
+    "sha256": "4f9d31299abb61e24d23f576bf5f3673074287fd5d95fe3bd0b7c574b09a6cc7",
+    "service": "Agent",
+    "kind": "runtime"
+  },
+  {
+    "path": "app/planning/metric_target_contract.py",
+    "sha256": "222f3489c71c87205c0f49be73c2bbed4a8c9c2009421177b31b398378508b45",
+    "service": "Agent",
+    "kind": "runtime"
+  },
+  {
+    "path": "tests/test_metric_target_contract.py",
+    "sha256": "f2a25b6d8bfe967d38fdb923dd15b6d5d389aaecf8cf204baac94b43f9d8ec06",
+    "service": "Agent",
+    "kind": "test"
+  }
+]
