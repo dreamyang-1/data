@@ -996,6 +996,45 @@ class AnalysisEngine:
             "multidimensional_time_aggregation": aggregated_multidimensional,
             "edge_bucket_integrity": edge_integrity,
         }
+        # DISPLAY_WINDOW_START：取数含环比基期月时，用户声明的展示窗口
+        # 起点。整体首尾变化、合计与月均按展示窗口单独给出口径，环比
+        # 序列仍使用含基期的完整数据，两个口径互不冒充。
+        display_window_start = next(
+            (
+                item.split("=", 1)[1].strip()
+                for item in request.assumptions
+                if item.startswith("DISPLAY_WINDOW_START=")
+            ),
+            None,
+        )
+        if display_window_start and display_window_start in labels:
+            window_index = labels.index(display_window_start)
+            if window_index > 0:
+                window_values = values[window_index:]
+                window_change = window_values[-1] - window_values[0]
+                facts["display_window"] = {
+                    "start_label": labels[window_index],
+                    "end_label": labels[-1],
+                    "start": window_values[0],
+                    "end": window_values[-1],
+                    "absolute_change": window_change,
+                    "change_rate": self._pct_change(window_values[0], window_values[-1]),
+                    "total": sum(window_values),
+                    "mean": sum(window_values) / len(window_values),
+                    "point_count": len(window_values),
+                    "baseline_labels": labels[:window_index],
+                }
+        if largest_drop["absolute_change"] < 0:
+            later_recovery_total = sum(
+                max(0.0, item["absolute_change"])
+                for item in period_changes
+                if labels.index(item["from"]) >= labels.index(largest_drop["to"])
+            )
+            facts["later_recovery"] = later_recovery_total
+            if later_recovery_total > 0:
+                facts["recovery_share_of_largest_drop"] = (
+                    later_recovery_total / abs(largest_drop["absolute_change"])
+                )
         if first_bucket_partial and first_partial_label is not None:
             answer += (
                 f"注意：首个时间桶{first_partial_label}为不完整期间"

@@ -657,6 +657,66 @@ class TaskInputBindingError(TaskPlanningError):
     """A calculation cannot name inputs outside its task dependency contract."""
 
 
+_ANALYSIS_QUESTION_INTENTS = {
+    PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
+    PrimaryIntent.COMPOSITION_ANALYSIS, PrimaryIntent.ANOMALY_ANALYSIS,
+    PrimaryIntent.ROOT_CAUSE_ANALYSIS, PrimaryIntent.FORECAST_ANALYSIS,
+}
+
+
+def _collapse_analysis_computation_tasks(decomposition):
+    """分析类问题只保留一个取数任务：模型自造的分析计算任务交给分析工具。
+
+    同比/环比/趋势等分析计算由系统分析工具完成。模型把这类计算拆成
+    "不再查询数据库"的任务时会自造非法结果操作（实测两轮重试均复发），
+    这里直接丢弃这些任务、保留首个取数任务，由分析任务规划器按登记
+    模板补充规范的分析任务，提示词约束作为第一道防线而不是唯一防线。
+    """
+    tasks = list(decomposition.tasks)
+    if len(tasks) <= 1:
+        return decomposition
+    intent = decomposition.intent or next(
+        (task.intent for task in tasks if task.intent in _ANALYSIS_QUESTION_INTENTS),
+        None,
+    )
+    if intent not in _ANALYSIS_QUESTION_INTENTS:
+        return decomposition
+    # Explicit calculator/statistical deliverables must be repaired, not
+    # silently replaced with a generic analysis of the first query.
+    if any(re.search(r'平方|立方|开根|方差|标准差|中位数|分位数|协方差|相关系数|对数|取余|阶乘|绝对值',
+                     task.question+' '+(task.expected_output or '')) for task in tasks
+           if '不再查询数据库' in task.question):
+        return decomposition
+    data_tasks = [task for task in tasks if "不再查询数据库" not in task.question]
+    if len(data_tasks) == len(tasks) or not data_tasks:
+        return decomposition
+    # The analysis-tool fallback is only for one retrieval and unsupported
+    # model-invented analysis steps. Never erase a complete calculation or a
+    # second retrieval: both carry real business dependencies and deliverables.
+    if len(data_tasks)!=1 or data_tasks[0].depends_on:
+        return decomposition
+    for index, task in enumerate(tasks):
+        value=task.structured or {}
+        if not (value.get('计算绑定') or value.get('结果操作')):
+            continue
+        try:
+            materialize_computation_binding(value,task_index=index,
+                dependencies=[f'task-{dep+1}' for dep in task.depends_on])
+        except TaskInputBindingError:
+            continue
+        return decomposition
+    dropped = [task for task in tasks if "不再查询数据库" in task.question]
+    logger.info(
+        "analysis computation tasks collapsed: intent=%s kept=%r dropped=%r",
+        intent, data_tasks[0].question[:80],
+        [task.question[:60] for task in dropped],
+    )
+    first = data_tasks[0]
+    if first.depends_on:
+        first = replace(first, depends_on=())
+    return replace(decomposition, intent=intent, tasks=(first,))
+
+
 from app.planning.calculation_bindings import materialize_computation_binding
 
 
@@ -775,9 +835,16 @@ _CALCULATION_PARAMETER_PROMPT = """
 每个纯计算任务必须明确实际运算，不能只写“根据结果计算”。
 两个指标加减乘除使用extraction.计算绑定：{"operation":"add或subtract或multiply或divide","left":{"source_task_index":0,"column":"左操作数指标登记名"},"right":{"source_task_index":1,"column":"右操作数指标登记名"},"result_field":"结果指标名","format":"number或percent"}。原有除法也兼容operation=divide配合numerator和denominator操作数。
 同一查询结果逐行运算时，两操作数引用同一个前序任务；跨任务运算时分别引用各自来源。source_task_index为本问题从0开始的任务下标，必须在depends_on中；不能引用自身或猜测数据集ID。左右操作数或分子、分母顺序严格依据当前规范中的公式，不能按依赖指标列的排列顺序猜测。多步公式拆成有依赖的计算任务，后一步可以引用前一步的结果字段。即使复合指标尚未拆分，也在其extraction里给出上述计算绑定的column、operation、result_field和format，此时不填source_task_index，拆分器负责关联成分任务。
-其他计算可使用extraction.结果操作：{"source_task_index":0,"operation":{"type":"pipeline","operations":[...]}}。只允许derive（left_field/right_field/operator/result_field，operator为add/subtract/multiply/divide）、aggregate（group_by和aggregations，每项field/function/alias）、filter、select、sort、sort_limit、limit；不得输出SQL、Python或任意表达式。
+其他计算可使用extraction.结果操作：{"source_task_index":0,"operation":{"type":"pipeline","operations":[...]}}。支持derive、aggregate、filter、select、sort、sort_limit、limit；不得输出SQL、Python或任意表达式。
+derive双操作数为left_field/right_field，也可用left_value/right_value显式数值常量，字段与常量每侧只能选一种。常量不得冒充业务字段。单操作数使用field，或明确的value数值常量；结果字段为result_field。
+单操作数支持square平方、cube立方、sqrt平方根、cbrt立方根、abs绝对值、negate取负、reciprocal倒数、sign符号、exp/exp2/expm1指数、ln自然对数、log10/log2/log1p、floor向下取整、ceil向上取整、trunc截断、round四舍五入（digits默认0，可为-15至15）、factorial阶乘、sin/cos/tan/asin/acos/atan/sinh/cosh/tanh/asinh/acosh/atanh、degrees/radians角度转换、bit_not按位取反。三角函数默认弧度，角度须先radians转换。
+双操作数除四则运算外支持power乘方、root开右侧指定次数的根、modulo取余、floor_divide向下整除、log指定右侧底数、hypot、atan2、minimum/maximum逐行较小/较大值、gcd/lcm、combination组合数、permutation排列数、bit_and/bit_or/bit_xor/shift_left/shift_right整数位运算。
+计算绑定也支持以上运算，双操作数沿用left/right；单操作数用input:{"source_task_index":0,"column":"实际结果列"}，或input:{"value":9}；二元常量也是{"value":数值}。数据必须引用当前依赖任务结果；纯数字计算可以没有查询依赖。
+aggregate按group_by分组、aggregations逐项计算。每项field/function/alias；支持count/sum/avg/min/max、count_distinct、median、quantile（q为0至1，默认0.5）、percentile（percentile为0至100，默认50）、variance_population/variance_sample、stddev_population/stddev_sample、range、product、sum_squares、rms、geometric_mean、harmonic_mean、covariance_population/covariance_sample/correlation（成对字段另填other_field）。未指定的variance/stddev默认总体口径（除以n），样本口径除以n-1，输出中说明所用口径；分位数用(n-1)*q线性插值。
+方差、标准差等样本统计必须先取得完整所需粒度的样本（例如逐订单金额），再aggregate；不能先查询总金额再把单个总数当样本。多步按依赖或最多5步pipeline组合，例如平方→分组平均→开根得到均方根，禁止把表达式写在字段名里。
 排序操作格式为{"type":"sort","field":"实际结果列名","descending":true}；取前N格式为{"type":"limit","count":N}；合并排序取前N格式为{"type":"sort_limit","field":"实际结果列名","descending":true,"count":N}。最终按计算结果排名时，成分取数任务不得先按其他指标取前N；只在用户明确先选定对象范围时保留该范围限制。
 排名必须保留最终计算字段的排序方向和限制人数；按人或组织计算时，所有相应取数任务都保留对象分组及必要展示字段，不能变成全局总计；共用分母按规范保留原有范围。公式或字段依据不明时不要编造计算绑定。
+同比、环比、趋势、占比、异常、归因、预测等分析类计算不属于“结果操作”，也不是“计算绑定”：这类问题只输出取数任务与正确意图（如趋势分析），不得为分析计算输出任何结果操作类型（包括自造的“同比”“环比”“增长率”等），分析由系统专门的分析工具完成。
 """
 
 # Compatibility name for consumers of the extraction specification. It no
@@ -839,6 +906,7 @@ class SingleQuestionPlanner:
                     return last_result
                 continue
             decomposition = _repair_unavailable_local_projection(decomposition, question)
+            decomposition = _collapse_analysis_computation_tasks(decomposition)
             last_result = decomposition
             off_data, off_meta = self._normalize_decomposition_metrics(decomposition)
             unsplit_compound = self._unsplit_compound_metrics(decomposition)
@@ -875,8 +943,18 @@ class SingleQuestionPlanner:
                     last_result = materialize_declared_result_operation(materialize_declared_division(last_result))
                 for index, task in enumerate(last_result.tasks):
                     if task.depends_on:
-                        materialize_computation_binding(task.structured, task_index=index,
-                            dependencies=[f'task-{dep + 1}' for dep in task.depends_on])
+                        try:
+                            materialize_computation_binding(task.structured, task_index=index,
+                                dependencies=[f'task-{dep + 1}' for dep in task.depends_on])
+                        except TaskInputBindingError as exc:
+                            # 打出任务级上下文：模型给哪个任务发明了什么计算结构，
+                            # 规划拒绝时不用翻模型原始输出就能定位
+                            logger.warning(
+                                "computation binding rejected: task=%r question=%r error=%s extraction_keys=%s",
+                                task.name or task.question[:60], task.question[:120], exc,
+                                sorted((task.structured or {}).keys()),
+                            )
+                            raise
             except TaskInputBindingError as exc:
                 if attempt == attempts - 1:
                     raise
@@ -1004,6 +1082,8 @@ class SingleQuestionPlanner:
                 from app.planning.calculation_bindings import arithmetic_roles
                 for role in arithmetic_roles(binding):
                     operand = binding.get(role)
+                    if isinstance(operand,dict) and set(operand)=={'value'}:
+                        continue
                     if not isinstance(operand, dict) or operand.get('column') not in components:
                         raise TaskInputBindingError('复合指标运算必须绑定登记的成分指标')
                     operand.pop('source_task_id', None)
@@ -1231,6 +1311,11 @@ class SingleQuestionPlanner:
             registered_metric_predicates, metric_definition, component_task_title,
         )
         dependencies = _parse_metric_dependencies(spec_for_catalog)
+        from app.planning.metric_target_contract import object_average_contract
+        target_contract = object_average_contract(
+            question, spec_for_catalog, metric_catalog, dependencies)
+        if target_contract is not None:
+            system_content += target_contract.instruction()
         planning_question = question
         if retry_feedback:
             planning_question += "\n上一轮需要修正：" + retry_feedback
@@ -1248,9 +1333,16 @@ class SingleQuestionPlanner:
             if 'extraction' not in planned and ('intent' not in planned or 'split' in planned):
                 raise ValueError('任务规划没有返回任务列表')
             planned = {**planned, 'tasks': [{'question': question}]}
-        boundaries = complete_boundaries(TaskBoundaries.model_validate(planned).tasks,
+        planned_boundaries = TaskBoundaries.model_validate(planned).tasks
+        boundaries = complete_boundaries(planned_boundaries,
             spec=spec_for_catalog, catalog=metric_catalog, dependencies=dependencies, source_question=question,
             default_times=_registered_default_times(question,spec_for_catalog))
+        if target_contract is not None and boundary_plan_complete:
+            from app.planning.task_plan_stages import boundary_targets
+            try:
+                target_contract.validate(boundaries, metric_catalog, boundary_targets)
+            except ValueError as exc:
+                raise TaskInputBindingError(str(exc)) from exc
         parameter_request = json.dumps({
             'original_question': question,
             'tasks': [dict(task_index=index, **task.model_dump(exclude_none=True))
@@ -1490,6 +1582,8 @@ class SingleQuestionPlanner:
                     if database_query_choice(structured) is False or '不再查询数据库' in task.question:
                         from app.planning.calculation_bindings import arithmetic_roles
                         for role in arithmetic_roles(binding):
+                            if set(binding[role])=={'value'}:
+                                continue
                             column = binding[role]['column']
                             sources = [index for index in task.depends_on
                                 if any((metric.get('name') if isinstance(metric, dict) else metric) == column

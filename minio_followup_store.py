@@ -1449,16 +1449,37 @@ def apply_followup_operation(
         return (result_field,), [{result_field: max(values) - min(values)}]
 
     if op == "derive":
-        left = _require_column(operation.get("left_field"), declared)
-        right = _require_column(operation.get("right_field"), declared)
+        arithmetic = str(operation.get("operator", "")).lower()
+        legacy = arithmetic in {'add','subtract','multiply','divide'} and 'left_field' in operation and 'right_field' in operation
+        if legacy:
+            _require_column(operation['left_field'],declared)
+            _require_column(operation['right_field'],declared)
+        else:
+            try:
+                from app.numeric_operations import validate_derive, derive_operands, evaluate
+            except ImportError as exc:
+                raise InvalidFollowupOperation('advanced arithmetic helper is unavailable') from exc
+            try:
+                roles = validate_derive(operation)
+            except ValueError as exc:
+                raise InvalidFollowupOperation(str(exc)) from exc
+            for role in roles:
+                key = 'field' if role == 'input' else role + '_field'
+                if key in operation:
+                    _require_column(operation[key], declared)
         result_field = str(operation.get("result_field", "")).strip()
         if not result_field or result_field in declared or len(result_field) > 128:
             raise InvalidFollowupOperation("result_field must be a new non-empty column")
-        arithmetic = str(operation.get("operator", "")).lower()
-        if arithmetic not in {"add", "subtract", "multiply", "divide"}:
-            raise InvalidFollowupOperation("derive operator must be add/subtract/multiply/divide")
         for row in rows:
-            row[result_field] = _arithmetic(row.get(left), row.get(right), arithmetic)
+            # Preserve the established null/zero behavior of standalone legacy
+            # dataset transforms. Task execution validates its numeric inputs.
+            if legacy:
+                row[result_field] = _arithmetic(row.get(operation['left_field']), row.get(operation['right_field']), arithmetic)
+            else:
+                try:
+                    row[result_field] = evaluate(arithmetic, *derive_operands(operation,row), digits=operation.get('digits',0))
+                except ValueError as exc:
+                    raise InvalidFollowupOperation(str(exc)) from exc
         return (*declared, result_field), rows
 
     if op == "aggregate":
@@ -1469,19 +1490,28 @@ def apply_followup_operation(
         if not isinstance(specs, list) or not specs:
             raise InvalidFollowupOperation("aggregations must be a non-empty list")
         output_names = list(group_by)
-        validated_specs: list[tuple[str, str, str]] = []
+        validated_specs: list[tuple[str, str, str, dict]] = []
         for spec in specs:
             if not isinstance(spec, Mapping):
                 raise InvalidFollowupOperation("each aggregation must be an object")
             function = str(spec.get("function", "")).lower()
             source = _require_column(spec.get("field"), declared)
             alias = str(spec.get("alias") or f"{function}_{source}").strip()
-            if function not in {"count", "sum", "avg", "min", "max"}:
-                raise InvalidFollowupOperation("unsupported aggregation function")
+            if function not in {'count','sum','avg','min','max'}:
+                try:
+                    from app.numeric_operations import validate_aggregation
+                except ImportError as exc:
+                    raise InvalidFollowupOperation('advanced arithmetic helper is unavailable') from exc
+                try:
+                    validate_aggregation({**spec,'function':function})
+                except ValueError as exc:
+                    raise InvalidFollowupOperation(str(exc)) from exc
+            if 'other_field' in spec:
+                _require_column(spec['other_field'], declared)
             if not alias or alias in output_names:
                 raise InvalidFollowupOperation("aggregation aliases must be non-empty and unique")
             output_names.append(alias)
-            validated_specs.append((function, source, alias))
+            validated_specs.append((function, source, alias, dict(spec)))
         grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
         for row in rows:
             grouped.setdefault(tuple(row.get(key) for key in group_by), []).append(row)
@@ -1490,8 +1520,15 @@ def apply_followup_operation(
         output: list[dict[str, Any]] = []
         for key, group_rows in grouped.items():
             result = dict(zip(group_by, key))
-            for function, source, alias in validated_specs:
-                result[alias] = _aggregate(group_rows, source, function)
+            for function, source, alias, spec in validated_specs:
+                if function in {'count','sum','avg','min','max'}:
+                    result[alias] = _aggregate(group_rows, source, function)
+                else:
+                    from app.numeric_operations import aggregate_numeric
+                    try:
+                        result[alias] = aggregate_numeric(group_rows,{**spec,'function':function})
+                    except (ValueError, ArithmeticError) as exc:
+                        raise InvalidFollowupOperation(str(exc)) from exc
             output.append(result)
         return tuple(output_names), output
 
@@ -1541,7 +1578,7 @@ def _as_number(value: Any) -> Decimal:
     if value is None or isinstance(value, bool):
         raise InvalidFollowupOperation("arithmetic fields must contain numbers")
     try:
-        number = Decimal(str(value))
+        number = Decimal(str(value).replace(',', ''))
     except Exception as exc:
         raise InvalidFollowupOperation("arithmetic fields must contain numbers") from exc
     if not number.is_finite():
@@ -1568,7 +1605,7 @@ def _arithmetic(left: Any, right: Any, operator: str) -> float | None:
         "multiply": lambda: first * second,
         "divide": lambda: first / second,
     }[operator]()
-    return float(result)
+    return _finite_number(result)
 
 
 def _aggregate(rows: Sequence[Mapping[str, Any]], field_name: str, function: str) -> Any:
@@ -1586,4 +1623,11 @@ def _aggregate(rows: Sequence[Mapping[str, Any]], field_name: str, function: str
     result = sum(numbers, Decimal(0))
     if function == "avg":
         result /= len(numbers)
-    return float(result)
+    return _finite_number(result)
+
+
+def _finite_number(value):
+    result = float(value)
+    if not math.isfinite(result):
+        raise InvalidFollowupOperation('arithmetic result must be finite')
+    return result

@@ -13,6 +13,27 @@ def _provenance(reference):
                  if item.get('type') == 'query_provenance'), {})
 
 
+def literal_computation(structured):
+    """Only a fully literal formula with no requested business data is local."""
+    from app.planning.calculation_bindings import arithmetic_roles
+    from app.numeric_operations import literal
+    if not isinstance(structured,dict) or any(structured.get(key) for key in ('实体','维度','展示字段','过滤条件')):
+        return False
+    if any((structured.get('时间粒度') or {}).get(key) for key in ('unit','time_range','anchor')):
+        return False
+    binding=structured.get('计算绑定')
+    if not isinstance(binding,dict) or structured.get('结果操作'):
+        return False
+    try:
+        for role in arithmetic_roles(binding):
+            if not isinstance(binding.get(role),dict) or set(binding[role])!={'value'}:return False
+            literal(binding[role]['value'])
+    except ValueError:return False
+    label=binding.get('result_field')
+    if not isinstance(label,str) or not label or label.startswith('_'):return False
+    return all((item.get('name') if isinstance(item,dict) else item)==label for item in structured.get('指标') or [])
+
+
 def output_column_bindings(columns, inputs):
     """Keep proven identities on arithmetic outputs for subsequent DAG tasks."""
     bindings = {}
@@ -102,9 +123,42 @@ def _check_compatible(first, second, *, same_unit, same_period=True):
             raise ValueError('计算输入的单位不兼容')
 
 
+def _simple_arithmetic(binding, inputs, roles):
+    """Unary or literal operands use the one explicitly bound source, if any."""
+    from app.numeric_operations import literal
+    source = None
+    evidence = {}
+    step = {'type':'derive','operator':binding['operation'],'result_field':binding.get('result_field')}
+    for index, role in enumerate(roles):
+        operand = binding.get(role)
+        if not isinstance(operand,dict):raise ValueError('计算缺少操作数')
+        key = 'field' if len(roles)==1 else ('left_field' if index==0 else 'right_field')
+        if 'value' in operand:
+            if set(operand) != {'value'}:raise ValueError('数值常量不能混用任务引用或字段')
+            literal(operand['value']);step[key.replace('field','value')] = operand['value']
+            evidence[role] = {'value':operand['value']}
+        else:
+            if set(operand) != {'source_task_id','column'} or operand.get('source_task_id') not in inputs:
+                raise ValueError('计算操作数必须绑定前序任务和字段')
+            ref,rows = inputs[operand['source_task_id']]
+            column = _column(ref,operand['column']);source=(ref,rows)
+            step[key]=column
+            evidence[role]={'source_task_id':operand['source_task_id'],'dataset_id':ref.dataset_id,'column':column}
+    columns,rows = (list(source[0].columns),[dict(row) for row in source[1]]) if source else ([],[{}])
+    if 'digits' in binding:step['digits']=binding['digits']
+    if binding.get('format','number') not in {'number','percent'}:raise ValueError('不支持的计算输出格式')
+    if roles==('numerator','denominator'):
+        from app.numeric_operations import derive_operands
+        if any(derive_operands(step,row)[1]<=0 for row in rows):raise ValueError('计算分母必须大于零')
+    columns,rows = _steps(columns,rows,step)
+    return columns,rows,step,evidence
+
+
 def _arithmetic(binding, inputs):
     from app.planning.calculation_bindings import arithmetic_roles
     operand_roles = arithmetic_roles(binding)
+    if len(operand_roles)==1 or any(isinstance(binding.get(role),dict) and 'value' in binding[role] for role in operand_roles):
+        return _simple_arithmetic(binding,inputs,operand_roles)
     operator = binding['operation']
     if binding.get('format', 'number') not in {'number', 'percent'}:
         raise ValueError('不支持的计算公式或输出格式')
@@ -164,6 +218,7 @@ def _arithmetic(binding, inputs):
         row['_calculation_left'], row['_calculation_right'] = left_number, right_number
     operation = {'type': 'derive', 'operator': operator, 'left_field': '_calculation_left',
                  'right_field': '_calculation_right', 'result_field': label}
+    if 'digits' in binding:operation['digits']=binding['digits']
     result_columns, result_rows = apply_followup_operation(
         [*columns, '_calculation_left', '_calculation_right'], rows, operation)
     for row in result_rows:
@@ -184,18 +239,20 @@ def _steps(columns, rows, operation):
             columns, rows = monthly_growth(columns, rows, step)
             continue
         if step['type'] == 'derive':
+            from app.numeric_operations import derive_operands
             for row in rows:
-                numeric_value(row.get(step.get('left_field')))
-                denominator = numeric_value(row.get(step.get('right_field')))
-                if step.get('operator') == 'divide' and denominator == 0:
+                operands = derive_operands(step,row)
+                if step.get('operator') in {'divide','floor_divide','modulo'} and operands[1] == 0:
                     raise ValueError('计算分母为零')
         columns, rows = apply_followup_operation(columns, rows, step)
+        if step['type']=='derive':
+            for row in rows:numeric_value(row.get(step['result_field']))
     return list(columns), rows
 
 
 def calculate(task, inputs, legacy_resolver):
     """Bindings choose operands; row count can only choose alignment/broadcast."""
-    if not inputs or set(inputs) != set(task.depends_on):
+    if set(inputs) != set(task.depends_on):
         raise ValueError('计算缺少指定的依赖任务')
     for reference, rows in inputs.values():
         if not rows or not dataset_source_complete(reference, len(rows)):
@@ -204,6 +261,11 @@ def calculate(task, inputs, legacy_resolver):
             raise ValueError('计算输入未通过质量检查')
     structured = task.extraction or {}
     binding, spec = structured.get('计算绑定'), structured.get('结果操作')
+    if not inputs:
+        from app.planning.calculation_bindings import arithmetic_roles
+        if not isinstance(binding,dict) or not all(isinstance(binding.get(role),dict) and
+                set(binding[role])=={'value'} for role in arithmetic_roles(binding)):
+            raise ValueError('计算缺少指定的依赖任务')
     if binding is not None and spec is not None:
         raise ValueError('计算公式与结果操作不能同时定义')
     legacy = binding is None and spec is None
