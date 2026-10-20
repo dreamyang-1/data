@@ -45,6 +45,15 @@
     "case": "calculation-first-attempt",
     "status": "NEEDS_CLARIFICATION",
     "reason": "城市字段绑定一次追问；同口径订单笔数单查及整题复测随后完成，未放松ASL标准值规则",
-    "classification": "non_reproduced_binding_uncertainty; not evidence of a scheduling or calculation failure"
+    "classification": "UNKNOWN: non-reproduced ASL city binding uncertainty"
+  },
+  {
+    "case": "last_remote_merge",
+    "intent_mappings_preserved": {
+      "异常分析": "ANOMALY_ANALYSIS",
+      "归因分析": "ROOT_CAUSE_ANALYSIS",
+      "预测分析": "FORECAST_ANALYSIS"
+    },
+    "candidate_health": 200
   }
 ]
