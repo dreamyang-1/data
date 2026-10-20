@@ -1,0 +1,30 @@
+[
+  {
+    "file": "app/services/semantic_recommend.py",
+    "sha256": "879eeb2d7f666dc652253a4294c50e331cb1e444ab8be0e6ea9b919832817d45"
+  },
+  {
+    "file": "tests/test_semantic_recommend.py",
+    "sha256": "3e2e64bdb6d92a6e40940e4bf7eb68604875dd8e2e2c0a13eab74d1359bb7f09"
+  },
+  {
+    "file": "tests/test_semantic_relation_restore.py",
+    "sha256": "00f6dc20d4d0892b9b15b43bafa52ccdc9518b7b7d313a9d9ea471454a09d6ef"
+  },
+  {
+    "file": "docs/relation_restore_20261020/closure_report.md",
+    "sha256": "0eef3e67c57f343738bfbbf31a7a9662347ef1b367682d882952f0a4aa6927ae"
+  },
+  {
+    "file": "docs/relation_restore_20261020/integration_manifest.json",
+    "sha256": "3a9ee5f0e2f33da95244bf93b68283e49429b65277f25d3d00e3f75f7c3015e0"
+  },
+  {
+    "file": "docs/relation_restore_20261020/server-service.patch",
+    "sha256": "e7d6377ab97d3bd6776ecf0b24bae6b86c647f8215fe34f26a536011839e0c96"
+  },
+  {
+    "file": "docs/relation_restore_20261020/verification.json",
+    "sha256": "1517ac67ff408b755040e270c1349bcf3bbf41a6776aab71787d7ab3d117d479"
+  }
+]

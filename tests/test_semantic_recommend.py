@@ -179,7 +179,7 @@ def test_build_semantic_description_sentences():
         "多个【客户】关联多个【订单】"
     )
     assert _build_semantic_description("客户", "订单", "1:N", "开设") == (
-        "1个【客户】开设多个【订单】，一个【订单】被多个【客户】开设"
+        "1个【客户】开设多个【订单】，一个【订单】被1个【客户】开设"
     )
 
 
@@ -881,7 +881,7 @@ def test_recommend_relations_existing_grouping_and_reversal():
         "targetColumnComment": None,
     }]
     assert forward["semanticDescription"] == (
-        "1个【客户】拥有多个【订单】，一个【订单】被多个【客户】拥有"
+        "1个【客户】拥有多个【订单】，一个【订单】被1个【客户】拥有"
     )
 
     reversed_vo = by_id[10]  # et-2 -> et-1 存储方向，需翻转为请求视角
@@ -935,13 +935,13 @@ def test_recommend_relations_same_name_fk_and_reverse_fk():
     inferred = [vo for vo in result if not vo["fromExisting"]]
     # 1:N（customer.id -> sales_order.customer_id）
     # + N:1（sales_order.id 无对应 customer 主键外键 → 无）
-    # + N:N（同名 dept_id）
+    # 同名 dept_id 不能证明两端唯一性，基数待确认。
     cardinalities = sorted(vo["cardinality"] for vo in inferred)
-    assert cardinalities == ["1:N", "N:N"]
-    nn = next(vo for vo in inferred if vo["cardinality"] == "N:N")
+    assert cardinalities == ["", "1:N"]
+    nn = next(vo for vo in inferred if vo["cardinality"] == "")
     assert nn["relationName"] == "关联"  # 无网关时保留模板
     assert nn["semanticDescription"] == (
-        "多个【客户】关联多个【订单】"
+        "【客户】与【订单】存在同名业务键候选，需确认业务含义及关系基数后配置"
     )
     assert nn["fieldPairs"] == [{
         "sourceTableName": "customer", "sourceColumnName": "dept_id",
