@@ -88,7 +88,7 @@ def _split_handler(
         if "问题拆分判断器" in system:
             content = judge_payload
         else:
-            if captured is not None:
+            if captured is not None and '你是任务规划器' not in system:
                 captured.setdefault("system", system)
                 captured.setdefault("user", payload["messages"][1]["content"])
             if isinstance(extract_payload, dict):

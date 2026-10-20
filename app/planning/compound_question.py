@@ -1254,6 +1254,7 @@ class CompoundTaskPlanner:
         ))
         tasks: list[AtomicTask] = []
         question_groups: list[QuestionTaskGroup] = []
+        group_terminals: list[list[str]] = []
         for entry, decomposition in zip(judgment.entries, decompositions):
             offset = len(tasks)
             entry_tasks = decomposition.tasks
@@ -1269,16 +1270,15 @@ class CompoundTaskPlanner:
                     expected_output = (
                         "、".join(declared_calculation_targets(task_question)) or None
                     )
-                if len(entry_tasks) == 1 and entry.depends_on:
-                    # 规则兜底的判断可能带子问题级依赖，单任务时直接映射
-                    depends_on = [
-                        f"task-{dep + 1}" for dep in entry.depends_on
-                        if 0 <= dep < offset
-                    ]
-                else:
-                    depends_on = [
-                        f"task-{offset + dep + 1}" for dep in task.depends_on
-                    ]
+                depends_on = [f"task-{offset + dep + 1}" for dep in task.depends_on]
+                if not task.depends_on:
+                    # A preceding question may have expanded into several
+                    # queries and a calculation. Depend on its terminal output.
+                    for dep in entry.depends_on:
+                        if not 0 <= dep < len(group_terminals):
+                            raise TaskPlanningError('问题依赖必须引用前序问题')
+                        depends_on.extend(group_terminals[dep])
+                    depends_on = list(dict.fromkeys(depends_on))
                 tasks.append(AtomicTask(
                     task_id=f"task-{offset + local_index + 1}",
                     question=task_question.strip(),
@@ -1290,6 +1290,9 @@ class CompoundTaskPlanner:
                         task_index=local_index, task_offset=offset, dependencies=depends_on),
                     primary_intent=task.intent or decomposition.intent,
                 ))
+            referenced = {dep for task in entry_tasks for dep in task.depends_on}
+            group_terminals.append([f'task-{offset + index + 1}'
+                                    for index in range(len(entry_tasks)) if index not in referenced])
             question_groups.append(QuestionTaskGroup(
                 question=entry.question.strip(),
                 label=entry.label,

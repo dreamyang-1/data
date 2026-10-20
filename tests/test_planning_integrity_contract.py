@@ -156,7 +156,9 @@ async def test_invalid_result_operation_uses_remaining_correction_attempt():
     correct={'intent':'METRIC_QUERY','tasks':[{'question':question,'extraction':query_extraction()}]}
     planner,calls=planner_for(invalid,correct)
     result=await planner.plan_question(question,semantic_context=CATALOG)
-    assert len(calls)==2 and len(result.tasks)==1
+    # Invalid planning operation is corrected before the separate extraction.
+    assert len(calls)==3 and len(result.tasks)==1
+    assert sum('你是任务规划器' in item['messages'][0]['content'] for item in calls)==2
 
 
 @pytest.mark.asyncio

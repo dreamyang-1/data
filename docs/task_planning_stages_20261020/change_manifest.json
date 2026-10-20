@@ -1,0 +1,54 @@
+{
+  "files": [
+    {
+      "path": "app/planning/task_dag.py",
+      "sha256": "26bc320a448a378c2c0892683008264337468a096743a64a4b7ac7bb1c8b0893"
+    },
+    {
+      "path": "app/planning/task_plan_stages.py",
+      "sha256": "9129ed4d81f7f1e3a4ce24706586666ab7bf83e852e2fc92f02131632267a815"
+    },
+    {
+      "path": "app/planning/compound_question.py",
+      "sha256": "b276acbcfebe0fab6e0ccf8ef9fbef364f2667ae7d37944874dde5ff2ef95ab8"
+    },
+    {
+      "path": "app/services/computation_delivery.py",
+      "sha256": "07164bcfd6101202b29ac25a6d5d3736d8ca80b5ce67fa4de9ec39ee56d49222"
+    },
+    {
+      "path": "app/services/calculation_execution.py",
+      "sha256": "6b73e8ec16cd9e571d8cffc96c8bd7f0cade1ce42b5d8c4a19721b3fcc844271"
+    },
+    {
+      "path": "tests/test_task_planning_stages.py",
+      "sha256": "88d78936bdad95d1a9f4f87bb5eeed26d29a154dd581410218116ab28cb85136"
+    },
+    {
+      "path": "tests/test_task_dag.py",
+      "sha256": "702ab70466c3660ceab63d6bbfd16fdb2c10992e223acb903bbdcf7f5d11ae5e"
+    },
+    {
+      "path": "tests/test_planning_integrity_contract.py",
+      "sha256": "2713cfe1dd897e5eb6603f88441f838da2925349a7c0f8586e8531c0730051c0"
+    }
+  ],
+  "review": {
+    "scope": "Five Agent runtime files plus matching tests; no ASL/SQL adapter, catalog, public API or SSE schema changes.",
+    "checks": [
+      "Task boundaries and dependency completion precede extraction and metric cleaning.",
+      "Per-task intent shares batched parameter inference; no intent-only model call.",
+      "Global intent and seven visible stages preserved by existing critical contract tests.",
+      "Question-level dependency edges target all terminal tasks after expansion.",
+      "Local operations use executable contracts; unavailable related details remain database queries.",
+      "Keyed order inputs align by proven SQL identity, including one-row keyed samples; true scalar denominators still work.",
+      "Remote period-series intent routing and time sorting retained unchanged; other remote files not published."
+    ],
+    "not_changed": [
+      "ASL and SQL validation",
+      "Scope authorization",
+      "Catalog business definitions",
+      "V1/V2 routing"
+    ]
+  }
+}
