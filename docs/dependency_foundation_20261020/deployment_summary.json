@@ -1,0 +1,19 @@
+{
+  "status": "STOPPED_AFTER_CONCURRENT_SOURCE_CHANGE",
+  "production_acceptance_complete": false,
+  "target_count": 4,
+  "backups_verified": true,
+  "rollback": {
+    "restored_uncontested_targets": 3,
+    "preserved_concurrently_modified_targets": 1
+  },
+  "health_after_rollback": {
+    "Agent": 200,
+    "ASL": 200,
+    "SQL": 200
+  },
+  "configurations_unchanged_at_verification": true,
+  "blocker": "编排文件持续新增分析任务规划及执行接入，仍有并发写入；保护回滚保留对方新内容，未完成生产验收",
+  "next_step": "停止相关后台代码写入后，以最终快照合并、验证和发布",
+  "release_manifest_status": "proposed tested candidate; production source changed during release"
+}
