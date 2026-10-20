@@ -134,3 +134,46 @@ def test_display_error_never_echoes_arbitrary_exception_suffix():
         ValueError('展示字段与分组实体没有唯一的N:1/1:1关联: company.name password=PRIVATE_SENTINEL'), False)
     assert result['error_code'] == 'AGGREGATE_DISPLAY_RELATION_UNSAFE'
     assert 'PRIVATE_SENTINEL' not in json.dumps(result)
+
+
+@pytest.mark.parametrize('legacy_dimensions', [False, True])
+def test_missing_company_name_does_not_discard_valid_person_groups(legacy_dimensions):
+    value, ast = fixture()
+    value.loader.entities['company']['attributes'][0]['is_main_attribute'] = True
+    if legacy_dimensions:
+        ast['dimensions'].append(ast.pop('display_fields')[0])
+    result = value.translate_only(json.dumps(ast), '81')
+    assert result['success'], result
+    sql = result['sql']
+    assert 'company.name IS NOT NULL' not in sql
+    assert not result['effective_filter_summary']['system_filters']
+    with sqlite3.connect(':memory:') as database:
+        database.executescript('CREATE TABLE staff (code TEXT, name TEXT, company TEXT);'
+            'CREATE TABLE company (code TEXT PRIMARY KEY, name TEXT);'
+            'CREATE TABLE orders (staff TEXT, amount REAL);'
+            "INSERT INTO staff VALUES ('1','销售员甲','missing');"
+            "INSERT INTO company VALUES ('other','不匹配的公司');"
+            "INSERT INTO orders VALUES ('1',30),('1',20);")
+        assert database.execute(sql).fetchall() == [('1', None, 50)]
+
+
+def test_explicit_company_presence_filter_remains_authoritative():
+    value, ast = fixture()
+    value.loader.entities['company']['attributes'][0]['is_main_attribute'] = True
+    ast['dimensions'].append(ast.pop('display_fields')[0])
+    ast['filters'] = [{'field':'company.name', 'operator':'IS NOT NULL', 'value':None}]
+    result = value.translate_only(json.dumps(ast), '81')
+    assert result['success'], result
+    assert 'company.name IS NOT NULL' in result['sql']
+    assert not result['effective_filter_summary']['system_filters']
+
+
+def test_explicit_company_entity_group_keeps_its_identity_rule():
+    value, ast = fixture()
+    value.loader.entities['company']['attributes'][0]['is_main_attribute'] = True
+    value.loader.dimensions['company'] = {'dim_code':'company','enum_list':[],
+        'bind_entities':[{'entity_code':'company'}], 'field_mapping':{'dim_table_field':'company.name'}}
+    ast['dimensions'] += [{'name':'company'}, ast.pop('display_fields')[0]]
+    result = value.translate_only(json.dumps(ast), '81')
+    assert result['success'], result
+    assert 'company.name IS NOT NULL' in result['sql']
