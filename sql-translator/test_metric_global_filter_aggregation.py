@@ -73,3 +73,28 @@ def test_aggregate_condition_tables_participate_in_existing_join_assembly():
         {'condition':'SUM(sales_order.quantity) > 0','filter_type':'include'}]
     sql=compiler.translate(json.dumps(ast),'81')
     assert 'JOIN sales_order ' in sql and 'HAVING (SUM(sales_order.quantity) > 0)' in sql
+
+
+def test_select_matching_orders_then_price_all_their_products():
+    compiler,ast=fixture()
+    compiler.loader.entities['ent_order']['attributes'] += [
+        {'field_mapping':'order_info.product_code'},{'field_mapping':'order_info.hospital_id'}]
+    selection={**ast,'metrics':[],'filters':[
+        {'field':'order_info.product_code','operator':'=','value':'P1'},
+        {'field':'order_info.hospital_id','operator':'=','value':'H1'}]}
+    with sqlite3.connect(':memory:') as db:
+        db.executescript('''CREATE TABLE order_info
+            (order_id TEXT,pay_amount REAL,quantity REAL,status TEXT,product_code TEXT,hospital_id TEXT);
+            INSERT INTO order_info VALUES
+            ('A',100,1,'valid','P1','H1'),('A',900,3,'valid','P2','H1'),
+            ('B',700,1,'valid','P2','H1'),
+            ('C',100,1,'valid','P1','H1'),('C',-100,-1,'valid','P2','H1');''')
+        keys=list(dict.fromkeys(row[0] for row in db.execute(compiler.translate(json.dumps(selection),'130'))))
+        assert keys==['A','C']
+        ast['filters']=[{'field':'order_info.order_id','operator':'IN','value':keys}]
+        sql=compiler.translate(json.dumps(ast),'130')
+        assert sorted(db.execute(sql).fetchall())==[('A',250.0)]
+        # Reusing P1 as a calculation filter would incorrectly produce 100.
+        ast['filters'].append({'field':'order_info.product_code','operator':'=','value':'P1'})
+        assert sorted(db.execute(compiler.translate(json.dumps(ast),'130')).fetchall())==[
+            ('A',100.0),('C',100.0)]
