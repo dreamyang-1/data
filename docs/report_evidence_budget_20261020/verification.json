@@ -1,0 +1,117 @@
+{
+  "scope": "report evidence, units, HTTP retry budget, ASL queue budget",
+  "full_regression": {
+    "agent": {
+      "baseline": {
+        "passed": 5352,
+        "failed": 232
+      },
+      "final": {
+        "passed": 5407,
+        "failed": 232
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "missing_tests": [],
+      "collection_errors": [],
+      "new_test_count": 55
+    },
+    "asl": {
+      "baseline": {
+        "passed": 1889,
+        "failed": 32
+      },
+      "final": {
+        "passed": 1891,
+        "failed": 32
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "missing_tests": [],
+      "collection_errors": [],
+      "new_test_count": 2
+    }
+  },
+  "critical_agent": {
+    "passed": 420
+  },
+  "critical_asl": {
+    "passed": 25
+  },
+  "native_isolated": [
+    {
+      "case": "original130-r16",
+      "status": "COMPLETED",
+      "seconds": 119.919,
+      "tasks_completed": 3,
+      "main_stages": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ],
+      "scope_model": 130,
+      "runtime": "pre-concurrent-change planning snapshot plus current report/budget files",
+      "math_checks": {
+        "displayed_quotients_match_inputs": true,
+        "sort_direction_correct": true,
+        "requested_limit_correct": true,
+        "unit_wording_uses_generic_unit_instead_of_order": false
+      },
+      "manual_prose_review": "No asserted business cause, stability advantage or negligible missing-data impact; formula-based conditional caveats remain."
+    },
+    {
+      "case": "lowest130-r16",
+      "status": "COMPLETED",
+      "seconds": 146.41,
+      "tasks_completed": 3,
+      "main_stages": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ],
+      "scope_model": 130,
+      "runtime": "pre-concurrent-change planning snapshot plus current report/budget files",
+      "math_checks": {
+        "displayed_quotients_match_inputs": true,
+        "sort_direction_correct": true,
+        "requested_limit_correct": true,
+        "unit_wording_uses_generic_unit_instead_of_order": false
+      },
+      "manual_prose_review": "No asserted business cause, stability advantage or negligible missing-data impact; formula-based conditional caveats remain."
+    }
+  ],
+  "deployment": "PENDING",
+  "whole_service_acceptance": "BLOCKED_BY_CONCURRENT_PLANNING_CHANGE",
+  "review": {
+    "scope_and_vector_bindings_unchanged": true,
+    "no_sql_retry_added": true,
+    "table_cells_and_task_selection_unchanged": true,
+    "correct_limitations_preserved": true,
+    "retry_and_synthesis_have_shared_deadlines": true,
+    "no_business_rows_or_credentials_in_commit": true
+  },
+  "local_budget_override": {
+    "request": 300,
+    "asl": 180,
+    "credentials_copied": false
+  },
+  "concurrency_control": {
+    "case_count": 3,
+    "seconds": [
+      66.943,
+      113.385,
+      141.416
+    ],
+    "timeouts": 0,
+    "scope": "earlier report wording; same final HTTP and ASL budgets",
+    "wording_acceptance": false
+  }
+}

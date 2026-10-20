@@ -5,10 +5,12 @@ import asyncio
 import hashlib
 import json
 import logging
+import math
 import re
 import time
 from contextlib import suppress
 from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import httpx
@@ -105,6 +107,23 @@ def _compact_progress_value(value: Any, limit: int = 800) -> str:
 class PlatformHttpClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+
+    @staticmethod
+    def _retry_after(response: httpx.Response) -> float:
+        value = response.headers.get("Retry-After")
+        if value is None:
+            return 0.0
+        try:
+            delay = float(value)
+        except ValueError:
+            try:
+                moment = parsedate_to_datetime(value)
+                if moment.tzinfo is None:
+                    moment = moment.replace(tzinfo=timezone.utc)
+                delay = (moment - datetime.now(timezone.utc)).total_seconds()
+            except (ValueError, TypeError, OverflowError):
+                return 0.0
+        return max(0.0, delay) if math.isfinite(delay) else 0.0
 
     def _headers(
         self,
@@ -219,15 +238,19 @@ class PlatformHttpClient:
         last_error: Exception | None = None
         last_adapter_error: AdapterError | None = None
         request_started = time.perf_counter()
+        deadline = request_started + (timeout or self.settings.request_timeout_seconds)
         # 不打印 payload：请求体可能含业务问题文本与凭证相关字段
         logger.debug("upstream request method=%s base_url=%s path=%s attempts=%s", method, base_url, path, attempts)
         for attempt in range(attempts):
+            remaining = deadline - time.perf_counter()
+            if remaining <= 0:
+                break
             try:
                 async with httpx.AsyncClient(
                     base_url=base_url.rstrip("/"),
-                    timeout=timeout or self.settings.request_timeout_seconds,
+                    timeout=remaining,
                 ) as client:
-                    response = await client.request(
+                    response = await asyncio.wait_for(client.request(
                         method,
                         path,
                         json=payload if method != "GET" else None,
@@ -237,7 +260,7 @@ class PlatformHttpClient:
                             idempotency_key=idempotency_key,
                             bearer_token=bearer_token,
                         ),
-                    )
+                    ), timeout=remaining)
                 if response.status_code in {401, 403}:
                     raise AdapterError(
                         "DEPENDENCY_FORBIDDEN",
@@ -277,9 +300,11 @@ class PlatformHttpClient:
                             path, attempt + 1, attempts, response.status_code,
                             upstream_code, time.perf_counter() - request_started,
                         )
-                        await asyncio.sleep(
-                            self.settings.http_retry_backoff_seconds * (2**attempt)
-                        )
+                        delay = max(self.settings.http_retry_backoff_seconds * (2**attempt),
+                                    self._retry_after(response))
+                        if delay >= deadline - time.perf_counter():
+                            break
+                        await asyncio.sleep(delay)
                         continue
                     logger.error(
                         "upstream failed path=%s status=%s upstream_code=%s elapsed=%.2fs",
@@ -302,7 +327,7 @@ class PlatformHttpClient:
                 return response.json()
             except AdapterError:
                 raise
-            except (httpx.HTTPError, ValueError) as exc:
+            except (httpx.HTTPError, ValueError, TimeoutError) as exc:
                 last_error = exc
                 if attempt + 1 < attempts:
                     logger.warning(
@@ -310,7 +335,10 @@ class PlatformHttpClient:
                         path, attempt + 1, attempts, type(exc).__name__,
                         time.perf_counter() - request_started,
                     )
-                    await asyncio.sleep(self.settings.http_retry_backoff_seconds * (2**attempt))
+                    delay = self.settings.http_retry_backoff_seconds * (2**attempt)
+                    if delay >= deadline - time.perf_counter():
+                        break
+                    await asyncio.sleep(delay)
                 else:
                     logger.error(
                         "upstream unreachable path=%s attempts=%s error=%s elapsed=%.2fs",

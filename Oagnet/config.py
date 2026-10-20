@@ -57,8 +57,9 @@ LLM_TIMEOUT_SECONDS = _positive_int("OAGNET_LLM_TIMEOUT_SECONDS", 45)
 LLM_MAX_RETRIES = _nonnegative_int("OAGNET_LLM_MAX_RETRIES", 0)
 LLM_MAX_CONCURRENCY = _positive_int("OAGNET_LLM_MAX_CONCURRENCY", 1)
 # One report commonly fans out into three ASL requests. This is the queue ceiling;
-# the API also shortens it when necessary to preserve its 85-second total budget.
+# The service deadline includes queueing and stays below the Agent's 180 seconds.
 LLM_QUEUE_TIMEOUT_SECONDS = _positive_int("OAGNET_LLM_QUEUE_TIMEOUT_SECONDS", 90)
+LLM_REQUEST_DEADLINE_SECONDS = _positive_int("OAGNET_LLM_REQUEST_DEADLINE_SECONDS", 175)
 
 EMBEDDING_MODEL = _env(
     "OAGNET_EMBEDDING_MODEL", "EMBEDDING_MODEL", default="text-embedding-v4"

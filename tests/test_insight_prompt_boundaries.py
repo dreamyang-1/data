@@ -50,7 +50,17 @@ async def test_guidance_keeps_task_data_interface_and_report_unchanged(
     calls = []
 
     async def handler(req):
-        calls.append(json.loads(req.content))
+        body = json.loads(req.content)
+        calls.append(body)
+        data = json.loads(body["messages"][1]["content"])
+        # The evidence review added for unsupported claims may verify a
+        # limitation; that must preserve the originally correct prose.
+        if "items" in data:
+            return httpx.Response(200, json={
+                "choices": [{"message": {"content": json.dumps({
+                    "reviews": [{"id": item["id"], "kind": "LIMITATION", "supported": True} for item in data["items"]]
+                }, ensure_ascii=False)}}]
+            })
         return httpx.Response(200, json={
             "choices": [{"message": {"content": json.dumps({
                 "claims": [{"statement": report}]
@@ -73,7 +83,7 @@ async def test_guidance_keeps_task_data_interface_and_report_unchanged(
         settings, httpx.MockTransport(handler)
     ).synthesize(request, source, [])
 
-    assert len(calls) == 1  # No extra validation/rewrite/model calls.
+    assert 1 <= len(calls) <= 2  # Generation and, if needed, evidence decisions.
     assert text == report
     assert output.claims[0].statement == report
     assert facts == original

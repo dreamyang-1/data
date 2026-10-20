@@ -2471,7 +2471,7 @@ async def test_real_two_stage_contract_and_double_encoded_result():
     assert [call[1] for call in client.calls] == ["/agent/query", "/api/translate", "/api/execute"]
     assert client.calls[0][3]["idempotency_key"].endswith(":asl")
     assert client.calls[0][3]["retryable"] is True
-    assert client.calls[0][3]["timeout"] == 90
+    assert client.calls[0][3]["timeout"] == 180  # Five-minute answer budget reserves ASL queue time.
     assert client.calls[1][3]["idempotency_key"].endswith(":sql-translate")
     assert client.calls[2][3]["idempotency_key"].endswith(":sql-execute")
     assert client.calls[0][3]["idempotency_key"] != client.calls[1][3]["idempotency_key"]
