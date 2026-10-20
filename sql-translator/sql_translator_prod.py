@@ -2023,6 +2023,7 @@ class SQLTranslatorProd:
         existing_tables: set,
         model_id: Optional[str] = None,
         preferred_entities: Optional[List[str]] = None,
+        metric_entities: Optional[List[str]] = None,
     ) -> Optional[str]:
         """
         从 from_entity 查找到物理表 table_name 的 JOIN 路径。
@@ -2069,6 +2070,24 @@ class SQLTranslatorProd:
                 continue
             join_clause = self._find_join_path(from_entity, cand, model_id)
             if join_clause:
+                # Equal-length routes can mean different business relations.
+                # For a filter, prefer the metric's registered fact owner;
+                # shorter paths and explicit hierarchy anchors retain priority.
+                for anchor in metric_entities or []:
+                    if anchor in {from_entity, cand}:
+                        continue
+                    lead = self._find_join_path(from_entity, anchor, model_id)
+                    tail = self._find_join_path(anchor, cand, model_id)
+                    if not lead or not tail:
+                        continue
+                    fact_path = f"{lead} {tail}"
+                    fact_tables = self._extract_tables_from_join(fact_path)
+                    if (
+                        self._get_entity_base_table(from_entity, model_id) not in fact_tables
+                        and len(fact_tables) == len(self._extract_tables_from_join(join_clause))
+                    ):
+                        join_clause = fact_path
+                        break
                 new_joins = self._filter_existing_joins(join_clause, existing_tables)
                 if new_joins:
                     return new_joins
@@ -3141,7 +3160,8 @@ class SQLTranslatorProd:
         return None
 
     def _detect_additional_joins(self, entity_code: str, dimensions: List[Dict],
-                                  filters: List[Dict] = None, having: List[str] = None, model_id: Optional[str] = None) -> List[str]:
+                                  filters: List[Dict] = None, having: List[str] = None, model_id: Optional[str] = None,
+                                  metric_entities: Optional[List[str]] = None) -> List[str]:
         """检测维度和过滤条件是否需要额外的 JOIN"""
         additional_joins = []
         existing_tables = self._get_existing_join_tables(entity_code, model_id)
@@ -3228,12 +3248,14 @@ class SQLTranslatorProd:
                 if field and '.' in field:
                     table_name = field.split('.')[0]
                     if table_name not in existing_tables:
+                        metric_options = {'metric_entities': metric_entities} if metric_entities else {}
                         new_joins = self._find_join_to_table(
                             entity_code,
                             table_name,
                             existing_tables,
                             model_id,
                             preferred_entities=dimension_anchor_entities,
+                            **metric_options,
                         )
                         if new_joins and new_joins not in additional_joins:
                             additional_joins.append(new_joins)
@@ -3778,7 +3800,18 @@ class SQLTranslatorProd:
             joins.add(clauses)
             existing_tables.update(joins.tables)
 
-        additional_joins = self._detect_additional_joins(entity_code, dimensions, filters, having, model_id)
+        metric_owners = set()
+        for metric in metrics:
+            definition = self._get_metric(metric.get('name'), model_id) or {}
+            owners = definition.get('source_dependency', {}).get('bind_entity') or []
+            metric_owners.update(owners if isinstance(owners, list) else [owners])
+            if not owners:
+                metric_owners.add(None)
+        metric_options = {}
+        if len(metric_owners) == 1 and None not in metric_owners and entity_code not in metric_owners:
+            metric_options['metric_entities'] = list(metric_owners)
+        additional_joins = self._detect_additional_joins(
+            entity_code, dimensions, filters, having, model_id, **metric_options)
         include_joins(additional_joins)
 
         # 检测时间条件引用的表 - 如果 anchor 包含表名也需要 JOIN
