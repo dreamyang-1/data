@@ -12,7 +12,7 @@ from typing import Any
 
 def key_kind(value: str) -> str:
     value = re.sub(r"[\s（）()\[\]【】]", "", value.lower()).rsplit(".", 1)[-1]
-    if re.search(r"(?:^|_)id$|编号$|标识$", value):
+    if re.search(r"(?:^|_)(?:id|key)$|编号$|标识$|^订单号$", value):
         return "id"
     if re.search(r"(?:^|_)code$|编码$|代码$", value):
         return "code"

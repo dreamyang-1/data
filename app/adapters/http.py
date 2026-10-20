@@ -2328,13 +2328,13 @@ class HttpDataRetrievalAdapter:
                     "ASL_ANALYSIS_SHAPE_INVALID",
                     "grouped partner metric ASL must retain requested metrics",
                 )
-            self._validate_grouped_semantic_dimensions(asl, request)
+            self._validate_grouped_semantic_dimensions(asl, request, contract_confirmed=intent_contract_confirmed)
         elif (
             request.primary_intent == PrimaryIntent.METRIC_QUERY
             and request.metrics
             and self._required_grouped_dimension_roles(request)
         ):
-            self._validate_grouped_semantic_dimensions(asl, request)
+            self._validate_grouped_semantic_dimensions(asl, request, contract_confirmed=intent_contract_confirmed)
         if ordered_entity_metric_ranking_request(request):
             sort = asl.get("sort")
             if not (
@@ -3463,6 +3463,7 @@ class HttpDataRetrievalAdapter:
         cls,
         asl: dict[str, Any],
         request: CanonicalAnalysisRequest,
+        *, contract_confirmed: bool = False,
     ) -> None:
         """Require every requested role using current ASL semantic metadata."""
 
@@ -3494,6 +3495,13 @@ class HttpDataRetrievalAdapter:
         missing: list[str] = []
         satisfied = [False] * len(dimensions)
         required_dimensions = cls._required_grouped_dimension_roles(request)
+        # As for detail projections, current scoped Oagnet owns the mapping
+        # from business labels to registered fields. A second static synonym
+        # check cannot reliably rebind an arbitrary newly published field.
+        # Retain shape, explicit V2 identities and strict-grain verification.
+        if (contract_confirmed and dimensions and not request.trusted_dimension_bindings
+                and 'STRICT_GROUPING_DIMENSIONS' not in request.assumptions):
+            return
         for expected in required_dimensions:
             expected_text = str(expected).strip()
             if not expected_text:

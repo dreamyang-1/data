@@ -1,6 +1,7 @@
 """Small, deterministic delivery helpers; no narrative may stand in for data."""
 from typing import Any
 from decimal import Decimal, InvalidOperation
+import re
 
 
 def numeric_value(value):
@@ -16,7 +17,7 @@ def numeric_value(value):
 
 
 def identifier_field(field):
-    return isinstance(field, str) and field.lower().endswith(('_code', '_id', '_no', '_number'))
+    return isinstance(field, str) and field.lower().endswith(('_code', '_id', '_no', '_number', '_key'))
 
 
 def has_group_identity(reference):
@@ -92,10 +93,56 @@ def aligned_input(references):
     return visible, [{name: row.get(name) for name in visible} for row in rows]
 
 
+def _distribution_fields(operation):
+    if operation.get('type')=='pipeline':
+        return list(dict.fromkeys(field for step in operation.get('operations',[])
+            for field in _distribution_fields(step)))
+    if operation.get('type')=='derive' and operation.get('result_field'):
+        return [operation['result_field']]
+    if operation.get('type')=='aggregate':
+        return [item['alias'] for item in operation.get('aggregations',[]) if item.get('alias')]
+    return []
+
+
+def metric_distributions(rows, fields):
+    """Describe computed row samples; never substitute a ratio of totals."""
+    result={}
+    for field in fields:
+        values=[]
+        for row in rows:
+            try:values.append(numeric_value(row.get(field)))
+            except ValueError:pass
+        if not values:
+            continue
+        values.sort();count=len(values);average=sum(values)/count
+        def quantile(fraction):
+            rank=Decimal(count-1)*fraction;left=int(rank);right=min(left+1,count-1)
+            return values[left]+(values[right]-values[left])*(rank-left)
+        low,high=values[0],values[-1]
+        bin_count=min(5,count) if low!=high else 1
+        width=(high-low)/bin_count if low!=high else Decimal(0)
+        counts=[0]*bin_count
+        for value in values:
+            index=min(int((value-low)/width),bin_count-1) if width else 0
+            counts[index]+=1
+        result[field]={'sample_count':count,'missing_or_non_numeric_count':len(rows)-count,
+            'mean':float(average),'median':float(quantile(Decimal('0.5'))),
+            'min':float(low),'max':float(high),'q1':float(quantile(Decimal('0.25'))),
+            'q3':float(quantile(Decimal('0.75'))),
+            'population_stddev':float((sum((value-average)**2 for value in values)/count).sqrt()),
+            'mean_method':'arithmetic_mean_of_computed_row_samples',
+            'quantile_method':'linear_interpolation_at_(n-1)*p',
+            'histogram_method':'equal_width_up_to_five_bins; left_closed_right_open_except_last',
+            'histogram':[{'lower':float(low+width*index),'upper':float(low+width*(index+1)),
+                'upper_inclusive':index==bin_count-1,'count':amount,'percentage':amount/count*100}
+                for index,amount in enumerate(counts)]}
+    return result
+
+
 def computation_material(question: str, reference, rows, operation: dict[str, Any], render, *, columns=None):
     columns = [name for name in (columns if columns is not None else reference.columns) if not str(name).startswith('_')]
     data = [{name: row.get(name) for name in columns} for row in rows]
-    return {'question':question, 'intent':'统计分析',
+    material={'question':question, 'intent':'统计分析',
         'summary':f'计算、筛选已完成，共 {len(data)} 条结果。', 'warnings':[],
         'presentation':{'table':render(columns, data[:20]), 'chart':'',
             'notes':([f'完整计算结果共 {len(data)} 条，当前展示前20条。'] if len(data)>20 else [])},
@@ -103,3 +150,11 @@ def computation_material(question: str, reference, rows, operation: dict[str, An
             'delivery_operation':operation,
             'query_data':{'columns':columns,'rows':data,'returned_row_count':len(data),
                 'total_row_count':len(data),'total_row_count_confirmed':True,'sample_only':False}}}
+    if re.search(r'分布|分散|离散|集中|区间',question):
+        distributions=metric_distributions(data,[field for field in _distribution_fields(operation) if field in columns])
+        if distributions:
+            material['facts']['metric_distributions']=distributions
+            summaries=[{'指标':field,'样本数':stats['sample_count'],'最小值':stats['min'],'最大值':stats['max'],
+                '算术平均值':stats['mean'],'中位数':stats['median']} for field,stats in distributions.items()]
+            material['presentation']['table']=render(list(summaries[0]),summaries)+'\n\n'+material['presentation']['table']
+    return material

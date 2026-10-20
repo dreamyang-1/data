@@ -503,7 +503,11 @@ def validate_intent_asl_contract_completeness(
 
     expected_projection = explicit.get("projection")
     if expected_projection is not None:
-        actual_projection = list(contract.get("required_projections") or [])
+        # Aggregate grouping keys are projected columns too. An explicitly
+        # requested order key is preserved when promised as a required grouping;
+        # detail-only projections need not duplicate that same requirement.
+        actual_projection = list(dict.fromkeys([*(contract.get("required_projections") or []),
+                                                *(contract.get("required_groupings") or [])]))
         missing_projection = [
             value for value in expected_projection.value
             if value not in actual_projection

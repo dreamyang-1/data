@@ -238,7 +238,8 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 
 
 def validate_plan(plan: TaskPlan, *, source_question: str | None = None,
-                  registered_default_times: tuple[str, ...] = ()) -> None:
+                  registered_default_times: tuple[str, ...] = (),
+                  registered_conditions: tuple[str, ...] = ()) -> None:
     if not 2 <= len(plan.tasks) <= 12:
         raise TaskPlanningError("任务计划必须包含2到12个原子任务")
     task_ids = [task.task_id for task in plan.tasks]
@@ -257,7 +258,7 @@ def validate_plan(plan: TaskPlan, *, source_question: str | None = None,
             )
         known.add(task.task_id)
     if source_question is not None:
-        _validate_grounding(plan, source_question, registered_default_times)
+        _validate_grounding(plan, source_question, registered_default_times, registered_conditions)
 
 
 def _unique_mentions(text: str, candidates: tuple[str, ...]) -> list[str]:
@@ -361,7 +362,8 @@ def _qualified_facet_parts(question: str) -> tuple[str, list[str]] | None:
 
 
 def _validate_grounding(plan: TaskPlan, source_question: str,
-                       registered_default_times: tuple[str, ...] = ()) -> None:
+                       registered_default_times: tuple[str, ...] = (),
+                       registered_conditions: tuple[str, ...] = ()) -> None:
     """拒绝模型自造的日期、数字、指标和带引号的过滤值。
 
     只做防自造的正向校验：任务文本不得引入原问题没有的数字、指标、
@@ -404,7 +406,19 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
         compact = _normalize_grounding_numbers(
             re.sub(r"\s+", "", grounding_question).casefold()
         )
-        if not set(re.findall(r"\d+(?:\.\d+)?", compact)).issubset(source_numbers):
+        numeric_question = compact
+        # Task references are control metadata, not new business thresholds.
+        # Accept only references to this task's declared predecessors.
+        predecessors = getattr(task,'depends_on',())
+        predecessor_numbers={str(index) for index,item in enumerate(plan.tasks)
+                             if getattr(item,'task_id',None) in predecessors}
+        predecessor_numbers.update(str(index+1) for index,item in enumerate(plan.tasks)
+                                   if getattr(item,'task_id',None) in predecessors)
+        numeric_question=re.sub(r'任务(\d+)|第(\d+)个任务',
+            lambda match:'' if (match[1] or match[2]) in predecessor_numbers else match[0],numeric_question)
+        for condition in sorted(registered_conditions,key=len,reverse=True):
+            numeric_question = re.sub(re.escape(condition.casefold()) + r'(?![\d.])', '', numeric_question)
+        if not set(re.findall(r"\d+(?:\.\d+)?", numeric_question)).issubset(source_numbers):
             raise TaskPlanningError("子任务包含原问题中不存在的数字或日期")
         if not {value for value in metric_terms if value in compact}.issubset(source_metrics):
             raise TaskPlanningError("子任务包含原问题中不存在的指标")
@@ -1347,7 +1361,9 @@ class CompoundTaskPlanner:
             )
         validate_plan(plan, source_question=source_question, registered_default_times=tuple(
             dict.fromkeys(default for decomposition in decompositions
-                          for default in decomposition.grounding_default_times)))
+                          for default in decomposition.grounding_default_times)),
+            registered_conditions=tuple(dict.fromkeys(condition for decomposition in decompositions
+                for condition in decomposition.grounding_registered_conditions)))
         self._reject_metric_substitution(plan, source_question)
         return plan
 
@@ -1575,7 +1591,8 @@ class CompoundQuestionRouter:
             compound_metrics=_compound_metrics_in_decompositions([decomposition]),
         )
         validate_plan(plan, source_question=question,
-                      registered_default_times=decomposition.grounding_default_times)
+                      registered_default_times=decomposition.grounding_default_times,
+                      registered_conditions=decomposition.grounding_registered_conditions)
         return CompoundRouteResult(judgment=judgment, plan=plan)
 
 

@@ -2379,6 +2379,11 @@ class DataAnalysisOrchestrator:
     @staticmethod
     def _dependency_anchor_text(question: str) -> str:
         compact = re.sub(r"\s+", "", question).lower()
+        key_list = re.search(
+            r"(?:根据|基于|按照|依照)(?:上述|上一步|前述|前序)(?:任务)?"
+            r"(?:返回|查询到)?的?([^，,。；;！？?]{1,24}?)(?:完整)?名单", compact)
+        if key_list:
+            return key_list.group(1)
         match = re.search(
             r"(?:根据|基于|按照|依照|按)(.+?)(?:筛选|过滤|推荐|查找|查询|匹配|分析|统计)",
             compact,
@@ -2399,6 +2404,7 @@ class DataAnalysisOrchestrator:
     def _dependency_column_family(text: str) -> str | None:
         normalized = text.lower()
         families = {
+            "order": ("订单", "order"),
             "department": ("科室", "部门", "department", "dept"),
             "category": ("分类", "类别", "品类", "category", "class"),
             "region": ("地区", "区域", "省份", "城市", "省", "市", "region", "province", "city"),
@@ -2439,6 +2445,8 @@ class DataAnalysisOrchestrator:
             if (
                 source_task_id not in candidate.depends_on
                 or not cls._dag_references_dependency_result(candidate.question)
+                or database_query_choice(candidate.extraction) is False
+                or '不再查询数据库' in candidate.question
             ):
                 continue
             family = cls._dependency_column_family(
@@ -2465,6 +2473,8 @@ class DataAnalysisOrchestrator:
         families = cls._dependency_key_families(source_task_id, plan)
         if not families:
             return question
+        if families == ('order',):
+            return question + '\n后续查询需要订单号作为精确关联键，请按当前授权目录返回订单号，不增加其他分组。'
         family_list = ", ".join(families)
         return (
             f"{question}\n"
@@ -2595,7 +2605,7 @@ class DataAnalysisOrchestrator:
                 current_scope=expected_scope,
             )
             rows = tuple(dict(row) for row in loaded.rows)
-            if reference.row_count != len(rows) or not rows or len(rows) > 1000:
+            if not dataset_source_complete(reference, len(rows)) or not rows or len(rows) > 1000:
                 raise DependencyConstraintError("DEPENDENCY_SOURCE_DATASET_INCOMPLETE_OR_TOO_LARGE")
             column = self._select_dependency_column(
                 task.question, reference.columns, rows,

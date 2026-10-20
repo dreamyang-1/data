@@ -1,0 +1,106 @@
+{
+  "services": {
+    "Agent": {
+      "baseline_counts": {
+        "passed": 5241,
+        "failed": 238
+      },
+      "final_counts": {
+        "passed": 5279,
+        "failed": 237
+      },
+      "old_pass_new_fail": [],
+      "old_fail_new_pass": [
+        "tests/test_complex_execution_correctness.py::test_truncated_source_is_not_a_complete_dependency_constraint"
+      ],
+      "new_tests_count": 37,
+      "baseline_collection_errors": 0,
+      "final_collection_errors": 0
+    },
+    "SQL": {
+      "baseline_counts": {
+        "passed": 702,
+        "failed": 15
+      },
+      "final_counts": {
+        "passed": 712,
+        "failed": 15
+      },
+      "old_pass_new_fail": [],
+      "old_fail_new_pass": [],
+      "new_tests_count": 10,
+      "baseline_collection_errors": 0,
+      "final_collection_errors": 0,
+      "coverage_basis": {
+        "reused_full_result": "sql-final.json",
+        "incremental_result": "sql-mixed-products-target.json",
+        "runtime_identity_verified": true,
+        "unchanged_test_bodies_verified": true,
+        "added_tests": 1,
+        "note": "Full suite was already run against identical runtime. Only the appended test was added afterwards; all 10 tests in that module were rerun."
+      }
+    },
+    "OagnetGit": {
+      "baseline_counts": {
+        "passed": 1827,
+        "failed": 26
+      },
+      "final_counts": {
+        "passed": 1841,
+        "failed": 26
+      },
+      "old_pass_new_fail": [],
+      "old_fail_new_pass": [],
+      "new_tests_count": 14,
+      "baseline_collection_errors": 0,
+      "final_collection_errors": 0
+    },
+    "OagnetRelease": {
+      "baseline_counts": {
+        "passed": 1821,
+        "failed": 32
+      },
+      "final_counts": {
+        "passed": 1835,
+        "failed": 32
+      },
+      "old_pass_new_fail": [],
+      "old_fail_new_pass": [],
+      "new_tests_count": 14,
+      "baseline_collection_errors": 0,
+      "final_collection_errors": 0
+    }
+  },
+  "critical_counts": {
+    "passed": 320
+  },
+  "native_cases": [
+    {
+      "case": "paraphrase-joint-verified",
+      "passed": true,
+      "status": "COMPLETED",
+      "task_count": 3,
+      "seven_stages_in_order": true,
+      "complete_cohort_verified": true,
+      "whole_order_aggregation_verified": true,
+      "independent_calculation_passed": true,
+      "program_distribution_facts_present": true,
+      "cohort_proof": "independent distinct count plus identical typed-key fingerprint",
+      "elapsed_seconds": 102.511
+    },
+    {
+      "case": "original-final-frozen",
+      "passed": true,
+      "status": "COMPLETED",
+      "task_count": 3,
+      "seven_stages_in_order": true,
+      "complete_cohort_verified": true,
+      "whole_order_aggregation_verified": true,
+      "independent_calculation_passed": true,
+      "program_distribution_facts_present": true,
+      "cohort_proof": "independent distinct count plus identical typed-key fingerprint",
+      "elapsed_seconds": 108.122
+    }
+  ],
+  "test_fixtures": "Synthetic data only; no business rows or credentials committed"
+}
