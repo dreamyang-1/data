@@ -472,6 +472,33 @@ def _shared_region_denominator_from_spec(spec_text: str) -> bool:
     )
 
 
+def _confirmed_hospital_department_scope(task_question, source_question, structured, model_id):
+    """Carry the user's confirmed model-81 product-applicability meaning.
+
+    Hospital order questions use product applicable departments in this
+    business workflow. Explicit order/administrative department requests keep
+    their own scope; physical binding remains the original ASL's job.
+    """
+    if (model_id != 81 or not structured or '医院' not in source_question
+            or not re.search(r'订单|销售', source_question)
+            or re.search(r'业务科室|business_department|行政科室|院属科室|下辖科室|医院下属科室', source_question, re.I)):
+        return task_question
+    department_filter = False
+    for item in structured.get('过滤条件') or []:
+        if isinstance(item, dict) and item.get('field') in {
+            '业务科室', '销售订单.业务科室', 'sales_order.business_department',
+            '科室', '科室名称', '适用科室',
+        }:
+            item['entity'] = '商品科室关联'
+            item['field'] = '科室编码'
+            department_filter = True
+    if department_filter:
+        task_question = task_question.replace('业务科室', '商品适用科室')
+        if '商品适用科室' not in task_question:
+            task_question += '，科室按商品适用科室筛选订单'
+    return task_question
+
+
 def _normalize_metric_name(
     name: str, registered: frozenset[str], aliases: dict[str, str]
 ) -> str:
@@ -586,7 +613,13 @@ def _respect_shared_region_denominator(decomposition, source):
         # A master-data denominator is independent of transaction activity time.
         fixed['时间粒度'] = {'unit': None, 'time_range': '全部历史', 'anchor': None}
         period = '全部历史'
-        filters = json.dumps(fixed.get('过滤条件') or [], ensure_ascii=False)
+        filters = '；'.join(
+            f"{item.get('entity') or ''}{item.get('field') or ''}"
+            f"{item.get('op') or item.get('operator') or '='}"
+            + '、'.join(str(value) for value in (
+                item.get('value') if isinstance(item.get('value'), list) else [item.get('value')]))
+            for item in fixed.get('过滤条件') or [] if isinstance(item, dict)
+        )
         question = f'查询{period}区域全部医院总数'
         if fixed.get('过滤条件'):
             question += '，筛选条件：' + filters
@@ -1135,6 +1168,9 @@ class SingleQuestionPlanner:
                 metric_catalog=metric_catalog,
             )
             _ground_location_owners(structured, task_question)
+            task_question = _confirmed_hospital_department_scope(
+                task_question, question, structured, semantic_model_id
+            )
             if structured is not None and task_intent in {
                 None, *_CHINESE_INTENT_TO_PRIMARY.values(),
             }:
