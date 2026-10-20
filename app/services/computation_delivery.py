@@ -150,6 +150,22 @@ def computation_material(question: str, reference, rows, operation: dict[str, An
             'delivery_operation':operation,
             'query_data':{'columns':columns,'rows':data,'returned_row_count':len(data),
                 'total_row_count':len(data),'total_row_count_confirmed':True,'sample_only':False}}}
+    steps=operation.get('operations',[]) if operation.get('type')=='pipeline' else [operation]
+    notes=[]
+    for step in steps:
+        for spec in step.get('aggregations',[]) if isinstance(step,dict) else []:
+            function=spec.get('function','')
+            if function in {'variance','stddev','variance_population','stddev_population','covariance_population'}:
+                notes.append('统计使用样本口径（除以n-1）。' if spec.get('ddof')==1 else '统计使用总体口径（除以n）。')
+            elif function in {'variance_sample','stddev_sample','covariance_sample'}:
+                notes.append('统计使用样本口径（除以n-1）。')
+            if function in {'median','quantile','percentile'}:
+                notes.append('分位数采用(n-1)×q位置的线性插值。')
+            if function in {'correlation','covariance_population','covariance_sample'}:
+                notes.append('成对统计仅使用两列均非空的成对样本。')
+    if notes:
+        notes=list(dict.fromkeys(notes));material['presentation']['notes'].extend(notes)
+        material['summary']+=' '+' '.join(notes)
     if re.search(r'分布|分散|离散|集中|区间',question):
         distributions=metric_distributions(data,[field for field in _distribution_fields(operation) if field in columns])
         if distributions:

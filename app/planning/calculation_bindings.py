@@ -9,28 +9,58 @@ ARITHMETIC_OPERATORS = {
     'subtract': r'−|－|-|减去|减',
     'multiply': r'\*|×|乘以|乘',
     'divide': r'/|÷|除以',
+    'power': r'\*\*|\^|乘方',
+    'modulo': r'%|取余|取模',
 }
 
 
 def arithmetic_roles(binding):
     """Retain the published ratio schema while allowing ordinary binary math."""
-    if not isinstance(binding, dict) or binding.get('operation') not in ARITHMETIC_OPERATORS:
+    from app.numeric_operations import operator_roles
+    if not isinstance(binding, dict):
         raise ValueError('计算绑定必须声明受控运算')
+    roles = operator_roles(binding.get('operation'))
     if binding['operation'] == 'divide' and any(key in binding for key in ('numerator', 'denominator')):
-        if any(key in binding for key in ('left', 'right')):
+        if any(key in binding for key in ('left', 'right', 'input')):
             raise ValueError('计算操作数不能混用两套字段')
         return ('numerator', 'denominator')
     if any(key in binding for key in ('numerator', 'denominator')):
         raise ValueError('加减乘运算必须使用左右操作数')
-    return ('left', 'right')
+    if any(key in binding and key not in roles for key in ('input','left','right')):
+        raise ValueError('运算操作数个数不匹配')
+    return roles
 
 
 def registered_arithmetic_binding(spec, name, components):
     """Read one binary formula without treating dependency order as math."""
     row = next((line for line in spec.splitlines() if line.strip().startswith('| ' + name + ' |')), '')
     cells = [cell.strip() for cell in row.strip().strip('|').split('|')]
-    if len(cells) < 4 or len(components) != 2:
+    if len(cells) < 4:
         return None
+    definition=cells[2]
+    if len(components)==1:
+        column=components[0];escaped=re.escape(column)
+        from app.numeric_operations import UNARY
+        for op in sorted(UNARY):
+            if re.fullmatch(re.escape(op)+r'\s*\(\s*'+escaped+r'\s*\)',definition.strip()):
+                return {'operation':op,'input':{'column':column},'result_field':name,'format':'number'}
+        for op,pattern in {'square':escaped+r'的?平方(?!根)','cube':escaped+r'的?立方(?!根)',
+            'sqrt':r'(?:sqrt\s*\(\s*'+escaped+r'\s*\)|'+escaped+r'的?平方根)',
+            'cbrt':r'(?:cbrt\s*\(\s*'+escaped+r'\s*\)|'+escaped+r'的?立方根)',
+            'abs':r'(?:abs\s*\(\s*'+escaped+r'\s*\)|'+escaped+r'的?绝对值)'}.items():
+            match=re.search(pattern,definition)
+            if match and not re.search(r'[+*/^×÷]|平方|立方|开根|方差|标准差|平均',definition[:match.start()]+definition[match.end():]):
+                return {'operation':op,'input':{'column':column},'result_field':name,'format':'number'}
+        literal=r'(?<![\w.])(-?(?:\d+(?:\.\d*)?|\.\d+))(?![\w.])'
+        for op,pattern in ARITHMETIC_OPERATORS.items():
+            match=re.search(escaped+r'\s*(?:'+pattern+r')\s*'+literal,definition)
+            if match:
+                remaining=definition[:match.start()]+definition[match.end():]
+                if re.search(r'[+*/^×÷]|加|减|乘|除|平方|开根',remaining):return None
+                value=float(match[1]);value=int(value) if value.is_integer() else value
+                return {'operation':op,'left':{'column':column},'right':{'value':value},'result_field':name,'format':'number'}
+        return None
+    if len(components)!=2:return None
     choices = [(operator, left, right) for operator, pattern in ARITHMETIC_OPERATORS.items()
                for left in components for right in components
                if left != right and re.search(re.escape(left) + r'\s*(?:' + pattern + r')\s*'
@@ -38,6 +68,12 @@ def registered_arithmetic_binding(spec, name, components):
     if len(choices) != 1:
         return None
     operator, left, right = choices[0]
+    match=re.search(re.escape(left)+r'\s*(?:'+ARITHMETIC_OPERATORS[operator]+r')\s*'+re.escape(right),definition)
+    remaining=definition[:match.start()]+definition[match.end():]
+    # Never silently drop a second operation from a registered formula.
+    if re.search(r'[+*/^×÷]|加|减|乘|除|平方|开根',remaining):
+        if not (operator=='divide' and '%' in cells[3] and re.fullmatch(r'\s*[×*]\s*100\s*%?\s*',remaining)):
+            return None
     roles = ('numerator', 'denominator') if operator == 'divide' else ('left', 'right')
     return {'operation':operator,roles[0]:{'column':left},roles[1]:{'column':right},
             'result_field':name,'format':'percent' if '%' in cells[3] else 'number'}
@@ -61,7 +97,8 @@ async def resolve_compound_formulas(settings, transport, spec_text, dependencies
     # formula must never be inferred from component order or dependency text.
     required = [name for name in required if any(
         line.strip().startswith('| ' + name + ' |') and len(line.strip().strip('|').split('|')) >= 4
-        and re.search('|'.join(ARITHMETIC_OPERATORS.values()), line.strip().strip('|').split('|')[2])
+        and (registered_arithmetic_binding(line,name,dependencies[name]) is not None
+             or re.search('|'.join(ARITHMETIC_OPERATORS.values())+r'|平方|立方|sqrt\(|cbrt\(|abs\(', line.strip().strip('|').split('|')[2]))
         for line in rows)]
     if not required:
         return {}
@@ -73,10 +110,21 @@ async def resolve_compound_formulas(settings, transport, spec_text, dependencies
     if len(exact) == len(required):
         return exact
     required = [name for name in required if name not in exact]
+    for name in required:
+        row=next(line for line in rows if line.strip().startswith('| '+name+' |'))
+        definition=row.strip().strip('|').split('|')[2]
+        normalized=definition
+        for component in sorted(dependencies[name],key=len,reverse=True):
+            normalized=normalized.replace(component,'input')
+        # A small role-binding call cannot encode a multi-step formula. Leave
+        # that to the planner's typed pipeline, rather than accepting a partial
+        # binary operation that silently loses the rest of the expression.
+        if len(re.findall(r'\*\*|[+*/^×÷]|加上|减去|乘以|除以|(?<=input)-',normalized))>1:
+            raise ValueError('登记公式包含多步运算，必须规划完整的结果操作pipeline，不能压缩为单个计算绑定')
     body = {'model': settings.intent_model_name, 'temperature': 0, 'enable_thinking': False,
         'response_format': {'type': 'json_object'}, 'messages': [
         {'role': 'system', 'content': '只绑定给定规范行中的计算公式，不回答业务问题。'
-         '输出JSON {"bindings":[{"metric":"登记指标名","operation":"add或subtract或multiply或divide",'
+         '输出JSON {"bindings":[{"metric":"登记指标名","operation":"add或subtract或multiply或divide或power或modulo",'
          '"left":"左成分登记名","right":"右成分登记名","format":"number或percent"}]}。'
          'divide也兼容numerator、denominator字段。操作数顺序必须按公式含义绑定到该指标的依赖指标登记原名，不能使用依赖指标的排列顺序。'
          '只支持明确的两个成分加减乘除；多步公式不能压缩成一个运算。不能确定或不支持时不输出该项。不得添加其他指标。'},
@@ -103,7 +151,7 @@ async def resolve_compound_formulas(settings, transport, spec_text, dependencies
                 or item.get('format') not in {'number', 'percent'}
                 or any(not isinstance(item.get(role), str) for role in roles)
                 or {item.get(role) for role in roles} != set(dependencies[name])
-                or len(dependencies[name]) != 2):
+                or len(dependencies[name]) != len(roles)):
             raise ValueError('公式绑定超出当前指标的登记成分')
         result[name] = {'operation': item['operation'], **{role: {'column': item[role]} for role in roles},
                         'result_field': name, 'format': item['format']}
@@ -120,6 +168,11 @@ def json_text(value):
 def normalize_result_operation(operation):
     """Adapt the planner's order/limit spellings to the existing dataset API."""
     value = copy.deepcopy(operation)
+    if isinstance(value,dict) and value.get('type')=='pipeline' and 'steps' in value:
+        steps=value.pop('steps')
+        if 'operations' in value and value['operations']!=steps:
+            raise ValueError('结果流水线同时提供了不一致的steps和operations')
+        value['operations']=steps
     steps = value.get('operations', []) if isinstance(value, dict) and value.get('type') == 'pipeline' else [value]
     if not isinstance(steps, list):
         return value
@@ -168,6 +221,15 @@ def materialize_computation_binding(extraction, *, task_index, task_offset=0, de
             raise TaskInputBindingError(str(exc)) from exc
         for role in roles:
             operand = binding.get(role)
+            if isinstance(operand, dict) and 'value' in operand:
+                from app.numeric_operations import literal
+                try:
+                    if set(operand) != {'value'}:
+                        raise ValueError('数值常量不能混用任务引用或字段')
+                    literal(operand['value'])
+                except ValueError as exc:
+                    raise TaskInputBindingError(str(exc)) from exc
+                continue
             if not isinstance(operand, dict) or not isinstance(operand.get('column'), str) or not operand['column'].strip():
                 raise TaskInputBindingError('计算绑定缺少输入字段')
             bind(operand)
@@ -216,18 +278,19 @@ def validate_result_operation(operation):
                     or not isinstance(step.get('group_by',[]),list) or not fields(step.get('group_by',[]))):
                 raise ValueError('月度增长缺少明确指标、月份或分组字段')
         elif step['type'] == 'derive':
-            if (step.get('operator') not in {'add','subtract','multiply','divide'}
-                    or not fields([step.get(key) for key in ('left_field','right_field','result_field')])):
-                raise ValueError('逐行计算缺少明确操作或字段')
+            from app.numeric_operations import validate_derive
+            validate_derive(step)
         elif step['type'] == 'aggregate':
             groups,specs = step.get('group_by',[]),step.get('aggregations')
             if (not isinstance(groups,list) or not fields(groups) or len(groups)>20
                     or not isinstance(specs,list) or not 1<=len(specs)<=20):
                 raise ValueError('聚合计算缺少分组或指标定义')
             for spec in specs:
-                if (not isinstance(spec,dict) or spec.get('function') not in {'count','sum','avg','min','max'}
+                if (not isinstance(spec,dict)
                         or not fields([spec.get('field')]) or ('alias' in spec and not fields([spec['alias']]))):
                     raise ValueError('聚合计算缺少明确函数或字段')
+                from app.numeric_operations import validate_aggregation
+                validate_aggregation(spec)
     return steps
 
 

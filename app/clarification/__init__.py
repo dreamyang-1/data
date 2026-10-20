@@ -5,7 +5,7 @@
 （附反问清单）。模型调用通过注入的 complete 回调接入，模块内不做
 网络传输；挂起状态的读写转发由 pending_bridge 承担。
 """
-from .context_builder import build_context_text
+from .context_builder import build_context_text, build_question_chain_section
 from .decision import CLARIFY_DECISION_PROMPT, ClarificationDecision, ClarificationDecisionError, decide
 
 __all__ = [
@@ -13,5 +13,6 @@ __all__ = [
     "ClarificationDecision",
     "ClarificationDecisionError",
     "build_context_text",
+    "build_question_chain_section",
     "decide",
 ]

@@ -50,7 +50,23 @@ metric_targets仅记录任务要交付的规范登记指标名；grain记录结�
 10. 若已有上一轮完整结果可提供参数，不重复原查询；采样不能当成完整名单。仅在完整性已确认时复用具体参数。
 11. postprocess仅用于明确可执行的既有数据操作，格式为{"source_task_index":0,"operation":{...}}；operation只支持derive、aggregate、filter、select、sort、sort_limit、limit或其pipeline。不得自造distribution、distribution_analysis、binning等操作。普通分布描述并入最终计算任务的交付物，由现有结果分析完成，不另造无法执行的分析任务。需要确认的计算口径保留clarification。禁止添加数据库字段、编程代码或未给出的业务条件。
 12. 区分入选对象的条件和对象内部的计算范围。若登记口径要求“该订单下全部商品”，原问题又按采购商品选择订单，必须先查询包含指定商品且满足医院、时间等条件的完整去重订单号名单，再依赖该名单统计每张订单全部商品的金额、数量，最后计算分布。商品条件仅用于入选名单，不可继续限制整单成分；不能把商品均价当成整单均价。其他客户/合同等对象同理。后续问题明确写“根据上述任务返回的完整名单”，不得把预览采样当名单。
+13. 平方、开根、对数、取余等数值计算使用后续本地计算任务，保留原始登记指标或字段作为输入，不把“平方金额”等临时结果名当成未登记数据库指标。方差、标准差、中位数、分位数、相关系数等先取得完整样本并保留正确粒度，再用aggregate；不能对已经求和的一个总数假装完成样本统计。总体与样本口径按原问题明确要求保留。纯数字运算可用无数据库依赖的计算任务。
 '''
+
+# Postprocessing belongs to planning; the extraction phase must not have to
+# invent a missing calculation task after its boundaries have been frozen.
+from app.numeric_operations import UNARY, BINARY, AGGREGATES
+PLANNING_PROMPT += ('\n数值计算任务可直接声明postprocess，不能只写计算目标而漏掉可执行操作。'
+    'postprocess={"source_task_index":0,"operation":{...}}只引用前序结果列的业务名称，不猜数据库字段。'
+    '一元例：{"type":"derive","operator":"sqrt","field":"订单笔数","result_field":"平方根"}。'
+    '二元例：{"type":"derive","operator":"power","left_field":"订单笔数","right_value":2,"result_field":"平方"}，'
+    '另一侧也可为right_field；field与value常量每侧二选一。'
+    '统计例：{"type":"aggregate","group_by":[],"aggregations":[{"field":"订单笔数","function":"variance_population","alias":"总体方差"}]}。'
+    '先查询各业务员完整的订单笔数样本，再计算这些样本的方差；不能改查一个总数。'
+    '组合运算使用最多5步的pipeline或拆成有依赖的计算任务，后续可引用前面结果列；不得输出表达式或代码。'
+    '纯数值任务没有数据依赖时留待参数阶段生成数值计算绑定。'
+    '可用一元运算：'+','.join(sorted(UNARY))+'；二元运算：'+','.join(sorted(BINARY))+
+    '；统计函数：'+','.join(sorted(AGGREGATES))+'。\n')
 
 
 PARAMETER_PROMPT = '''任务边界已经确定。请为给定任务逐项提取extraction，只输出JSON。
@@ -481,7 +497,7 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
             from app.planning.calculation_bindings import registered_arithmetic_binding
             formula = registered_arithmetic_binding(canonical_formula_spec(spec,catalog),
                                                     compound[0],dependencies[compound[0]])
-            if formula and formula['operation'] in {'add','subtract','multiply'}:
+            if formula and formula['operation'] != 'divide':
                 # Components of this one request share scope and grain. Ask
                 # the existing query service for them together, preserving its
                 # common population instead of inventing missing groups/zeros

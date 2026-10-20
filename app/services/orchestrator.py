@@ -88,6 +88,7 @@ from app.clarification import (
     ClarificationDecision,
     ClarificationDecisionError,
     build_context_text,
+    build_question_chain_section,
     decide,
 )
 from app.services.clarification_policy import (
@@ -918,11 +919,31 @@ class DataAnalysisOrchestrator:
                     + (f"上一轮问题：{prior_question}\n" if prior_question else "")
                     + "\n".join(rows)
                 )
+        # 会话问题链：前面几轮用户问题、系统反问与回答摘要。澄清回复轮
+        # 补全问题时要结合最新补全的参数和历史轮次里已确认的有效条件
+        question_chain_text = ""
+        try:
+            question_log = await self.sessions.get_question_log(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+        except Exception:
+            logger.warning(
+                "read question log for pending triage failed: message_id=%s",
+                chat.message_id,
+                exc_info=True,
+            )
+            question_log = None
+        if question_log:
+            question_chain_text = build_question_chain_section(question_log)
         prompt = (
             "你在判断用户最新输入与系统挂起的追问之间的关系。\n\n"
             f"用户此前的问题：{original or '（无记录）'}\n"
             f"系统因信息不全暂停执行，挂起的待确认项：{'；'.join(asked) or '无'}"
             + (f"\n系统给出的候选：{'、'.join(options[:8])}" if options else "")
+            + (f"\n本次会话前面几轮的问答记录（从早到近）：\n{question_chain_text}" if question_chain_text else "")
             + (f"\n{prior_result_text}" if prior_result_text else "")
             + f"\n用户最新输入：{chat.question.strip()}\n\n"
             "判断属于哪一类，只输出 JSON：\n"
@@ -935,6 +956,10 @@ class DataAnalysisOrchestrator:
             "（补上了哪个条件/换了个说法），控制在80字内，不要写执行步骤。\n"
             "merged_question 只合并原问题和用户输入里出现过的指标、维度、"
             "筛选和时间，不发明两边都没有的条件。\n"
+            "有问答记录时，merged_question 要带上前面关联轮次里用户已确认的"
+            "有效参数（实体、时间范围、指标、筛选），再叠加本轮输入补上的参数，"
+            "最终一句完整问题把有效参数都带上；记录里系统反问过且用户本轮已"
+            "回答的项必须体现，系统反问过但用户没答的项不得编造。\n"
             "用户输入与某个候选名称近似（同义、错字、增减“总额/金额”等"
             "通用字）时视为选择了该候选，merged_question 里统一用候选的"
             "规范名称。\n"
@@ -1489,6 +1514,8 @@ class DataAnalysisOrchestrator:
                 if self._should_dispatch_mcp_file_analysis(chat)
                 else None
             )
+            from app.numeric_operations import parse_literal_binding
+            literal_binding=parse_literal_binding(chat.question) if confirmed_pending_choice is None and dag_pending is None else None
             if mcp_response is not None:
                 response = mcp_response
                 if dag_pending is not None:
@@ -1498,6 +1525,14 @@ class DataAnalysisOrchestrator:
                         chat.application_id,
                         chat.conversation_id,
                     )
+            elif literal_binding is not None:
+                chat._planner_extraction=PlannerExtraction(intent=PrimaryIntent.COMPARISON_ANALYSIS,
+                    structured={'是否查询数据库':'否','计算绑定':literal_binding})
+                chat._task_table=[{'任务':'task-1','名称':'计算明确数值','是否查询数据库':'否','依赖':[],'执行状态':'待执行'}]
+                chat._task_table_message_id=chat.message_id
+                await emit_progress('INTENT_RECOGNITION','COMPLETED','已识别为明确数值的计算任务。')
+                await emit_progress('TASK_PLANNING','COMPLETED','任务1：按给定操作数完成数值计算。',task_table=chat._task_table)
+                response=await self._respond_literal_computation(chat,identity)
             elif independent_chat:
                 # A standalone social/lifestyle turn is never a DAG answer or
                 # a multi-question analytical task, even when it contains a
@@ -1638,7 +1673,12 @@ class DataAnalysisOrchestrator:
                                     else 1,
                                 )
                             plan = outcome.plan
-                            if plan is None and outcome.single_extraction is not None:
+                            from app.services.calculation_execution import literal_computation
+                            is_literal = bool(plan is None and outcome.single_extraction is not None
+                                and literal_computation(outcome.single_extraction.structured))
+                            if is_literal:
+                                outcome.single_extraction.intent=PrimaryIntent.COMPARISON_ANALYSIS
+                            if plan is None and outcome.single_extraction is not None and not is_literal:
                                 # 分析类单任务展开为取数+分析多任务DAG：
                                 # 取数、分析都是独立任务节点，随任务表下发；
                                 # 展开异常不拖垮规划，回退单任务路径
@@ -1700,7 +1740,7 @@ class DataAnalysisOrchestrator:
                                 # 标注要查库；追问的快照复用由执行层白名单
                                 # 判定，真实路由以 DATA_RETRIEVAL 的说明为准。
                                 if outcome.single_extraction.structured is not None:
-                                    outcome.single_extraction.structured["是否查询数据库"] = "是"
+                                    outcome.single_extraction.structured["是否查询数据库"] = "否" if is_literal else "是"
                                     _apply_sort_type(outcome.single_extraction.structured)
                         except TaskPlanningError as exc:
                             logger.warning("multi-question plan rejected: %s", exc)
@@ -1726,6 +1766,10 @@ class DataAnalysisOrchestrator:
                         and chat._planner_extraction is not None
                         and chat._planner_extraction.intent in NO_DATA_INTENTS
                     )
+                    if plan is None and chat._planner_extraction is not None:
+                        from app.services.calculation_execution import literal_computation
+                        if literal_computation(chat._planner_extraction.structured):
+                            await emit_progress('INTENT_RECOGNITION','COMPLETED','已识别为明确数值的计算任务。')
                     if plan is not None:
                         task_requests = []
                         for task in plan.tasks:
@@ -2205,7 +2249,12 @@ class DataAnalysisOrchestrator:
                         "original_question": chat.question,
                         "completed_question": planning_question,
                     }
+                    from app.services.calculation_execution import literal_computation
+                    single_literal = bool(plan is None and chat._planner_extraction is not None
+                        and literal_computation(chat._planner_extraction.structured))
                     response = (
+                        await self._respond_literal_computation(chat,identity)
+                        if single_literal else
                         await self._route_compound_followup(
                             chat, identity, plan, planning_question,
                         )
@@ -3211,7 +3260,8 @@ class DataAnalysisOrchestrator:
     ) -> AgentResponse:
         """Execute a declared calculation against its exact predecessor artifacts."""
         await emit_progress("ASL_GENERATION", "COMPLETED",
-                            "该任务基于前序任务的查询结果计算，不再调用数据库。")
+                            "该任务基于前序任务的查询结果计算，不再调用数据库。" if task.depends_on else
+                            "该任务按明确数值直接计算，不调用数据库。")
         analysis_binding = (task.extraction or {}).get("分析绑定")
         if isinstance(analysis_binding, dict) and analysis_binding.get("analysis_type"):
             # 分析任务：加载前序取数结果后调用确定性分析引擎，
@@ -3250,6 +3300,27 @@ class DataAnalysisOrchestrator:
                 kind='ANALYSIS_RESULT', source_ref='task-dag',
                 payload={'task_id': task.task_id, 'code': 'CALCULATION_INPUT_UNAVAILABLE'})]
             return response
+
+    async def _respond_literal_computation(self, chat, identity):
+        """The single-task route must not rewrite a calculator into a SQL query."""
+        task=AtomicTask(task_id='task-1',question=chat.question,depends_on=[],
+            extraction=chat._planner_extraction.structured,primary_intent=PrimaryIntent.COMPARISON_ANALYSIS)
+        response=await self._respond_pure_computation(chat,identity,task,{})
+        success=response.status=='COMPLETED'
+        if success:
+            preview=response.evidence[0].payload.get('preview') or []
+            if preview:response.answer=self._markdown_result_table(list(preview[0]),preview)
+            response.intent=PrimaryIntent.COMPARISON_ANALYSIS
+            chat._last_result_dataset_id=response.dataset_id
+        if chat._task_table:
+            chat._task_table[0]['执行状态']='已完成' if success else '执行失败'
+        await emit_progress('DATA_RETRIEVAL','COMPLETED' if success else 'FAILED',
+            '数值计算完成，未调用数据库。' if success else response.answer,task_table=chat._task_table)
+        await emit_progress('RELIABILITY_CHECK','COMPLETED','已检查数值定义域和结果有限性。')
+        await emit_progress('INSIGHT_ANALYSIS','COMPLETED' if success else 'SKIPPED',
+            '结果由确定性计算生成。' if success else '未生成可用数值结果。')
+        await emit_progress('FINAL_OUTPUT','COMPLETED',response.answer)
+        return response
 
     @staticmethod
     def _pure_computation_unavailable(chat: ChatRequest) -> AgentResponse:
@@ -3457,7 +3528,24 @@ class DataAnalysisOrchestrator:
         )
 
     @staticmethod
-    def _analysis_sub_tool_summary(fact_key: str, sub_facts: dict[str, Any]) -> str:
+    def _analysis_fmt(value: Any, *, signed: bool = False) -> str:
+        """工具行数值格式：千分位完整数值，不用科学计数法。"""
+        if value is None:
+            return "—"
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return str(value)
+        sign = ""
+        if signed:
+            sign = "+" if number > 0 else "-" if number < 0 else ""
+        absolute = abs(number)
+        if absolute.is_integer():
+            return sign + f"{int(absolute):,}"
+        return sign + f"{absolute:,.4f}".rstrip("0").rstrip(".")
+
+    @classmethod
+    def _analysis_sub_tool_summary(cls, fact_key: str, sub_facts: dict[str, Any]) -> str:
         """子工具调用行的结果摘要：逐期环比/同比的具体计算值。
 
         展示与引擎 facts 一一对应，只读不重算；不可计算时如实给出原因，
@@ -3466,14 +3554,15 @@ class DataAnalysisOrchestrator:
         if fact_key == "period_over_period":
             changes = sub_facts.get("changes") or []
             parts = []
-            for item in changes[:4]:
+            for item in changes[:6]:
                 rate = item.get("change_rate")
                 rate_text = "基期为0，变化率不可计算" if rate is None else f"{rate:+.2%}"
-                parts.append(f"{item.get('to')}较{item.get('from')} {rate_text}")
+                absolute = cls._analysis_fmt(item.get("absolute_change"), signed=True)
+                parts.append(f"{item.get('to')}较{item.get('from')} {rate_text}（绝对变化{absolute}）")
             if not parts:
                 return "无可展示的环比期间"
             suffix = "；".join(parts)
-            if len(changes) > 4:
+            if len(changes) > 6:
                 suffix += f"；共{len(changes)}期"
             return "逐期环比：" + suffix + "。"
         if fact_key == "year_over_year":
@@ -3497,25 +3586,63 @@ class DataAnalysisOrchestrator:
             return ("逐月同比：" + suffix + "。") if parts else "无可计算的同比月份"
         return f"输出事实{len(sub_facts)}项。"
 
-    @staticmethod
-    def _analysis_main_tool_summary(analysis_type: str, method: str, facts: dict[str, Any]) -> str:
+    @classmethod
+    def _analysis_main_tool_summary(cls, analysis_type: str, method: str, facts: dict[str, Any]) -> str:
         """分析主工具调用行的摘要：方法名加该分析类型的关键结论。
 
         关键结论缺失时回退到事实计数，不在展示层编造数值。
         """
         if analysis_type == "trend":
             parts = [f"方法：{method}"]
-            start, end = facts.get("start"), facts.get("end")
-            change, rate = facts.get("absolute_change"), facts.get("change_rate")
-            if start is not None and end is not None and change is not None:
+            window = facts.get("display_window")
+            if isinstance(window, dict):
+                rate = window.get("change_rate")
                 rate_text = "变化率不可计算" if rate is None else f"{rate:+.2%}"
-                parts.append(f"整体变化 {change:+g}（{rate_text}）")
+                parts.append(
+                    f"展示窗口{window.get('start_label')}至{window.get('end_label')}："
+                    f"整体变化 {cls._analysis_fmt(window.get('absolute_change'), signed=True)}"
+                    f"（{rate_text}）"
+                )
+                parts.append(
+                    f"窗口合计 {cls._analysis_fmt(window.get('total'))}，"
+                    f"月均 {cls._analysis_fmt(window.get('mean'))}"
+                )
+                if window.get("baseline_labels"):
+                    parts.append("环比基期：" + "、".join(window["baseline_labels"]))
+            else:
+                change, rate = facts.get("absolute_change"), facts.get("change_rate")
+                if change is not None:
+                    rate_text = "变化率不可计算" if rate is None else f"{rate:+.2%}"
+                    parts.append(
+                        f"整体变化 {cls._analysis_fmt(change, signed=True)}（{rate_text}）"
+                    )
+            diagnostics = facts.get("trend_diagnostics") or {}
+            if diagnostics:
+                direction = {"UP": "上升", "DOWN": "下降", "FLAT": "基本持平"}.get(
+                    diagnostics.get("direction"), diagnostics.get("direction")
+                )
+                diag_parts = [
+                    f"算法：{diagnostics.get('decision_method', method)}",
+                    f"稳健斜率 {cls._analysis_fmt(diagnostics.get('robust_slope_per_period'), signed=True)}/期",
+                    f"标准化斜率 {diagnostics.get('normalized_slope'):+.2f}"
+                    if diagnostics.get("normalized_slope") is not None else "",
+                    f"方向判定：{direction}",
+                    f"方向一致性 {diagnostics.get('direction_consistency'):.2%}"
+                    if diagnostics.get("direction_consistency") is not None else "",
+                ]
+                cv = diagnostics.get("coefficient_of_variation")
+                if cv is not None:
+                    diag_parts.append(f"变异系数 {cv:.2f}")
+                parts.append("；".join(item for item in diag_parts if item))
             points = facts.get("change_points") or []
             if points:
                 parts.append("转折点：" + "、".join(
                     f"{item.get('label')}（{'峰值' if item.get('type') == 'PEAK' else '谷值'}）"
                     for item in points[:3]
                 ))
+            recovery_share = facts.get("recovery_share_of_largest_drop")
+            if recovery_share is not None:
+                parts.append(f"最大下滑后回升占跌幅 {recovery_share:.2%}")
             return "；".join(parts) + "。"
         if analysis_type == "comparison":
             base_label, current_label = facts.get("base_label"), facts.get("current_label")
@@ -3524,7 +3651,7 @@ class DataAnalysisOrchestrator:
                 rate_text = "基期为0，变化率不可计算" if rate is None else f"{rate:+.2%}"
                 return (
                     f"方法：{method}；{current_label}较{base_label} "
-                    f"变化 {change:+g}（{rate_text}）。"
+                    f"变化 {cls._analysis_fmt(change, signed=True)}（{rate_text}）。"
                 )
         if analysis_type == "root_cause":
             candidates = facts.get("ranked_candidates") or []
@@ -3532,7 +3659,7 @@ class DataAnalysisOrchestrator:
                 top = candidates[0]
                 return (
                     f"方法：{method}；最大贡献项：{top.get('label')}"
-                    f"（贡献 {top.get('contribution'):+g}）。"
+                    f"（贡献 {cls._analysis_fmt(top.get('contribution'), signed=True)}）。"
                 )
         return f"方法：{method}；输出分析结论与事实{len(facts)}项。"
 
@@ -3573,6 +3700,10 @@ class DataAnalysisOrchestrator:
             knowledge_base_names=list(chat.knowledge_base_names or []),
         )
         request.assumptions.append("ANALYSIS_SOURCE_QUESTION=" + original[:200])
+        display_window_start = str(binding.get("display_window_start") or "").strip()
+        if display_window_start:
+            # 趋势取数含环比基期月，引擎按此标签输出用户窗口口径的整体变化
+            request.assumptions.append("DISPLAY_WINDOW_START=" + display_window_start)
         return request
 
     def _merge_analysis_inputs(
@@ -3751,11 +3882,11 @@ class DataAnalysisOrchestrator:
                 task, references, plan_dataset_followup)
             scope = DatasetScope(identity.tenant_id, identity.user_id, chat.application_id,
                 chat.conversation_id, chat.authorized_semantic_scope.fingerprint())
-            first = next(iter(references.values()))[0]
+            first = next(iter(references.values()))[0] if references else None
             reference = await asyncio.to_thread(self.dataset_store.save_dataset,
                 scope=scope, columns=columns, rows=rows, snapshot_id='',
-                data_as_of=datetime.fromisoformat(first.data_as_of), source_type='DERIVED_COMPUTATION',
-                source_ref='/'.join(ref.dataset_id for ref, _ in references.values()),
+                data_as_of=datetime.fromisoformat(first.data_as_of) if first else datetime.now(timezone.utc), source_type='DERIVED_COMPUTATION',
+                source_ref='/'.join(ref.dataset_id for ref, _ in references.values()) or 'NUMERIC_CONSTANTS',
                 semantic_model_id=chat.semantic_model_id, business_domain_ids=chat.business_domain_ids,
                 parent_dataset_ids=[ref.dataset_id for ref, _ in references.values()],
                 transformation_log=({'type': 'query_provenance', 'source_truncated': False,
@@ -3783,9 +3914,18 @@ class DataAnalysisOrchestrator:
         except Exception as exc:
             logger.warning('dataset computation not completed task=%s: %s', task.task_id, exc)
             response = self._pure_computation_unavailable(chat)
+            from app.numeric_operations import NumericOperationError
+            cause=exc
+            for _ in range(4):
+                if isinstance(cause,NumericOperationError):
+                    response.answer='计算未完成：'+str(cause)+'。'
+                    break
+                cause=cause.__cause__ if cause else None
+            reason=str(cause) if isinstance(cause,NumericOperationError) else None
             response.evidence = [EvidenceItem(evidence_id='calculation-contract-unavailable',
                 kind='ANALYSIS_RESULT', source_ref='task-dag',
-                payload={'task_id': task.task_id, 'code': 'CALCULATION_CONTRACT_INVALID'})]
+                payload={'task_id': task.task_id, 'code': 'CALCULATION_CONTRACT_INVALID',
+                         **({'reason':reason} if reason else {})})]
             return response
 
     async def _route_compound_followup(

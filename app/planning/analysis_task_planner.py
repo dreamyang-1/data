@@ -15,8 +15,10 @@ from typing import Any
 
 from app.analysis.chain_tools.temporal_window import (
     align_structured_time_window,
+    disjunctive_periods_to_range,
     extend_window_for_pop_baseline,
     has_yoy_signal,
+    parse_absolute_range,
 )
 from app.domain.models import (
     AtomicTask,
@@ -193,6 +195,27 @@ def _trend_retrieval_window(question: str, structured: dict[str, Any]) -> dict[s
     return extended or aligned
 
 
+def _absolute_window_bounds(time_range: str) -> tuple[str, str] | None:
+    """把绝对/列举式时间范围文本解析成 (起, 止) ISO 日期；失败返回 None。"""
+    absolute = parse_absolute_range(time_range)
+    if absolute is None:
+        covering = disjunctive_periods_to_range(time_range)
+        if covering is not None:
+            absolute = parse_absolute_range(covering)
+    if absolute is None:
+        return None
+    start, end = absolute
+    return start.isoformat(), end.isoformat()
+
+
+def _display_window_start_label(time_range: str) -> str | None:
+    """用户展示窗口起点对应的月桶标签（YYYY-MM），供引擎口径对齐。"""
+    bounds = _absolute_window_bounds(time_range)
+    if bounds is None:
+        return None
+    return bounds[0][:7]
+
+
 def _query_clause(time_text: str, grouping: str, metric_text: str) -> str:
     middle = f"{time_text}{grouping}的" if (time_text or grouping) else ""
     return f"查询{middle}{metric_text}"
@@ -280,18 +303,31 @@ def build_analysis_task_plan(
     if not retrieval_specs:
         # 趋势/占比/异常/预测及未命中两期拆分的对比：原取数任务保持不变，
         # 只把意图口径降为指标查询，分析计算交给独立分析任务；
-        # 趋势取数窗口按环比基期方法需要前推一个粒度并披露扩展原因
+        # 趋势取数窗口按环比基期方法需要前推一个粒度并披露扩展原因。
+        # Oagnet 主路径按问题文本解析 time_context，扩展窗口必须写进
+        # 执行问题文本才生效；任务表展示名保持用户声明的窗口。
         retrieval_structured = _retrieval_extraction(structured)
+        retrieval_question = source_text or _query_clause(time_text, "", metric_text)
+        display_start_label: str | None = None
         if intent is PrimaryIntent.TREND_ANALYSIS:
             extended_window = _trend_retrieval_window(question, structured)
             if extended_window is not None:
                 retrieval_structured["时间粒度"] = extended_window
+                extended_range = str(extended_window.get("time_range") or "")
+                bounds = _absolute_window_bounds(extended_range)
+                if bounds is not None:
+                    retrieval_question = _query_clause(
+                        f"{bounds[0]}至{bounds[1]}", "分月", metric_text,
+                    )
+                display_start_label = _display_window_start_label(time_text)
         retrieval_specs.append({
             "task_id": "task-1",
-            "question": source_text or _query_clause(time_text, "", metric_text),
+            "question": retrieval_question,
             "name": (task_name or source_text or _query_clause(time_text, "", metric_text))[:60],
             "structured": retrieval_structured,
         })
+    else:
+        display_start_label = None
 
     analysis_structured = copy.deepcopy(structured)
     analysis_structured["是否查询数据库"] = "否"
@@ -303,6 +339,7 @@ def build_analysis_task_plan(
         "merge": merge_mode,
         "periods": binding_periods,
         "source_question": str(question or "").strip(),
+        "display_window_start": display_start_label,
     }
     retrieval_ids = [spec["task_id"] for spec in retrieval_specs]
     analysis_question = _analysis_question(
