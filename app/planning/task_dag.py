@@ -1231,6 +1231,11 @@ class SingleQuestionPlanner:
             registered_metric_predicates, metric_definition, component_task_title,
         )
         dependencies = _parse_metric_dependencies(spec_for_catalog)
+        from app.planning.metric_target_contract import object_average_contract
+        target_contract = object_average_contract(
+            question, spec_for_catalog, metric_catalog, dependencies)
+        if target_contract is not None:
+            system_content += target_contract.instruction()
         planning_question = question
         if retry_feedback:
             planning_question += "\n上一轮需要修正：" + retry_feedback
@@ -1248,9 +1253,16 @@ class SingleQuestionPlanner:
             if 'extraction' not in planned and ('intent' not in planned or 'split' in planned):
                 raise ValueError('任务规划没有返回任务列表')
             planned = {**planned, 'tasks': [{'question': question}]}
-        boundaries = complete_boundaries(TaskBoundaries.model_validate(planned).tasks,
+        planned_boundaries = TaskBoundaries.model_validate(planned).tasks
+        boundaries = complete_boundaries(planned_boundaries,
             spec=spec_for_catalog, catalog=metric_catalog, dependencies=dependencies, source_question=question,
             default_times=_registered_default_times(question,spec_for_catalog))
+        if target_contract is not None and boundary_plan_complete:
+            from app.planning.task_plan_stages import boundary_targets
+            try:
+                target_contract.validate(boundaries, metric_catalog, boundary_targets)
+            except ValueError as exc:
+                raise TaskInputBindingError(str(exc)) from exc
         parameter_request = json.dumps({
             'original_question': question,
             'tasks': [dict(task_index=index, **task.model_dump(exclude_none=True))
