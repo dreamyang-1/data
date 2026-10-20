@@ -1,0 +1,79 @@
+{
+  "runtime_files": [
+    "Oagnet/agent.py",
+    "Oagnet/vector_filter_grounding.py"
+  ],
+  "files": [
+    {
+      "path": "Oagnet/agent.py",
+      "sha256": "b51cce84fa88875c372e518f83666b888121e98daacc34fe28e97021657a437f"
+    },
+    {
+      "path": "Oagnet/vector_filter_grounding.py",
+      "sha256": "2de706a16e2542a3c6df7195a9dd55dfaf7ed1ef7ebffd5e0cd12ff13d790ebe"
+    },
+    {
+      "path": "Oagnet/tests/test_vector_filter_value_gate.py",
+      "sha256": "18de5ce9c0bc98dda97a6c9f3ac5ce5916d23f7d68af4023bc6b24f1ecf14007"
+    },
+    {
+      "path": "Oagnet/tests/test_question_asl_recovery.py",
+      "sha256": "f6f53824e7dc8dc5dda6cf88f89d4c293c7306c0cb8b45e91b1022c8398db24c"
+    },
+    {
+      "path": "Oagnet/tests/test_partial_display_fields.py",
+      "sha256": "30171c34f63d640d2608f50f73af78019c1dd30ca0d52c156d96f63be1c02264"
+    },
+    {
+      "path": "Oagnet/tests/test_filter_failure_diagnostics.py",
+      "sha256": "7d4a22e8b0da85467ab0332f59a1ba11e77bebc4334d30e42040156a5ab2e533"
+    },
+    {
+      "path": "Oagnet/tests/test_analysis_contract_request.py",
+      "sha256": "36192f7b07e9821e6ce38995d72887b375c78c5b7e6a9d8567b484190ab62474"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "c69268d30d946f46eacf3f67665c1726884e09669385c988558aa7e953714be8"
+    }
+  ],
+  "deployment": {
+    "status": "DEPLOYED_HEALTHY",
+    "targets": {
+      "agent.py": "b51cce84fa88875c372e518f83666b888121e98daacc34fe28e97021657a437f",
+      "vector_filter_grounding.py": "2de706a16e2542a3c6df7195a9dd55dfaf7ed1ef7ebffd5e0cd12ff13d790ebe"
+    },
+    "restarted": [
+      "oagnet-data-agent.service"
+    ],
+    "configuration_unchanged": true,
+    "unrelated_sources_unchanged": true,
+    "backup_verified": true,
+    "health": {
+      "Oagnet": 200,
+      "AgentReady": 200,
+      "AgentLive": 200,
+      "SQL": 200
+    }
+  },
+  "source_baseline": {
+    "path": "agent.py",
+    "remote_sha256": "2cfef5fa9da8ea78cee9c8eb67efd120eb58a6fd74cf5bb2ec5c77839aab779d",
+    "local_sha256": "2cfef5fa9da8ea78cee9c8eb67efd120eb58a6fd74cf5bb2ec5c77839aab779d"
+  },
+  "version_parent": "7f642dbed55b0b8cf8bc47ae8757c531c16fcfdd",
+  "synchronization": "Explicit SHA-256-verified files in a dedicated worktree of the E:/yy repository; concurrent planning branch preserved.",
+  "excluded": [
+    ".env",
+    "credentials",
+    "logs",
+    "caches",
+    "backups",
+    "business results"
+  ],
+  "documentation": [
+    "docs/vector_standard_values_20261020/closure_report.md",
+    "docs/vector_standard_values_20261020/test_delta.json",
+    "docs/vector_standard_values_20261020/change_manifest.json"
+  ]
+}

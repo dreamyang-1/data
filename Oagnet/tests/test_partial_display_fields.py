@@ -1,5 +1,6 @@
 import copy
 import json
+from types import SimpleNamespace
 
 import pytest
 import agent
@@ -11,7 +12,9 @@ def knowledge():
         {"attr_code": "dealer_name", "attr_name": "经销商名称", "field_mapping": "dealer.dealer_name"},
         {"attr_code": "city", "attr_name": "城市", "field_mapping": "dealer.city"},
     ])], "dimensions": [], "metrics": [], "relations": [],
-        "_vector_authorized_fields": ["dealer.dealer_name", "dealer.city"]}
+        "_vector_authorized_fields": ["dealer.dealer_name", "dealer.city"],
+        "entity_attribute_values": [SimpleNamespace(metadata={
+            "source_field": "dealer.city", "attr_value": "上海"})]}
 
 
 def reference():

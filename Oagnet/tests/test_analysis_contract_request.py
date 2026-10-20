@@ -1,4 +1,5 @@
 import json
+from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
@@ -91,7 +92,10 @@ def test_missing_asl_filter_field_gets_second_pass_exact_vector_proof():
         "sort": None,
         "having": [],
     })
-    knowledge = {"_vector_authorized_fields": []}
+    knowledge = {"_vector_authorized_fields": [],
+        "attributes": [SimpleNamespace(metadata={"field_mapping": "products.brand_name"})],
+        "entity_attribute_values": [SimpleNamespace(metadata={
+            "source_field": "products.brand_name", "attr_value": "Acme"})]}
 
     agent._verify_missing_asl_fields_in_vector_store(
         content, knowledge, Store(), 81, [205]
