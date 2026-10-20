@@ -156,6 +156,25 @@ def boundary_targets(task, catalog) -> list[str]:
     return list(dict.fromkeys(aliases.get(name, name) for name in names))
 
 
+def component_task_title(task: TaskBoundary, extraction: dict) -> str | None:
+    """Describe the actual component query using its extracted business scope."""
+    if not task.component_input:
+        return task.name
+    temporal = extraction.get('时间粒度') or {}
+    time_range = temporal.get('time_range') if isinstance(temporal, dict) else None
+    time_text = time_range if isinstance(time_range, str) else ''
+    grouping = '各' + '、'.join(task.grain) + '的' if task.grain else ''
+    title = f'统计{time_text}{grouping}' + '、'.join(task.metric_targets)
+    labels = []
+    for item in extraction.get('展示字段') or []:
+        label = str(item.get('field') or item.get('name') or '') if isinstance(item, dict) else str(item)
+        if label and label not in {*task.grain, *task.metric_targets} and label not in labels:
+            labels.append(label)
+    if labels:
+        title += '，附' + '、'.join(labels)
+    return title[:60]
+
+
 def grouping_labels(spec: str) -> set[str]:
     """Business field labels, never example values or metric-table cells."""
     result = set()
@@ -464,14 +483,12 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
             name, grouping, sample = '、'.join(names), query_group[0][1], query_group[0][2]
             grain = list(grouping)
             wording = task.question
-            for target in sorted(task.metric_targets, key=len, reverse=True):
-                wording = wording.replace(target, name)
-            for alias, canonical in aliases.items():
-                if canonical in task.metric_targets:
-                    wording = wording.replace(alias, name)
-            question = f'统计{name}，范围与分组：{wording}'
+            # Keep the final ranking as context. Replacing its measure with an
+            # input would turn "average Top5" into "sales/count Top5".
+            question = f'统计{name}，时间、筛选及关联展示范围参考原要求（最终指标排名不在本任务执行）：{wording}'
             if grain:
                 question += '，按' + '、'.join(grain) + '汇总'
+            question += '；本任务返回完整成分数据，不提前按原问题的最终指标排名或截断，最终计算及排名由后续任务完成'
             for key in query_group:
                 component_indices[key] = len(result)
             external_edges.append(len(result))
@@ -486,7 +503,7 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
             terminals.append(len(result))
             goal = task.expected_output if task._whole_object_scope else task.question
             result.append(TaskBoundary(question=f'根据上述任务的查询结果计算{name}，完成原要求：{goal}，不再查询数据库',
-                name=f'计算{name}', depends_on=indices, metric_targets=[name], grain=grains[name],
+                name=(f'计算{name}，完成{task.name or task.question}')[:60], depends_on=indices, metric_targets=[name], grain=grains[name],
                 expected_output=task.expected_output or task.question))
         terminal_by_old[old_index] = terminals
     for index in external_edges:

@@ -5,6 +5,7 @@ import asyncio
 import copy
 import difflib
 import hashlib
+from types import SimpleNamespace
 import hmac
 import json
 import logging
@@ -35,9 +36,14 @@ from app.services.general_rules import attach_general_rules
 from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
+from app.analysis.chain_tools.temporal_window import (
+    align_structured_time_window,
+    disjunctive_periods_to_range,
+)
 from app.config import Settings
-from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
+from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChartSpec, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
+from app.planning.analysis_task_planner import build_analysis_task_plan
 from app.planning.compat import (
     PlanningResult,
     plan_question,
@@ -78,6 +84,12 @@ from app.services.conversation_followup import (
     resolve_conversation_temporal_context,
 )
 from app.services.turn_admission import TurnAdmissionGate
+from app.clarification import (
+    ClarificationDecision,
+    ClarificationDecisionError,
+    build_context_text,
+    decide,
+)
 from app.services.clarification_policy import (
     decide_clarification,
     restore_clarification_keys,
@@ -858,11 +870,60 @@ class DataAnalysisOrchestrator:
                 ).strip()
                 if label:
                     options.append(label)
+        # Only a proven complete result in the current scope may supply an
+        # entire reference list. A ten-row preview is not that evidence.
+        prior_result_text = ""
+        try:
+            prior_table = await self.sessions.get_task_table(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+        except Exception:
+            logger.warning(
+                "read prior task table for pending triage failed: message_id=%s",
+                chat.message_id,
+                exc_info=True,
+            )
+            prior_table = None
+        if (isinstance(prior_table, dict)
+                and prior_table.get('semantic_scope_fingerprint') == chat.authorized_semantic_scope.fingerprint()):
+            rows: list[str] = []
+            for row in (prior_table.get("tasks") or [])[:3]:
+                if not isinstance(row, dict):
+                    continue
+                parts = [str(row.get("名称") or "").strip()]
+                summary = row.get("结果概要")
+                if isinstance(summary, dict) and summary.get('sample_is_complete') is True:
+                    if summary.get("row_count") is not None:
+                        parts.append(f"共{summary['row_count']}行")
+                    sample = summary.get("sample")
+                    if sample and isinstance(sample[0], dict):
+                        for sample_row in sample[:10]:
+                            pairs = "；".join(
+                                f"{k}={v}"
+                                for k, v in list(sample_row.items())[:4]
+                            )
+                            parts.append(pairs)
+                text = "；".join(p for p in parts if p)
+                if text:
+                    rows.append("- " + text)
+            if rows:
+                prior_question = str(
+                    prior_table.get("question") or ""
+                ).strip()
+                prior_result_text = (
+                    "上一轮已核实完整的查询结果：\n"
+                    + (f"上一轮问题：{prior_question}\n" if prior_question else "")
+                    + "\n".join(rows)
+                )
         prompt = (
             "你在判断用户最新输入与系统挂起的追问之间的关系。\n\n"
             f"用户此前的问题：{original or '（无记录）'}\n"
             f"系统因信息不全暂停执行，挂起的待确认项：{'；'.join(asked) or '无'}"
             + (f"\n系统给出的候选：{'、'.join(options[:8])}" if options else "")
+            + (f"\n{prior_result_text}" if prior_result_text else "")
             + f"\n用户最新输入：{chat.question.strip()}\n\n"
             "判断属于哪一类，只输出 JSON：\n"
             '- 用户仍在原话题内（直接给值、换一种说法、只补了部分条件、'
@@ -877,6 +938,9 @@ class DataAnalysisOrchestrator:
             "用户输入与某个候选名称近似（同义、错字、增减“总额/金额”等"
             "通用字）时视为选择了该候选，merged_question 里统一用候选的"
             "规范名称。\n"
+            "用户输入提到上一轮结果里的对象（如“这些”“上述N家”“华东那"
+            "几家”）时，仅在上文提供了已核实完整的结果时才能展开全部具体值；"
+            "没有完整结果时保留对原结果的引用，不得用采样推定完整名单。\n"
         )
         body = {
             "model": settings.intent_model_name,
@@ -934,6 +998,274 @@ class DataAnalysisOrchestrator:
             identity.user_id,
             chat.application_id,
             chat.conversation_id,
+        )
+
+    async def _clarification_module_decide(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        planning_question: str,
+    ) -> ClarificationDecision | None:
+        """接入点A的澄清判定：问题链+上轮结果+本轮问题交给判定模型。
+
+        返回 None 表示跳过（首轮无上下文）或模块异常降级为原流程。
+        模型故障按系统问题记日志后继续原流程，不转成对用户的反问。
+        """
+        started = time.perf_counter()
+        try:
+            question_log = await self.sessions.get_question_log(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+            prior_task_table = getattr(chat, "_prior_task_table", None)
+            if not question_log and not prior_task_table:
+                # 首轮无任何上下文，必是新问题，不花模型调用
+                logger.info(
+                    "clarification module skipped (no context): message_id=%s",
+                    chat.message_id,
+                )
+                return None
+            context_text = build_context_text(
+                current_question=planning_question,
+                question_log=question_log,
+                task_table=prior_task_table,
+            )
+            logger.info(
+                "clarification module decide start: message_id=%s "
+                "log_rounds=%d has_task_table=%s context_chars=%d question=%s",
+                chat.message_id,
+                len(question_log),
+                bool(prior_task_table),
+                len(context_text),
+                planning_question[:80],
+            )
+            decision = await decide(
+                current_question=planning_question,
+                context_text=context_text,
+                complete=self._clarification_module_complete,
+            )
+            logger.info(
+                "clarification module decided: message_id=%s relation=%s "
+                "questions=%d reason=%s elapsed=%.2fs",
+                chat.message_id,
+                decision.relation,
+                len(decision.questions),
+                (decision.reason or "")[:80],
+                time.perf_counter() - started,
+            )
+            return decision
+        except ClarificationDecisionError as exc:
+            logger.warning(
+                "clarification module decision rejected: message_id=%s "
+                "elapsed=%.2fs error=%s",
+                chat.message_id,
+                time.perf_counter() - started,
+                exc,
+            )
+            return None
+        except Exception:
+            logger.warning(
+                "clarification module decide failed: message_id=%s elapsed=%.2fs",
+                chat.message_id,
+                time.perf_counter() - started,
+                exc_info=True,
+            )
+            return None
+
+    @staticmethod
+    def _render_binding_ambiguities(ambiguities) -> str:
+        """绑定歧义结构化渲染：每条歧义一行，供判定模型逐条理解。"""
+        lines = []
+        for item in ambiguities or []:
+            kind = str(getattr(item, "type", "") or "").strip()
+            phrase = str(getattr(item, "phrase", "") or "").strip()
+            question = str(getattr(item, "question", "") or "").strip()
+            lines.append(
+                f"- 类型={kind or '未知'}；原文={phrase or '无'}；问题={question or '无'}"
+            )
+        return "\n".join(lines) if lines else "无"
+
+    async def _clarification_module_binding_retry(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        request: CanonicalAnalysisRequest,
+    ) -> AgentResponse | None:
+        """接入点B：绑定失败后让澄清模块结合歧义再判一次。
+
+        COMPLETE 时以补全后的问题重建请求，经
+        execute_v1_from_completed_question 重走参数提取、绑定与校验，
+        不直接把失败改判成功；CLARIFY/NEW_TASK 返回 None，调用方按
+        原反问流程返回（保留语义歧义的候选展示）。任何异常降级为原
+        流程，重入限一次（由 _clarification_module_retry 标记控制）。
+        """
+        started = time.perf_counter()
+        try:
+            question_log = await self.sessions.get_question_log(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+            current_question = (
+                request.rewritten_question
+                or request.original_question
+                or chat.question
+                or ""
+            )
+            context_text = build_context_text(
+                current_question=current_question,
+                question_log=question_log,
+                task_table=getattr(chat, "_prior_task_table", None),
+                extra_sections={
+                    "绑定歧义": self._render_binding_ambiguities(
+                        request.semantic_ambiguities
+                    )
+                },
+            )
+            logger.info(
+                "clarification module binding retry start: message_id=%s "
+                "ambiguities=%d context_chars=%d question=%s",
+                chat.message_id,
+                len(request.semantic_ambiguities or []),
+                len(context_text),
+                current_question[:80],
+            )
+            decision = await decide(
+                current_question=current_question,
+                context_text=context_text,
+                complete=self._clarification_module_complete,
+            )
+            logger.info(
+                "clarification module binding retry decided: message_id=%s "
+                "relation=%s elapsed=%.2fs",
+                chat.message_id,
+                decision.relation,
+                time.perf_counter() - started,
+            )
+            if decision.relation != "COMPLETE" or not decision.completed_question:
+                return None
+            updates = {"question": decision.completed_question, "history": []}
+            if not (
+                getattr(chat, "original_question", None) or ""
+            ).strip():
+                updates["original_question"] = (chat.question or "")[:4000]
+            merged_chat = chat.model_copy(deep=True, update=updates)
+            merged_chat._completed_question_execution = True
+            # 重入标记：补全后的问题再次绑定失败时不再重试，按原反问返回
+            merged_chat._clarification_module_retry = True
+            logger.info(
+                "clarification module binding retry rebind: message_id=%s "
+                "completed_question=%s",
+                chat.message_id,
+                decision.completed_question[:120],
+            )
+            return await self.execute_v1_from_completed_question(
+                merged_chat, identity
+            )
+        except Exception:
+            logger.warning(
+                "clarification module binding retry failed: message_id=%s "
+                "elapsed=%.2fs",
+                chat.message_id,
+                time.perf_counter() - started,
+                exc_info=True,
+            )
+            return None
+
+    async def _clarification_module_complete(
+        self, instruction: str, context_text: str
+    ) -> str:
+        """澄清判定的模型回调：复用意图模型网关与连接池。"""
+        settings = self.settings
+        body = {
+            "model": settings.intent_model_name,
+            "messages": [
+                {"role": "user", "content": f"{instruction}\n\n{context_text}"}
+            ],
+            "temperature": 0,
+            "enable_thinking": settings.intent_model_enable_thinking,
+            "response_format": {"type": "json_object"},
+        }
+        headers = {
+            "Authorization": "Bearer "
+            + settings.intent_model_api_key.get_secret_value(),
+            "Content-Type": "application/json",
+        }
+        client = self._triage_http_client
+        if client is None or client.is_closed:
+            client = httpx.AsyncClient(
+                base_url=settings.intent_model_base_url.rstrip("/"),
+                timeout=settings.intent_model_timeout_seconds,
+            )
+            self._triage_http_client = client
+        try:
+            resp = await client.post("/chat/completions", headers=headers, json=body)
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            logger.warning(
+                "clarification model http error: status=%d model=%s base=%s body=%s",
+                exc.response.status_code,
+                body["model"],
+                settings.intent_model_base_url,
+                exc.response.text[:300],
+            )
+            raise
+        except httpx.HTTPError as exc:
+            logger.warning(
+                "clarification model request error: model=%s base=%s error=%s",
+                body["model"],
+                settings.intent_model_base_url,
+                exc,
+            )
+            raise
+        payload = resp.json()
+        content = payload["choices"][0]["message"].get("content") or ""
+        if not content.strip():
+            logger.warning(
+                "clarification model returned empty content: model=%s finish=%s",
+                body["model"],
+                payload["choices"][0]["message"].get("finish_reason"),
+            )
+        return content
+
+    def _clarification_module_response(
+        self,
+        chat: ChatRequest,
+        raw_request: CanonicalAnalysisRequest,
+        decision: ClarificationDecision,
+    ) -> AgentResponse:
+        """接入点A的反问响应。不落挂起：反问已随问题链记录，下一轮
+        判定器结合用户回复补全（与 New_Agent 的追问续接同机制）。"""
+        question_text = (
+            getattr(chat, "original_question", None) or chat.question or ""
+        ).strip()
+        lines = [f"当前问题：{question_text}。本次需要补充以下信息："]
+        for index, item in enumerate(decision.questions, 1):
+            options = (
+                decision.options[index - 1]
+                if index - 1 < len(decision.options)
+                else []
+            )
+            if options:
+                listed = "；".join(
+                    f"{seq}. {option}" for seq, option in enumerate(options, 1)
+                )
+                lines.append(f"{index}. {item}（请选择：{listed}）")
+            else:
+                lines.append(f"{index}. {item}")
+        return AgentResponse(
+            request_id=raw_request.request_id,
+            conversation_id=chat.conversation_id,
+            status="NEEDS_CLARIFICATION",
+            intent=raw_request.primary_intent,
+            intent_source=raw_request.intent_source,
+            clarification_questions=list(decision.questions),
+            missing_slots=["semantic_ambiguity"],
+            clarification_round=1,
+            answer="\n".join(lines),
         )
 
     async def execute_v1_pending_clarification_answer(
@@ -1221,7 +1553,49 @@ class DataAnalysisOrchestrator:
                     # 任务意图和结构化参数（闲聊已在上方独立分支拦截）。
                     # surface 直通兜底决策不带任务边界（复合问题也只是单个
                     # 兜底任务），跳过拆分器会导致多问题不再拆分，不能省。
-                    if (confirmed_extraction is None
+                    # 接入点A：澄清模块判定（DATA_AGENT_CLARIFICATION_DECIDER_ENABLED，
+                    # 默认关闭）。在规划前判一次 NEW_TASK/COMPLETE/CLARIFY：
+                    # CLARIFY 直接反问，跳过规划与绑定；COMPLETE 用补全后的
+                    # 问题进规划，保证问题文本与提取参数同源。模块异常降级
+                    # 为原流程；精确匹配的澄清回复轮不经过本判定。
+                    module_clarify_response = None
+                    if (
+                        self.settings.clarification_decider_enabled
+                        and confirmed_pending_choice is None
+                        and not chat._is_regeneration_execution
+                        and not chat._completed_question_execution
+                    ):
+                        module_decision = await self._clarification_module_decide(
+                            chat, identity, planning_question,
+                        )
+                        if module_decision is not None:
+                            if module_decision.relation == "CLARIFY":
+                                module_clarify_response = (
+                                    self._clarification_module_response(
+                                        chat, raw_request, module_decision,
+                                    )
+                                )
+                                logger.info(
+                                    "clarification module ask: message_id=%s "
+                                    "questions=%s",
+                                    chat.message_id,
+                                    module_decision.questions,
+                                )
+                                await emit_progress(
+                                    "INTENT_RECOGNITION",
+                                    "RUNNING",
+                                    "对话状态识别：澄清问题。",
+                                )
+                            elif module_decision.relation == "COMPLETE":
+                                planning_question = module_decision.completed_question
+                                logger.info(
+                                    "clarification module complete: message_id=%s "
+                                    "completed_question=%s",
+                                    chat.message_id,
+                                    planning_question[:120],
+                                )
+                    if (module_clarify_response is None
+                            and confirmed_extraction is None
                             and (confirmed_pending_choice is None or self.settings.surface_asl_execution_enabled)
                             and not semantic_decision_ready):
                         try:
@@ -1264,6 +1638,15 @@ class DataAnalysisOrchestrator:
                                     else 1,
                                 )
                             plan = outcome.plan
+                            if plan is None and outcome.single_extraction is not None:
+                                # 分析类单任务展开为取数+分析多任务DAG：
+                                # 取数、分析都是独立任务节点，随任务表下发
+                                plan = build_analysis_task_plan(
+                                    planning_question,
+                                    outcome.single_extraction,
+                                    task_question=outcome.single_task_question,
+                                    task_name=outcome.single_task_name,
+                                )
                             logger.info(
                                 "node=task_planning status=COMPLETED elapsed=%.2fs plan=%s tasks=%s",
                                 time.perf_counter() - task_planning_started,
@@ -1866,6 +2249,8 @@ class DataAnalysisOrchestrator:
             # 本轮结束把任务表连同各任务结果概要落盘，下轮识别/追问判断
             # 从这里读出上一轮的任务表
             await self._persist_conversation_task_table(chat, identity)
+            # 会话问题链落盘：多轮用户问题+回答摘要，供澄清上下文模块回看
+            await self._persist_conversation_question_log(chat, identity, stored)
             logger.info(
                 "orchestration request completed message_id=%s status=%s intent=%s elapsed=%.2fs",
                 chat.message_id, stored.status, stored.intent,
@@ -2820,6 +3205,13 @@ class DataAnalysisOrchestrator:
         """Execute a declared calculation against its exact predecessor artifacts."""
         await emit_progress("ASL_GENERATION", "COMPLETED",
                             "该任务基于前序任务的查询结果计算，不再调用数据库。")
+        analysis_binding = (task.extraction or {}).get("分析绑定")
+        if isinstance(analysis_binding, dict) and analysis_binding.get("analysis_type"):
+            # 分析任务：加载前序取数结果后调用确定性分析引擎，
+            # 工具调用过程经 ANALYSIS_TOOL 事件进入调度执行节点
+            return await self._respond_analysis_task(
+                chat, identity, task, conversation_by_task, responses, analysis_binding
+            )
         if self.dataset_store is None:
             return self._pure_computation_unavailable(chat)
         references = {}
@@ -2871,6 +3263,376 @@ class DataAnalysisOrchestrator:
                 },
             ),
         )
+
+    async def _load_task_result_references(
+        self, chat: ChatRequest, identity: TrustedIdentity, task: AtomicTask,
+        conversation_by_task: dict[str, str], responses: dict[str, Any] | None,
+    ) -> dict[str, tuple[Any, list[dict]]]:
+        """加载分析/计算任务全部依赖任务的完整结果集（列+行）。"""
+        references: dict[str, tuple[Any, list[dict]]] = {}
+        for dependency_id in task.depends_on:
+            conversation = conversation_by_task.get(dependency_id, chat.conversation_id)
+            dependency = (responses or {}).get(dependency_id)
+            dataset_id = getattr(dependency, 'dataset_id', None)
+            raw = await self._latest_task_dataset_reference(
+                identity, chat, conversation, **({'dataset_id': dataset_id} if dataset_id else {}))
+            if raw is None and getattr(dependency, 'result_file_url', None):
+                raw = await self._import_dependency_result_file(
+                    chat, identity, conversation, dependency.result_file_url)
+            if raw is None:
+                raise ValueError('分析依赖任务没有可用的完整数据集：' + dependency_id)
+            reference = restore_reference(raw)
+            expected_scope = DatasetScope(identity.tenant_id, identity.user_id,
+                chat.application_id, conversation, chat.authorized_semantic_scope.fingerprint())
+            if reference.semantic_model_id is not None and reference.semantic_model_id != chat.semantic_model_id:
+                raise ValueError('分析输入的语义模型不匹配')
+            loaded = await asyncio.to_thread(self.dataset_store.load_dataset,
+                reference, current_scope=expected_scope)
+            references[dependency_id] = (reference, loaded.rows)
+        return references
+
+    async def _respond_analysis_task(
+        self, chat: ChatRequest, identity: TrustedIdentity, task: AtomicTask,
+        conversation_by_task: dict[str, str], responses: dict[str, Any] | None,
+        binding: dict[str, Any],
+    ) -> AgentResponse:
+        """分析任务执行器：前序取数结果 -> 确定性分析引擎，工具调用全程可追踪。
+
+        引擎拒算（数据形状不满足算子契约）时降级保留已取数据，不把
+        分析失败改写成查询失败；洞察物料随 deferred_insights 参与根级合并。
+        """
+        tool = str(binding.get("tool") or "分析工具")
+        if self.dataset_store is None or self.analysis_engine is None:
+            return self._pure_computation_unavailable(chat)
+        try:
+            references = await self._load_task_result_references(
+                chat, identity, task, conversation_by_task, responses
+            )
+        except Exception as exc:
+            logger.warning('analysis input unavailable task=%s: %s', task.task_id, exc)
+            response = self._pure_computation_unavailable(chat)
+            response.evidence = [EvidenceItem(evidence_id='analysis-input-unavailable',
+                kind='ANALYSIS_RESULT', source_ref='task-dag',
+                payload={'task_id': task.task_id, 'code': 'ANALYSIS_INPUT_UNAVAILABLE'})]
+            return response
+        request = self._analysis_task_request(chat, identity, task, binding)
+        input_summary = "、".join(
+            f"{dependency_id}结果集{len(rows)}行"
+            for dependency_id, (_, rows) in references.items()
+        )
+        await emit_progress(
+            "ANALYSIS_TOOL", "RUNNING",
+            f"调用工具：{tool}。输入：{input_summary}。",
+            analysis_tool=tool, analysis_type=str(binding.get("analysis_type") or ""),
+        )
+        try:
+            columns, rows = self._merge_analysis_inputs(task, references, binding, request)
+            knowledge = KnowledgeContext(query=chat.question, documents=[])
+            analysis_output = self.analysis_engine.analyze(request, columns, rows, knowledge)
+        except AnalysisError as exc:
+            await emit_progress(
+                "ANALYSIS_TOOL", "DEGRADED",
+                f"{tool}未能完成本次分析：{exc}。已保留前序查询结果，不据此生成分析结论。",
+                analysis_tool=tool,
+            )
+            warning = f"{tool}未能完成本次分析：{exc}。"
+            return AgentResponse(
+                request_id=uuid4(), conversation_id=chat.conversation_id,
+                status="PARTIAL_SUCCESS", intent=request.primary_intent,
+                intent_source="ANALYSIS_TASK_PLANNER", intent_confidence=1.0,
+                answer=warning + "前序任务的查询结果已保留。",
+                reliability=ReliabilityReport(
+                    level="LIMITED", score=0.5,
+                    gates={"analysis_completed": False, "query_evidence_preserved": True},
+                    warnings=[warning],
+                ),
+                evidence=[EvidenceItem(
+                    evidence_id=f"analysis-declined:{task.task_id}", kind="ANALYSIS_RESULT",
+                    source_ref="deterministic:declined",
+                    payload={"task_id": task.task_id, "tool": tool, "reason": str(exc)},
+                )],
+            )
+        except Exception as exc:
+            logger.warning('analysis task failed task=%s: %s', task.task_id, exc)
+            await emit_progress(
+                "ANALYSIS_TOOL", "FAILED",
+                f"{tool}执行未成功，已保留前序查询结果。", analysis_tool=tool,
+            )
+            response = self._pure_computation_unavailable(chat)
+            response.evidence = [EvidenceItem(evidence_id='analysis-execution-failed',
+                kind='ANALYSIS_RESULT', source_ref='task-dag',
+                payload={'task_id': task.task_id, 'code': 'ANALYSIS_EXECUTION_FAILED'})]
+            return response
+        facts = dict(analysis_output.facts or {})
+        sub_tools = binding.get("sub_tools") or {}
+        for fact_key, sub_tool in sub_tools.items():
+            sub_facts = facts.get(fact_key)
+            if isinstance(sub_facts, dict):
+                await emit_progress(
+                    "ANALYSIS_TOOL", "COMPLETED",
+                    f"{sub_tool}调用完成。输出事实{len(sub_facts)}项。",
+                    analysis_tool=str(sub_tool),
+                )
+        await emit_progress(
+            "ANALYSIS_TOOL", "COMPLETED",
+            f"{tool}调用完成。方法：{analysis_output.method}；输出分析结论与事实{len(facts)}项。",
+            analysis_tool=tool,
+        )
+        try:
+            reference = await self._save_analysis_derived_dataset(
+                chat, identity, task, references, columns, rows, analysis_output.method
+            )
+            dataset_id = reference.dataset_id
+        except Exception as exc:
+            logger.warning('analysis derived dataset not persisted task=%s: %s', task.task_id, exc)
+            reference = None
+            dataset_id = None
+        # 分析任务的合并输入采概要，随任务表落盘供下轮判断复用
+        chat._last_result_summary = self._summarize_query_result(
+            SimpleNamespace(columns=columns, rows=rows)
+        )
+        chat._last_result_dataset_id = dataset_id
+        table = self._markdown_result_table(columns, rows[:20]) if rows else ""
+        chat._dag_deferred_insight = {
+            "question": task.question, "intent": "统计分析",
+            "summary": analysis_output.answer,
+            "warnings": list(analysis_output.warnings or []),
+            "presentation": {"table": table, "chart": "", "notes": []},
+            "facts": {
+                **facts,
+                "analysis_method": analysis_output.method,
+                "analysis_tool": tool,
+                "query_data": {
+                    "columns": columns, "rows": rows,
+                    "returned_row_count": len(rows), "total_row_count": len(rows),
+                    "total_row_count_confirmed": True, "sample_only": False,
+                },
+            },
+        }
+        chart_specs = []
+        for item in facts.get("chart_specs") or []:
+            try:
+                chart_specs.append(ChartSpec.model_validate(item))
+            except (TypeError, ValueError):
+                continue
+        return AgentResponse(
+            request_id=uuid4(), conversation_id=chat.conversation_id,
+            status="COMPLETED", intent=request.primary_intent,
+            intent_source="ANALYSIS_TASK_PLANNER", intent_confidence=1.0,
+            answer=analysis_output.answer, dataset_id=dataset_id,
+            chart_specs=chart_specs,
+            reliability=ReliabilityReport(
+                level="HIGH", score=1.0,
+                gates={"analysis_completed": True, "deterministic_computation": True},
+                warnings=list(analysis_output.warnings or []),
+            ),
+            evidence=[EvidenceItem(
+                evidence_id=f"analysis:{task.task_id}", kind="ANALYSIS_RESULT",
+                source_ref=f"deterministic:{analysis_output.method}",
+                payload={
+                    "task_id": task.task_id, "tool": tool,
+                    "method": analysis_output.method, "facts": facts,
+                    "warnings": list(analysis_output.warnings or []),
+                },
+            )],
+        )
+
+    def _analysis_task_request(
+        self, chat: ChatRequest, identity: TrustedIdentity, task: AtomicTask,
+        binding: dict[str, Any],
+    ) -> CanonicalAnalysisRequest:
+        """按分析绑定构造引擎请求：意图取自分析任务，指标取自提取参数。"""
+        intent = PrimaryIntent(str(binding.get("intent"))) if binding.get("intent") else (
+            task.primary_intent or PrimaryIntent.COMPARISON_ANALYSIS
+        )
+        metrics = []
+        for item in (task.extraction or {}).get("指标") or []:
+            name = item.get("name") if isinstance(item, dict) else item
+            if isinstance(name, str) and name.strip():
+                metrics.append(MetricRef(input=name.strip(), canonical_name=name.strip()))
+        root_context = getattr(chat, "_analysis_root_context", None) or {}
+        original = str(
+            root_context.get("original_question") or chat.question or task.question
+        )
+        request = CanonicalAnalysisRequest(
+            conversation_id=chat.conversation_id,
+            tenant_id=identity.tenant_id, user_id=identity.user_id,
+            application_id=chat.application_id,
+            original_question=original,
+            rewritten_question=task.question,
+            primary_intent=intent,
+            intent_source="ANALYSIS_TASK_PLANNER",
+            intent_confidence=1.0,
+            metrics=metrics,
+            semantic_model_id=chat.semantic_model_id,
+            knowledge_base_names=list(chat.knowledge_base_names or []),
+        )
+        return request
+
+    def _merge_analysis_inputs(
+        self, task: AtomicTask, references: dict[str, tuple[Any, list[dict]]],
+        binding: dict[str, Any], request: CanonicalAnalysisRequest,
+    ) -> tuple[list[str], list[dict]]:
+        """按分析绑定把依赖数据集合成引擎输入形状。
+
+        period_roles：两期对比各取数结果一行，补"期间"标签与
+        period_role（基期/当前期）列，与引擎对比契约对齐；
+        root_cause：两期水平值确定性对齐成贡献形状（变化量列），
+        不满足两期形状时抛出 AnalysisError 走降级；
+        其余 concat：单数据集原样透传，多数据集按行拼接。
+        """
+        merge = str(binding.get("merge") or "concat")
+        if merge == "period_roles":
+            period_by_task = {
+                item.get("task"): item for item in binding.get("periods") or []
+            }
+            columns: list[str] = ["期间"]
+            rows: list[dict] = []
+            for dependency_id in task.depends_on:
+                reference, dep_rows = references[dependency_id]
+                info = period_by_task.get(dependency_id) or {}
+                for column in reference.columns:
+                    if column not in columns:
+                        columns.append(column)
+                for row in dep_rows:
+                    rows.append({
+                        "期间": str(info.get("label") or ""),
+                        **{column: row.get(column) for column in reference.columns},
+                        "period_role": str(info.get("role") or ""),
+                    })
+            columns.append("period_role")
+            return columns, rows
+        if str(binding.get("analysis_type") or "") == "root_cause":
+            return self._root_cause_contribution_shape(task, references, request)
+        columns = []
+        rows = []
+        for dependency_id in task.depends_on:
+            reference, dep_rows = references[dependency_id]
+            for column in reference.columns:
+                if column not in columns:
+                    columns.append(column)
+            rows.extend(dep_rows)
+        return columns, rows
+
+    def _root_cause_contribution_shape(
+        self, task: AtomicTask, references: dict[str, tuple[Any, list[dict]]],
+        request: CanonicalAnalysisRequest,
+    ) -> tuple[list[str], list[dict]]:
+        """把"总体+维度分组"两期水平值对齐成引擎归因契约的贡献形状。
+
+        每个维度分组数据集必须含一个时间列且恰好两个时间点，早为基期、
+        晚为本期；按维度成员计算本期-基期变化量，附总体变化对账列。
+        """
+        metric_names = [
+            value for ref in request.metrics
+            for value in (ref.canonical_name, ref.input) if value
+        ]
+        total_delta: float | None = None
+        contribution_rows: list[dict] = []
+        label_column: str | None = None
+        change_column = f"{metric_names[0]}变化" if metric_names else "变化"
+        for index, dependency_id in enumerate(task.depends_on):
+            reference, dep_rows = references[dependency_id]
+            if not dep_rows:
+                continue
+            time_column, periods = self._two_period_time_column(reference.columns, dep_rows)
+            metric_column = next(
+                (column for column in reference.columns
+                 if column in metric_names or any(name in column for name in metric_names)),
+                None,
+            )
+            if metric_column is None:
+                numeric = [column for column in reference.columns
+                           if column != time_column and any(
+                               isinstance(row.get(column), (int, float))
+                               and not isinstance(row.get(column), bool)
+                               for row in dep_rows)]
+                if len(numeric) != 1:
+                    raise AnalysisError("归因输入的指标列无法唯一确定")
+                metric_column = numeric[0]
+            base_label, current_label = periods
+            if index == 0:
+                # 第一个依赖是总体取数：只取总体变化做对账
+                by_period = self._sum_by_period(dep_rows, time_column, metric_column, periods)
+                total_delta = by_period[current_label] - by_period[base_label]
+                continue
+            member_column = next(
+                (column for column in reference.columns
+                 if column not in {time_column, metric_column}),
+                None,
+            )
+            if member_column is None:
+                continue
+            label_column = label_column or member_column
+            grouped: dict[str, dict[str, float]] = {}
+            for row in dep_rows:
+                member = str(row.get(member_column) or "").strip()
+                period = str(row.get(time_column) or "").strip()
+                value = row.get(metric_column)
+                if not member or period not in periods:
+                    continue
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    continue
+                grouped.setdefault(member, {base_label: 0.0, current_label: 0.0})
+                grouped[member][period] = grouped[member].get(period, 0.0) + float(value)
+            for member, values in grouped.items():
+                contribution_rows.append({
+                    member_column: member,
+                    change_column: values.get(current_label, 0.0) - values.get(base_label, 0.0),
+                })
+        if not contribution_rows or label_column is None:
+            raise AnalysisError("归因输入缺少可按两期对齐的维度分组数据")
+        if total_delta is not None:
+            for row in contribution_rows:
+                row["整体变化"] = total_delta
+        columns = [label_column, change_column] + (["整体变化"] if total_delta is not None else [])
+        return columns, contribution_rows
+
+    @staticmethod
+    def _two_period_time_column(columns: list[str], rows: list[dict]) -> tuple[str, tuple[str, str]]:
+        """找出恰好含两个时间值的时间列，返回（列名, （基期标签, 本期标签））。"""
+        time_tokens = ("日期", "时间", "月份", "季度", "年份", "周期", "date", "time", "month", "year", "period")
+        for column in columns:
+            if not any(token in column.lower() for token in time_tokens):
+                continue
+            values = sorted({str(row.get(column) or "").strip() for row in rows} - {""})
+            if len(values) == 2:
+                return column, (values[0], values[1])
+        raise AnalysisError("归因输入缺少恰好两个时间点的时间列，无法对齐基期与本期")
+
+    @staticmethod
+    def _sum_by_period(
+        rows: list[dict], time_column: str, metric_column: str, periods: tuple[str, str]
+    ) -> dict[str, float]:
+        totals = {periods[0]: 0.0, periods[1]: 0.0}
+        for row in rows:
+            period = str(row.get(time_column) or "").strip()
+            value = row.get(metric_column)
+            if period in totals and isinstance(value, (int, float)) and not isinstance(value, bool):
+                totals[period] += float(value)
+        return totals
+
+    async def _save_analysis_derived_dataset(
+        self, chat: ChatRequest, identity: TrustedIdentity, task: AtomicTask,
+        references: dict[str, tuple[Any, list[dict]]],
+        columns: list[str], rows: list[dict], method: str,
+    ):
+        """分析合并输入落盘为派生数据集，支撑任务表概要与后续追问复用。"""
+        scope = DatasetScope(identity.tenant_id, identity.user_id, chat.application_id,
+            chat.conversation_id, chat.authorized_semantic_scope.fingerprint())
+        first = next(iter(references.values()))[0]
+        reference = await asyncio.to_thread(self.dataset_store.save_dataset,
+            scope=scope, columns=columns, rows=rows, snapshot_id='',
+            data_as_of=datetime.fromisoformat(first.data_as_of), source_type='DERIVED_COMPUTATION',
+            source_ref='/'.join(ref.dataset_id for ref, _ in references.values()),
+            semantic_model_id=chat.semantic_model_id, business_domain_ids=chat.business_domain_ids,
+            parent_dataset_ids=[ref.dataset_id for ref, _ in references.values()],
+            transformation_log=({'type': 'analysis_merge', 'analysis_method': method,
+                'source_ref_tasks': list(references)},),
+            ttl_seconds=self.settings.dataset_ttl_seconds)
+        await self.sessions.put_dataset_reference(reference.to_dict(),
+            recent_limit=self.settings.dataset_recent_limit)
+        return reference
 
     async def _respond_dataset_computation(self, chat, identity, task, references):
         """The shared executor consumes formulas and result operations, not prose claims."""
@@ -4862,22 +5624,69 @@ class DataAnalysisOrchestrator:
             question_chain=[turn.content for turn in chat.history if turn.role == "user"],
             include_resolved_context=not chat._intent_context_progress_emitted,
         ))
+        structured_payload = (
+            planner_extraction.structured
+            if planner_extraction is not None else None
+        )
+        if isinstance(structured_payload, dict):
+            aligned_grain = align_structured_time_window(
+                request.rewritten_question or request.original_question,
+                structured_payload.get("时间粒度"),
+                intent=request.primary_intent.value,
+                today=date.today(),
+            )
+            if aligned_grain is not None:
+                # 趋势分析要求月桶完整：相对范围在发出前对齐到桶边界，
+                # 同比另需扩展基期窗口。只改发往 ASL 的副本，规划侧原始
+                # 提取与请求指纹不动，改写依据记入 assumptions 供下游披露。
+                structured_payload = dict(structured_payload)
+                structured_payload["时间粒度"] = aligned_grain
+                request.assumptions.append(
+                    "TIME_WINDOW_ALIGNED=" + str(aligned_grain.get("time_range"))
+                )
+            grain = structured_payload.get("时间粒度")
+            if isinstance(grain, dict):
+                covering = disjunctive_periods_to_range(
+                    str(grain.get("time_range") or "")
+                )
+                if covering is not None:
+                    # “X和Y”“X、Y”式离散期间取数需要连续窗口：改写为覆盖
+                    # 区间后按时间分组，各期间自然成分开的行。只改发往 ASL
+                    # 的副本，规划侧原始提取保持不变。
+                    structured_payload = dict(structured_payload)
+                    structured_payload["时间粒度"] = {**grain, "time_range": covering}
+                    logger.info(
+                        "disjunctive time periods rewritten to covering range: "
+                        "message_id=%s range=%s",
+                        chat.message_id, covering,
+                    )
         try:
             # 规划产出的结构化提取JSON原样透传给语义查询器，消费方式由下游负责；
             # mentions 保留作兼容，语义查询器未适配前行为不变。
             await emit_progress("ASL_GENERATION", "RUNNING", "正在解析并校验结构化参数，生成标准 ASL。")
             result = await self.adapters.query.query_surface(
                 request, identity, mentions=mentions,
-                structured_extraction=(
-                    planner_extraction.structured
-                    if planner_extraction is not None else None
-                ),
+                structured_extraction=structured_payload,
             )
         except AdapterError as exc:
             if exc.code in {"ASL_AMBIGUOUS", "SQL_TRANSLATION_AMBIGUOUS"}:
                 request.semantic_ambiguities = self._semantic_ambiguities(exc)
                 request.ambiguities = self._ambiguity_texts(exc)
                 request.missing_slots = ["semantic_ambiguity"]
+                # 接入点B：绑定失败兜底（DATA_AGENT_CLARIFICATION_DECIDER_ENABLED，
+                # 默认关闭）。把绑定歧义结构化交给澄清模块再判一次：上下文
+                # 能救（COMPLETE）就以补全后的问题重走参数提取与绑定，绝不
+                # 直接改判成功；救不了（CLARIFY/NEW_TASK）按原反问流程返回。
+                # 单任务路径接线，重入限一次，异常一律降级为原澄清流程。
+                if (
+                    self.settings.clarification_decider_enabled
+                    and not getattr(chat, "_clarification_module_retry", False)
+                ):
+                    retry_response = await self._clarification_module_binding_retry(
+                        chat, identity, request,
+                    )
+                    if retry_response is not None:
+                        return retry_response
                 return await self._request_clarification(
                     request, clarification_rounds, source_stage=self._asl_clarification_stage(exc),
                     semantic_extractions=chat._semantic_extraction_items,
@@ -10469,6 +11278,13 @@ class DataAnalysisOrchestrator:
             encoded = json.dumps(sample, ensure_ascii=False, default=str)
             if len(encoded) <= 3000:
                 summary["sample"] = sample
+        total = getattr(dataset, 'total_row_count', None)
+        summary['sample_is_complete'] = (
+            type(total) is int and total == len(dataset.rows or []) == len(summary.get('sample') or [])
+            and not getattr(dataset, 'truncated', True)
+            and all(len(str(value)) <= 80 for row in dataset.rows or [] for key,value in row.items()
+                    if not str(key).startswith('_'))
+        )
         return summary
 
     async def _persist_conversation_task_table(
@@ -10490,6 +11306,7 @@ class DataAnalysisOrchestrator:
             summaries = getattr(chat, "_task_result_summaries", {}) or {}
             payload = {
                 "message_id": chat.message_id,
+                "semantic_scope_fingerprint": chat.authorized_semantic_scope.fingerprint(),
                 # ChatRequest 没有 rewritten_question，改写后的问题在
                 # original_question（修订重问场景）或 question 本身
                 "question": (
@@ -10529,6 +11346,57 @@ class DataAnalysisOrchestrator:
             )
         except Exception as exc:
             logger.warning("failed to persist conversation task table: %s", exc)
+
+    async def _persist_conversation_question_log(
+        self, chat: ChatRequest, identity: TrustedIdentity, response: AgentResponse,
+    ) -> None:
+        """轮末把本轮问题与回答摘要追加进会话问题链。
+
+        澄清上下文模块需要回看多轮用户问题，任务表只保留最近一轮，因此
+        在独立 key 上滚动保留最近 20 轮。当前仅 app/clarification 模块
+        读取该数据；写入失败只记日志，不影响本轮回答。
+        """
+        try:
+            summaries = getattr(chat, "_task_result_summaries", {}) or {}
+            result_summaries = [
+                item.get("summary")
+                for item in summaries.values()
+                if isinstance(item, dict) and item.get("summary")
+            ]
+            if not result_summaries:
+                last_summary = getattr(chat, "_last_result_summary", None)
+                if last_summary:
+                    result_summaries = [last_summary]
+            entry = {
+                "message_id": chat.message_id,
+                "question": (
+                    getattr(chat, "original_question", None)
+                    or chat.question
+                    or ""
+                )[:500],
+                "intent": str(getattr(response, "intent", "") or ""),
+                "status": getattr(response, "status", "") or "",
+                # 回答只留摘要，问题链的用途是回看问过什么，不是复述答案
+                "answer_summary": (getattr(response, "answer", "") or "")[:200],
+                "clarification_questions": list(
+                    getattr(response, "clarification_questions", []) or []
+                )[:3],
+                "missing_slots": list(getattr(response, "missing_slots", []) or [])[:8],
+                "result_summaries": result_summaries[:3],
+            }
+            await self.sessions.append_question_log(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+                entry,
+            )
+        except Exception as exc:
+            logger.warning(
+                "failed to persist conversation question log: message_id=%s %s",
+                chat.message_id,
+                exc,
+            )
 
     async def _persist_query_dataset(
         self, request: CanonicalAnalysisRequest, query_result: DataQueryResult,

@@ -13,6 +13,12 @@ from app.analysis.forecasting import DeterministicForecastSelector, ForecastMode
 from app.analysis.profiling import profile_dataset
 from app.analysis.visualization import build_chart_specs
 from app.analysis.operators import AnalysisOperatorRegistry, OperatorInputError
+from app.analysis.chain_tools.composition import cumulative_contribution_threshold
+from app.analysis.chain_tools.temporal_window import (
+    detect_edge_bucket_alignment,
+    has_pop_signal,
+    has_yoy_signal,
+)
 from app.analysis.insight_discovery import discover_insights
 from app.analysis.contracts import (
     ExplicitObjectComparisonScope,
@@ -756,7 +762,7 @@ class AnalysisEngine:
         if match := re.fullmatch(r"(20\d{2})[-/.年](\d{1,2})(?:月)?", text):
             month = int(match.group(2))
             return (int(match.group(1)), month, 1) if 1 <= month <= 12 else None
-        if match := re.fullmatch(r"(20\d{2})(?:年)?[Qq]([1-4])", text):
+        if match := re.fullmatch(r"(20\d{2})[-/年]?[Qq]([1-4])", text):
             return int(match.group(1)), (int(match.group(2)) - 1) * 3 + 1, 1
         if match := re.fullmatch(r"(20\d{2})年?第?([一二三四1234])季度", text):
             value = match.group(2)
@@ -869,6 +875,14 @@ class AnalysisEngine:
             raise AnalysisError("趋势分析至少需要两个有序时间点")
         labels = self._temporal_labels(columns, rows, metric)
         continuity = self._temporal_continuity(labels)
+        edge_integrity = detect_edge_bucket_alignment(
+            labels,
+            request.time_range.start if request.time_range is not None else None,
+            request.time_range.end_exclusive if request.time_range is not None else None,
+            continuity["grain"],
+        )
+        first_bucket_partial = bool(edge_integrity["first_bucket_partial"])
+        first_partial_label = edge_integrity["first_partial_label"]
         requested_granularity = self._requested_trend_granularity(
             request.original_question
         )
@@ -903,6 +917,11 @@ class AnalysisEngine:
                 "to": labels[index],
                 "absolute_change": delta,
                 "change_rate": self._pct_change(values[index - 1], values[index]),
+                **(
+                    {"left_bucket_partial": True}
+                    if first_bucket_partial and index == 1
+                    else {}
+                ),
             })
         largest_rise = max(period_changes, key=lambda item: item["absolute_change"])
         largest_drop = min(period_changes, key=lambda item: item["absolute_change"])
@@ -964,7 +983,7 @@ class AnalysisEngine:
             "以上是时间序列能够验证的变化解释；仅凭汇总趋势无法确定业务因果原因，"
             "如需进一步归因，应继续按产品、经销商、医院或地区拆分核验。"
         )
-        return AnalysisOutput(answer, "robust_trend_diagnostics", {
+        facts: dict[str, Any] = {
             "metric_column": metric, "start": values[0], "end": values[-1],
             "absolute_change": change, "change_rate": pct, "minimum": min(values),
             "maximum": max(values), "point_count": len(values), "pattern": pattern,
@@ -975,7 +994,56 @@ class AnalysisEngine:
             "actual_granularity": continuity["grain"],
             "change_points": change_points,
             "multidimensional_time_aggregation": aggregated_multidimensional,
-        }, warnings)
+            "edge_bucket_integrity": edge_integrity,
+        }
+        if first_bucket_partial and first_partial_label is not None:
+            answer += (
+                f"注意：首个时间桶{first_partial_label}为不完整期间"
+                "（查询窗口起点落在该期间内部），整体首尾变化与逐期环比"
+                "含该残缺桶，解释时需以下方剔除后对照为准。"
+            )
+            warnings.append(f"首桶{first_partial_label}被窗口起点截断，为不完整期间")
+            trimmed_values = values[1:]
+            if len(trimmed_values) >= 2:
+                facts["overall_change_excluding_partial"] = {
+                    "excluded_label": first_partial_label,
+                    "start": trimmed_values[0],
+                    "end": trimmed_values[-1],
+                    "absolute_change": trimmed_values[-1] - trimmed_values[0],
+                    "change_rate": self._pct_change(trimmed_values[0], trimmed_values[-1]),
+                }
+        if has_pop_signal(request.original_question):
+            try:
+                pop_result = self.operator_registry.execute(
+                    "period_over_period_change", columns, rows
+                )
+                pop_facts = dict(pop_result.facts)
+                if first_bucket_partial and pop_facts.get("changes"):
+                    pop_facts["changes"] = [
+                        item for item in pop_facts["changes"]
+                        if item.get("from") != first_partial_label
+                    ]
+                    pop_facts["excluded_partial_first"] = first_partial_label
+                    pop_facts["period_count"] = len(pop_facts["changes"])
+                    warnings.append(
+                        f"首桶{first_partial_label}为不完整期间，其环比已剔除"
+                    )
+                facts["period_over_period"] = pop_facts
+                warnings.extend(pop_result.warnings)
+            except OperatorInputError as exc:
+                warnings.append(f"环比序列未计算：{exc}")
+        if has_yoy_signal(request.original_question):
+            try:
+                yoy_result = self.operator_registry.execute(
+                    "year_over_year_change", columns, rows
+                )
+                facts["year_over_year"] = yoy_result.facts
+                warnings.extend(yoy_result.warnings)
+                if yoy_result.facts.get("status") == "NOT_COMPUTABLE":
+                    answer += "同比分析：" + str(yoy_result.facts.get("reason")) + "。"
+            except OperatorInputError as exc:
+                warnings.append(f"同比序列未计算：{exc}")
+        return AnalysisOutput(answer, "robust_trend_diagnostics", facts, warnings)
 
     @staticmethod
     def _trend_diagnostics(values: list[float]) -> dict[str, Any]:
@@ -1361,6 +1429,33 @@ class AnalysisEngine:
         )
 
     def _composition(self, request, columns, rows, knowledge) -> AnalysisOutput:
+        threshold = cumulative_contribution_threshold(request.original_question)
+        if threshold is not None:
+            if (
+                AnalysisOperator.TOP_N in request.operators
+                or AnalysisOperator.BOTTOM_N in request.operators
+            ):
+                raise AnalysisError(
+                    "累计贡献要求完整分组结果，TopN预览的合计不能充当总体分母"
+                )
+            result = self.operator_registry.execute(
+                "cumulative_contribution", columns, rows, threshold=threshold
+            )
+            facts = result.facts
+            number = self._display_number
+            boundary = facts["boundary_label"]
+            answer = (
+                f"{facts['metric_column']}按{facts['label_column']}降序，前 "
+                f"{facts['threshold_set_size']} 个分组累计贡献 "
+                f"{facts['threshold_set_coverage']:.2%}（首次跨过{threshold:.0%}阈值）；"
+                f"跨过阈值的边界分组为{boundary}，其单组占 "
+                f"{facts['boundary_share']:.2%}，必须计入阈值集合。"
+                f"参与统计的分组共 {facts['group_count']} 个，合计 {number(facts['total'])}。"
+                "该结论基于完整分组结果，不是TopN抽样。"
+            )
+            return AnalysisOutput(
+                answer, result.method, facts, result.warnings
+            )
         metric, values = self._series(request, columns, rows)
         if any(value < 0 for value in values):
             raise AnalysisError("占比计算不接受负值，需先确认指标口径")

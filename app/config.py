@@ -248,6 +248,15 @@ class Settings(BaseSettings):
     pending_triage_timeout_seconds: float = Field(default=10, gt=0, le=60)
     intent_model_enable_thinking: bool = False
     intent_model_min_confidence: float = Field(default=0.80, ge=0.5, le=1)
+    # 接入点A澄清判定开关：开启后规划前先经 app/clarification 判定
+    # （NEW_TASK/COMPLETE/CLARIFY），判定异常时降级为原流程，不阻断本轮
+    clarification_decider_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_CLARIFICATION_DECIDER_ENABLED",
+            "CLARIFICATION_DECIDER_ENABLED",
+        ),
+    )
     multi_question_enabled: bool = True
     multi_question_model_enabled: bool = True
     multi_question_max_tasks: int = Field(default=5, ge=2, le=5)

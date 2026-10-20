@@ -16,6 +16,7 @@ from app.analysis.contracts import (
     multidimensional_operator_for_question,
     ordered_entity_metric_ranking_request,
 )
+from app.analysis.chain_tools.temporal_window import has_pop_signal, has_yoy_signal
 
 
 class AnalysisPlanner:
@@ -66,6 +67,13 @@ class AnalysisPlanner:
             or ordered_entity_ranking
         ):
             methods = ["ranking_metric_validation", "stable_ranking", "coverage_reconciliation"]
+        if request.primary_intent == PrimaryIntent.TREND_ANALYSIS:
+            # 提问中出现环比/同比诉求时补充对应确定性方法，规划展示
+            # 与引擎实际执行的算子保持同名。
+            if has_pop_signal(request.original_question):
+                methods.append("period_over_period_change")
+            if has_yoy_signal(request.original_question):
+                methods.append("year_over_year_alignment")
         if not methods:
             return None
         object_scope = explicit_object_comparison_scope(request)

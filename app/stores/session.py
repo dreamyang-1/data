@@ -70,6 +70,8 @@ class SessionStore(Protocol):
     async def get_recent_task_frames(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, *, limit: int) -> list[CanonicalAnalysisRequest]: ...
     async def get_task_table(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str) -> dict | None: ...
     async def put_task_table(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, table: dict) -> None: ...
+    async def get_question_log(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str) -> list[dict]: ...
+    async def append_question_log(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, entry: dict, *, max_items: int = 20) -> None: ...
     async def put_dataset_reference(self, reference: dict, *, recent_limit: int) -> None: ...
     async def get_recent_dataset_references(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, *, limit: int) -> list[dict]: ...
     async def list_expired_dataset_references(self, *, now_epoch: float, limit: int) -> list[dict]: ...
@@ -109,6 +111,7 @@ class InMemorySessionStore:
             tuple[str, str, str, str], list[tuple[float, CanonicalAnalysisRequest]]
         ] = {}
         self._task_tables: dict[tuple[str, str, str, str], tuple[float, list[dict]]] = {}
+        self._question_logs: dict[tuple[str, str, str, str], tuple[float, list[dict]]] = {}
         self._dataset_references: dict[str, dict] = {}
         self._conversation_datasets: dict[tuple[str, str, str, str], list[str]] = {}
         self._dag_checkpoints: dict[tuple[str, str, str, str, str], tuple[float, dict]] = {}
@@ -301,6 +304,37 @@ class InMemorySessionStore:
             self._task_tables[key] = (
                 time.monotonic() + self.ttl_seconds,
                 json.loads(json.dumps(table)),
+            )
+
+    async def get_question_log(
+        self, tenant_id: str, user_id: str, application_id: str, conversation_id: str,
+    ) -> list[dict]:
+        key = (tenant_id, user_id, application_id, conversation_id)
+        async with self._lock:
+            item = self._question_logs.get(key)
+            if not item or item[0] <= time.monotonic():
+                self._question_logs.pop(key, None)
+                return []
+            return json.loads(json.dumps(item[1]))
+
+    async def append_question_log(
+        self, tenant_id: str, user_id: str, application_id: str,
+        conversation_id: str, entry: dict, *, max_items: int = 20,
+    ) -> None:
+        key = (tenant_id, user_id, application_id, conversation_id)
+        async with self._lock:
+            item = self._question_logs.get(key)
+            entries = (
+                list(item[1])
+                if item and item[0] > time.monotonic()
+                else []
+            )
+            entries.append(json.loads(json.dumps(entry)))
+            # 只保留最近 max_items 轮，早期轮次滚动淘汰
+            del entries[: max(0, len(entries) - max_items)]
+            self._question_logs[key] = (
+                time.monotonic() + self.ttl_seconds,
+                entries,
             )
 
     async def put_dataset_reference(self, reference: dict, *, recent_limit: int) -> None:
@@ -770,6 +804,35 @@ return 0
         await self.redis.set(
             key, json.dumps(table, ensure_ascii=False), ex=self.ttl_seconds
         )
+
+    async def get_question_log(
+        self, tenant_id: str, user_id: str, application_id: str, conversation_id: str,
+    ) -> list[dict]:
+        # 新头在前的列表：lpush 写入、lrange 整表读出
+        key = self._key("question-log", tenant_id, user_id, application_id, conversation_id)
+        values = await self.redis.lrange(key, 0, -1)
+        result: list[dict] = []
+        for raw in values:
+            try:
+                entry = json.loads(raw)
+            except (ValueError, TypeError):
+                logger.warning("discarding invalid question-log entry: key=%s", key)
+                continue
+            if isinstance(entry, dict):
+                result.append(entry)
+        return result
+
+    async def append_question_log(
+        self, tenant_id: str, user_id: str, application_id: str,
+        conversation_id: str, entry: dict, *, max_items: int = 20,
+    ) -> None:
+        key = self._key("question-log", tenant_id, user_id, application_id, conversation_id)
+        encoded = json.dumps(entry, ensure_ascii=False)
+        async with self.redis.pipeline(transaction=True) as pipe:
+            pipe.lpush(key, encoded)
+            pipe.ltrim(key, 0, max(0, max_items - 1))
+            pipe.expire(key, self.ttl_seconds)
+            await pipe.execute()
 
     @property
     def _dataset_expiry_key(self) -> str:

@@ -220,6 +220,73 @@ class InsightInterpretationLayer:
                 priority=85,
                 evidence_fields=["period_changes"],
             ))
+        edge = facts.get("edge_bucket_integrity") or {}
+        partial_labels = [
+            edge.get(key)
+            for key in ("first_partial_label", "last_partial_label")
+            if edge.get(key)
+        ]
+        if partial_labels:
+            insights.append(InterpretedInsight(
+                category="limitation",
+                statement=(
+                    "、".join(partial_labels)
+                    + "为查询窗口边界截断的不完整期间，相关环比已剔除，"
+                    "整体首尾变化需结合剔除后对照解释"
+                ),
+                nature=InsightNature.LIMITATION,
+                priority=82,
+                evidence_fields=["edge_bucket_integrity"],
+            ))
+        pop = facts.get("period_over_period")
+        if isinstance(pop, dict) and pop.get("changes"):
+            valid_changes = [
+                item for item in pop["changes"] if item.get("change_rate") is not None
+            ]
+            if valid_changes:
+                largest_pop = max(valid_changes, key=lambda item: abs(item["change_rate"]))
+                insights.append(InterpretedInsight(
+                    category="period_over_period",
+                    statement=(
+                        f"环比变动最大的一期：{largest_pop['from']}至{largest_pop['to']}，"
+                        f"{largest_pop['base']:,.2f}→{largest_pop['current']:,.2f}，"
+                        f"变化{largest_pop['absolute_change']:+,.2f}"
+                        f"（{largest_pop['change_rate']:+.2%}）"
+                    ),
+                    nature=InsightNature.FACT,
+                    priority=88,
+                    evidence_fields=["period_over_period"],
+                ))
+        yoy = facts.get("year_over_year")
+        if isinstance(yoy, dict):
+            if yoy.get("status") == "NOT_COMPUTABLE":
+                insights.append(InterpretedInsight(
+                    category="limitation",
+                    statement=f"同比不可计算：{yoy.get('reason')}",
+                    nature=InsightNature.LIMITATION,
+                    priority=83,
+                    evidence_fields=["year_over_year"],
+                ))
+            elif yoy.get("changes"):
+                computable = [
+                    item for item in yoy["changes"]
+                    if item.get("status") == "COMPUTABLE"
+                    and item.get("change_rate") is not None
+                ]
+                if computable:
+                    largest_yoy = max(computable, key=lambda item: abs(item["change_rate"]))
+                    insights.append(InterpretedInsight(
+                        category="year_over_year",
+                        statement=(
+                            f"同比变动最大的月份：{largest_yoy['label']}，"
+                            f"上年同期{largest_yoy['base']:,.2f}→本期{largest_yoy['current']:,.2f}，"
+                            f"变化{largest_yoy['absolute_change']:+,.2f}"
+                            f"（{largest_yoy['change_rate']:+.2%}）"
+                        ),
+                        nature=InsightNature.FACT,
+                        priority=88,
+                        evidence_fields=["year_over_year"],
+                    ))
         limitation = (
             "当前结果只能验证时间变化，未包含产品、医院、经销商或地区贡献拆分，"
             "不能据此认定具体业务原因"

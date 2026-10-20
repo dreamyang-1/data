@@ -172,6 +172,46 @@ def parse_absolute_range(time_range: str) -> tuple[date, date] | None:
     return first[0], last[1]
 
 
+_DISJUNCTIVE_SPLIT = re.compile(r"\s*(?:和|及|、|，|,)\s*")
+
+
+def disjunctive_periods_to_range(text: str) -> str | None:
+    """“X和Y”“X、Y”式离散期间改写为覆盖区间。
+
+    两期对比（“2025年11月和10月”）与月份列举（“2025年10月、11月、
+    12月”）取数时都需要一段连续窗口，按月分组后各期间自然成分开
+    的行。无年份的分段沿用首个带年份分段的年份；任何分段无法解析、
+    或全程无年份时不改写，交给下游按缺口径追问，不猜测年份。
+    返回“起始至结束”文本；非离散列举返回 None。
+    """
+    raw = str(text or "").strip()
+    if not raw or not _DISJUNCTIVE_SPLIT.search(raw):
+        return None
+    parts = [part for part in _DISJUNCTIVE_SPLIT.split(raw) if part.strip()]
+    if len(parts) < 2:
+        return None
+    anchor_year: str | None = None
+    for part in parts:
+        match = re.search(r"(20\d{2})", part)
+        if match is not None:
+            anchor_year = match.group(1)
+            break
+    if anchor_year is None:
+        return None
+    parsed: list[tuple[date, date]] = []
+    for part in parts:
+        segment = part.strip()
+        if re.search(r"20\d{2}", segment) is None:
+            segment = f"{anchor_year}年{segment}"
+        period = _parse_absolute_period(segment)
+        if period is None:
+            return None
+        parsed.append(period)
+    start = min(period[0] for period in parsed)
+    end = max(period[1] for period in parsed)
+    return f"{start.isoformat()}至{end.isoformat()}"
+
+
 def align_structured_time_window(
     question: str,
     time_grain: dict[str, Any] | None,

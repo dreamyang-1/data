@@ -1650,6 +1650,7 @@ def _thinking_section(stage: str) -> str | None:
         "ASL_GENERATION": "parsing",
         "SQL_TRANSLATION": "execution",
         "SQL_EXECUTION": "execution",
+        "ANALYSIS_TOOL": "execution",
         "KNOWLEDGE_RETRIEVAL": "execution",
         "EXTERNAL_SEARCH": "execution",
         "RELIABILITY_CHECK": "validation",
@@ -1951,6 +1952,7 @@ def _new_agent_think_step(stage: str) -> str:
         "ASL_GENERATION",
         "SQL_TRANSLATION",
         "SQL_EXECUTION",
+        "ANALYSIS_TOOL",
         "KNOWLEDGE_RETRIEVAL",
         "EXTERNAL_SEARCH",
     }:
