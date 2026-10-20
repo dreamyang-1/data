@@ -1,0 +1,107 @@
+{
+  "comparisons": {
+    "Agent": {
+      "baseline": {
+        "passed": 5291,
+        "failed": 236
+      },
+      "final": {
+        "passed": 5297,
+        "failed": 232
+      },
+      "old_pass_new_fail": [],
+      "old_fail_new_pass": [
+        "tests/test_pending_result_context_completeness.py::test_pending_triage_only_expands_a_proven_complete_scoped_small_result[True-True]",
+        "tests/test_pending_result_context_completeness.py::test_small_preview_is_not_source_completeness_proof[1-False-False-True]",
+        "tests/test_pending_result_context_completeness.py::test_new_task_summary_records_current_scope_for_pending_reuse",
+        "tests/test_prior_task_table_context.py::test_persist_conversation_task_table_assembles_payload"
+      ],
+      "added_tests": {
+        "tests/test_task_planning_stages.py::test_component_titles_keep_year_grain_and_related_display_before_final_ranking": "passed",
+        "tests/test_task_planning_stages.py::test_merged_relative_period_plan_does_not_turn_period_order_into_a_year": "passed"
+      },
+      "collection_errors": []
+    },
+    "ASL": {
+      "baseline": {
+        "passed": 1887,
+        "failed": 32
+      },
+      "final": {
+        "passed": 1889,
+        "failed": 32
+      },
+      "old_pass_new_fail": [],
+      "old_fail_new_pass": [],
+      "added_tests": {
+        "tests/test_structured_time_contract.py::test_merged_range_inherits_only_an_explicit_leading_year[2025\\u5e7410\\u6708\\u523012\\u6708-2025-10-01-2025-12-31]": "passed",
+        "tests/test_structured_time_contract.py::test_merged_range_inherits_only_an_explicit_leading_year[2025\\u5e7412\\u6708\\u52302026\\u5e741\\u6708-2025-12-01-2026-01-31]": "passed"
+      },
+      "collection_errors": []
+    },
+    "SQL": {
+      "baseline": {
+        "passed": 712,
+        "failed": 15
+      },
+      "final": {
+        "passed": 716,
+        "failed": 15
+      },
+      "old_pass_new_fail": [],
+      "old_fail_new_pass": [],
+      "added_tests": {
+        "test_aggregate_display_fields.py::test_missing_company_name_does_not_discard_valid_person_groups[False]": "passed",
+        "test_aggregate_display_fields.py::test_missing_company_name_does_not_discard_valid_person_groups[True]": "passed",
+        "test_aggregate_display_fields.py::test_explicit_company_presence_filter_remains_authoritative": "passed",
+        "test_aggregate_display_fields.py::test_explicit_company_entity_group_keeps_its_identity_rule": "passed"
+      },
+      "collection_errors": []
+    }
+  },
+  "critical": {
+    "passed": 342
+  },
+  "native": {
+    "status": "COMPLETED",
+    "main_headings": [
+      "意图识别",
+      "任务拆分与规划",
+      "解析校验",
+      "调度执行",
+      "结果校验",
+      "数据洞察分析",
+      "最终输出"
+    ],
+    "elapsed_seconds": 97.472,
+    "input_group_counts": [
+      89,
+      89
+    ],
+    "output_count": 5,
+    "matches_independent_sql": true,
+    "company_missing_disclosed": true,
+    "business_rows_persisted": false
+  },
+  "legacy_asl": {
+    "translation_success": true,
+    "execution_success": true,
+    "row_count": 89,
+    "company_null_exclusion_removed": true,
+    "salesperson_identity_rule_preserved": true,
+    "system_filters": [
+      {
+        "condition": "salesperson.salesperson_name IS NOT NULL",
+        "source": "ENTITY_IDENTITY_DEFAULT",
+        "reason": "分组实体的主名称字段排除空值组；该组对应的记录不参与本次汇总"
+      }
+    ],
+    "business_rows_persisted": false
+  },
+  "known_blockers": [
+    "Current remote rollback removes analysis scheduling and three intent mappings; release stopped before any write pending the user decision."
+  ],
+  "sql_legacy_timeout": [
+    "test_single_domain_execution.py::test_request_local_indexes_survive_interleaved_domains"
+  ]
+}
