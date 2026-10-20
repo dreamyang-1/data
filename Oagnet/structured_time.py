@@ -254,6 +254,25 @@ def validate_boundaries(start, end):
     return start, end
 
 
+_RANGE_YEAR = re.compile(r'(?<!\d)((?:19|20)\d{2})(?!\d)')
+
+
+def _inherit_range_year(parts):
+    """区间尾段省略年份时沿用首段年份。
+
+    “2025年10月到12月”是常见中文简写，尾段“12月”不带年份时按首段
+    年份补全后再解析。尾段自带年份、或首段也没有年份（两端都无从
+    判断所属年份）时原样返回，不猜测年份。
+    """
+    head, tail = parts
+    if not tail or _RANGE_YEAR.search(tail):
+        return parts
+    year = _RANGE_YEAR.search(head)
+    if year is None:
+        return parts
+    return head, f"{year.group(1)}年{tail.lstrip()}"
+
+
 def bounds(value, today):
     if isinstance(value, dict):
         if not value.get('start') or not any(value.get(k) for k in ('end', 'end_inclusive', 'end_exclusive')):
@@ -273,6 +292,7 @@ def bounds(value, today):
     elif isinstance(value, str):
         parts = re.split(r'\s*(?:至|到|[~～]|\s+-\s+)\s*', value.strip())
         if len(parts) == 2:
+            parts = _inherit_range_year(parts)
             start, end = _period(parts[0], today)[0], _period(parts[1], today)[1]
         elif len(parts) == 1:
             start, end = _period(parts[0], today)

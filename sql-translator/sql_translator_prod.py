@@ -1982,9 +1982,19 @@ class SQLTranslatorProd:
             model_id,
         )
         conditions: List[str] = []
+        group_entities = self._aggregate_group_entities(dimensions, model_id)
+        group_tables = {self._get_entity_base_table(code, model_id) for code in group_entities}
         for _, field in resolved:
             table = field.split('.', 1)[0]
             if table in explicit_null_tables or field in explicit_non_null_fields:
+                continue
+            # Legacy ASL put to-one display attributes in dimensions. A missing
+            # company label must not remove an otherwise valid salesperson.
+            # Explicit entity groups and caller filters retain their semantics.
+            if table not in group_tables and any(
+                self._relation_path(code, table, model_id, to_one_only=True)
+                for code in group_entities
+            ):
                 continue
             attributes = attributes_by_field.get(field, [])
             # Conflicting declarations are not enough evidence to rewrite query
@@ -3521,22 +3531,10 @@ class SQLTranslatorProd:
             )
         return expr
 
-    def _aggregate_display_dimensions(self, ast: Dict, model_id: str) -> List[Dict]:
-        """Project to-one related attributes without changing the declared grain.
-
-        GROUP BY the dependent attribute satisfies ONLY_FULL_GROUP_BY. The
-        declared to-one path means it cannot split an identity group. Unknown
-        and to-many relationships are not guessed or reduced with MIN/MAX.
-        """
-        displays = ast.get('display_fields') or []
-        if not isinstance(displays, list):
-            raise ValueError('display_fields必须是数组')
-        if not displays:
-            return []
-        if not ast.get('metrics'):
-            raise ValueError('明细展示字段继续由dimensions承载')
+    def _aggregate_group_entities(self, dimensions: List[Dict], model_id: str) -> List[str]:
+        """Entity identities already declared as the aggregation grain."""
         starts = []
-        for dim in ast.get('dimensions') or []:
+        for dim in dimensions:
             code = str(dim.get('name') or '')
             if dim.get('granularity'):
                 continue
@@ -3554,6 +3552,23 @@ class SQLTranslatorProd:
             definition = self._get_dimension(code, model_id) or {}
             if not definition.get('enum_list'):
                 starts.append(code)
+        return list(dict.fromkeys(starts))
+
+    def _aggregate_display_dimensions(self, ast: Dict, model_id: str) -> List[Dict]:
+        """Project to-one related attributes without changing the declared grain.
+
+        GROUP BY the dependent attribute satisfies ONLY_FULL_GROUP_BY. The
+        declared to-one path means it cannot split an identity group. Unknown
+        and to-many relationships are not guessed or reduced with MIN/MAX.
+        """
+        displays = ast.get('display_fields') or []
+        if not isinstance(displays, list):
+            raise ValueError('display_fields必须是数组')
+        if not displays:
+            return []
+        if not ast.get('metrics'):
+            raise ValueError('明细展示字段继续由dimensions承载')
+        starts = self._aggregate_group_entities(ast.get('dimensions') or [], model_id)
         result = []
         for item in displays:
             field = item.get('name') if isinstance(item, dict) else None

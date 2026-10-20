@@ -126,6 +126,48 @@ async def test_ordinary_atomic_query_stays_single_and_needs_no_intent_only_call(
 
 
 @pytest.mark.asyncio
+async def test_component_titles_keep_year_grain_and_related_display_before_final_ranking(monkeypatch):
+    question='查询2025年订单平均金额最高的前五位销售人员及其所在销售公司'
+    def extract(request):
+        return {'tasks':[{'task_index':task['task_index'],'extraction':{
+            '意图':'指标计算' if '不再查询数据库' in task['question'] else '排名分析',
+            '指标':[], '维度':['业务员'],
+            '展示字段':[{'entity':'业务员','field':'销售员姓名'}, {'entity':'销售公司','field':'国药公司名称'}],
+            '排序':[{'field':'平均每单销售金额','order':'desc'}], '限制':5,
+            '时间粒度':{'unit':'年','time_range':'2025年'},
+            '过滤条件':[], '输出要求':'按平均每单销售金额降序取前5位并返回所属公司',
+            '是否查询数据库':'否' if '不再查询数据库' in task['question'] else '是',
+        }} for task in request['tasks']]}
+    planner, calls = setup_planner(monkeypatch, {'tasks':[{'question':question,
+        'metric_targets':['平均每单销售金额'], 'grain':['业务员']}]}, extract=extract)
+    result = await planner.plan_question(question, semantic_model_id=130)
+    assert len(calls) == 2 and len(result.tasks) == 3
+    for task, metric in zip(result.tasks[:2], ['含税销售总额','订单笔数']):
+        assert all(word in task.name for word in ['2025年','业务员',metric,'国药公司名称'])
+        assert task.structured['限制'] is None and task.structured['排序'] == []
+        assert '不提前' in task.question
+        assert f'按{metric}降序' not in task.question
+    final = result.tasks[-1]
+    assert final.depends_on == (0,1)
+    assert final.structured['计算绑定']['numerator']['source_task_index'] == 0
+    assert final.structured['计算绑定']['denominator']['source_task_index'] == 1
+    assert '前五位' in final.question and '销售公司' in final.name
+
+
+def test_merged_relative_period_plan_does_not_turn_period_order_into_a_year():
+    from app.domain.models import PlannerExtraction
+    from app.planning.analysis_task_planner import build_analysis_task_plan
+    plan = build_analysis_task_plan('对比本月和上月的销售额', PlannerExtraction(
+        intent=PrimaryIntent.COMPARISON_ANALYSIS, structured={
+            '意图':'对比分析', '指标':[{'name':'销售额'}], '维度':[],
+            '时间粒度':{'time_range':'本月和上月'}, '是否查询数据库':'是'}))
+    assert plan is not None and len(plan.tasks) == 3
+    assert [task.extraction['时间粒度']['time_range'] for task in plan.tasks[:2]] == ['上月','本月']
+    assert plan.tasks[-1].depends_on == ['task-1','task-2']
+    assert plan.tasks[-1].extraction['是否查询数据库'] == '否'
+
+
+@pytest.mark.asyncio
 async def test_planned_computation_bindings_reach_existing_router_contract(monkeypatch):
     planner, _ = setup_planner(monkeypatch, {'tasks':[{'question':QUESTION,'metric_targets':['订单级均价']}]})
     router = CompoundQuestionRouter(planner.settings)

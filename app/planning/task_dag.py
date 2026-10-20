@@ -73,6 +73,9 @@ _CHINESE_INTENT_TO_PRIMARY = {
     "占比分析": PrimaryIntent.COMPOSITION_ANALYSIS,
     "排名分析": PrimaryIntent.METRIC_QUERY,
     "明细查询": PrimaryIntent.DETAIL_QUERY,
+    "异常分析": PrimaryIntent.ANOMALY_ANALYSIS,
+    "归因分析": PrimaryIntent.ROOT_CAUSE_ANALYSIS,
+    "预测分析": PrimaryIntent.FORECAST_ANALYSIS,
 }
 _CHINESE_INTENT_LABELS = frozenset(_CHINESE_INTENT_TO_PRIMARY)
 
@@ -1224,7 +1227,7 @@ class SingleQuestionPlanner:
         from app.planning.task_plan_stages import (
             PLANNING_PROMPT, PARAMETER_PROMPT, TaskBoundaries,
             complete_boundaries, parameter_items, registered_metric_conditions,
-            registered_metric_predicates, metric_definition,
+            registered_metric_predicates, metric_definition, component_task_title,
         )
         dependencies = _parse_metric_dependencies(spec_for_catalog)
         planning_question = question
@@ -1357,8 +1360,11 @@ class SingleQuestionPlanner:
                     requirement = str(value.get('输出要求') or '').strip()
                     if boundary.expected_output not in requirement:
                         value['输出要求'] = (requirement + '；' if requirement else '') + boundary.expected_output
-            raw_tasks.append(_PlannedTask(**boundary.model_dump(exclude={
-                'metric_targets', 'grain', 'sample_requirements', 'component_input', 'preserve_ranking'}), extraction=value))
+            planned_task = boundary.model_dump(exclude={
+                'metric_targets', 'grain', 'sample_requirements', 'component_input', 'preserve_ranking'})
+            if isinstance(value, dict):
+                planned_task['name'] = component_task_title(boundary, value)
+            raw_tasks.append(_PlannedTask(**planned_task, extraction=value))
         tasks: list[DecomposedTask] = []
         for task_index, item in enumerate(raw_tasks):
             task_question = item.question.strip() or question

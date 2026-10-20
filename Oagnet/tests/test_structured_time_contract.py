@@ -42,6 +42,14 @@ def test_declared_period_bounds(value, start, end):
     assert bounds(value, TODAY) == (start, end)
 
 
+@pytest.mark.parametrize('value,start,end', [
+    ('2025年10月到12月', '2025-10-01', '2025-12-31'),
+    ('2025年12月到2026年1月', '2025-12-01', '2026-01-31'),
+])
+def test_merged_range_inherits_only_an_explicit_leading_year(value,start,end):
+    assert bounds(value,TODAY) == (start,end)
+
+
 @pytest.mark.parametrize('value', ['2026年第五季度', '2025-02-30', '2026-12-01至2026-01-01',
                                   '财年', '最近0个月', '2025年及2026年', True, {}])
 def test_invalid_or_ambiguous_period_never_becomes_model_dates(value):

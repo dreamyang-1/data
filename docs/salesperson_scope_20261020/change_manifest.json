@@ -1,0 +1,140 @@
+[
+  {
+    "service": "Agent",
+    "path": "app/analysis/chain_tools/__init__.py",
+    "source_sha256": "c5518fc5831845416548735490cf684a4725a55875864dcaf788f709d1dcdd58",
+    "release_sha256": "c5518fc5831845416548735490cf684a4725a55875864dcaf788f709d1dcdd58"
+  },
+  {
+    "service": "Agent",
+    "path": "app/analysis/chain_tools/composition.py",
+    "source_sha256": "28ca5d3add639fec464293058cbd133350ae65cb63cac2fdba95e4d04c4c2bf5",
+    "release_sha256": "28ca5d3add639fec464293058cbd133350ae65cb63cac2fdba95e4d04c4c2bf5"
+  },
+  {
+    "service": "Agent",
+    "path": "app/analysis/chain_tools/temporal_window.py",
+    "source_sha256": "666f09229dc309b1afd6d2dcb77d14dca7957bdff445dc8b8862abe4236548a3",
+    "release_sha256": "666f09229dc309b1afd6d2dcb77d14dca7957bdff445dc8b8862abe4236548a3"
+  },
+  {
+    "service": "Agent",
+    "path": "app/analysis/engine.py",
+    "source_sha256": "56e659b488b784fb1173fc7fc3f5ff848d9a01ddc14891c432de501d4349a4e7",
+    "release_sha256": "56e659b488b784fb1173fc7fc3f5ff848d9a01ddc14891c432de501d4349a4e7"
+  },
+  {
+    "service": "Agent",
+    "path": "app/analysis/interpretation.py",
+    "source_sha256": "6e4f210bec64889b49900b25895d4ad3a62b154586653162bfc035c6c760c941",
+    "release_sha256": "6e4f210bec64889b49900b25895d4ad3a62b154586653162bfc035c6c760c941"
+  },
+  {
+    "service": "Agent",
+    "path": "app/analysis/operators.py",
+    "source_sha256": "d85e00533b8260821d46035b82b96940f5f7f213659d9d0245a0cd09af074535",
+    "release_sha256": "d85e00533b8260821d46035b82b96940f5f7f213659d9d0245a0cd09af074535"
+  },
+  {
+    "service": "Agent",
+    "path": "app/analysis/planning.py",
+    "source_sha256": "c9b45d568e3d4de0ab271846f8d0d8f0a34103ea341630b4de1f25e6c0a7d9c5",
+    "release_sha256": "c9b45d568e3d4de0ab271846f8d0d8f0a34103ea341630b4de1f25e6c0a7d9c5"
+  },
+  {
+    "service": "Agent",
+    "path": "app/api.py",
+    "source_sha256": "0759268d3339dcc5e0352a0f0a037963354c151b81b2b75118c76775e110aaa1",
+    "release_sha256": "0759268d3339dcc5e0352a0f0a037963354c151b81b2b75118c76775e110aaa1"
+  },
+  {
+    "service": "Agent",
+    "path": "app/clarification/__init__.py",
+    "source_sha256": "29038380bcc70abb2f817a1fec3c573cfd014d73b5b296d821026ef6b5272b4e",
+    "release_sha256": "29038380bcc70abb2f817a1fec3c573cfd014d73b5b296d821026ef6b5272b4e"
+  },
+  {
+    "service": "Agent",
+    "path": "app/clarification/context_builder.py",
+    "source_sha256": "462cdbe2685574989e9654dbd93a8aaca30a78a0295982798aea9b0e28358ac6",
+    "release_sha256": "462cdbe2685574989e9654dbd93a8aaca30a78a0295982798aea9b0e28358ac6"
+  },
+  {
+    "service": "Agent",
+    "path": "app/clarification/decision.py",
+    "source_sha256": "e07458d9e1ce08ebce2505e1e8f4eb8bc08402f615a64c150778c9c62ec32b92",
+    "release_sha256": "e07458d9e1ce08ebce2505e1e8f4eb8bc08402f615a64c150778c9c62ec32b92"
+  },
+  {
+    "service": "Agent",
+    "path": "app/clarification/pending_bridge.py",
+    "source_sha256": "5721c839e9df9760ce8dfee05984d88f3b9a05d3fb2fba39a58846e3fdfdfbbd",
+    "release_sha256": "5721c839e9df9760ce8dfee05984d88f3b9a05d3fb2fba39a58846e3fdfdfbbd"
+  },
+  {
+    "service": "Agent",
+    "path": "app/config.py",
+    "source_sha256": "bc2d183d8f293c39c74d1f2f0c0b7f67bc01c2789aa5cdec04d701e5742991e6",
+    "release_sha256": "bc2d183d8f293c39c74d1f2f0c0b7f67bc01c2789aa5cdec04d701e5742991e6"
+  },
+  {
+    "service": "Agent",
+    "path": "app/planning/analysis_task_planner.py",
+    "source_sha256": "55e7bf4d420f07ebe861b7f3ff72310922c76cd07f815d8bcff174ca6b9102b0",
+    "release_sha256": "55e7bf4d420f07ebe861b7f3ff72310922c76cd07f815d8bcff174ca6b9102b0"
+  },
+  {
+    "service": "Agent",
+    "path": "app/planning/structured_extraction_prompt.txt",
+    "source_sha256": "0e58a75d1dec96d760200fe38042c87c0e8f2eb15d8787196faeb650817b3605",
+    "release_sha256": "0e58a75d1dec96d760200fe38042c87c0e8f2eb15d8787196faeb650817b3605"
+  },
+  {
+    "service": "Agent",
+    "path": "app/planning/task_dag.py",
+    "source_sha256": "acf9d74cdffa528fa7672ebc39847e2aaafd925a2685edb9cfb7fec9a840652a",
+    "release_sha256": "915069f66aa6c72775e40619c639eef455a931507521ff857c4816bc6ec5e949"
+  },
+  {
+    "service": "Agent",
+    "path": "app/planning/task_plan_stages.py",
+    "source_sha256": "07e57c5deb499d0048a28c22f84278a294f3962509514127ee0cd795a4a1f251",
+    "release_sha256": "0a91c28944d4557361714f22860c660a005decc8f318dd8c233fa7a483208e46"
+  },
+  {
+    "service": "Agent",
+    "path": "app/services/orchestrator.py",
+    "source_sha256": "d7b3a17c6b20725a4a51cf40edf2b5d43e4f61b8d99419e6afb49540f1877a32",
+    "release_sha256": "1ca2cd7ea78b9e5f7c9c624ecaec7453554ea190658bb9f5ee034e4938ebe3ef"
+  },
+  {
+    "service": "Agent",
+    "path": "app/stores/session.py",
+    "source_sha256": "a454961edd560c5d534a2e46d69dc4f3542403823289386d6ea8fe841bc967b2",
+    "release_sha256": "a454961edd560c5d534a2e46d69dc4f3542403823289386d6ea8fe841bc967b2"
+  },
+  {
+    "service": "Oagnet",
+    "path": "agent.py",
+    "source_sha256": "54663e2dd54293b13e2b8e455c8b691d0a20dd87f605ee6ff1c07d315933d3aa",
+    "release_sha256": "7fed25a9b2e97f52c258d5f119fb7083ce7cb65f2721ecaefab19ce725134d46"
+  },
+  {
+    "service": "Oagnet",
+    "path": "structured_time.py",
+    "source_sha256": "757150b9d761c40f840c1c69d2764707aaaa88e96011b9e7ca044933e7ba9687",
+    "release_sha256": "757150b9d761c40f840c1c69d2764707aaaa88e96011b9e7ca044933e7ba9687"
+  },
+  {
+    "service": "Oagnet",
+    "path": "surface_literals.py",
+    "source_sha256": "4e844d4d3d0210310f21b93f42c24571c328b07915a884417f3ace612273a53e",
+    "release_sha256": "a114af8c243063bdb0b75593141330d57815f10d7304d30782986f411af76851"
+  },
+  {
+    "service": "SQL",
+    "path": "sql_translator_prod.py",
+    "source_sha256": "d76d14d397aaadde104454b2f0490fe864eca06c276363323d1bdc4a4b450acd",
+    "release_sha256": "6373edab447e5d8b891d801739f561442b2c1844e4d6909e97d923411fe8ac62"
+  }
+]
