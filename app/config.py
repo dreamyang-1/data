@@ -119,7 +119,7 @@ class Settings(BaseSettings):
     # legitimately take longer than an ordinary HTTP dependency. Keep its own
     # budget below this value so orchestration still has time to terminate and
     # persist an idempotent response.
-    request_timeout_seconds: float = Field(default=120, gt=0, le=300)
+    request_timeout_seconds: float = Field(default=300, gt=0, le=300)
     # 集中日志配置（app/logging_config.setup_logging 消费）。log_file 为空时
     # 只写 stdout（systemd/journald 抓取）；非空时启用按大小轮转的文件输出。
     log_level: str = Field(default="INFO")
@@ -180,7 +180,7 @@ class Settings(BaseSettings):
     # it is sent to the data source.
     asl_generator_base_url: str = "http://192.168.1.27:8021"
     asl_generator_path: str = "/agent/query"
-    asl_generation_timeout_seconds: float = Field(default=90, gt=0, le=180)
+    asl_generation_timeout_seconds: float = Field(default=180, gt=0, le=180)
     asl_plan_cache_ttl_seconds: int = Field(default=300, ge=0, le=3600)
     asl_plan_cache_max_items: int = Field(default=256, ge=0, le=2048)
     question_rewrite_enabled: bool = True

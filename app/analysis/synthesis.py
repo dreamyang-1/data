@@ -118,7 +118,7 @@ SENIOR_ANALYSIS_EXPERT_PROMPT = """
 
 
 class SynthesisValidationError(ValueError):
-    """Compatibility exception for unusable responses, not content review."""
+    """An unusable report; execution results remain available to the caller."""
 
 
 class QwenAnalysisSynthesizer:
@@ -137,8 +137,8 @@ class QwenAnalysisSynthesizer:
             item.evidence_id: {"kind": item.kind, "payload": self._bounded(item.payload)}
             for item in evidence if item.kind in {"QUERY_RESULT", "ANALYSIS_RESULT"}
         }
-        # The query pipeline supplies task-local data. No algorithm lock,
-        # wording overlap, number allowlist or independent review is required.
+        # The query pipeline supplies task-local data. Presentation review may
+        # remove unsupported interpretations, never change data or execution.
         prompt_input = {
             "intent": request.primary_intent.value,
             "untrusted_user_question": request.original_question,
@@ -202,6 +202,78 @@ class QwenAnalysisSynthesizer:
         self, system_prompt: str, prompt_input: dict[str, Any], *,
         name: str, source_ids: set[str],
     ) -> tuple[str, SynthesisOutput]:
+        from app.analysis.report_contract import (
+            REPORT_CONTRACT_PROMPT, build_report_contract, output_issues, remove_unsupported_text,
+            EVIDENCE_REVIEW_PROMPT, review_candidates, apply_evidence_review, grounded_ratio_text,
+        )
+        contract = build_report_contract(prompt_input)
+        data = {**prompt_input, "report_contract": contract}
+        latest = None
+        candidates = []
+        review_finished = False
+        try:
+            # The existing synthesis budget covers generation AND one targeted
+            # repair. A second attempt must not restart the stage's clock.
+            async with asyncio.timeout(self.settings.analysis_synthesis_timeout_seconds):
+                for attempt in range(self.settings.analysis_synthesis_validation_retries + 1):
+                    _, latest = await self._generate_once(
+                        system_prompt + REPORT_CONTRACT_PROMPT, data,
+                        name=name, source_ids=source_ids,
+                    )
+                    issues = output_issues(latest, contract)
+                    if not issues:
+                        break
+                    data = {**data, "report_corrections": issues,
+                            "previous_report": latest.model_dump(mode="json")}
+                latest = remove_unsupported_text(latest, contract)
+                # Ratio reports repeatedly paraphrased the same unsupported
+                # inference without trigger words. Review every sentence.
+                candidates = review_candidates(latest, review_all=bool(contract['executed_ratios']))
+                if candidates:
+                    raw = await self._request_content(EVIDENCE_REVIEW_PROMPT,
+                        {"evidence_context": {**prompt_input, "report_contract": contract}, "items": candidates},
+                        name="analysis-evidence-review")
+                    try:
+                        reviewed = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip()))
+                    except (ValueError, TypeError, AttributeError):
+                        reviewed = None
+                    latest = apply_evidence_review(latest, candidates, reviewed,
+                        allow_inference=contract['causality_established'])
+                    candidates = []
+                review_finished = True
+        except (TimeoutError, httpx.HTTPError, SynthesisValidationError) as exc:
+            if latest is None:
+                if isinstance(exc, TimeoutError):
+                    raise SynthesisValidationError("analysis synthesis deadline exceeded") from exc
+                raise
+        clean = remove_unsupported_text(latest, contract)
+        if not review_finished:
+            clean = apply_evidence_review(clean, review_candidates(clean), None)
+        # Repeated native reviews accepted unsupported interpretations and
+        # incorrect rounding as facts. Complete aggregate-ratio deliverables
+        # therefore use executed values for prose, retaining table/chart choices.
+        grounded = grounded_ratio_text(prompt_input, contract)
+        if grounded:
+            clean.claims = [
+                SynthesisClaim(statement=text, certainty=ClaimCertainty.VERIFIED_FACT)
+                for text in grounded['facts']
+            ] + [SynthesisClaim(statement=text, certainty=ClaimCertainty.LIMITATION)
+                 for text in grounded['warnings']]
+            clean.final_answer.update(overview=grounded['facts'][0],
+                                      findings=grounded['facts'][1:], tips=grounded['warnings'])
+        return self._render(clean), clean
+
+    async def _generate_once(
+        self, system_prompt: str, prompt_input: dict[str, Any], *,
+        name: str, source_ids: set[str],
+    ) -> tuple[str, SynthesisOutput]:
+        content = await self._request_content(system_prompt, prompt_input, name=name)
+        output = self._parse_report(content, source_ids)
+        return self._render(output), output
+
+    async def _request_content(
+        self, system_prompt: str, prompt_input: dict[str, Any], *, name: str,
+    ) -> Any:
         body = {
             "model": self.settings.analysis_synthesis_model_name,
             "messages": [
@@ -240,8 +312,7 @@ class QwenAnalysisSynthesizer:
             raise SynthesisValidationError("analysis synthesis returned unusable choices")
         message = choices[0].get("message") if choices else None
         content = message.get("content") if isinstance(message, dict) else None
-        output = self._parse_report(content, source_ids)
-        return self._render(output), output
+        return content
 
     @staticmethod
     def _parse_report(content: Any, source_ids: set[str]) -> SynthesisOutput:

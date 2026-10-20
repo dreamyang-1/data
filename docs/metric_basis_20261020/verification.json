@@ -62,6 +62,28 @@
       ],
       "seven_visible_stages_ordered": true,
       "seconds": 95.854
+    },
+    {
+      "case": "original130-r7",
+      "model": 130,
+      "status": "COMPLETED",
+      "task_count": 3,
+      "task_statuses": [
+        "COMPLETED",
+        "COMPLETED",
+        "COMPLETED"
+      ],
+      "input_group_counts": [
+        89,
+        89
+      ],
+      "calculation_rows": 5,
+      "denominator": "订单笔数",
+      "grouping": [
+        "业务员"
+      ],
+      "seven_visible_stages_ordered": true,
+      "seconds": 97.836
     }
   ],
   "real_model_plan_controls": [
@@ -102,6 +124,66 @@
     "unrelated_concurrent_changes_preserved": true
   },
   "publication": {
-    "status": "NOT_PUBLISHED"
+    "status": "DEPLOYED_AND_NATIVE_VERIFIED",
+    "code_commit": "aa16c17da13a08ffd741e76b9d8dabf328fbad98",
+    "draft_pr": "https://github.com/dreamyang-1/data/pull/115",
+    "runtime_files": [
+      "app/planning/task_dag.py",
+      "app/planning/metric_target_contract.py"
+    ],
+    "health": {
+      "agent_live": 200,
+      "agent_ready": 200,
+      "asl": 200,
+      "sql": 200
+    },
+    "configuration_fingerprints_preserved": true,
+    "protected_config_count": 9,
+    "backup_created": true,
+    "restarted_services": [
+      "data-analysis-agent.service"
+    ],
+    "preserved_concurrent_changes": {
+      "remote_changed_paths": [
+        "app/analysis/engine.py",
+        "app/clarification/__init__.py",
+        "app/clarification/decision.py",
+        "app/planning/analysis_task_planner.py",
+        "app/semantic_v2/context_proposal.py",
+        "app/semantic_v2/recognition.py",
+        "app/services/orchestrator.py"
+      ],
+      "changed_count": 7,
+      "overlap_with_release_files": false,
+      "new_candidate_preserves_current_remote_source": true,
+      "publication_rejected_before_any_writes": true
+    }
+  },
+  "production_native_case": {
+    "case": "original130-r8",
+    "model": 130,
+    "status": "COMPLETED",
+    "task_count": 3,
+    "task_statuses": [
+      "COMPLETED",
+      "COMPLETED",
+      "COMPLETED"
+    ],
+    "input_group_counts": [
+      89,
+      89
+    ],
+    "calculation_rows": 5,
+    "denominator": "订单笔数",
+    "grouping": [
+      "业务员"
+    ],
+    "seven_visible_stages_ordered": true,
+    "seconds": 95.536
+  },
+  "production_math_check": {
+    "displayed_quotients_match_inputs": true,
+    "sort_direction_correct": true,
+    "requested_limit_correct": true
   }
 }

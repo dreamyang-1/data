@@ -1,0 +1,240 @@
+{
+  "scope": "report evidence, units, HTTP retry budget, ASL queue budget",
+  "full_regression": {
+    "agent": {
+      "baseline": {
+        "passed": 5352,
+        "failed": 232
+      },
+      "final": {
+        "passed": 5425,
+        "failed": 232
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "missing_tests": [],
+      "collection_errors": [],
+      "new_test_count": 73
+    },
+    "asl": {
+      "baseline": {
+        "passed": 1889,
+        "failed": 32
+      },
+      "final": {
+        "passed": 1891,
+        "failed": 32
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "missing_tests": [],
+      "collection_errors": [],
+      "new_test_count": 2
+    }
+  },
+  "critical_agent": {
+    "passed": 438
+  },
+  "critical_asl": {
+    "passed": 25
+  },
+  "native_isolated": [
+    {
+      "case": "original130-r16",
+      "status": "COMPLETED",
+      "seconds": 119.919,
+      "tasks_completed": 3,
+      "main_stages": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ],
+      "scope_model": 130,
+      "runtime": "pre-concurrent-change planning snapshot plus current report/budget files",
+      "math_checks": {
+        "displayed_quotients_match_inputs": true,
+        "sort_direction_correct": true,
+        "requested_limit_correct": true,
+        "unit_wording_uses_generic_unit_instead_of_order": false
+      },
+      "manual_prose_review": "No asserted business cause, stability advantage or negligible missing-data impact; formula-based conditional caveats remain."
+    },
+    {
+      "case": "lowest130-r16",
+      "status": "COMPLETED",
+      "seconds": 146.41,
+      "tasks_completed": 3,
+      "main_stages": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ],
+      "scope_model": 130,
+      "runtime": "pre-concurrent-change planning snapshot plus current report/budget files",
+      "math_checks": {
+        "displayed_quotients_match_inputs": true,
+        "sort_direction_correct": true,
+        "requested_limit_correct": true,
+        "unit_wording_uses_generic_unit_instead_of_order": false
+      },
+      "manual_prose_review": "No asserted business cause, stability advantage or negligible missing-data impact; formula-based conditional caveats remain."
+    }
+  ],
+  "deployment": {
+    "status": "DEPLOYED",
+    "initial_code_commit": "c4d664ca8fe20e29f9c25e38bc0be3285b9ee095",
+    "effective_budgets": {
+      "agent": {
+        "request": 300.0,
+        "asl": 180.0
+      },
+      "asl": {
+        "asl_request": 175
+      }
+    },
+    "final_health": {
+      "agent_live": 200,
+      "agent_ready": 200,
+      "asl": 200,
+      "sql": 200
+    },
+    "followup_runtime_files": {
+      "app/analysis/synthesis.py": "0d98aadab6870a8cc4d4a0bc35b77d53e78884ed7c1f9b0d7296c6bd22d33c66",
+      "app/analysis/report_contract.py": "8b10eab1a37a9414d160dcc5757873d727af83e9658c93c0b8e994f00e2a0759"
+    },
+    "existing_configs_preserved": true,
+    "unrelated_sources_preserved": true
+  },
+  "whole_service_acceptance": "REPORT_AND_BUDGET_CHECKS_PASSED; COMPANY_NAME_BINDING_GAP_OPEN",
+  "review": {
+    "scope_and_vector_bindings_unchanged": true,
+    "no_sql_retry_added": true,
+    "table_cells_and_task_selection_unchanged": true,
+    "correct_limitations_preserved": true,
+    "retry_and_synthesis_have_shared_deadlines": true,
+    "no_business_rows_or_credentials_in_commit": true,
+    "negated_data_state_not_treated_as_negated_claim": true,
+    "watermark_scope_comes_from_execution_validation": true,
+    "complete_ratio_prose_comes_from_executed_values": true,
+    "final_four_decimal_format_has_focused_and_full_regression": true
+  },
+  "local_budget_override": {
+    "request": 300,
+    "asl": 180,
+    "credentials_copied": false
+  },
+  "concurrency_control": {
+    "case_count": 3,
+    "seconds": [
+      66.943,
+      113.385,
+      141.416
+    ],
+    "timeouts": 0,
+    "scope": "earlier report wording; same final HTTP and ASL budgets",
+    "wording_acceptance": false
+  },
+  "native_final": [
+    {
+      "case": "original130-r20",
+      "status": "COMPLETED",
+      "seconds": 102.764,
+      "tasks_completed": 2,
+      "main_stages": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ],
+      "math_checks": {
+        "displayed_quotients_match_inputs": true,
+        "sort_direction_correct": true,
+        "requested_limit_correct": true,
+        "unit_wording_uses_generic_unit_instead_of_order": false,
+        "company_name_returned": true
+      },
+      "runtime": "current production planning plus grounded ratio prose; before final four-decimal display alignment",
+      "prose_review": "Manually inspected final answer and insight prose; see closure report for acceptance limits."
+    },
+    {
+      "case": "lowest130-r20",
+      "status": "COMPLETED",
+      "seconds": 120.035,
+      "tasks_completed": 2,
+      "main_stages": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ],
+      "math_checks": {
+        "displayed_quotients_match_inputs": true,
+        "sort_direction_correct": true,
+        "requested_limit_correct": true,
+        "unit_wording_uses_generic_unit_instead_of_order": false,
+        "company_name_returned": false
+      },
+      "runtime": "current production planning plus grounded ratio prose; before final four-decimal display alignment",
+      "prose_review": "Manually inspected final answer and insight prose; see closure report for acceptance limits."
+    },
+    {
+      "case": "original130-r21",
+      "status": "COMPLETED",
+      "seconds": 108.902,
+      "tasks_completed": 3,
+      "main_stages": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ],
+      "math_checks": {
+        "displayed_quotients_match_inputs": true,
+        "sort_direction_correct": true,
+        "requested_limit_correct": true,
+        "unit_wording_uses_generic_unit_instead_of_order": false,
+        "company_name_returned": true
+      },
+      "runtime": "production after follow-up",
+      "prose_review": "Manually inspected final answer and insight prose; see closure report for acceptance limits."
+    }
+  ],
+  "known_blockers": [
+    {
+      "case": "lowest130-r20",
+      "issue": "Returned company code without requested company name",
+      "owner": "Separate user-confirmed planning/binding work window",
+      "changed_by_this_branch": false
+    }
+  ],
+  "parallel_planning": {
+    "owner": "separate user-confirmed window",
+    "files_changed_by_this_branch": [],
+    "latest_native_queries_and_computations_completed": true
+  },
+  "intermediate_failed_prose_cases": [
+    "original130-r17",
+    "lowest130-r17",
+    "original130-r18",
+    "lowest130-r18",
+    "original130-r19",
+    "lowest130-r19"
+  ]
+}
