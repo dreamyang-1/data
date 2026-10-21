@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -34,6 +35,8 @@ from app.planning.task_dag import (
     database_query_choice,
     materialize_computation_binding,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -420,6 +423,12 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
             numeric_question = re.sub(re.escape(condition.casefold()) + r'(?![\d.])', '', numeric_question)
         task_numbers = set(re.findall(r"\d+(?:\.\d+)?", numeric_question))
         if not task_numbers.issubset(source_numbers):
+            logger.warning(
+                "grounding numeric mismatch task=%s unexpected=%r question=%r",
+                getattr(task, "task_id", ""),
+                sorted(task_numbers - source_numbers),
+                task.question,
+            )
             raise TaskPlanningError(
                 "子任务包含原问题中不存在的数字或日期"
                 f"：{sorted(task_numbers - source_numbers)}"

@@ -9543,12 +9543,12 @@ def main(
     # dimensions to satisfy them. The structured planner owns those slots.
     final_ast = json.loads(result)
     logger.info(
-        'ASL summary: metrics=%r sort=%r dimensions=%r filters=%r ambiguity=%d',
+        'ASL summary: metrics=%r sort=%r dimensions=%r filters=%r ambiguity=%s',
         [item.get('name') for item in final_ast.get('metrics') or [] if isinstance(item, dict)],
         final_ast.get('sort'),
         [item.get('name') for item in final_ast.get('dimensions') or [] if isinstance(item, dict)],
         [item.get('field') for item in final_ast.get('filters') or [] if isinstance(item, dict)],
-        len(final_ast.get('ambiguity') or []),
+        json.dumps(final_ast.get('ambiguity') or [], ensure_ascii=False)[:1500],
     )
     if not final_ast.get('ambiguity'):
         if analysis_operator is not None and result_contract is not None:

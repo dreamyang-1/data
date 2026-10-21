@@ -2332,6 +2332,16 @@ class HttpDataRetrievalAdapter:
             # cross-table join. The intent selected by the orchestrator is the
             # authoritative execution shape, so aggregate metrics are removed.
             asl["metrics"] = []
+            # A row-level detail projects no aggregate, so an ORDER BY on a
+            # metric code would reference a column that never reaches SELECT
+            # (MySQL 1054). Drop that sort instead of emitting invalid SQL;
+            # detail ordering must use a projected field.
+            sort = asl.get("sort")
+            if (
+                isinstance(sort, dict)
+                and str(sort.get("field_type") or "").lower() == "metric"
+            ):
+                asl.pop("sort", None)
             # Relationship lists are set-shaped even though the physical joins
             # may contain several paths to the same projected combination.  The
             # translator applies this before LIMIT; ordinary order/event detail
