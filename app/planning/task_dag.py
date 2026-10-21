@@ -1629,6 +1629,51 @@ class SingleQuestionPlanner:
                                 raise ValueError('计算公式无法唯一绑定成分任务')
                             binding[role]['source_task_index'] = sources[0]
                     structured['计算绑定'] = binding
+        # 2026-10-21 用户要求：语义层已发布的复合指标公式是计算任务的公式来源。
+        # 已有模型计算绑定的任务也解析登记公式；发布公式能唯一绑定成分任务时
+        # 以登记公式为准（确定性业务定义优先于模型推断），绑定不了保留原绑定。
+        bound_names = list(dict.fromkeys(
+            item.get('name') if isinstance(item, dict) else item
+            for task in tasks if task.intent not in _METADATA_INTENTS
+            and (task.structured or {}).get('计算绑定')
+            and not (task.structured or {}).get('结果操作')
+            for item in (task.structured or {}).get('指标') or []
+            if (item.get('name') if isinstance(item, dict) else item) in dependencies))
+        if bound_names:
+            from app.planning.calculation_bindings import arithmetic_roles, resolve_compound_formulas
+            from app.planning.task_plan_stages import canonical_formula_spec
+            try:
+                published = await resolve_compound_formulas(self.settings, self._transport,
+                    canonical_formula_spec(spec_for_catalog, metric_catalog), dependencies, bound_names)
+            except Exception as exc:  # 2026-10-21 用户裁决：解析失败不拦停规划
+                logger.warning('登记复合指标公式覆盖解析失败，保留模型计算绑定：%s', exc)
+                published = {}
+            for task in tasks:
+                structured = task.structured or {}
+                if not structured.get('计算绑定') or structured.get('结果操作'):
+                    continue
+                if database_query_choice(structured) is not False and '不再查询数据库' not in task.question:
+                    continue
+                names = [item.get('name') if isinstance(item, dict) else item
+                         for item in structured.get('指标') or []]
+                name = next((value for value in names if value in published), None)
+                if name is None:
+                    continue
+                binding = copy.deepcopy(published[name])
+                bound = True
+                for role in arithmetic_roles(binding):
+                    if set(binding[role]) == {'value'}:
+                        continue
+                    column = binding[role]['column']
+                    sources = [index for index in task.depends_on
+                        if any((metric.get('name') if isinstance(metric, dict) else metric) == column
+                               for metric in (tasks[index].structured or {}).get('指标') or [])]
+                    if len(sources) != 1:
+                        bound = False
+                        break
+                    binding[role]['source_task_index'] = sources[0]
+                if bound:
+                    structured['计算绑定'] = binding
         return QuestionDecomposition(
             intent=question_intent,
             tasks=tuple(tasks),

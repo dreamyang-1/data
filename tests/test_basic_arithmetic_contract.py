@@ -188,6 +188,71 @@ async def test_original_receivable_question_is_planned_before_bound_subtraction(
     assert all(task.extraction['维度']==['部门'] for task in outcome.plan.tasks)
 
 
+def _ratio_extract(fixed):
+    items = []
+    for task in fixed['tasks']:
+        compute = '不再查询数据库' in task['question']
+        value = {'意图': '指标计算' if compute else '明细查询', '指标': [],
+            '维度': ['经销商'], '展示字段': [], '过滤条件': [],
+            '是否查询数据库': '否' if compute else '是', '输出要求': '默认输出表格'}
+        if compute:
+            # 模型把公式绑定成了退化形态：分子分母同名（X÷X）。
+            value['计算绑定'] = {'operation': 'divide', 'left': {'column': '付款金额'},
+                'right': {'column': '付款金额'}, 'result_field': '付款核销比', 'format': 'number'}
+        items.append({'task_index': task['task_index'], 'extraction': value})
+    return {'tasks': items}
+
+
+@pytest.mark.asyncio
+async def test_published_formula_overrides_model_binding_for_registered_compound_metric(monkeypatch):
+    # 2026-10-21 用户要求：语义层已发布的复合指标公式是计算任务的公式来源。
+    # 模型推断的退化计算绑定（X÷X）在发布公式能唯一绑定成分任务时被覆盖。
+    from app.domain import semantic_description
+    from test_task_planning_stages import setup_planner
+    from app.planning.compound_question import CompoundQuestionRouter, CompoundJudgment
+    question = '查询2026年各经销商付款核销比'
+    planner, calls = setup_planner(monkeypatch, {'tasks': [{'question': question,
+        'metric_targets': ['付款核销比'], 'grain': ['经销商']}]}, extract=_ratio_extract)
+    spec = ('| 指标 | 同义词 | 业务口径 | 单位 | 依赖指标 |\n'
+            '| 付款核销比 | 无 | 付款金额÷核销金额 | 元 | 核销金额, 付款金额 |\n'
+            '| 付款金额 | 无 | 付款金额合计 | 元 | 无 |\n'
+            '| 核销金额 | 无 | 核销金额合计 | 元 | 无 |')
+    monkeypatch.setattr(semantic_description, 'load_semantic_description', AsyncMock(return_value={
+        'available': True, 'source': 'semantic_model_133.md', 'content': spec}))
+    router = CompoundQuestionRouter(planner.settings); router._single = planner
+    outcome = await router.plan_with_judgment(CompoundJudgment(is_compound=False), question, semantic_model_id=133)
+    assert outcome.plan is not None and len(outcome.plan.tasks) == 3
+    assert len(calls) == 2  # 发布公式精确解析，无重试、无公式绑定兜底调用
+    contract = outcome.plan.tasks[-1].extraction['计算绑定']
+    assert contract['operation'] == 'divide'
+    assert contract['numerator']['column'] == '付款金额'
+    assert contract['denominator']['column'] == '核销金额'
+    assert contract['numerator']['source_task_id'] != contract['denominator']['source_task_id']
+
+
+@pytest.mark.asyncio
+async def test_unparsable_published_formula_keeps_lenient_plan_without_override(monkeypatch):
+    # 发布公式含多步运算无法解析为单一计算绑定时，宽松化不拦停规划：
+    # 退化绑定在重试耗尽后按既有契约丢弃，任务留待计算执行器兜底。
+    from app.domain import semantic_description
+    from test_task_planning_stages import setup_planner
+    from app.planning.compound_question import CompoundQuestionRouter, CompoundJudgment
+    question = '查询2026年各经销商付款核销比'
+    planner, calls = setup_planner(monkeypatch, {'tasks': [{'question': question,
+        'metric_targets': ['付款核销比'], 'grain': ['经销商']}]}, extract=_ratio_extract)
+    spec = ('| 指标 | 同义词 | 业务口径 | 单位 | 依赖指标 |\n'
+            '| 付款核销比 | 无 | 付款金额÷核销金额×100 | 元 | 核销金额, 付款金额 |\n'
+            '| 付款金额 | 无 | 付款金额合计 | 元 | 无 |\n'
+            '| 核销金额 | 无 | 核销金额合计 | 元 | 无 |')
+    monkeypatch.setattr(semantic_description, 'load_semantic_description', AsyncMock(return_value={
+        'available': True, 'source': 'semantic_model_133.md', 'content': spec}))
+    router = CompoundQuestionRouter(planner.settings); router._single = planner
+    outcome = await router.plan_with_judgment(CompoundJudgment(is_compound=False), question, semantic_model_id=133)
+    assert outcome.plan is not None and len(outcome.plan.tasks) == 3
+    contract = outcome.plan.tasks[-1].extraction.get('计算绑定')
+    assert not contract or contract['left']['column'] == contract['right']['column']
+
+
 @pytest.mark.asyncio
 async def test_persisted_calculation_results_can_feed_later_arithmetic_tasks():
     agent=service();chat,_=context()
