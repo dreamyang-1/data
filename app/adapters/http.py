@@ -1437,7 +1437,14 @@ class HttpDataRetrievalAdapter:
                      # 计划器有时把前序任务的值写成模板占位符（如
                      # ${task_0.销售员姓名}）。该值由下方依赖约束按标准键注入，
                      # 占位符本身不是可绑定字面量。
-                     or re.match(r'^\$\{\s*task[_-]?\d+(?:\.[^}]*)?\s*\}$', v.strip(), re.IGNORECASE)))]
+                     or re.match(r'^\$\{\s*task[_-]?\d+(?:\.[^}]*)?\s*\}$', v.strip(), re.IGNORECASE)
+                     # 计划器也会把引用写成“依赖任务1输出的经销商名称列表”
+                     # 这类自然语言占位（2026-10-21 端到端实测）。同样由依赖
+                     # 约束的标准键接管，否则占位文本会被当筛选值去做向量值
+                     # 绑定，必然失败并触发澄清拦停。
+                     or re.match(r'^(?:依赖)?(?:前序|上述|之前)?任务\d*(?:的)?(?:查询|返回|执行)?'
+                                 r'(?:输出)?(?:的)?.{0,24}?(?:结果|名单|列表|输出|名称|编码|值)$',
+                                 v.strip())))]
             if len(retained) == len(values):
                 return item
             resolved_references.update(v for v in values if isinstance(v, str) and v not in retained)
