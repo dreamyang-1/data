@@ -959,7 +959,19 @@ class SingleQuestionPlanner:
                 validate_computation_column_lineage(last_result)
             except TaskInputBindingError as exc:
                 if attempt == attempts - 1:
-                    raise
+                    # 2026-10-21 用户裁决：计算绑定不完整不再拦停整个计划。
+                    # 重试耗尽后丢弃无法落地的结果操作/计算绑定，按原样
+                    # 继续执行（拆错了就拆错了）；对应任务可能拿不到派生列，
+                    # 由执行与洞察环节对空缺结果兜底。
+                    logger.warning(
+                        "computation binding degraded after retries: %s", exc,
+                    )
+                    for degraded in last_result.tasks:
+                        structured = degraded.structured
+                        if isinstance(structured, dict):
+                            structured.pop('结果操作', None)
+                            structured.pop('计算绑定', None)
+                    return _respect_shared_region_denominator(last_result, question)
                 retry_feedback = '计算操作不完整或无效，请修正后重新输出完整计划：' + str(exc)
                 continue
             return _respect_shared_region_denominator(last_result, question)

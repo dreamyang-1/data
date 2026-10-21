@@ -367,14 +367,16 @@ def _qualified_facet_parts(question: str) -> tuple[str, list[str]] | None:
 def _validate_grounding(plan: TaskPlan, source_question: str,
                        registered_default_times: tuple[str, ...] = (),
                        registered_conditions: tuple[str, ...] = ()) -> None:
-    """拒绝模型自造的日期、数字、指标和带引号的过滤值。
+    """拒绝模型自造的指标和带引号的过滤值。
 
-    只做防自造的正向校验：任务文本不得引入原问题没有的数字、指标、
-    时间条件、引号过滤值和业务型号。"遗漏"方向只比对无参数载体的信号
-    （排除/限定语气、并列分支结构、业务型号编码）——任务问题文本是
-    允许改写的展示字段，年份、排名、指标、时间等要求合法落在结构化
-    参数（时间粒度、排序、限制、指标通道）里而不复读进文本，文本级
-    强比对只会把整个规划误杀（实测多轮复现），下游合同以结构化参数为准。
+    只做防自造的正向校验：任务文本不得引入原问题没有的指标、时间条件、
+    引号过滤值和业务型号。数字不拦截（2026-10-21 用户裁决）："第一名→1"、
+    "去年同期→2024"等价改写只留诊断日志，拆错了就继续执行。"遗漏"方向
+    只比对无参数载体的信号（排除/限定语气、并列分支结构、业务型号编码）
+    ——任务问题是允许改写的展示字段，年份、排名、指标、时间等要求合法
+    落在结构化参数（时间粒度、排序、限制、指标通道）里而不复读进文本，
+    文本级强比对只会把整个规划误杀（实测多轮复现），下游合同以结构化
+    参数为准。
     """
     source_for_grounding = re.sub(
         r"(?:^|[;；\n])\s*[一二三四五1-5][、.)．]\s*",
@@ -423,15 +425,16 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
             numeric_question = re.sub(re.escape(condition.casefold()) + r'(?![\d.])', '', numeric_question)
         task_numbers = set(re.findall(r"\d+(?:\.\d+)?", numeric_question))
         if not task_numbers.issubset(source_numbers):
+            # 2026-10-21 用户裁决：数字不再拦截。"第一名→1"、"去年同期→2024"
+            # 属等价改写或由原问题年份直接推导，字面强比对只会误杀整个规划
+            # （实测复现：多任务计划被整体拒绝后无任务执行）。拆分不完美
+            # 就继续执行，数字口径交给下游按结构化参数与向量目录校验，
+            # 这里只留诊断日志。
             logger.warning(
-                "grounding numeric mismatch task=%s unexpected=%r question=%r",
+                "grounding numeric mismatch tolerated task=%s unexpected=%r question=%r",
                 getattr(task, "task_id", ""),
                 sorted(task_numbers - source_numbers),
                 task.question,
-            )
-            raise TaskPlanningError(
-                "子任务包含原问题中不存在的数字或日期"
-                f"：{sorted(task_numbers - source_numbers)}"
             )
         if not {value for value in metric_terms if value in compact}.issubset(source_metrics):
             raise TaskPlanningError("子任务包含原问题中不存在的指标")

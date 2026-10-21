@@ -107,10 +107,12 @@ async def test_rejected_recognized_plan_does_not_become_a_single_query():
     from app.domain.models import AtomicTask,TaskPlan
     from app.planning.compound_question import validate_plan
     from test_complex_execution_correctness import service,context,IDENTITY
-    agent=service();chat,_=context();chat.question='查询2025年甲数据；查询2025年乙数据'
+    agent=service();chat,_=context();chat.question='查询2025年TDC-3数据；查询2025年乙数据'
     async def plan(*args,**kwargs):
+        # 数字改写已放行（2026-10-21 用户裁决），无效计划改用编造的
+        # 业务型号编码触发，保持"被拒计划不得降级为单查询"的合同。
         candidate=TaskPlan(planner='STRUCTURED_MODEL',tasks=[
-            AtomicTask(task_id='a',question='查询2026年甲数据'),
+            AtomicTask(task_id='a',question='查询2025年XYZ-3数据'),
             AtomicTask(task_id='b',question='查询2025年乙数据')])
         validate_plan(candidate,source_question=chat.question)
         return candidate

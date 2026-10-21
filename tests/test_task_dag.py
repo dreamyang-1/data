@@ -945,16 +945,54 @@ def test_plan_validation_accepts_normalized_date_spellings() -> None:
     )
 
 
-def test_plan_validation_still_rejects_invented_year() -> None:
+def test_plan_validation_tolerates_derived_numbers_instead_of_rejecting() -> None:
+    # 2026-10-21 用户裁决：拆分中的数字改写（去年同期→2024）不再拦截整个
+    # 计划，只留诊断日志；拆错了就继续执行，由下游按结构化参数校验。
     plan = TaskPlan(planner="STRUCTURED_MODEL", tasks=[
         AtomicTask(task_id="task-1", question="统计2026年9月新华医院各销售员的销售额"),
         AtomicTask(task_id="task-2", question="查询2026年9月该销售员销售的产品明细",
                    depends_on=["task-1"]),
     ])
-    with pytest.raises(TaskPlanningError, match="不存在的数字或日期"):
-        validate_plan(
-            plan, source_question="25年9月新华医院销售额最高的销售员是谁？销售了哪些产品？",
-        )
+    validate_plan(
+        plan, source_question="25年9月新华医院销售额最高的销售员是谁？销售了哪些产品？",
+    )
+
+
+@pytest.mark.asyncio
+async def test_computation_binding_failure_degrades_instead_of_blocking(monkeypatch) -> None:
+    # 2026-10-21 用户裁决：重试耗尽的计算绑定不再拦停整个计划。
+    # 无效的结果操作被丢弃后按原样继续执行（拆错了就拆错了），
+    # 派生列空缺由执行与洞察环节兜底。
+    from app.planning import SingleQuestionPlanner
+    from app.planning.task_dag import DecomposedTask, QuestionDecomposition
+
+    bad = {'是否查询数据库': '否',
+           '结果操作': {'operation': {'type': 'sort', 'field': '', 'descending': False}}}
+    decomposition = QuestionDecomposition(intent=PrimaryIntent.METRIC_QUERY, tasks=(
+        DecomposedTask(question='查询2025年各经销商销售排名',
+                       structured={'意图': '统计查询'}),
+        DecomposedTask(question='提取第一名和第二名经销商名称，不再查询数据库',
+                       depends_on=(0,), structured=bad),
+    ))
+    settings = Settings(
+        _env_file=None, env='test',
+        intent_model_api_key=SecretStr('test-key'),
+        multi_question_model_enabled=True,
+    )
+    planner = SingleQuestionPlanner(settings)
+
+    async def decompose(*args, **kwargs):
+        return decomposition
+
+    monkeypatch.setattr(planner, '_model_decompose', decompose)
+    result = await planner.plan_question(
+        '先给出2025年各经销商销售排名，再对比第一名与第二名去年同期的差距。'
+    )
+    assert [task.question for task in result.tasks] == [
+        '查询2025年各经销商销售排名',
+        '提取第一名和第二名经销商名称，不再查询数据库',
+    ]
+    assert result.tasks[1].structured.get('结果操作') is None
 
 
 @pytest.mark.asyncio
