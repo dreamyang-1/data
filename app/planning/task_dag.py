@@ -1459,6 +1459,10 @@ class SingleQuestionPlanner:
                         value['维度'] = existing + [name for name in boundary.grain if name not in existing]
                 if boundary.expected_output:
                     requirement = str(value.get('输出要求') or '').strip()
+                    # “默认输出表格”是模型编造的默认格式而非用户要求，
+                    # 合并边界交付物时不作为既有要求保留（2026-10-21）。
+                    if requirement == "默认输出表格":
+                        requirement = ''
                     if boundary.expected_output not in requirement:
                         value['输出要求'] = (requirement + '；' if requirement else '') + boundary.expected_output
             planned_task = boundary.model_dump(exclude={
@@ -1736,6 +1740,10 @@ class SingleQuestionPlanner:
         limit = value.get("限制")
         structured["限制"] = limit if isinstance(limit, (int, float)) else None
         output_requirement = value.get("输出要求")
+        # 输出要求只保留用户明确说出的格式；旧模型习惯性写出的
+        # “默认输出表格”属于编造的默认格式，按未声明处理（2026-10-21）。
+        if isinstance(output_requirement, str) and output_requirement.strip() == "默认输出表格":
+            output_requirement = None
         structured["输出要求"] = (
             _clean_extraction_text(output_requirement)
             if isinstance(output_requirement, str) and output_requirement.strip()

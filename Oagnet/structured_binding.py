@@ -68,6 +68,32 @@ def issue(slot, value, reason, candidates=()):
             'source': 'STRUCTURED_EXTRACTION'}
 
 
+def apply_surface_requirements(ast, extraction):
+    """结构化参数是 ASL 的唯一业务要求来源（2026-10-21 用户要求）。
+
+    问题式生成、绑定修复或契约补全都不得丢失结构化声明过的行数限制
+    与明细去重口径；在最终 ASL 上确定性回填，返回追加的 repairs。
+    限制合同与 bind 一致：1~10000 的整数；去重仅在无指标的明细投影上生效。
+    """
+    repairs = []
+    if not isinstance(ast, dict) or ast.get('ambiguity') or not isinstance(extraction, dict):
+        return repairs
+    limit = extraction.get('限制')
+    if (isinstance(limit, int) and not isinstance(limit, bool)
+            and 1 <= limit <= 10000 and ast.get('limit') != limit):
+        ast['limit'] = limit
+        repairs.append({'type': 'APPLY_STRUCTURED_LIMIT',
+                        'source': 'STRUCTURED_EXTRACTION', 'limit': limit})
+    dedup = str(extraction.get('是否去重') or '').strip().casefold()
+    if (not ast.get('metrics') and ast.get('dimensions')
+            and str(ast.get('projection_mode') or '').strip().upper() not in {'DISTINCT', 'ROWS'}
+            and dedup in {'是', 'true', '1', 'yes', 'y', 'distinct'}):
+        ast['projection_mode'] = 'DISTINCT'
+        repairs.append({'type': 'APPLY_STRUCTURED_DEDUP',
+                        'source': 'STRUCTURED_EXTRACTION'})
+    return repairs
+
+
 def catalog_candidates(knowledge):
     entities, metrics, fields, dimensions = {}, {}, {}, {}
     allowed = set(knowledge.get('_vector_authorized_fields') or [])

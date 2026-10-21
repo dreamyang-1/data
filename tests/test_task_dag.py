@@ -70,6 +70,26 @@ def test_extraction_normalizes_database_query_route(raw, expected):
     assert "是否查询数据库" in extraction_parser_prompt()
 
 
+def test_extraction_drops_default_output_table_and_keeps_limit():
+    """输出要求只保留用户明确说出的格式；“默认输出表格”按未声明处理。
+
+    结构化参数中的行数限制必须原样保留，供 ASL 与最终输出消费。
+    """
+    from app.planning.task_dag import SingleQuestionPlanner
+
+    dropped = SingleQuestionPlanner._sanitize_extraction(
+        {"输出要求": "默认输出表格", "限制": 1000}, intent=PrimaryIntent.METRIC_QUERY
+    )
+    assert dropped["输出要求"] is None
+    assert dropped["限制"] == 1000
+
+    kept = SingleQuestionPlanner._sanitize_extraction(
+        {"输出要求": "折线图展示", "限制": 1000}, intent=PrimaryIntent.METRIC_QUERY
+    )
+    assert kept["输出要求"] == "折线图展示"
+    assert kept["限制"] == 1000
+
+
 def _split_handler(
     judge_payload: str,
     extract_payload: "str | dict[str, str] | None" = None,

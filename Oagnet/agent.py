@@ -9377,7 +9377,8 @@ def main(
             canonical_repairs = []
     # Restore the original question/catalog generator. Planner slots remain
     # advisory; a failed generation can still use the existing finite binder.
-    from structured_binding import bind, issue, retrieval_terms, filter_value_queries
+    from structured_binding import (bind, issue, retrieval_terms, filter_value_queries,
+                                    apply_surface_requirements)
     from query_binding_review import review_bindings
     from mysql_tool import resolve_scoped_dictionary_keys
     generated = _recover_question_asl(
@@ -9542,6 +9543,11 @@ def main(
     # Keep existing analysis envelopes, but never invent missing measures or
     # dimensions to satisfy them. The structured planner owns those slots.
     final_ast = json.loads(result)
+    if not final_ast.get('ambiguity'):
+        # 结构化参数是 ASL 的唯一业务要求来源（2026-10-21 用户要求）：
+        # 问题式生成或绑定修复都不得丢失结构化声明过的行数限制与去重口径。
+        repairs.extend(apply_surface_requirements(final_ast, structured_extraction
+                                                  if isinstance(structured_extraction, dict) else {}))
     logger.info(
         'ASL summary: metrics=%r sort=%r dimensions=%r filters=%r ambiguity=%s',
         [item.get('name') for item in final_ast.get('metrics') or [] if isinstance(item, dict)],
