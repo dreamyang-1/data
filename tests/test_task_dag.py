@@ -958,6 +958,23 @@ def test_plan_validation_tolerates_derived_numbers_instead_of_rejecting() -> Non
     )
 
 
+def test_result_operation_coerces_safe_count_spellings() -> None:
+    # 2026-10-21 用户裁决：行数限制写成 '前2名'/2.0 等可安全归一化的
+    # 字面量时直接换算为整数，不因字面类型差异拒绝整个结果操作。
+    from app.planning.calculation_bindings import (
+        normalize_result_operation, validate_result_operation)
+
+    op = normalize_result_operation({'type': 'limit', 'count': '前2名'})
+    validate_result_operation(op)
+    assert op['count'] == 2
+    op = normalize_result_operation(
+        {'type': 'sort_limit', 'field': '含税销售总额', 'limit': 2.0, 'descending': True})
+    validate_result_operation(op)
+    assert op['count'] == 2
+    with pytest.raises(ValueError, match='结果限制'):
+        validate_result_operation(normalize_result_operation({'type': 'limit', 'count': '全部'}))
+
+
 @pytest.mark.asyncio
 async def test_computation_binding_failure_degrades_instead_of_blocking(monkeypatch) -> None:
     # 2026-10-21 用户裁决：重试耗尽的计算绑定不再拦停整个计划。

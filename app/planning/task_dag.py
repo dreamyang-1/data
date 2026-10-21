@@ -959,18 +959,31 @@ class SingleQuestionPlanner:
                 validate_computation_column_lineage(last_result)
             except TaskInputBindingError as exc:
                 if attempt == attempts - 1:
-                    # 2026-10-21 用户裁决：计算绑定不完整不再拦停整个计划。
-                    # 重试耗尽后丢弃无法落地的结果操作/计算绑定，按原样
-                    # 继续执行（拆错了就拆错了）；对应任务可能拿不到派生列，
-                    # 由执行与洞察环节对空缺结果兜底。
+                    # 2026-10-21 用户裁决：校验尽可能宽松，任务只要能输出
+                    # 就输出。重试耗尽后只丢弃自身绑定无法落地的任务的结果
+                    # 操作/计算绑定，其余任务保持既有绑定继续执行；执行期
+                    # 无公式的任务由计算执行器透传依赖数据集兜底。
                     logger.warning(
                         "computation binding degraded after retries: %s", exc,
                     )
-                    for degraded in last_result.tasks:
-                        structured = degraded.structured
-                        if isinstance(structured, dict):
-                            structured.pop('结果操作', None)
-                            structured.pop('计算绑定', None)
+                    for degraded_index, degraded in enumerate(last_result.tasks):
+                        degraded_structured = degraded.structured
+                        if (not isinstance(degraded_structured, dict)
+                                or not degraded.depends_on
+                                or not ({'结果操作', '计算绑定'} & set(degraded_structured))):
+                            continue
+                        try:
+                            materialize_computation_binding(
+                                degraded_structured, task_index=degraded_index,
+                                dependencies=[f'task-{dep + 1}' for dep in degraded.depends_on])
+                        except TaskInputBindingError as task_exc:
+                            degraded_structured.pop('结果操作', None)
+                            degraded_structured.pop('计算绑定', None)
+                            logger.warning(
+                                "computation binding dropped: task=%r question=%r error=%s",
+                                degraded.name or degraded.question[:60],
+                                degraded.question[:120], task_exc,
+                            )
                     return _respect_shared_region_denominator(last_result, question)
                 retry_feedback = '计算操作不完整或无效，请修正后重新输出完整计划：' + str(exc)
                 continue

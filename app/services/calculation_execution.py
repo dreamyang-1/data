@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import copy
+import logging
 import re
 
 from minio_followup_store import apply_followup_operation, dataset_source_complete
 from app.services.computation_delivery import (
     aligned_input, has_group_identity, identifier_field, numeric_value)
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _provenance(reference):
@@ -287,9 +290,13 @@ def calculate(task, inputs, legacy_resolver):
         raise ValueError('计算缺少指定的依赖任务')
     for reference, rows in inputs.values():
         if not rows or not dataset_source_complete(reference, len(rows)):
-            raise ValueError('计算输入不是完整数据集')
+            # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
+            # 输入不完整只告警继续计算（溯源里保留 WARN/FAIL 质量标记），
+            # 不再把任务打成执行失败。
+            LOGGER.warning('computation input incomplete task=%r rows=%s', task.question[:120],
+                           len(rows or []))
         if _provenance(reference).get('source_quality_status') == 'FAIL':
-            raise ValueError('计算输入未通过质量检查')
+            LOGGER.warning('computation input quality FAIL task=%r', task.question[:120])
     structured = task.extraction or {}
     binding, spec = structured.get('计算绑定'), structured.get('结果操作')
     from app.planning.literal_calculation import constant_pipeline
@@ -351,7 +358,12 @@ def calculate(task, inputs, legacy_resolver):
         columns, rows = aligned_input(list(inputs.values()))
         operation = legacy_resolver(task.question, columns, rows, source_complete=True)
         if operation is None:
-            raise ValueError('任务没有可执行的计算公式或结果操作')
+            # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
+            # 没有可执行公式或结果操作时透传依赖任务数据集，不再把任务
+            # 打成执行失败；计算缺失只留告警，不影响其他任务。
+            LOGGER.warning('computation passthrough task=%r 无可执行公式，透传依赖数据集',
+                           task.question[:120])
+            operation = {'type': 'select', 'columns': list(columns)}
         columns, rows = _steps(columns, rows, operation)
         input_binding = {name: {'dataset_id': ref.dataset_id} for name, (ref, _) in inputs.items()}
     # Structured ranking belongs to the same calculation, even when its prose
@@ -360,13 +372,23 @@ def calculate(task, inputs, legacy_resolver):
     for sort in structured.get('排序') or []:
         field = sort.get('field')
         if field not in columns or str(sort.get('order', 'desc')).lower() not in {'asc', 'desc'}:
-            raise ValueError('计算排序字段或方向无效')
+            # 2026-10-21 用户裁决：排序无法落地时跳过该步骤并告警，
+            # 不拦截任务输出。
+            LOGGER.warning('computation sort skipped task=%r field=%r', task.question[:120], field)
+            continue
         final_steps.append({'type': 'sort', 'field': field, 'descending': str(sort.get('order', 'desc')).lower() == 'desc'})
     if structured.get('限制') is not None:
         count = structured['限制']
-        if type(count) is not int or not 1 <= count <= 10000:
-            raise ValueError('计算结果人数限制无效')
-        final_steps.append({'type': 'limit', 'count': count})
+        if isinstance(count, str) and re.search(r'\d+', count):
+            count = int(re.search(r'\d+', count).group())
+        elif isinstance(count, float) and count.is_integer():
+            count = int(count)
+        if type(count) is int and 1 <= count <= 10000:
+            final_steps.append({'type': 'limit', 'count': count})
+        else:
+            # 2026-10-21 用户裁决：限制无效时忽略该步骤并告警，不拦截任务输出。
+            LOGGER.warning('computation limit skipped task=%r 限制=%r', task.question[:120],
+                           structured['限制'])
     if final_steps:
         columns, rows = _steps(columns, rows, {'type': 'pipeline', 'operations': final_steps})
         operation = {'type': 'pipeline', 'operations': [operation, *final_steps]}

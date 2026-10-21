@@ -102,6 +102,13 @@ def test_arithmetic_cannot_hide_incomplete_or_incompatible_inputs(mode):
     a=reference('a',list(left[0]),left)
     b=reference('b',list(right[0]),right,source_truncated=mode=='truncated',
                 source_quality_status='FAIL' if mode=='failed_quality' else 'PASS')
+    if mode in {'truncated','failed_quality'}:
+        # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
+        # 输入截断/质量失败只告警继续计算（溯源保留质量标记），不再拒绝。
+        columns,rows,operation,evidence,quality=execute(
+            binding('subtract',sources=('a','b')),{'a':(a,left),'b':(b,right)})
+        assert rows
+        return
     with pytest.raises(ValueError):
         execute(binding('subtract',sources=('a','b')),{'a':(a,left),'b':(b,right)})
 
