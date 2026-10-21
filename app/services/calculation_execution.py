@@ -141,6 +141,32 @@ def _legacy_division(task, inputs):
             'result_field': label, 'format': 'percent' if re.search('率|占比|比例', label) else 'number'}
 
 
+def _two_dataset_divide(task, inputs):
+    """Degenerate-binding fallback: each dependency contributes exactly one metric.
+
+    Deterministic only when both dependencies expose a single numeric metric;
+    operand direction follows question wording when both columns are mentioned,
+    otherwise the planner's depends_on order.
+    """
+    if len(inputs) != 2:
+        return None
+    try:
+        operands = [{'source_task_id': name, 'column': _numeric_column(ref, rows, task.question)}
+                    for name, (ref, rows) in inputs.items()]
+    except ValueError:
+        return None
+    wording = task.question
+    if all(operand['column'] in wording for operand in operands):
+        operands.sort(key=lambda operand: wording.index(operand['column']))
+    match = re.search(r'计算([^，,。；;（(]{2,60})', wording)
+    label = match[1] if match else '计算结果'
+    label = re.split(r'并|按|然后', label)[0].strip() or '计算结果'
+    label = re.sub(r'^(?:这些|各|所有|上述).+?的', '', label) or label
+    return {'operation': 'divide', 'numerator': operands[0], 'denominator': operands[1],
+            'result_field': label,
+            'format': 'percent' if re.search('率|占比|比例', label) else 'number'}
+
+
 def _check_compatible(first, second, *, same_unit, same_period=True):
     left = _provenance(first).get('fingerprint_components', {})
     right = _provenance(second).get('fingerprint_components', {})
@@ -310,13 +336,22 @@ def calculate(task, inputs, legacy_resolver):
         raise ValueError('计算公式与结果操作不能同时定义')
     legacy = binding is None and spec is None
     if not legacy and binding is None and isinstance(spec, dict) and len(inputs) == 2:
-        # 规划器可能把跨任务算术写成未绑定唯一来源的结果操作。回退到题面
-        # 措辞的确定性解析（只认除以/覆盖率等显式形态）；解析不出仍按原错误拒绝。
+        # 规划器可能把跨任务算术写成未绑定唯一来源的结果操作——包括绑定了
+        # 其中一个依赖但依赖实际有两个的形态。回退到题面措辞的确定性解析
+        # （只认除以/覆盖率等显式形态）；解析不出走透传兜底，不再拒绝。
         name = spec.get('source_task_id')
-        if (set(spec) <= {'source_task_id', 'operation'} and name not in inputs
+        if (set(spec) <= {'source_task_id', 'operation'}
                 and _legacy_division(task, inputs) is not None):
             legacy = True
     binding = binding or (_legacy_division(task, inputs) if legacy else None)
+    if (binding is not None and binding.get('operation') == 'divide'
+            and binding.get('left') is not None
+            and binding.get('left') == binding.get('right')):
+        # 规划器把除法两个操作数绑成同一列（X÷X 恒为 1）时按用户宽松裁决
+        # 依次回退：题面显式除法措辞 → 两个依赖各恰有一个数值指标的确定性
+        # 重导；都不可得时走透传，绝不输出恒为 1 的伪结果。
+        LOGGER.warning('degenerate divide binding task=%r left==right', task.question[:120])
+        binding = _legacy_division(task, inputs) or _two_dataset_divide(task, inputs)
     percent_label = None
     if binding is not None:
         columns, rows, operation, input_binding = _arithmetic(binding, inputs)
@@ -338,22 +373,31 @@ def calculate(task, inputs, legacy_resolver):
         if not isinstance(spec, dict) or set(spec) - {'source_task_id', 'operation'}:
             raise ValueError('结果操作必须绑定指定任务，不能覆盖数据集身份')
         name = spec.get('source_task_id')
-        if name not in inputs or len(inputs) != 1:
-            raise ValueError('结果操作必须明确绑定唯一依赖任务')
-        source, original_rows = inputs[name]
-        from app.planning.calculation_bindings import normalize_result_operation
-        operation = normalize_result_operation(spec.get('operation'))
-        input_binding = {'source_task_id': name, 'dataset_id': source.dataset_id}
-        steps = operation.get('operations', []) if isinstance(operation, dict) and operation.get('type') == 'pipeline' else [operation]
-        for step in steps:
-            if isinstance(step, dict) and step.get('type') == 'monthly_growth':
-                declared = step.get('period_field')
-                actual = _column(source, declared, role='month')
-                step['period_field'] = actual
-                roles = _provenance(source).get('calculation_columns', {}).get('dimension_identity', {})
-                step['group_by'] = [roles.get(group, group) for group in step.get('group_by', [])]
-                input_binding['period_column'] = {'declared': declared, 'actual': actual}
-        columns, rows = _steps(list(source.columns), [dict(row) for row in original_rows], operation)
+        if name in inputs and len(inputs) == 1:
+            source, original_rows = inputs[name]
+            from app.planning.calculation_bindings import normalize_result_operation
+            operation = normalize_result_operation(spec.get('operation'))
+            input_binding = {'source_task_id': name, 'dataset_id': source.dataset_id}
+            steps = operation.get('operations', []) if isinstance(operation, dict) and operation.get('type') == 'pipeline' else [operation]
+            for step in steps:
+                if isinstance(step, dict) and step.get('type') == 'monthly_growth':
+                    declared = step.get('period_field')
+                    actual = _column(source, declared, role='month')
+                    step['period_field'] = actual
+                    roles = _provenance(source).get('calculation_columns', {}).get('dimension_identity', {})
+                    step['group_by'] = [roles.get(group, group) for group in step.get('group_by', [])]
+                    input_binding['period_column'] = {'declared': declared, 'actual': actual}
+            columns, rows = _steps(list(source.columns), [dict(row) for row in original_rows], operation)
+        else:
+            # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
+            # 未绑定唯一依赖任务的结果操作按题面显式除法解析（上方已尝试），
+            # 仍解析不出时透传依赖数据集并告警，不再把任务打成执行失败。
+            LOGGER.warning('computation passthrough task=%r 结果操作未绑定唯一依赖任务，透传依赖数据集',
+                           task.question[:120])
+            columns, rows = aligned_input(list(inputs.values()))
+            operation = {'type': 'select', 'columns': list(columns)}
+            input_binding = {dep: {'dataset_id': ref.dataset_id}
+                             for dep, (ref, _) in inputs.items()}
     else:
         columns, rows = aligned_input(list(inputs.values()))
         operation = legacy_resolver(task.question, columns, rows, source_complete=True)

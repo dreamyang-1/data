@@ -227,3 +227,71 @@ async def test_derived_single_group_is_not_mistaken_for_a_global_scalar():
     next_result=await agent._respond_pure_computation(chat,IDENTITY,next_task,
         {'difference':result.conversation_id,'tax':'tax'})
     assert next_result.status=='FAILED' and not next_result.dataset_id
+
+
+def test_cross_task_divide_with_single_bound_spec_still_computes():
+    # 2026-10-21 用户裁决宽松放行：规划器把跨任务除法写成绑定了单一依赖的
+    # 结果操作（依赖实际有两个）时，按题面显式除法措辞解析继续计算。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                       {'经销商（编码）': 'D2', '含税销售总额': 60}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                           {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])
+    task = AtomicTask(task_id='compute',
+        question='计算单院产出，含税销售总额/有效订单去重医院数',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否',
+                    '结果操作': {'source_task_id': 'sales', 'operation': {'type': 'select'}}})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                                 {'经销商（编码）': 'D2', '含税销售总额': 60}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                                         {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])},
+        lambda *args, **kwargs: None)
+    values = {row['经销商（编码）']: row['单院产出'] for row in result}
+    assert values == {'D1': 25.0, 'D2': 20.0} and quality == 'PASS'
+
+
+def test_unbound_result_operation_passthrough_instead_of_failure():
+    # 2026-10-21 用户裁决：结果操作解析不出公式时透传依赖数据集并告警，
+    # 不再把计算任务打成执行失败。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4}])
+    task = AtomicTask(task_id='compute', question='按既定口径整理这些商户',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否',
+                    '结果操作': {'source_task_id': 'ghost', 'operation': {'type': 'select'}}})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4}])},
+        lambda *args, **kwargs: None)
+    assert result and quality == 'PASS'
+    assert operation['type'] == 'select'
+
+
+def test_degenerate_divide_binding_is_rederived_not_output_as_one():
+    # 2026-10-21 线上缺陷：规划器把除法两个操作数绑成同一列（医院数÷医院数
+    # 恒为1）。按宽松裁决回退：两个依赖各恰有一个数值指标时确定性重导除法。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                       {'经销商（编码）': 'D2', '含税销售总额': 60}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                           {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])
+    task = AtomicTask(task_id='compute', question='计算这些商户的单院产出并按降序排列',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否', '计算绑定': binding(
+            'divide', '有效订单去重医院数', '有效订单去重医院数', ('hospitals', 'hospitals'),
+            label='单院产出')})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                                 {'经销商（编码）': 'D2', '含税销售总额': 60}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                                         {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])},
+        lambda *args, **kwargs: None)
+    values = {row['经销商（编码）']: row['单院产出'] for row in result}
+    assert values == {'D1': 25.0, 'D2': 20.0} and quality == 'PASS'
+    assert operation['operator'] == 'divide'
