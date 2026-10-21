@@ -43,7 +43,6 @@ def test_materialized_reference_does_not_become_an_extra_business_filter(value):
 
 @pytest.mark.parametrize('overrides', [
     {'value': '明确指定的经销商'},
-    {'value': '复用上一轮查询结果：经销商', 'constrained': False},
     {'value': '复用上一轮查询结果：医院', 'field': '医院名称'},
     {'value': '复用上一轮查询结果：经销商', 'operator': 'NOT IN'},
     {'value': '复用上一轮查询结果：公司甲', 'question': '仅查询名称为“复用上一轮查询结果：公司甲”的经销商产品'},
@@ -55,6 +54,15 @@ def test_explicit_filters_and_unbound_references_are_preserved(overrides):
     original = request.filters[0].copy()
     HttpDataRetrievalAdapter._merge_dependency_filters(request)
     assert original in request.filters
+
+
+def test_unbound_reference_without_constraints_is_dropped_instead_of_asking():
+    # 2026-10-21 用户裁决：占位引用永远绑定不到真实标准值，无约束可接管时
+    # 直接剥离继续执行（任务不带该筛选输出），不再触发澄清拦停。
+    request = request_for('复用上一轮查询结果：经销商', constrained=False)
+    HttpDataRetrievalAdapter._merge_dependency_filters(request)
+    assert request.filters == []
+    assert request._planner_extraction.structured['过滤条件'] == []
 
 
 def test_mixed_named_selection_keeps_the_named_part():

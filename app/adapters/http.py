@@ -1413,8 +1413,6 @@ class HttpDataRetrievalAdapter:
     @classmethod
     def _merge_dependency_filters(cls, request: CanonicalAnalysisRequest) -> None:
         """Put immutable upstream values in structured input, not just prose."""
-        if not request.dependency_constraints:
-            return
         extraction = request._planner_extraction
         structured = extraction.structured if extraction is not None else None
         families = {cls._constraint_field_family(item.source_column)
@@ -1423,9 +1421,15 @@ class HttpDataRetrievalAdapter:
 
         def resolve_reference(item):
             # A planner may express an unresolved predecessor reference as a
-            # name value. The complete, scoped key set below owns that binding.
-            # Preserve real literals, exclusions and filters on other objects.
-            if (cls._constraint_field_family(str(item.get('field') or '')) not in families
+            # name value. With constraints, the complete, scoped key set below
+            # owns that binding; without them the placeholder can never bind
+            # to a real standard value anyway. Preserve real literals,
+            # exclusions and filters on other objects.
+            family_ok = (
+                not families
+                or cls._constraint_field_family(str(item.get('field') or '')) in families
+            )
+            if (not family_ok
                     or str(item.get('operator') or item.get('op') or '=').upper() not in {'=', 'EQ', 'IN'}):
                 return item
             value = item.get('value')
