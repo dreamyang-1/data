@@ -24,7 +24,7 @@ from config import (
     LLM_TIMEOUT_SECONDS,
     require_runtime_secret,
 )
-from prompt_build import PromptBuilder
+from prompt_build import PromptBuilder, canonicalize_structured_mentions
 from mysql_tool import (
     get_registered_entity_attributes,
     get_metric_evidence,
@@ -9312,6 +9312,18 @@ def main(
     )
     if store is None:
         store = globals()["store"]
+    # 进入 ASL 前把结构化参数槽位名统一经向量库转成标准值（2026-10-21）：
+    # 上游模型可能写出目录别名之外的口语叫法（如"含税金额"），不经标准化
+    # 会在绑定阶段报语义歧义拦停整条任务链。唯一命中才改写，多义/未命中
+    # 保持原样；物理字段路径（表.字段）不重写。
+    canonical_repairs: list[dict] = []
+    if isinstance(structured_extraction, dict):
+        try:
+            canonical_repairs = canonicalize_structured_mentions(
+                structured_extraction, store, embed_query,
+                semantic_model_id, domain_ids)
+        except Exception:  # 标准化失败不阻断既有绑定链路
+            canonical_repairs = []
     # Restore the original question/catalog generator. Planner slots remain
     # advisory; a failed generation can still use the existing finite binder.
     from structured_binding import bind, issue, retrieval_terms, filter_value_queries
@@ -9331,7 +9343,8 @@ def main(
         result, knowledge = generated
         repairs = [{'type': 'RESTORE_QUESTION_ASL_GENERATION',
                     'source': 'SCOPED_QUESTION_AND_CATALOG'},
-                   *knowledge.get('_vector_filter_repairs', [])]
+                   *knowledge.get('_vector_filter_repairs', []),
+                   *canonical_repairs]
     elif not isinstance(structured_extraction, dict):
         result = _ambiguity_asl([issue(
             "结构化提取", None,
@@ -9355,6 +9368,7 @@ def main(
         model = _get_chat_model()
         ast, repairs = bind(structured_extraction, knowledge, model,
                             detail_subject_resolver=_detail_projection_subject_candidate)
+        repairs = [*canonical_repairs, *repairs]
         if not ast.get("ambiguity"):
             relationship_required = any(r.get("relationship_required") for r in repairs)
             # Owner/time/relationship resolution sees only the same structured

@@ -2951,11 +2951,16 @@ class HttpDataRetrievalAdapter:
                     formula,
                 ))
                 normalized_sql = current.replace("`", "").lower()
-                if any(field.lower() not in normalized_sql for field in expected_fields):
+                missing = [field for field in sorted(expected_fields)
+                           if field.lower() not in normalized_sql]
+                if missing:
                     raise AdapterError(
                         "METRIC_FORMULA_STALE",
                         "SQL translation does not match the current published metric formula",
-                        details={"metric_id": definition["metric_id"]},
+                        details={"metric_id": definition["metric_id"],
+                                 "expected_fields": sorted(expected_fields),
+                                 "missing_fields": missing,
+                                 "sql_preview": current[:1200]},
                     )
                 continue
 

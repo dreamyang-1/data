@@ -1531,6 +1531,174 @@ class PromptBuilder:
         return ordered
 
 
+# ====================== 结构化参数槽位名向量库标准化 ======================
+
+# 槽位名含 "表.字段" 物理路径时已是标准形态，不再改写
+_PHYSICAL_FIELD_RE = re.compile(r'^\w+\.\w+$')
+
+
+def _log_canonicalization(message, level='info'):
+    """写入 Oagnet 运行日志；日志不可用时静默，不影响绑定主链路。"""
+    try:
+        import logging
+        getattr(logging.getLogger('app'), level)(message)
+    except Exception:
+        pass
+
+
+def _synonym_terms(value):
+    """解析指标/维度同义词：兼容 JSON 数组字符串与逗号分隔文本。"""
+    if value is None:
+        return set()
+    if isinstance(value, (list, tuple)):
+        return {str(item).strip() for item in value if str(item).strip()}
+    text = str(value).strip()
+    if not text:
+        return set()
+    try:
+        decoded = json.loads(text)
+    except (TypeError, ValueError):
+        decoded = None
+    if isinstance(decoded, list):
+        return {str(item).strip() for item in decoded if str(item).strip()}
+    # 兼容 {"销售总额","销售额"} 这类非标准集合写法：去掉包裹符与引号再分割
+    text = text.strip('{}[]')
+    return {part.strip().strip('"\'').strip()
+            for part in re.split(r'[,，、;；]', text)
+            if part.strip().strip('"\'').strip()}
+
+
+def _record_identity(meta):
+    """向量记录的身份：(类型, 稳定编码, 标准名, 同义词集合)。"""
+    kind = meta.get('type')
+    if kind == 'metric':
+        return ('metric', str(meta.get('metric_code') or ''),
+                str(meta.get('metric_name') or '').strip(),
+                _synonym_terms(meta.get('synonyms')))
+    if kind == 'dimension':
+        return ('dimension', str(meta.get('dim_code') or ''),
+                str(meta.get('dim_name') or '').strip(),
+                _synonym_terms(meta.get('synonyms')))
+    if kind == 'attribute':
+        return ('attribute', str(meta.get('attr_code') or ''),
+                str(meta.get('attr_name') or '').strip(), set())
+    return None
+
+
+def _canonical_surface_name(surface, allowed_kinds, store, embed_fn,
+                            semantic_model_id, business_domain_ids,
+                            top_k=20, min_score=0.72, margin=0.06):
+    """把槽位名 mention 经向量库重解析为标准业务名称。
+
+    一次跨类检索（不加 record_type 过滤），按槽位允许的类型集合筛选：
+    - 标准名或同义词与输入精确相等 → 已是标准值，不改写（避免把
+      "含税销售总额"（指标）误改成同名近邻"含税金额"（属性））；
+    - 否则取允许类型内得分最高且达到 min_score、领先次优身份 margin 的
+      候选；不达标或多义时不改写，交由既有绑定/澄清链路处理。
+
+    Returns:
+        (canonical_name | None, reason)
+    """
+    try:
+        hits = store.search(
+            embed_fn(surface), top_k=top_k,
+            where=scope_filter(semantic_model_id,
+                               business_domain_ids=business_domain_ids))
+    except Exception:
+        return None, 'search_failed'
+    ranked = []
+    for hit in hits or []:
+        identity = _record_identity(hit.metadata or {})
+        if not identity or identity[0] not in allowed_kinds or not identity[2]:
+            continue
+        ranked.append((hit.score, identity))
+    if not ranked:
+        return None, 'no_candidate'
+    for _, identity in ranked:
+        if identity[2] == surface or surface in identity[3]:
+            return None, 'already_canonical'
+    best_score, best = ranked[0]
+    if best_score < min_score:
+        return None, 'below_threshold'
+    for score, identity in ranked[1:]:
+        if identity[1] != best[1] and score > best_score - margin:
+            return None, 'ambiguous'
+    return best[2], 'rewritten'
+
+
+# 各槽位允许映射到的目录类型：指标位只认指标；过滤位只认物理属性/维度。
+_SECTION_KINDS = {
+    '指标': ('metric',),
+    '维度': ('dimension', 'attribute'),
+    '展示字段': ('metric', 'attribute', 'dimension'),
+    '排序': ('metric', 'attribute', 'dimension'),
+    '过滤条件': ('attribute', 'dimension'),
+}
+
+
+def canonicalize_structured_mentions(extraction, store, embed_fn,
+                                     semantic_model_id, business_domain_ids):
+    """进入 ASL 前把结构化参数的槽位名统一经向量库转成标准值（就地改写）。
+
+    不管结构化参数传的什么（上游模型可能写出目录别名之外的口语叫法，
+    如把"含税销售总额"写成"含税金额"），槽位名都重新经向量库召回标准
+    指标/维度/属性；已是标准名/同义词的保持不变，其余仅在允许类型内
+    唯一且高置信命中时改写并记录 repair；多义、低分或未命中保持原样。
+    不动过滤值——过滤值有独立的按值解析通道（_vector_correct_filter 等）。
+
+    Returns:
+        repairs 列表，每项 {'type': 'VECTOR_MENTION_CANONICALIZED', ...}。
+    """
+    count = getattr(store, 'count', None)
+    if callable(count) and count() == 0:
+        return []
+    if not isinstance(extraction, dict):
+        _log_canonicalization('structured extraction missing; skip canonicalization')
+        return []
+    repairs = []
+    for section, allowed_kinds in _SECTION_KINDS.items():
+        items = extraction.get(section)
+        if not isinstance(items, list):
+            continue
+        for idx, item in enumerate(items):
+            if section == '过滤条件':
+                if not isinstance(item, dict):
+                    continue
+                surface = item.get('field')
+            elif isinstance(item, dict):
+                surface = item.get('name') or item.get('field')
+            else:
+                surface = item
+            if not isinstance(surface, str) or not surface.strip():
+                continue
+            if _PHYSICAL_FIELD_RE.match(surface.strip()):
+                continue
+            canonical, _reason = _canonical_surface_name(
+                surface, allowed_kinds, store, embed_fn,
+                semantic_model_id, business_domain_ids)
+            if not canonical or canonical == surface:
+                continue
+            if section == '过滤条件':
+                item['field'] = canonical
+            elif isinstance(item, dict):
+                if item.get('name') == surface:
+                    item['name'] = canonical
+                else:
+                    item['field'] = canonical
+            else:
+                items[idx] = canonical
+            repairs.append({
+                'type': 'VECTOR_MENTION_CANONICALIZED',
+                'source': 'STRUCTURED_EXTRACTION_VECTOR_NORMALIZATION',
+                'section': section, 'original': surface,
+                'canonical': canonical})
+    _log_canonicalization(
+        'structured mention canonicalization: model_id=%s rewritten=%s details=%s'
+        % (semantic_model_id, len(repairs),
+           [(r['section'], r['original'], r['canonical']) for r in repairs]))
+    return repairs
+
+
 if __name__ == "__main__":
     # 自检：构建一次 prompt
     from embedding import embed_query, embed_documents

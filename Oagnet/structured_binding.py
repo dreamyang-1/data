@@ -1095,6 +1095,14 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 direction = str(original.get('order') or original.get('direction') or '').upper() if isinstance(original,dict) else ''
                 if len(extraction[source])>1 or direction not in {'ASC','DESC'}:
                     ast['ambiguity'].append(issue(source, original, '当前ASL仅支持一个明确升序/降序的排序字段'));continue
+                if key in catalog['metrics'] and key not in {m['name'] for m in ast['metrics']}:
+                    # 按指标排序时该指标必须同时进 SELECT，否则 ORDER BY 会引用
+                    # 一个未投影的指标编码，SQL 与发布公式对不上（METRIC_FORMULA_STALE）
+                    ast['metrics'].append({'name': key,
+                                           'alias': catalog['metrics'][key].get('metric_name') or key,
+                                           'time_anchor': None})
+                    repairs.append({'type': 'METRIC_FROM_SORT_SLOT',
+                                    'source': 'STRUCTURED_EXTRACTION', 'metric': key})
                 ast['sort']={'field':key,'direction':direction,'field_type':'metric' if key in catalog['metrics'] else 'field' if '.' in key else 'dimension'}
         if extraction[source] and any(not isinstance(r,dict) or type(r.get('index')) is not int or not 0<=r['index']<len(extraction[source]) for r in rows):
             ast['ambiguity'].append(issue(source, extraction[source], '绑定输出添加了结构化提取中不存在的参数'))
