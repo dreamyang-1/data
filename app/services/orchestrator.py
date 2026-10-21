@@ -4474,6 +4474,10 @@ class DataAnalysisOrchestrator:
             if pure_computation:
                 # 复合指标拆出的纯计算任务：不进查询链路，基于前序任务结果回复
                 child._dag_pure_computation = True
+            if task.primary_intent == PrimaryIntent.METRIC_DEFINITION:
+                # 解释口径子任务与单一解释口径问题同合同：意图识别后直接读
+                # 语义文件作答，不进 ASL/数据查询链路（冻结的口径直答分支）
+                child._dag_definition_direct = True
             if task.task_id in pure_computation_dependency_ids:
                 # 纯计算任务的依赖任务：单值结果也要落盘，供计算任务取分母
                 child._dag_keep_result_dataset = True
@@ -8094,7 +8098,10 @@ class DataAnalysisOrchestrator:
                 sheet_count=file_inspection.get("sheet_count"),
             )
 
-        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
+        if self._is_definition_direct(request, chat):
+            # DAG 拆出的解释口径子任务其规划意图可能被后续意图规范化改写，
+            # 这里按任务卡口径强制回落到口径直答，防止进入数据查询链路。
+            request.primary_intent = PrimaryIntent.METRIC_DEFINITION
             response = await self._metadata_answer(request, identity, chat.semantic_model_id)
             return await self._finish_terminal(request, response)
 
@@ -14715,6 +14722,17 @@ class DataAnalysisOrchestrator:
         return CurrentAuthorizedCatalog(
             self.settings.context_catalog_root
         ).catalog_overview(semantic_model_id)
+
+    @staticmethod
+    def _is_definition_direct(request: CanonicalAnalysisRequest, chat: ChatRequest) -> bool:
+        """解释口径直答判定：整请求判定为口径解释，或 DAG 任务卡口径为
+        解释口径（task.primary_intent == METRIC_DEFINITION 打上的
+        _dag_definition_direct 标记）。后者即使后续意图规范化把意图改写成
+        查询，也按冻结的口径直答分支处理，不进数据查询链路。"""
+        return (
+            request.primary_intent == PrimaryIntent.METRIC_DEFINITION
+            or getattr(chat, "_dag_definition_direct", False)
+        )
 
     async def _metadata_answer(self, request: CanonicalAnalysisRequest, identity: TrustedIdentity, semantic_model_id: int | None) -> AgentResponse:
         if request.primary_intent == PrimaryIntent.SEMANTIC_CATALOG_QUERY:

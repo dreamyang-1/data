@@ -95,6 +95,53 @@ async def test_definition_boundary_cannot_be_expanded_or_overridden_by_query_ext
     assert result.tasks[0].structured['指标'] == [{'name': '平均每单销售金额'}]
 
 
+@pytest.mark.asyncio
+async def test_mixed_dag_marks_definition_subtask_for_direct_answer():
+    """混合计划：解释口径子任务必须打直答标记，查询子任务不打（Q1回归）。"""
+    from test_workflow import make_orchestrator
+    from app.domain.models import AtomicTask, ChatRequest, TaskPlan
+    from app.planning.compound_question import CompoundQuestionRouter
+    from app.services.progress import progress_scope
+    agent = make_orchestrator()
+    agent.task_planner = CompoundQuestionRouter(agent.settings)
+    agent.analysis_synthesizer = SimpleNamespace(synthesize_combined=AsyncMock())
+    flags = {}
+
+    async def respond(child, identity):
+        flags[child.question] = getattr(child, '_dag_definition_direct', False)
+        return definition_response(request(), [found('销售额')])
+
+    agent._handle = AsyncMock(side_effect=respond)
+    tasks = [
+        AtomicTask(task_id='task-1', question='2025年销售额排名前10的经销商有哪些',
+            primary_intent=PrimaryIntent.METRIC_QUERY, extraction={'是否查询数据库': '是'}),
+        AtomicTask(task_id='task-2', question='解释销售额排名中并列名次的处理规则',
+            primary_intent=PrimaryIntent.METRIC_DEFINITION, extraction={'是否查询数据库': '否'}),
+    ]
+    chat = ChatRequest(semantic_model_id=130, application_id='app', conversation_id='mixed-dag',
+        message_id='m1', question='2025年销售额排名前10的经销商有哪些？并列名次如何处理？')
+    events = []
+    with progress_scope(events.append):
+        await agent._handle_task_plan(chat, TrustedIdentity(tenant_id='t', user_id='u'),
+            TaskPlan(planner='DETERMINISTIC_RULE', tasks=tasks))
+    assert flags.get('解释销售额排名中并列名次的处理规则') is True
+    assert flags.get('2025年销售额排名前10的经销商有哪些') is False
+
+
+def test_definition_direct_flag_overrides_rewritten_intent():
+    """意图规范化把解释口径子任务意图改写成查询时，直答标记仍生效。"""
+    from app.domain.models import ChatRequest
+    from app.services.orchestrator import DataAnalysisOrchestrator
+    chat = ChatRequest(semantic_model_id=130, application_id='app', conversation_id='c',
+        message_id='m', question='解释销售额排名中并列名次的处理规则')
+    chat._dag_definition_direct = True
+    rewritten = request().model_copy(update={'primary_intent': PrimaryIntent.METRIC_QUERY, 'metrics': []})
+    assert DataAnalysisOrchestrator._is_definition_direct(rewritten, chat) is True
+    plain = ChatRequest(semantic_model_id=130, application_id='app', conversation_id='c',
+        message_id='m', question='x')
+    assert DataAnalysisOrchestrator._is_definition_direct(rewritten, plain) is False
+
+
 def test_stream_definition_skips_fixed_query_stages_and_models(monkeypatch):
     from test_api import TestClient, build_test_app
     app = build_test_app()
