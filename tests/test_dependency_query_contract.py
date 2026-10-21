@@ -11,9 +11,9 @@ from app.adapters.base import AdapterError
 from app.adapters.http import HttpDataRetrievalAdapter
 from app.config import Settings
 from app.domain.models import (
-    AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest,
-    DependencyConstraint, EvidenceItem, PlannerExtraction, PrimaryIntent,
-    ReliabilityReport, TaskPlan, TrustedIdentity,
+    AgentResponse, AnalysisOperator, AtomicTask, CanonicalAnalysisRequest,
+    ChatRequest, DependencyConstraint, EvidenceItem, PlannerExtraction,
+    PrimaryIntent, ReliabilityReport, TaskPlan, TrustedIdentity,
 )
 from app.planning import CompoundQuestionRouter
 from app.planning.dependency_contract import (
@@ -153,6 +153,49 @@ def test_bound_child_shape_does_not_inherit_parent_ranking(owner, field):
     assert request.entity == owner and request.fields == [field]
     assert not request.metrics and not request.dimensions and request.ranking_limit is None
     assert request.filters == [{"entity": "医院", "field": "医院名称", "operator": "=", "value": "测试医院"}]
+
+
+def test_bound_child_row_cap_is_not_a_ranking_intent():
+    """裸行数上限（限制=1000、无排序）不得进入 ranking_limit 触发契约排序要求。
+
+    回归：依赖明细子任务的契约曾把「限制: 1000」当排名意图，要求 canonical
+    sorting，模型草稿漏写排序时被 ASL_SORT_INVALID 拦成 SAFE_FALLBACK。
+    行数上限仍应经抽取「限制」通道进入可执行 ASL，不受本修复影响。
+    """
+    request = CanonicalAnalysisRequest(conversation_id="test", tenant_id="t", user_id="u",
+        original_question="依赖查询", primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="经销商")
+    extraction = PlannerExtraction(intent=PrimaryIntent.DETAIL_QUERY, structured={
+        "实体": ["销售订单", "商品", "经销商"],
+        "指标": [{"name": "含税销售总额"}, {"name": "销售总数量"}],
+        "维度": ["经销商", "商品"],
+        "展示字段": [{"entity": "经销商", "field": "经销商名称"},
+                    {"entity": "商品", "field": "商品名称"}],
+        "过滤条件": [], "排序": [], "限制": 1000})
+    token = _INTERNAL_ASSUMPTIONS.set(("DAG_BOUND_STRUCTURED_QUERY",))
+    try:
+        DataAnalysisOrchestrator._apply_dag_structured_query_shape(request, extraction)
+    finally:
+        _INTERNAL_ASSUMPTIONS.reset(token)
+    assert request.ranking_limit is None
+    assert not request.operators
+
+
+def test_bound_child_ranked_task_keeps_topn_limit():
+    request = CanonicalAnalysisRequest(conversation_id="test", tenant_id="t", user_id="u",
+        original_question="依赖查询", primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="经销商")
+    extraction = PlannerExtraction(intent=PrimaryIntent.METRIC_QUERY, structured={
+        "实体": ["销售订单", "经销商"], "指标": [{"name": "含税销售总额"}],
+        "维度": ["经销商"], "展示字段": [{"entity": "经销商", "field": "经销商名称"}],
+        "过滤条件": [], "排序": [{"field": "含税销售总额", "order": "desc"}], "限制": 3})
+    token = _INTERNAL_ASSUMPTIONS.set(("DAG_BOUND_STRUCTURED_QUERY",))
+    try:
+        DataAnalysisOrchestrator._apply_dag_structured_query_shape(request, extraction)
+    finally:
+        _INTERNAL_ASSUMPTIONS.reset(token)
+    assert request.ranking_limit == 3
+    assert AnalysisOperator.SORT in request.operators
 
 
 @pytest.mark.asyncio

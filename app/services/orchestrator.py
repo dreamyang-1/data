@@ -3571,11 +3571,16 @@ class DataAnalysisOrchestrator:
             },
         }
         chart_specs = []
+        display_start = str(binding.get("display_window_start") or "").strip()
         for item in facts.get("chart_specs") or []:
             try:
-                chart_specs.append(ChartSpec.model_validate(item))
+                spec = ChartSpec.model_validate(item)
             except (TypeError, ValueError):
                 continue
+            if display_start and spec.x_field and spec.data:
+                # 图表只画用户声明的展示窗口：环比基期月参与计算不出现在图里
+                spec = self._clip_chart_to_display_window(spec, display_start)
+            chart_specs.append(spec)
         return AgentResponse(
             request_id=uuid4(), conversation_id=chat.conversation_id,
             status="COMPLETED", intent=request.primary_intent,
@@ -3597,6 +3602,30 @@ class DataAnalysisOrchestrator:
                 },
             )],
         )
+
+    @staticmethod
+    def _clip_chart_to_display_window(spec: "ChartSpec", display_start: str) -> "ChartSpec":
+        """折线/柱状图数据点裁剪到展示窗口起点及之后（按月桶序号比较）。
+
+        无法解析为月桶的 x 值保持原样，不做猜测性过滤。
+        """
+        from app.analysis.chain_tools.temporal_window import month_bucket_index
+        start_index = month_bucket_index(display_start)
+        if start_index is None:
+            return spec
+        kept = []
+        for point in spec.data:
+            x_value = point.get(spec.x_field) if isinstance(point, dict) else None
+            point_index = month_bucket_index(str(x_value or ""))
+            if point_index is None or point_index >= start_index:
+                kept.append(point)
+        if len(kept) == len(spec.data):
+            return spec
+        return spec.model_copy(update={
+            "data": kept,
+            "point_count": len(kept),
+            "data_truncated": bool(spec.data_truncated or len(kept) < len(spec.data)),
+        })
 
     @staticmethod
     def _analysis_fmt(value: Any, *, signed: bool = False) -> str:
@@ -12022,7 +12051,15 @@ class DataAnalysisOrchestrator:
                 value = value[0]
             request.filters.append({"field": item["field"], "operator": op, "value": value,
                                    **({"entity": item["entity"]} if item.get("entity") else {})})
-        request.ranking_limit = structured.get("限制")
+        # 「限制」在规划抽取里承担两种角色：排名任务的 TopN 容量（伴随「排序」
+        # 槽位）与明细/计算任务的普通行数上限。只有伴随「排序」的限制才能进入
+        # ranking_limit——裸的 1000 行上限不是排名意图，把它当排名会让契约要求
+        # canonical sorting，任何漏写排序的依赖明细子任务都会被
+        # ASL_SORT_INVALID 拦成 SAFE_FALLBACK。行数上限本身仍经抽取「限制」
+        # 通道进入可执行 ASL（structured_binding 直接读取该槽位），不受影响。
+        request.ranking_limit = (
+            structured.get("限制") if structured.get("排序") else None
+        )
         request.operators = []
         request.assumptions = [item for item in request.assumptions if not item.startswith("SORT_DIRECTION=")]
         if structured.get("排序"):
