@@ -1566,19 +1566,22 @@ class HttpDataRetrievalAdapter:
             for definition in metric_definitions
         ]
         intent_asl_contract: dict[str, Any] | None = build_intent_asl_contract(request)
+        contract_notices: list[dict[str, Any]] = []
         contract_definition_errors = validate_intent_asl_contract_definition(
             intent_asl_contract
         )
         if contract_definition_errors:
-            if request.turn_admission is not None:
-                raise AdapterError(
-                    "INTENT_ASL_CONTRACT_INVALID",
-                    "canonical request produced an invalid Intent-ASL contract",
-                    details={"errors": contract_definition_errors},
-                )
-            # Direct adapter callers and older internal tests may intentionally
-            # provide a partial request.  They retain the legacy path; admitted
-            # user turns always have to satisfy the full contract above.
+            # 2026-10-21 用户明确要求：结构校验尽可能宽松，让任务正常往下执行，
+            # 结构性缺口只记录不拦停。契约定义不完整时退回旧路径（contract=None），
+            # 数据正确性由下游既有校验（向量绑定、依赖范围、任务输出校验）兜底。
+            logger.warning(
+                "Intent-ASL contract definition errors tolerated: %s",
+                contract_definition_errors,
+            )
+            contract_notices.append({
+                "type": "INTENT_ASL_CONTRACT_TOLERATED",
+                "warnings": contract_definition_errors,
+            })
             intent_asl_contract = None
         contract_completeness_errors = (
             validate_intent_asl_contract_completeness(
@@ -1589,11 +1592,15 @@ class HttpDataRetrievalAdapter:
             else []
         )
         if contract_completeness_errors:
-            raise AdapterError(
-                "INTENT_ASL_CONTRACT_INCOMPLETE",
-                "Intent-ASL contract lost one or more explicit current-turn requirements",
-                details={"errors": contract_completeness_errors},
+            # 同上：显式槽位丢失只记录不拦停，由下游校验兜底数据正确性。
+            logger.warning(
+                "Intent-ASL contract completeness errors tolerated: %s",
+                contract_completeness_errors,
             )
+            contract_notices.append({
+                "type": "INTENT_ASL_CONTRACT_TOLERATED",
+                "warnings": contract_completeness_errors,
+            })
 
         semantic_query = request.rewritten_question or request.original_question
         # Keep equivalent temporal grouping word orders away from the semantic
@@ -2253,6 +2260,9 @@ class HttpDataRetrievalAdapter:
                         "type": "ANALYSIS_RESULT_CONTRACT_WARNING",
                         "warnings": ["解析结果未确认扩展报告的数据条件；继续执行已绑定的查询，并说明分析范围。"],
                     })
+        if contract_notices:
+            # 宽松放行的结构性缺口随修复回执透出，便于排查但不拦停任务。
+            asl_repairs.extend(contract_notices)
         self._remove_unrequested_metric_window_time(asl, request)
         self._repair_model81_trend_time(asl, request, semantic_model_id)
         self._bind_canonical_time_range(
@@ -2678,7 +2688,9 @@ class HttpDataRetrievalAdapter:
         applied_metric_filters = [
             item for item in applied_metric_filters if isinstance(item, dict)
         ]
-        sql = self._apply_current_metric_formulas(sql, metric_definitions)
+        sql = self._apply_current_metric_formulas(
+            sql, self._active_metric_definitions(asl, metric_definitions)
+        )
         sql = self._apply_shared_region_hospital_coverage_policy(
             sql,
             asl=asl,
@@ -2989,6 +3001,28 @@ class HttpDataRetrievalAdapter:
             raise AdapterError('ASL_SCOPE_INVALID', 'Resolved domains exceed backend authorization')
         if any(not isinstance(m, dict) or m.get('semantic_model_id') != scope.semantic_model_id or not scope.contains_domain(m.get('business_domain_id')) for m in evidence['selected_metrics']):
             raise AdapterError('ASL_SCOPE_INVALID', 'Selected metric exceeds backend authorization')
+
+    @staticmethod
+    def _active_metric_definitions(
+        asl: dict[str, Any], metric_definitions: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Only metrics the ASL actually projects are subject to formula checks.
+
+        Row-level detail clears ``asl["metrics"]`` while the request still
+        carries the extracted metric list, so validating every requested
+        metric would report METRIC_FORMULA_STALE for a column the SQL never
+        had to produce.
+        """
+        projected = {
+            str(item.get("name"))
+            for item in asl.get("metrics") or []
+            if isinstance(item, dict) and item.get("name")
+        }
+        return [
+            definition
+            for definition in metric_definitions
+            if str(definition.get("metric_id") or "").rsplit(":", 1)[-1] in projected
+        ]
 
     @classmethod
     def _apply_current_metric_formulas(
@@ -3527,11 +3561,15 @@ class HttpDataRetrievalAdapter:
             if not direct and not resolved:
                 unresolved.append(mention)
         if unresolved:
-            raise AdapterError(
-                "ASL_ENTITY_MENTION_UNRESOLVED",
-                "ASL did not provide source-backed bindings for semantic entity mentions",
-                details={"unresolved_mentions": unresolved},
+            # 2026-10-21 用户明确要求：结构校验尽可能宽松，未绑定的语义提及
+            # 只记录不拦停（提及不会进入 ASL 过滤，不触碰向量标准化底线）。
+            logger.warning(
+                "Unresolved semantic entity mentions tolerated: %s", unresolved
             )
+            repairs.append({
+                "type": "UNRESOLVED_ENTITY_MENTION_SKIPPED",
+                "mentions": unresolved,
+            })
 
     @classmethod
     def _validate_no_synthetic_product_filter(

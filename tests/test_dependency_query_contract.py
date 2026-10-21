@@ -130,6 +130,22 @@ def test_ordering_dependency_is_not_a_business_object_filter():
     assert not DataAnalysisOrchestrator._dag_references_dependency_result("查询上海地区的区域全部医院总数")
 
 
+def test_unresolved_entity_mentions_are_tolerated_not_fatal():
+    # 2026-10-21 用户明确要求：结构校验宽松放行，未绑定提及只记录不拦停。
+    request = CanonicalAnalysisRequest(
+        conversation_id="test", tenant_id="t", user_id="u",
+        original_question="查产品", primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=130,
+        semantic_entity_mentions=["该医院近12个月按业务日期（月）分组"])
+    repairs: list = []
+    HttpDataRetrievalAdapter._validate_semantic_entity_mentions(
+        {"filters": []}, request, repairs)
+    assert repairs == [{
+        "type": "UNRESOLVED_ENTITY_MENTION_SKIPPED",
+        "mentions": ["该医院近12个月按业务日期（月）分组"],
+    }]
+
+
 @pytest.mark.parametrize("owner,field", [("商品", "商品名称"), ("医院", "医院名称"),
                                         ("经销商", "经销商名称"), ("销售公司", "公司名称")])
 def test_bound_child_shape_does_not_inherit_parent_ranking(owner, field):
