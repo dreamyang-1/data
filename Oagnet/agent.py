@@ -8237,6 +8237,54 @@ def _apply_intent_asl_contract(
     return json.dumps(ast, ensure_ascii=False), repairs
 
 
+def _ensure_sort_metric_projection(ast: dict, knowledge: dict) -> bool:
+    """按指标排序时保证该指标同时被投影。
+
+    ASL 可能只写 ``sort.field_type='metric'`` 而没有把指标放进 metrics
+    （例如问题式生成按"降序排列"补了排序却漏了度量），SQL 会生成
+    ORDER BY 指标编码却没有任何聚合投影，与已发布公式对不上
+    （METRIC_FORMULA_STALE）。只在该指标确实存在于当前召回目录时补齐，
+    目录里找不到就保持原状交给既有校验。
+    """
+    sort = ast.get("sort")
+    if not isinstance(sort, dict) or str(sort.get("field_type") or "") != "metric":
+        return False
+    field = str(sort.get("field") or "").strip()
+    if not field:
+        return False
+    metrics = ast.get("metrics")
+    if not isinstance(metrics, list):
+        metrics = []
+        ast["metrics"] = metrics
+    if any(isinstance(item, dict) and str(item.get("name") or "") == field
+           for item in metrics):
+        return False
+    metadata: dict = {}
+    for item in knowledge.get("metrics") or []:
+        candidate = getattr(item, "metadata", None)
+        if not isinstance(candidate, dict) and isinstance(item, dict):
+            candidate = item
+        if isinstance(candidate, dict) and str(candidate.get("metric_code") or "") == field:
+            metadata = candidate
+            break
+    if not metadata:
+        codes = []
+        for item in knowledge.get("metrics") or []:
+            meta = getattr(item, "metadata", None)
+            if not isinstance(meta, dict) and isinstance(item, dict):
+                meta = item
+            if isinstance(meta, dict):
+                codes.append(meta.get("metric_code"))
+        logger.info('sort metric projection missing catalog metric: field=%r catalog=%r', field, codes)
+        return False
+    metrics.append({
+        "name": field,
+        "alias": str(metadata.get("metric_name") or field),
+        "time_anchor": None,
+    })
+    return True
+
+
 def _validate_intent_asl_contract(
     content: str,
     contract: dict | None,
@@ -9250,6 +9298,9 @@ def _recover_question_asl(
         ast = json.loads(result)
         if ast.get('ambiguity'):
             return None
+        # 问题式生成可能只补了排序却漏了被排序的度量，SQL 会引用未投影
+        # 的指标编码；在契约校验前按已召回目录补齐指标投影。
+        _ensure_sort_metric_projection(ast, knowledge)
         for projection in (intent_asl_contract or {}).get('required_projections') or []:
             _repair_contract_grouping(ast,str(projection),knowledge,
                 query_object=intent_asl_contract.get('query_object'),prefer_display=True)
@@ -9402,6 +9453,9 @@ def main(
                     mode = "DISTINCT" if dedup in {"是", "true", "1", "yes", "y", "distinct"} else ""
                 if mode == "DISTINCT":
                     ast["projection_mode"] = "DISTINCT"
+            if not ast.get("ambiguity") and _ensure_sort_metric_projection(ast, knowledge):
+                repairs.append({'type': 'METRIC_FROM_SORT_FIELD',
+                                'source': 'RECALLED_SEMANTIC_METADATA'})
         result = json.dumps(ast, ensure_ascii=False)
         if not ast.get("ambiguity"):
             try:
@@ -9488,6 +9542,14 @@ def main(
     # Keep existing analysis envelopes, but never invent missing measures or
     # dimensions to satisfy them. The structured planner owns those slots.
     final_ast = json.loads(result)
+    logger.info(
+        'ASL summary: metrics=%r sort=%r dimensions=%r filters=%r ambiguity=%d',
+        [item.get('name') for item in final_ast.get('metrics') or [] if isinstance(item, dict)],
+        final_ast.get('sort'),
+        [item.get('name') for item in final_ast.get('dimensions') or [] if isinstance(item, dict)],
+        [item.get('field') for item in final_ast.get('filters') or [] if isinstance(item, dict)],
+        len(final_ast.get('ambiguity') or []),
+    )
     if not final_ast.get('ambiguity'):
         if analysis_operator is not None and result_contract is not None:
             final_ast['analysis_contract'] = {'contract_version':'1.0', 'producer':'OAGNET',

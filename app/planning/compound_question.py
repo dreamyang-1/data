@@ -418,8 +418,12 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
             lambda match:'' if (match[1] or match[2]) in predecessor_numbers else match[0],numeric_question)
         for condition in sorted(registered_conditions,key=len,reverse=True):
             numeric_question = re.sub(re.escape(condition.casefold()) + r'(?![\d.])', '', numeric_question)
-        if not set(re.findall(r"\d+(?:\.\d+)?", numeric_question)).issubset(source_numbers):
-            raise TaskPlanningError("子任务包含原问题中不存在的数字或日期")
+        task_numbers = set(re.findall(r"\d+(?:\.\d+)?", numeric_question))
+        if not task_numbers.issubset(source_numbers):
+            raise TaskPlanningError(
+                "子任务包含原问题中不存在的数字或日期"
+                f"：{sorted(task_numbers - source_numbers)}"
+            )
         if not {value for value in metric_terms if value in compact}.issubset(source_metrics):
             raise TaskPlanningError("子任务包含原问题中不存在的指标")
         if not {value for value in temporal_terms if value in compact}.issubset(source_temporal):

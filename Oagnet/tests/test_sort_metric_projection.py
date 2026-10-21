@@ -64,6 +64,40 @@ def test_sort_by_metric_does_not_duplicate_declared_metric():
     assert not any(r['type'] == 'METRIC_FROM_SORT_SLOT' for r in repairs)
 
 
+def test_question_generated_sort_metric_is_projected():
+    from agent import _ensure_sort_metric_projection
+    _, knowledge = sort_fixture()
+    ast = {'metrics': [], 'sort': {'field': 'sales_total_including_tax',
+                                   'direction': 'DESC', 'field_type': 'metric'}}
+    assert _ensure_sort_metric_projection(ast, knowledge) is True
+    assert ast['metrics'] == [{'name': 'sales_total_including_tax',
+                               'alias': '含税销售总额', 'time_anchor': None}]
+
+
+def test_question_generated_sort_metric_is_not_duplicated():
+    from agent import _ensure_sort_metric_projection
+    _, knowledge = sort_fixture()
+    ast = {'metrics': [{'name': 'sales_total_including_tax', 'alias': '含税销售总额',
+                        'time_anchor': None}],
+           'sort': {'field': 'sales_total_including_tax', 'field_type': 'metric',
+                    'direction': 'DESC'}}
+    assert _ensure_sort_metric_projection(ast, knowledge) is False
+    assert len(ast['metrics']) == 1
+
+
+def test_unknown_or_physical_sort_is_left_untouched():
+    from agent import _ensure_sort_metric_projection
+    _, knowledge = sort_fixture()
+    unknown = {'metrics': [], 'sort': {'field': 'not_in_catalog',
+                                       'field_type': 'metric', 'direction': 'DESC'}}
+    assert _ensure_sort_metric_projection(unknown, knowledge) is False
+    assert unknown['metrics'] == []
+    physical = {'metrics': [], 'sort': {'field': 'product.product_name',
+                                        'field_type': 'field', 'direction': 'DESC'}}
+    assert _ensure_sort_metric_projection(physical, knowledge) is False
+    assert physical['metrics'] == []
+
+
 def test_sort_by_physical_field_does_not_add_metric():
     extraction, knowledge = sort_fixture(
         {'name': '商品名称', 'order': 'DESC'})
