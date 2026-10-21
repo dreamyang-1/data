@@ -40,6 +40,7 @@ _NO_DATA_INTENTS = {
 _METADATA_INTENTS = {
     PrimaryIntent.METRIC_DEFINITION,
     PrimaryIntent.DATA_LINEAGE,
+    PrimaryIntent.SEMANTIC_CATALOG_QUERY,
 }
 
 _PARAMETER_PATTERN = re.compile(r"^(.+?)（(.+?)）$")

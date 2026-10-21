@@ -363,6 +363,79 @@ class CurrentAuthorizedCatalog:
             semantic_model_id, current.resolved_business_domain_ids
         )
 
+    def catalog_overview(self, semantic_model_id: int) -> dict:
+        """按业务域汇总语义模型已登记的指标与维度（模型级只读快照）。
+
+        与 capture_catalog 同源：指标取自 semantic_model_indicator、维度取自
+        semantic_model_dimension，维度为跨业务域共享，按 dim_code 去重。
+        仅用于展示清单，不产生任何可执行 ASL 或绑定值。
+        """
+        snapshot = self._modules["catalog_release"].capture_catalog(
+            semantic_model_id, ()
+        )
+        model_name = ""
+        domains: dict[int, dict[str, Any]] = {}
+        shared_metrics: list[dict[str, Any]] = []
+        dimensions_by_code: dict[str, dict[str, Any]] = {}
+
+        def metric_item(metric: dict[str, Any]) -> dict[str, Any] | None:
+            name = str(metric.get("metric_name") or "").strip()
+            if not name:
+                return None
+            description = ""
+            definition = metric.get("business_definition")
+            if isinstance(definition, dict):
+                description = str(definition.get("description") or "").strip()
+            return {"name": name, "description": description}
+
+        for document in snapshot.get("documents") or []:
+            if not model_name:
+                model_name = str(
+                    (document.get("semantic_model") or {}).get("name") or ""
+                ).strip()
+            domain = document.get("business_domain") or {}
+            metrics = [
+                item
+                for item in (
+                    metric_item(metric)
+                    for metric in document.get("metrics") or []
+                    if isinstance(metric, dict)
+                )
+                if item is not None
+            ]
+            domain_id = domain.get("id")
+            if domain_id is None:
+                shared_metrics = metrics
+            else:
+                domains[domain_id] = {
+                    "id": domain_id,
+                    "name": str(domain.get("name") or "").strip(),
+                    "metrics": metrics,
+                }
+            for dimension in document.get("dimensions") or []:
+                if not isinstance(dimension, dict):
+                    continue
+                name = str(dimension.get("dim_name") or "").strip()
+                if not name:
+                    continue
+                code = str(dimension.get("dim_code") or "").strip()
+                definition = dimension.get("business_definition")
+                description = ""
+                if isinstance(definition, dict):
+                    description = str(definition.get("description") or "").strip()
+                dimensions_by_code.setdefault(
+                    code or name,
+                    {"name": name, "description": description},
+                )
+        return {
+            "model_name": model_name,
+            "domains": [
+                domains[key] for key in sorted(domains, key=lambda value: value)
+            ],
+            "shared_metrics": shared_metrics,
+            "dimensions": list(dimensions_by_code.values()),
+        }
+
 
 class _CurrentCatalogSnapshotProvider:
     def __init__(

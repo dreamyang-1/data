@@ -141,7 +141,10 @@ from minio_followup_store import (
 )
 
 NO_DATA_INTENTS = {PrimaryIntent.CHAT, PrimaryIntent.CAPABILITY_HELP, PrimaryIntent.OUT_OF_SCOPE}
-METADATA_INTENTS = {PrimaryIntent.METRIC_DEFINITION, PrimaryIntent.DATA_LINEAGE}
+METADATA_INTENTS = {
+    PrimaryIntent.METRIC_DEFINITION, PrimaryIntent.DATA_LINEAGE,
+    PrimaryIntent.SEMANTIC_CATALOG_QUERY,
+}
 ANALYSIS_INTENTS = {
     PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
     PrimaryIntent.COMPOSITION_ANALYSIS, PrimaryIntent.ANOMALY_ANALYSIS,
@@ -7942,7 +7945,7 @@ class DataAnalysisOrchestrator:
         # rendering intent diagnostics.  The former late-only recovery allowed
         # the UI to announce stale dimensions/clarification even when the same
         # turn subsequently obtained a SQL-verified canonical semantic frame.
-        if request.primary_intent != PrimaryIntent.METRIC_DEFINITION and (
+        if request.primary_intent not in (PrimaryIntent.METRIC_DEFINITION, PrimaryIntent.SEMANTIC_CATALOG_QUERY) and (
             "metric" in request.missing_slots
             or any(metric.metric_id is None for metric in request.metrics)
         ):
@@ -7952,7 +7955,7 @@ class DataAnalysisOrchestrator:
         # slots separately so raw LLM/rule candidates can never be presented as
         # if they were current vector-catalog facts. This is display-only and
         # intentionally cannot mutate the executable request.
-        if self.question_rewriter is not None and not nondata_direct and request.primary_intent != PrimaryIntent.METRIC_DEFINITION:
+        if self.question_rewriter is not None and not nondata_direct and request.primary_intent not in (PrimaryIntent.METRIC_DEFINITION, PrimaryIntent.SEMANTIC_CATALOG_QUERY):
             await self.question_rewriter.ground_display_slots(request)
 
         if not nondata_direct:
@@ -7978,7 +7981,7 @@ class DataAnalysisOrchestrator:
                 "CHAT"
                 if request.primary_intent == PrimaryIntent.CHAT
                 else "METADATA"
-                if request.primary_intent == PrimaryIntent.METRIC_DEFINITION
+                if request.primary_intent in (PrimaryIntent.METRIC_DEFINITION, PrimaryIntent.SEMANTIC_CATALOG_QUERY)
                 else "CLARIFICATION"
                 if request.missing_slots
                 else "ANALYTIC"
@@ -8002,6 +8005,14 @@ class DataAnalysisOrchestrator:
 
         if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
             response = await self._metadata_answer(request, identity, chat.semantic_model_id)
+            return await self._finish_terminal(request, response)
+
+        if request.primary_intent == PrimaryIntent.SEMANTIC_CATALOG_QUERY:
+            # 解释口径清单类问题：意图识别后直接读语义模型登记文件作答，
+            # 不进入澄清与任务规划及以下固有步骤。
+            response = await self._catalog_overview_answer(
+                request, chat.semantic_model_id
+            )
             return await self._finish_terminal(request, response)
 
         if (chat.use_longterm_memory and self.memories is not None
@@ -13033,7 +13044,9 @@ class DataAnalysisOrchestrator:
         completes lets that second clarification advance with the existing CAS
         version instead of trying to recreate state from version zero.
         """
-        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
+        if request.primary_intent in (
+            PrimaryIntent.METRIC_DEFINITION, PrimaryIntent.SEMANTIC_CATALOG_QUERY
+        ):
             response.analysis_plan = None
         elif response.analysis_plan is None:
             response.analysis_plan = self.analysis_planner.build(request)
@@ -14570,7 +14583,36 @@ class DataAnalysisOrchestrator:
             )
         return steps
 
+    async def _catalog_overview_answer(
+        self, request: CanonicalAnalysisRequest, semantic_model_id: int | None
+    ) -> AgentResponse:
+        """解释口径清单类问题的直接回答：只读语义模型登记文件，不执行查询。"""
+        from app.services.catalog_overview_answer import catalog_overview_response
+        if semantic_model_id is None:
+            return self._fallback(request, "当前会话未绑定语义模型，无法提供已登记的指标与维度清单。")
+        try:
+            overview = await asyncio.to_thread(
+                self._catalog_overview_snapshot, semantic_model_id
+            )
+        except AdapterError as exc:
+            return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
+        except Exception as exc:
+            logger.warning(
+                "semantic catalog overview failed; falling back request_id=%s error=%s",
+                request.request_id, exc,
+            )
+            return self._fallback(request, "语义模型登记文件暂时无法读取，请稍后重试。")
+        return catalog_overview_response(request, overview)
+
+    def _catalog_overview_snapshot(self, semantic_model_id: int) -> dict:
+        from app.semantic_v2.current_catalog import CurrentAuthorizedCatalog
+        return CurrentAuthorizedCatalog(
+            self.settings.context_catalog_root
+        ).catalog_overview(semantic_model_id)
+
     async def _metadata_answer(self, request: CanonicalAnalysisRequest, identity: TrustedIdentity, semantic_model_id: int | None) -> AgentResponse:
+        if request.primary_intent == PrimaryIntent.SEMANTIC_CATALOG_QUERY:
+            return await self._catalog_overview_answer(request, semantic_model_id)
         lookup = getattr(self.adapters.semantic, 'lookup_definitions', None)
         if request.primary_intent == PrimaryIntent.METRIC_DEFINITION and callable(lookup):
             from app.services.metric_definition_answer import definition_response
