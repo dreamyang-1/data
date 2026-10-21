@@ -4173,6 +4173,18 @@ class DataAnalysisOrchestrator:
         chat._task_table = task_table
         chat._task_table_message_id = chat.message_id
 
+        def _task_display_question(task: AtomicTask) -> str:
+            # 执行链路打标的任务名与任务表"名称"列同源，保证与
+            # 任务拆分与规划节点展示的任务名一致；表里没有该任务
+            # 或名称为空时回退任务问题文本
+            for row in task_table:
+                if row.get("任务") == task.task_id:
+                    name = str(row.get("名称") or "").strip()
+                    if name:
+                        return name
+                    break
+            return task.question
+
         async def _emit_task_status(task_id: str, status_text: str) -> None:
             # 直接原地改行再整体快照下发：并发任务同时刷状态时
             # 不会像整表替换那样互相覆盖
@@ -4450,7 +4462,7 @@ class DataAnalysisOrchestrator:
                     task_id=task.task_id,
                     task_index=task_index_by_id[task.task_id],
                     task_count=len(plan.tasks),
-                    task_question=task.question,
+                    task_question=_task_display_question(task),
                     is_child_task=True,
                 ):
                     if getattr(child, "_dag_pure_computation", False):
@@ -4570,7 +4582,7 @@ class DataAnalysisOrchestrator:
             with task_progress_scope(
                 parent_message_id=root_message_id, task_id=task.task_id,
                 task_index=task_index_by_id[task.task_id], task_count=len(plan.tasks),
-                task_question=task.question, is_child_task=True,
+                task_question=_task_display_question(task), is_child_task=True,
             ):
                 await emit_progress(
                     "METADATA_RETRIEVAL" if task.primary_intent == PrimaryIntent.METRIC_DEFINITION else "DATA_RETRIEVAL",
