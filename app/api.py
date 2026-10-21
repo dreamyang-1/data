@@ -1219,6 +1219,10 @@ async def chat_stream(
                         and event.get("stage") == "INTENT_RECOGNITION"
                         and event.get("progress_phase") != "V2_RESOLVED_INTENT_CONTEXT_READY"
                     ):
+                        if not str(event.get("message") or "").strip():
+                            # 空的意图完结事件不转挂规划节点：解释口径等
+                            # 直答轮不再出现空的“任务拆分与规划”标题
+                            continue
                         if _thinking_section(latest_progress_stage) not in {"intent", "planning"}:
                             continue
                         # Keep useful parameter/child-question summaries, under

@@ -145,6 +145,8 @@ METADATA_INTENTS = {
     PrimaryIntent.METRIC_DEFINITION, PrimaryIntent.DATA_LINEAGE,
     PrimaryIntent.SEMANTIC_CATALOG_QUERY,
 }
+# 典型口径询问句式（“什么是X”）：先跳过任务拆分，由意图识别判定是否口径解释类
+DEFINITION_QUESTION_PATTERN = re.compile(r"^\s*(什么是|啥是|什么叫|请问什么是)")
 ANALYSIS_INTENTS = {
     PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
     PrimaryIntent.COMPOSITION_ANALYSIS, PrimaryIntent.ANOMALY_ANALYSIS,
@@ -1549,6 +1551,18 @@ class DataAnalysisOrchestrator:
                         chat.conversation_id,
                     )
                 response = await self._handle(chat, identity)
+            elif (
+                (
+                    raw_request.primary_intent in METADATA_INTENTS
+                    or DEFINITION_QUESTION_PATTERN.match(chat.question)
+                )
+                and confirmed_pending_choice is None
+                and not chat._is_regeneration_execution
+                and not chat._completed_question_execution
+            ):
+                # 口径解释/血缘/目录清单类问题：意图识别后直接作答，
+                # 不进入任务拆分与规划，也不展示规划节点。
+                response = await self._handle(chat, identity)
             elif dag_pending is not None:
                 cached_rules = chat._rules_classification_cache
                 if cached_rules is not None and cached_rules[0] == chat.question:
@@ -1570,7 +1584,24 @@ class DataAnalysisOrchestrator:
                 plan = None
                 # 语义识别已判成业务无关的问题，拆分器不再调度，直接落 _handle 走聊天回复
                 off_topic_direct = bool(getattr(chat, "_v2_off_topic", False))
-                if self.settings.multi_question_enabled and self.task_planner is not None and not off_topic_direct:
+                definition_direct = (
+                    raw_request.primary_intent in METADATA_INTENTS
+                    or bool(DEFINITION_QUESTION_PATTERN.match(chat.question or ""))
+                )
+                if (
+                    definition_direct
+                    and confirmed_pending_choice is None
+                ):
+                    # 解释口径类问题：意图识别后直接依据语义文件作答，
+                    # 不做任务拆分与规划，也不展示规划节点。
+                    # V1 回退轮 _completed_question_execution 恒为真，
+                    # 故不以此作为拦截条件。
+                    chat._planner_extraction = PlannerExtraction(
+                        intent=PrimaryIntent.METRIC_DEFINITION, structured=None,
+                    )
+                    chat._planner_task_name = planning_question
+                    chat._planner_task_question = planning_question
+                elif self.settings.multi_question_enabled and self.task_planner is not None and not off_topic_direct:
                     semantic_decision = chat._semantic_decision
                     semantic_decision_ready = bool(
                         chat._completed_question_execution
@@ -2218,14 +2249,29 @@ class DataAnalysisOrchestrator:
                         # 记下建表消息ID，执行期只复用同一消息的表
                         chat._task_table = copy.deepcopy(task_table)
                         chat._task_table_message_id = chat.message_id
-                        await emit_progress(
-                            "TASK_PLANNING",
-                            "COMPLETED",
-                            decision_line + "\n" + planning_detail,
-                            progress_phase="V2_PLANNING_SUMMARY",
-                            task_count=len(plan.tasks) if plan is not None else 1,
-                            task_table=task_table,
+                        planned_intents = (
+                            {task_request.primary_intent for task_request in task_requests}
+                            if plan is not None
+                            else {
+                                chat._planner_extraction.intent
+                                if chat._planner_extraction is not None
+                                else None
+                            }
                         )
+                        planned_intents.discard(None)
+                        if planned_intents and planned_intents <= METADATA_INTENTS:
+                            # 口径解释/血缘/目录清单类问题意图识别后直接作答，
+                            # 不展示任务拆分与规划节点
+                            pass
+                        else:
+                            await emit_progress(
+                                "TASK_PLANNING",
+                                "COMPLETED",
+                                decision_line + "\n" + planning_detail,
+                                progress_phase="V2_PLANNING_SUMMARY",
+                                task_count=len(plan.tasks) if plan is not None else 1,
+                                task_table=task_table,
+                            )
                 if (confirmed_pending_choice is not None and plan is None
                         and self.settings.surface_asl_execution_enabled
                         and chat._planner_extraction is not None
@@ -7958,7 +8004,11 @@ class DataAnalysisOrchestrator:
         if self.question_rewriter is not None and not nondata_direct and request.primary_intent not in (PrimaryIntent.METRIC_DEFINITION, PrimaryIntent.SEMANTIC_CATALOG_QUERY):
             await self.question_rewriter.ground_display_slots(request)
 
-        if not nondata_direct:
+        if not nondata_direct and request.primary_intent not in (
+            PrimaryIntent.METRIC_DEFINITION, PrimaryIntent.SEMANTIC_CATALOG_QUERY
+        ):
+            # 解释口径类直答轮不发意图完结事件：展示由意图识别节点的
+            # 补全问题与判断结论承担，避免空的任务拆分与规划标题
             await emit_progress(
                 "INTENT_RECOGNITION",
                 "COMPLETED",
