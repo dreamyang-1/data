@@ -295,3 +295,50 @@ def test_degenerate_divide_binding_is_rederived_not_output_as_one():
     values = {row['经销商（编码）']: row['单院产出'] for row in result}
     assert values == {'D1': 25.0, 'D2': 20.0} and quality == 'PASS'
     assert operation['operator'] == 'divide'
+
+
+def test_dimension_sort_field_falls_back_to_metric_value_ordering():
+    # 2026-10-21 用户要求恢复默认：计算任务的排序字段被规划器写成维度名称
+    # （如"经销商名称"）时，回退到计算结果数值列按声明方向排序。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                       {'经销商（编码）': 'D2', '含税销售总额': 60}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                           {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])
+    task = AtomicTask(task_id='compute', question='计算这些商户的单院产出并排序',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否', '计算绑定': binding(
+            'divide', '含税销售总额', '有效订单去重医院数', ('sales', 'hospitals'),
+            label='单院产出'),
+            '排序': [{'field': '经销商名称', 'order': 'desc'}]})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                                 {'经销商（编码）': 'D2', '含税销售总额': 60}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                                         {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])},
+        lambda *args, **kwargs: None)
+    assert [row['单院产出'] for row in result] == [25.0, 20.0] and quality == 'PASS'
+
+
+def test_computation_without_sort_slot_defaults_to_result_descending():
+    # 2026-10-21 用户要求恢复默认：计算任务未携带排序槽位时按计算结果列
+    # 默认降序（与指标类查询默认降序一致）。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                       {'经销商（编码）': 'D2', '含税销售总额': 60}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                           {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])
+    task = AtomicTask(task_id='compute', question='计算这些商户的单院产出',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否', '计算绑定': binding(
+            'divide', '含税销售总额', '有效订单去重医院数', ('sales', 'hospitals'),
+            label='单院产出')})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                                 {'经销商（编码）': 'D2', '含税销售总额': 60}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                                         {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])},
+        lambda *args, **kwargs: None)
+    assert [row['单院产出'] for row in result] == [25.0, 20.0] and quality == 'PASS'

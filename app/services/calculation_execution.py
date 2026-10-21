@@ -413,6 +413,11 @@ def calculate(task, inputs, legacy_resolver):
     # Structured ranking belongs to the same calculation, even when its prose
     # omits TopN. Keep values numeric until ordering has completed.
     final_steps = []
+    numeric_columns = [
+        column for column in columns
+        if rows and all(isinstance(row.get(column), (int, float))
+                        and not isinstance(row.get(column), bool) for row in rows)
+    ]
     for sort in structured.get('排序') or []:
         field = sort.get('field')
         if field not in columns or str(sort.get('order', 'desc')).lower() not in {'asc', 'desc'}:
@@ -420,6 +425,19 @@ def calculate(task, inputs, legacy_resolver):
             # 不拦截任务输出。
             LOGGER.warning('computation sort skipped task=%r field=%r', task.question[:120], field)
             continue
+        if field not in numeric_columns:
+            # 2026-10-21 用户要求恢复默认：规划器把排序字段写成维度名称
+            # （如"经销商名称"）时，非数值列不能承担指标排序，回退到结果
+            # 数值列（计算结果列最后生成，优先取末位），保持按指标值排序。
+            fallback = next(
+                (column for column in reversed(numeric_columns) if column != field), None)
+            if fallback is None:
+                LOGGER.warning('computation sort skipped task=%r field=%r 无数值列可回退',
+                               task.question[:120], field)
+                continue
+            LOGGER.warning('computation sort fallback task=%r field=%r -> %r',
+                           task.question[:120], field, fallback)
+            field = fallback
         final_steps.append({'type': 'sort', 'field': field, 'descending': str(sort.get('order', 'desc')).lower() == 'desc'})
     if structured.get('限制') is not None:
         count = structured['限制']
@@ -436,6 +454,17 @@ def calculate(task, inputs, legacy_resolver):
     if final_steps:
         columns, rows = _steps(columns, rows, {'type': 'pipeline', 'operations': final_steps})
         operation = {'type': 'pipeline', 'operations': [operation, *final_steps]}
+    elif (isinstance(operation, dict) and operation.get('type') == 'divide'
+          and isinstance(operation.get('result_field'), str)
+          and operation['result_field'] in columns and rows):
+        # 2026-10-21 用户要求恢复默认：除法计算任务未携带排序槽位时按结果
+        # 列默认降序（与指标类查询默认降序一致）；不改 operation 结构，
+        # 也不影响时序类与透传类任务的原有顺序契约。
+        default_column = operation['result_field']
+        LOGGER.warning('computation default sort task=%r column=%r desc',
+                       task.question[:120], default_column)
+        columns, rows = _steps(columns, rows, {'type': 'pipeline', 'operations': [
+            {'type': 'sort', 'field': default_column, 'descending': True}]})
     if percent_label:
         for row in rows:
             row[percent_label] = f'{numeric_value(row[percent_label])*100:.2f}%'

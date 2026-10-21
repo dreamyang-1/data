@@ -8693,20 +8693,27 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _metric_sort_column(structured: dict, request, dataset) -> str | None:
-        """优先取结构化排序字段，其次请求指标别名，最后取首个全数值列。"""
+        """优先取结构化排序字段，其次请求指标别名，最后取首个全数值列。
+
+        规划器把排序字段写成维度名称（如"经销商名称"）时，非数值列不能
+        承担指标排序，继续向后回退，保持指标类查询默认按数值列排序。
+        """
+        candidates = []
         for item in structured.get("排序") or []:
             if isinstance(item, dict):
                 field = str(item.get("field") or "").strip()
-                if field and field in dataset.columns:
-                    return field
+                if field and field in dataset.columns and field not in candidates:
+                    candidates.append(field)
         for metric in getattr(request, "metrics", None) or []:
             for name in (
                 getattr(metric, "canonical_name", None),
                 getattr(metric, "input", None),
             ):
-                if name and name in dataset.columns:
-                    return name
-        for column in dataset.columns:
+                if name and name in dataset.columns and name not in candidates:
+                    candidates.append(name)
+        candidates.extend(
+            column for column in dataset.columns if column not in candidates)
+        for column in candidates:
             if all(
                 isinstance(row.get(column), (int, float))
                 and not isinstance(row.get(column), bool)

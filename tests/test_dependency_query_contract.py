@@ -146,6 +146,44 @@ def test_unresolved_entity_mentions_are_tolerated_not_fatal():
     }]
 
 
+class _SortDataset:
+    def __init__(self, columns, rows):
+        self.columns = columns
+        self.rows = rows
+
+
+class _SortMetric:
+    def __init__(self, canonical_name, input_name):
+        self.canonical_name = canonical_name
+        self.input = input_name
+
+
+class _SortRequest:
+    def __init__(self, metrics):
+        self.metrics = metrics
+
+
+def test_dimension_sort_field_falls_back_to_numeric_metric_column():
+    # 2026-10-21 用户要求恢复默认：规划器把排序字段写成维度名称（如"经销商
+    # 名称"）时，非数值列不能吞掉指标排序，回退到指标数值列按方向排序。
+    dataset = _SortDataset(
+        ["经销商名称", "去重医院数"],
+        [{"经销商名称": "乙", "去重医院数": 3}, {"经销商名称": "甲", "去重医院数": 9}])
+    request = _SortRequest([_SortMetric("去重医院数", "有效订单去重医院数")])
+    structured = {"排序": [{"field": "经销商名称", "order": "desc"}]}
+    assert DataAnalysisOrchestrator._metric_sort_column(
+        structured, request, dataset) == "去重医院数"
+
+
+def test_numeric_structured_sort_field_still_honored():
+    dataset = _SortDataset(
+        ["经销商名称", "销售额"],
+        [{"经销商名称": "甲", "销售额": 1}, {"经销商名称": "乙", "销售额": 2}])
+    structured = {"排序": [{"field": "销售额", "order": "asc"}]}
+    assert DataAnalysisOrchestrator._metric_sort_column(
+        structured, _SortRequest([]), dataset) == "销售额"
+
+
 @pytest.mark.parametrize("owner,field", [("商品", "商品名称"), ("医院", "医院名称"),
                                         ("经销商", "经销商名称"), ("销售公司", "公司名称")])
 def test_bound_child_shape_does_not_inherit_parent_ranking(owner, field):
