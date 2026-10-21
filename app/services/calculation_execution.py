@@ -142,7 +142,10 @@ def _check_compatible(first, second, *, same_unit, same_period=True):
     left = _provenance(first).get('fingerprint_components', {})
     right = _provenance(second).get('fingerprint_components', {})
     if left and right:
-        if same_period and left.get('time_range') != right.get('time_range'):
+        # 双方都声明了时间范围才比对；分母全量口径（无时间条件）是合法输入，
+        # 不能因一侧未声明时间就拒绝比率计算。
+        left_period, right_period = left.get('time_range'), right.get('time_range')
+        if same_period and left_period and right_period and left_period != right_period:
             raise ValueError('计算输入的时间范围不一致')
         left_units = {m.get('unit') for m in left.get('metrics', []) if isinstance(m, dict) and m.get('unit')}
         right_units = {m.get('unit') for m in right.get('metrics', []) if isinstance(m, dict) and m.get('unit')}
@@ -299,6 +302,13 @@ def calculate(task, inputs, legacy_resolver):
     if binding is not None and spec is not None:
         raise ValueError('计算公式与结果操作不能同时定义')
     legacy = binding is None and spec is None
+    if not legacy and binding is None and isinstance(spec, dict) and len(inputs) == 2:
+        # 规划器可能把跨任务算术写成未绑定唯一来源的结果操作。回退到题面
+        # 措辞的确定性解析（只认除以/覆盖率等显式形态）；解析不出仍按原错误拒绝。
+        name = spec.get('source_task_id')
+        if (set(spec) <= {'source_task_id', 'operation'} and name not in inputs
+                and _legacy_division(task, inputs) is not None):
+            legacy = True
     binding = binding or (_legacy_division(task, inputs) if legacy else None)
     percent_label = None
     if binding is not None:

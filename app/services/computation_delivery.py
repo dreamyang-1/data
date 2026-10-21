@@ -7,13 +7,19 @@ import re
 def numeric_value(value):
     if value is None or isinstance(value, bool):
         raise ValueError('计算输入不是有效数值')
+    text = str(value).replace(',', '')
+    percent = text.endswith('%')
+    if percent:
+        text = text[:-1]
+    if '%' in text:
+        raise ValueError('计算输入不是有效数值')
     try:
-        result = Decimal(str(value).replace(',', ''))
+        result = Decimal(text)
     except (InvalidOperation, TypeError, ValueError) as exc:
         raise ValueError('计算输入不是有效数值') from exc
     if not result.is_finite():
         raise ValueError('计算输入必须是有限数值')
-    return result
+    return result / 100 if percent else result
 
 
 def identifier_field(field):

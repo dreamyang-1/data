@@ -1589,13 +1589,19 @@ def _compare(actual: Any, operator: str, target: Any) -> bool:
 def _as_number(value: Any) -> Decimal:
     if value is None or isinstance(value, bool):
         raise InvalidFollowupOperation("arithmetic fields must contain numbers")
+    text = str(value).replace(',', '')
+    percent = text.endswith('%')
+    if percent:
+        text = text[:-1]
+    if '%' in text:
+        raise InvalidFollowupOperation("arithmetic fields must contain numbers")
     try:
-        number = Decimal(str(value).replace(',', ''))
+        number = Decimal(text)
     except Exception as exc:
         raise InvalidFollowupOperation("arithmetic fields must contain numbers") from exc
     if not number.is_finite():
         raise InvalidFollowupOperation("arithmetic result must be finite")
-    return number
+    return number / 100 if percent else number
 
 
 def _numeric_or_none(value: Any) -> Decimal | None:
