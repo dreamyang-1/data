@@ -5,12 +5,34 @@ import copy
 import re
 
 from minio_followup_store import apply_followup_operation, dataset_source_complete
-from app.services.computation_delivery import aligned_input, has_group_identity, numeric_value
+from app.services.computation_delivery import (
+    aligned_input, has_group_identity, identifier_field, numeric_value)
 
 
 def _provenance(reference):
     return next((item for item in reference.transformation_log
                  if item.get('type') == 'query_provenance'), {})
+
+
+def _identity_fields(reference):
+    fields = {field for field in _provenance(reference).get('column_bindings', {}).values()
+              if identifier_field(field)}
+    if not fields:
+        fields = {str(name) for name in reference.columns
+                  if identifier_field(str(name)) or any(
+                      tag in str(name).lower() for tag in ('编码', '编号', '（id）', '(id)'))}
+    return fields
+
+
+def _row_scalar(reference, other):
+    """A one-row operand stays a scalar unless it must align with the other input.
+
+    一个只带自身维度身份列的1行合计（如按省份分组的区域医院总数）对另一个
+    无共同身份列的操作数仍是常数；强制按行对齐会让所有覆盖率类计算失败。
+    """
+    if not has_group_identity(reference):
+        return True
+    return not bool(_identity_fields(reference) & _identity_fields(other))
 
 
 def literal_computation(structured):
@@ -189,10 +211,10 @@ def _arithmetic(binding, inputs):
     if first.dataset_id == second.dataset_id:
         columns, rows = list(first.columns), [dict(row) for row in left]
         operands = [(row[left_column], row[right_column]) for row in rows]
-    elif ((len(left) == 1 and not has_group_identity(first))
-          or (len(right) == 1 and not has_group_identity(second))):
-        left_scalar = len(left) == 1 and not has_group_identity(first)
-        right_scalar = len(right) == 1 and not has_group_identity(second)
+    elif ((len(left) == 1 and _row_scalar(first, second))
+          or (len(right) == 1 and _row_scalar(second, first))):
+        left_scalar = len(left) == 1 and _row_scalar(first, second)
+        right_scalar = len(right) == 1 and _row_scalar(second, first)
         main, source_rows = (second, right) if left_scalar and not right_scalar else (first, left)
         columns, rows = list(main.columns), [dict(row) for row in source_rows]
         operands = [(left[0 if len(left) == 1 else index][left_column],
