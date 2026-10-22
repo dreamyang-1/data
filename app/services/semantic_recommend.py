@@ -324,10 +324,10 @@ def _build_semantic_description(
             f"多个【{source_name}】{relation_name}1个【{target_name}】，"
             f"1个【{target_name}】对应多个【{source_name}】"
         )
+    # 多对多（用户 2026-10-22）：只保留双向基数说明，去掉多余的“多个…多个…”前缀
     return (
-        f"多个【{source_name}】{relation_name}多个【{target_name}】，"
         f"1个【{source_name}】可{relation_name}多个【{target_name}】，"
-        f"1个【{target_name}】也可被多个【{source_name}】{relation_name}"
+        f"1个【{target_name}】可被多个【{source_name}】{relation_name}"
     )
 
 
@@ -344,6 +344,102 @@ def _display_cardinality(cardinality: str | None) -> str:
     if value in ("N:N", "M:N"):
         return "M:N"
     return ""
+
+
+# 层级关系判定（用户 2026-10-22 需求）：树形/组织机构实体之间的关系归为层级关系
+_LEVEL_ENTITY_KEYWORDS = (
+    "组织", "机构", "部门", "层级",
+    "org", "organization", "dept", "department", "hierarchy",
+)
+_LEVEL_FIELD_PREFIXES = ("parent", "pid", "上级", "父级", "父节点")
+
+# 实体保存时的关联建议文案（用户 2026-10-22 需求 1，原文固定）
+_RELATION_SUGGESTION_MESSAGE = (
+    "【关联建议】当前实体和目标实体不存在直接业务关联，"
+    "建议先配置子表映射，再配置关联关系。"
+)
+
+
+def _is_level_entity(name: str | None) -> bool:
+    value = (name or "").strip().lower()
+    return bool(value) and any(key in value for key in _LEVEL_ENTITY_KEYWORDS)
+
+
+def _relation_category(
+    source_name: str | None, target_name: str | None,
+    field_pairs: list[dict[str, Any]] | None = None,
+) -> str:
+    """推荐关系分类：树形/组织机构的实体对为「层级关系」，否则「关联关系」。
+
+    判定证据（任一命中即层级关系）：自关联、字段对含 parent/pid/上级类字段、
+    两端实体名都带组织类关键词。
+    """
+    source = (source_name or "").strip().lower()
+    target = (target_name or "").strip().lower()
+    if source and source == target:
+        return "层级关系"
+    for pair in field_pairs or []:
+        for key in ("sourceColumnName", "targetColumnName"):
+            column = (pair.get(key) or "").strip().lower()
+            if column.startswith(_LEVEL_FIELD_PREFIXES):
+                return "层级关系"
+    if _is_level_entity(source) and _is_level_entity(target):
+        return "层级关系"
+    return "关联关系"
+
+
+def _swap_field_pair(pair: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "sourceTableName": pair.get("targetTableName"),
+        "sourceColumnName": pair.get("targetColumnName"),
+        "sourceColumnComment": pair.get("targetColumnComment"),
+        "targetTableName": pair.get("sourceTableName"),
+        "targetColumnName": pair.get("sourceColumnName"),
+        "targetColumnComment": pair.get("sourceColumnComment"),
+    }
+
+
+def _is_identifier_field(vo: dict[str, Any]) -> bool:
+    name = (vo.get("name") or "").strip().lower()
+    if not name:
+        return True
+    if name in ("id", "uuid", "guid"):
+        return True
+    return name.endswith(("_id", "_code", "_no", "_key", "_uuid"))
+
+
+def _mark_graph_node_display(fields: list[dict[str, Any]]) -> None:
+    """为实体属性标记唯一一个「图谱节点显示」字段（用户 2026-10-22 需求）。
+
+    优先名称类字段（name/title/*_name 或注释含“名称”），排除主键与
+    编码/编号类标识字段；没有名称类字段时退化为首个文本属性，
+    再退化为首个非主键属性。始终只标记一个。
+    """
+    for vo in fields:
+        vo["graphNodeDisplay"] = False
+    candidates = [
+        vo for vo in fields
+        if not vo.get("primaryKey") and not _is_identifier_field(vo)
+    ]
+    if not candidates:
+        candidates = [vo for vo in fields if not vo.get("primaryKey")] or list(fields)
+    if not candidates:
+        return
+
+    def rank(vo: dict[str, Any]) -> int:
+        name = (vo.get("name") or "").strip().lower()
+        comment = vo.get("comment") or ""
+        if name in ("name", "title", "full_name") or name.endswith("_name"):
+            return 0
+        if "名称" in comment or "姓名" in comment:
+            return 1
+        field_type = (vo.get("type") or "").lower().split("(")[0].strip()
+        if field_type in {"char", "varchar", "text", "string", "nvarchar", "nchar"}:
+            return 2
+        return 3
+
+    best = min(candidates, key=rank)
+    best["graphNodeDisplay"] = True
 
 
 def _relation_name_is_clean(value: str | None) -> bool:
@@ -603,8 +699,11 @@ class SemanticRecommendService:
             }
             (primary if pk else normal).append(vo)
         normal.sort(key=lambda vo: (not _has_text(vo["comment"]), vo["name"] or ""))
-        self._enhance_fields_with_llm(primary + normal)
-        return primary + normal
+        result = primary + normal
+        # 用户 2026-10-22 需求：为当前实体推荐一个「图谱节点显示」名称属性
+        _mark_graph_node_display(result)
+        self._enhance_fields_with_llm(result)
+        return result
 
     def _enhance_fields_with_llm(self, result: list[dict[str, Any]]) -> None:
         """大模型为属性提炼规范中文名；失败保留规则结果。
@@ -709,7 +808,8 @@ class SemanticRecommendService:
         for other in others:
             configured = configured_count.get(other["id"], 0)
             candidates = self._infer_relation_candidates(
-                current, other, current_info, info_map.get(other["id"])
+                current, other, current_info, info_map.get(other["id"]),
+                skip_cross_dimension=configured > 0,
             )
             direct_by_id[other["id"]] = candidates
             inferred = sum(len(c["fieldPairs"]) for c in candidates)
@@ -835,6 +935,10 @@ class SemanticRecommendService:
                     "category": relation.get("category"),
                     "cardinality": cardinality,
                     "fieldPairs": [],
+                    "sourceEntityTypeId": source_entity_type_id,
+                    "sourceEntityName": source.get("name"),
+                    "targetEntityTypeId": target_entity_type_id,
+                    "targetEntityName": target.get("name"),
                     "semanticDescription": _build_semantic_description(
                         source["name"], target["name"], cardinality,
                         relation.get("name") or "关联",
@@ -850,6 +954,7 @@ class SemanticRecommendService:
             source, target,
             info_map.get(source_entity_type_id),
             info_map.get(target_entity_type_id),
+            skip_cross_dimension=bool(existing),
         )
         self._enhance_relation_candidates_with_llm(
             source["name"], target["name"], inferred
@@ -885,12 +990,123 @@ class SemanticRecommendService:
                 [target], all_others, relations, all_info,
             )
             result.extend(indirect)
-        # 对外只展示 1:1 / 1:N / M:N 三种关系类型（用户 2026-10-22 要求）
+        # 方向合同（用户 2026-10-22）：系统不存在多对一关系，推荐结果一律按
+        # 「主实体(1) → 目标实体(N)」方向输出；内部 N:1 候选翻转为 1:N
+        # （交换字段对与实体角色），并补齐主实体/目标实体标识。
         for vo in result:
-            vo["cardinality"] = _display_cardinality(vo.get("cardinality"))
-            # 关系分类：平台统一使用「关联关系」，已配置行缺失分类时补齐
-            vo["category"] = vo.get("category") or "关联关系"
+            self._orient_relation_vo(vo, source, target)
         return result
+
+    def _orient_relation_vo(
+        self, vo: dict[str, Any],
+        source: dict[str, Any], target: dict[str, Any],
+    ) -> None:
+        """把单条推荐关系归一为主实体(1)→目标实体(N)口径并补齐实体标识。"""
+        cardinality = _normalize_cardinality(vo.get("cardinality"), False)
+        source_id = vo.get("sourceEntityTypeId") or source["id"]
+        source_name = vo.get("sourceEntityName") or source.get("name")
+        target_id = vo.get("targetEntityTypeId") or target["id"]
+        target_name = vo.get("targetEntityName") or target.get("name")
+        if cardinality == "N:1":
+            vo["fieldPairs"] = [
+                _swap_field_pair(pair) for pair in vo.get("fieldPairs") or []
+            ]
+            source_id, target_id = target_id, source_id
+            source_name, target_name = target_name, source_name
+            cardinality = "1:N"
+            if vo.get("indirect"):
+                vo["semanticDescription"] = self._build_indirect_description(
+                    source_name, vo.get("viaEntityName"), target_name, cardinality
+                )
+            else:
+                # 翻转后原关系名的语义方向不再成立，描述改用中性“关联”
+                vo["semanticDescription"] = _build_semantic_description(
+                    source_name, target_name, cardinality, "关联"
+                )
+        vo["sourceEntityTypeId"] = source_id
+        vo["sourceEntityName"] = source_name
+        vo["targetEntityTypeId"] = target_id
+        vo["targetEntityName"] = target_name
+        vo["cardinality"] = _display_cardinality(cardinality)
+        # 关系分类（用户 2026-10-22）：已配置关系保留原分类，缺失时按
+        # 树形/组织机构判定补齐；推荐候选始终按该判定输出。
+        if not vo.get("fromExisting"):
+            vo["category"] = _relation_category(
+                source_name, target_name, vo.get("fieldPairs")
+            )
+        else:
+            vo["category"] = vo.get("category") or _relation_category(
+                source_name, target_name, vo.get("fieldPairs")
+            )
+
+    def check_relation_suggestions(
+        self, semantic_model_id: int, entity_type_id: str,
+        business_domain_id: int | None = None,
+    ) -> dict[str, Any]:
+        """实体保存时的关联建议（用户 2026-10-22 需求 1）。
+
+        当前实体与同业务域内已配置实体既无已配置关系、也无直接字段证据，
+        但可通过中间实体两跳关联时，返回「先配置子表映射再配置关系」提示；
+        没有中间表关联时不产生任何建议。
+        """
+        if not _has_text(entity_type_id):
+            raise SemanticRecommendError("实体类型ID不能为空")
+        entities = self._reader.entities(semantic_model_id)
+        current = next(
+            (e for e in entities if e["id"] == entity_type_id), None
+        )
+        if current is None:
+            raise SemanticRecommendError("实体类型不存在")
+
+        relations = self._reader.relations(semantic_model_id)
+        configured: set[str] = set()
+        for relation in relations:
+            if relation.get("source_entity_type_id") == entity_type_id:
+                configured.add(relation.get("target_entity_type_id"))
+            elif relation.get("target_entity_type_id") == entity_type_id:
+                configured.add(relation.get("source_entity_type_id"))
+
+        if business_domain_id is None:
+            business_domain_id = current.get("business_domain_id")
+        others = [
+            e for e in entities
+            if e["id"] != entity_type_id
+            and (business_domain_id is None
+                 or e.get("business_domain_id") == business_domain_id)
+        ]
+        info_map = self._entity_table_info_map(
+            [current, *others], semantic_model_id
+        )
+        current_info = info_map.get(entity_type_id)
+        suggestions: list[dict[str, Any]] = []
+        if current_info is not None:
+            for other in others:
+                if other["id"] in configured:
+                    continue
+                # 已有直接可关联字段：用户可直接连线，不做中间表提示
+                if self._infer_relation_candidates(
+                    current, other, current_info, info_map.get(other["id"])
+                ):
+                    continue
+                indirect = self._infer_indirect_candidates(
+                    current, current_info, [other], others, relations, info_map,
+                )
+                if not indirect:
+                    continue
+                via = indirect[0]
+                suggestions.append({
+                    "otherEntityTypeId": other["id"],
+                    "otherEntityName": other.get("name"),
+                    "viaEntityTypeId": via.get("viaEntityTypeId"),
+                    "viaEntityName": via.get("viaEntityName"),
+                    "message": _RELATION_SUGGESTION_MESSAGE,
+                })
+        return {
+            "entityTypeId": entity_type_id,
+            "entityName": current.get("name"),
+            "hasSuggestion": bool(suggestions),
+            "suggestions": suggestions,
+        }
 
     # ---------- 内部工具 ----------
 
@@ -1110,14 +1326,20 @@ class SemanticRecommendService:
     def _build_inferred_candidate(
         self, pairs: list[dict[str, Any]], cardinality: str,
         source_name: str, target_name: str,
+        source_entity_id: str | None = None,
+        target_entity_id: str | None = None,
     ) -> dict[str, Any]:
         return {
             "fromExisting": False,
             "relationId": None,
             "relationName": "关联",
-            "category": "关联关系",
+            "category": _relation_category(source_name, target_name, pairs),
             "cardinality": cardinality,
             "fieldPairs": pairs,
+            "sourceEntityTypeId": source_entity_id,
+            "sourceEntityName": source_name,
+            "targetEntityTypeId": target_entity_id,
+            "targetEntityName": target_name,
             "semanticDescription": _build_semantic_description(
                 source_name, target_name, cardinality, "关联"
             ),
@@ -1126,6 +1348,7 @@ class SemanticRecommendService:
     def _infer_relation_candidates(
         self, source: dict[str, Any], target: dict[str, Any],
         source_info: dict[str, Any] | None, target_info: dict[str, Any] | None,
+        *, skip_cross_dimension: bool = False,
     ) -> list[dict[str, Any]]:
         """按当前实体的物理字段推导候选，不依赖已删除的关系配置。
 
@@ -1149,6 +1372,7 @@ class SemanticRecommendService:
                         source, target,
                         {k: v for k, v in source_table.items() if k != "mappedTables"},
                         {k: v for k, v in target_table.items() if k != "mappedTables"},
+                        skip_cross_dimension=skip_cross_dimension,
                     ):
                         signature = tuple(tuple(p[k] for k in (
                             "sourceTableName", "sourceColumnName", "targetTableName", "targetColumnName"
@@ -1178,11 +1402,13 @@ class SemanticRecommendService:
         ]
         for pair in pk_fk_pairs:
             candidates.append(self._build_inferred_candidate(
-                [pair], "1:N", source["name"], target["name"]
+                [pair], "1:N", source["name"], target["name"],
+                source.get("id"), target.get("id"),
             ))
         for pair in fk_pk_pairs:
             candidates.append(self._build_inferred_candidate(
-                [pair], "N:1", source["name"], target["name"]
+                [pair], "N:1", source["name"], target["name"],
+                source.get("id"), target.get("id"),
             ))
 
         # 同名业务键也能在删除/重建实体后重新推荐；基数按“列名是否指向对方表”
@@ -1217,9 +1443,18 @@ class SemanticRecommendService:
                     ))
         for src_name, pairs in same_name_pairs.items():
             flags = same_name_flags.get(src_name) or set()
+            # 两端列名都不指向对方表：只是共用第三个维度（如都带 province_id），
+            # 属于经中间表/中间维度的关联，不是两个实体间的直连关系。
+            # 已有直接证据（主外键或已配置关系）时不再找中间表建关系（用户 2026-10-22）。
+            cross_dimension = bool(flags) and not any(
+                left or right for left, right in flags
+            )
+            if cross_dimension and (skip_cross_dimension or candidates):
+                continue
             cardinality = _same_key_cardinality(*next(iter(flags))) if len(flags) == 1 else "N:N"
             candidates.append(self._build_inferred_candidate(
-                pairs, cardinality, source["name"], target["name"]
+                pairs, cardinality, source["name"], target["name"],
+                source.get("id"), target.get("id"),
             ))
         return candidates
 
@@ -1293,7 +1528,11 @@ class SemanticRecommendService:
             return f"多个【{source_name}】通过{middle}间接关联1个【{target_name}】"
         if cardinality == "1:N":
             return f"1个【{source_name}】通过{middle}间接关联多个【{target_name}】"
-        return f"多个【{source_name}】通过{middle}间接关联多个【{target_name}】"
+        # 多对多（用户 2026-10-22）：与直连多对多保持同一句式，去掉“多个…多个…”
+        return (
+            f"1个【{source_name}】可通过{middle}关联多个【{target_name}】，"
+            f"1个【{target_name}】可被多个【{source_name}】通过{middle}关联"
+        )
 
     def _infer_indirect_candidates(
         self, current: dict[str, Any], current_info: dict[str, Any] | None,
@@ -1325,7 +1564,8 @@ class SemanticRecommendService:
                 entity_info = info_map.get(entity["id"])
                 rule_candidates = (
                     self._infer_relation_candidates(
-                        current, entity, current_info, entity_info
+                        current, entity, current_info, entity_info,
+                        skip_cross_dimension=bool(hops),
                     )
                     if entity_info is not None else []
                 )
@@ -1342,6 +1582,9 @@ class SemanticRecommendService:
         for target in targets:
             if len(result) >= max_total:
                 break
+            # 两端已有直连能力时不再经中间表关联（用户 2026-10-22）。
+            if direct_by_id and direct_by_id.get(target["id"]):
+                continue
             target_info = info_map.get(target["id"])
             if target_info is None:
                 continue
@@ -1357,7 +1600,8 @@ class SemanticRecommendService:
                     second_hops.extend(
                         (c["fieldPairs"], c["cardinality"])
                         for c in self._infer_relation_candidates(
-                            bridge, target, bridge_info, target_info
+                            bridge, target, bridge_info, target_info,
+                            skip_cross_dimension=bool(second_hops),
                         ) if c["cardinality"]
                     )
                 if not second_hops:
@@ -1369,7 +1613,8 @@ class SemanticRecommendService:
                     continue
                 cardinality = self._merge_cardinality(first_card, second_card)
                 vo = self._build_inferred_candidate(
-                    pairs, cardinality, current["name"], target["name"]
+                    pairs, cardinality, current["name"], target["name"],
+                    current.get("id"), target.get("id"),
                 )
                 vo["relationName"] = "间接关联"
                 vo["semanticDescription"] = self._build_indirect_description(
