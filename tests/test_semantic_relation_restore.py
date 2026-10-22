@@ -47,7 +47,8 @@ def test_legacy_bare_field_resolves_in_its_entity_and_reverses():
     reader._relations[0]["target_table_column_name"] = "customer_id"
     service = SemanticRecommendService(reader, None)
     existing = service.recommend_relations(81, "et-2", "et-1")[0]
-    assert existing["cardinality"] == "N:1"
+    # 源端为多：对外展示统一归入一对多 1:N（不出现 N:1）
+    assert existing["cardinality"] == "1:N"
     pair = existing["fieldPairs"][0]
     assert (pair["sourceTableName"], pair["sourceColumnName"]) == ("sales_order", "customer_id")
     assert (pair["targetTableName"], pair["targetColumnName"]) == ("customer", "id")

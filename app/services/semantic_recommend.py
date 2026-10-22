@@ -296,21 +296,60 @@ def _is_foreign_key_to(
 def _build_semantic_description(
     source_name: str, target_name: str, cardinality: str, relation_name: str
 ) -> str:
+    """按关系方向生成语义描述，只使用连线两端实体，不引入第三个实体。
+
+    cardinality 为方向口径（1:1 / 1:N / N:1 / N:N），对外展示统一归一为
+    1:1 / 1:N / M:N 三种。
+    """
     if not cardinality:
         return f"【{source_name}】与【{target_name}】存在同名业务键候选，需确认业务含义及关系基数后配置"
     if cardinality == "1:1":
-        return f"1个【{source_name}】{relation_name}1个【{target_name}】"
+        return (
+            f"1个【{source_name}】{relation_name}1个【{target_name}】，"
+            f"1个【{target_name}】只对应1个【{source_name}】"
+        )
+    if cardinality == "1:N":
+        return (
+            f"1个【{source_name}】{relation_name}多个【{target_name}】，"
+            f"1个【{target_name}】只对应1个【{source_name}】"
+        )
     if cardinality == "N:1":
         return (
             f"多个【{source_name}】{relation_name}1个【{target_name}】，"
-            f"1个【{target_name}】被多个【{source_name}】{relation_name}"
+            f"1个【{target_name}】对应多个【{source_name}】"
         )
-    if cardinality == "N:N":
-        return f"多个【{source_name}】{relation_name}多个【{target_name}】"
     return (
-        f"1个【{source_name}】{relation_name}多个【{target_name}】，"
-        f"一个【{target_name}】被1个【{source_name}】{relation_name}"
+        f"多个【{source_name}】{relation_name}多个【{target_name}】，"
+        f"1个【{source_name}】可{relation_name}多个【{target_name}】，"
+        f"1个【{target_name}】也可被多个【{source_name}】{relation_name}"
     )
+
+
+def _display_cardinality(cardinality: str | None) -> str:
+    """推荐关系对外只展示 1:1 / 1:N / M:N 三种。
+
+    方向口径 N:1（源端为多）归入一对多，N:N 记为 M:N；无法确认时保持空串。
+    """
+    value = (cardinality or "").strip().upper()
+    if value in ("1:1", "1:N"):
+        return value
+    if value == "N:1":
+        return "1:N"
+    if value in ("N:N", "M:N"):
+        return "M:N"
+    return ""
+
+
+def _relation_name_is_clean(value: str | None) -> bool:
+    """大模型关系名合法性：2-6 字、不含【】/换行、不能是泛化的“关联/关系”。"""
+    if not isinstance(value, str):
+        return False
+    name = value.strip()
+    if not 2 <= len(name) <= 6:
+        return False
+    if any(ch in name for ch in "【】\n\r"):
+        return False
+    return name not in ("关联", "关系")
 
 
 def _normalize_cardinality(cardinality: str | None, reversed_pair: bool) -> str:
@@ -808,6 +847,9 @@ class SemanticRecommendService:
                 [target], all_others, relations, all_info,
             )
             result.extend(indirect)
+        # 对外只展示 1:1 / 1:N / M:N 三种关系类型（用户 2026-10-22 要求）
+        for vo in result:
+            vo["cardinality"] = _display_cardinality(vo.get("cardinality"))
         return result
 
     # ---------- 内部工具 ----------
@@ -1296,7 +1338,11 @@ class SemanticRecommendService:
         self, source_name: str, target_name: str,
         candidates: list[dict[str, Any]],
     ) -> None:
-        """为物理推导候选生成语义化关系名与文档句式描述；失败保留模板结果。"""
+        """为物理推导候选生成语义化关系名；描述始终由模板确定性生成。
+
+        模型只负责重命名（2-6 字动词），不再采用模型生成的语义描述，
+        避免描述里混入第三个实体；失败或关系名不合法时保留模板结果。
+        """
         if not self._llm_enabled or not candidates:
             return
         try:
@@ -1315,12 +1361,10 @@ class SemanticRecommendService:
                 "你在为数据语义建模平台做实体关系推荐。两个实体：源实体【" + source_name
                 + "】、目标实体【" + target_name + "】。物理层推导出以下候选关联：\n"
                 + listing + "\n\n"
-                + "任务：为每个候选生成 1) 一个简洁贴切的中文动词关系名（如：开设、隶属、供货、包含，2-6 个字，不要泛泛的\"关联\"）；"
-                + "2) 一句按基数生成的语义描述，句式示例：1:N 时为\"1个【" + source_name
-                + "】<关系名>多个【" + target_name
-                + "】，一个【" + target_name + "】被1个【" + source_name + "】<关系名>\"；N:1、N:N、1:1 按此规则类推。基数为空时必须说明待确认，不得推断数量。\n"
+                + "任务：为每个候选生成一个简洁贴切的中文动词关系名（如：开设、隶属、供货、包含，2-6 个字，不要泛泛的\"关联\"）。"
+                + "关系名只能描述这两个实体之间的动作，禁止提到任何第三个实体。\n"
                 + "只输出 JSON 数组，不要任何解释或 markdown 代码块，格式："
-                + "[{\"candidate\":1,\"relationName\":\"关系名\",\"semanticDescription\":\"语义描述\"}]，"
+                + "[{\"candidate\":1,\"relationName\":\"关系名\"}]，"
                 + "candidate 对应候选序号，必须覆盖每一个候选。\n"
             )
             array = _parse_llm_json_array(self._gateway.complete("实体关系推荐语义生成", prompt))
@@ -1334,14 +1378,13 @@ class SemanticRecommendService:
                     continue
                 candidate = candidates[candidate_no - 1]
                 relation_name = item.get("relationName")
-                if isinstance(relation_name, str) and relation_name.strip():
-                    candidate["relationName"] = relation_name.strip()
-                    candidate["semanticDescription"] = _build_semantic_description(
-                        source_name, target_name, candidate["cardinality"], relation_name.strip()
-                    )
-                description = item.get("semanticDescription")
-                if candidate["cardinality"] and isinstance(description, str) and description.strip():
-                    candidate["semanticDescription"] = description.strip()
+                if _relation_name_is_clean(relation_name):
+                    name = relation_name.strip()
+                    old_name = candidate.get("relationName") or "关联"
+                    description = candidate.get("semanticDescription")
+                    candidate["relationName"] = name
+                    if isinstance(description, str) and description:
+                        candidate["semanticDescription"] = description.replace(old_name, name)
         except Exception as exc:
             logger.warning("大模型增强关系推荐失败，降级为模板描述: %s", exc)
 

@@ -19,6 +19,7 @@ from app.services.semantic_recommend import (
     SemanticRecommendError,
     SemanticRecommendService,
     _build_semantic_description,
+    _display_cardinality,
     _derive_entity_name,
     _is_foreign_key_to,
     _normalize_cardinality,
@@ -170,17 +171,28 @@ def test_normalize_cardinality_reversal():
 
 def test_build_semantic_description_sentences():
     assert _build_semantic_description("客户", "订单", "1:1", "拥有") == (
-        "1个【客户】拥有1个【订单】"
+        "1个【客户】拥有1个【订单】，1个【订单】只对应1个【客户】"
     )
     assert _build_semantic_description("客户", "订单", "N:1", "隶属") == (
-        "多个【客户】隶属1个【订单】，1个【订单】被多个【客户】隶属"
+        "多个【客户】隶属1个【订单】，1个【订单】对应多个【客户】"
     )
     assert _build_semantic_description("客户", "订单", "N:N", "关联") == (
-        "多个【客户】关联多个【订单】"
+        "多个【客户】关联多个【订单】，1个【客户】可关联多个【订单】，"
+        "1个【订单】也可被多个【客户】关联"
     )
     assert _build_semantic_description("客户", "订单", "1:N", "开设") == (
-        "1个【客户】开设多个【订单】，一个【订单】被1个【客户】开设"
+        "1个【客户】开设多个【订单】，1个【订单】只对应1个【客户】"
     )
+
+
+def test_display_cardinality_keeps_three_values():
+    """推荐关系对外只展示 1:1 / 1:N / M:N（N:1 归入一对多，N:N 记为 M:N）。"""
+    assert _display_cardinality("1:1") == "1:1"
+    assert _display_cardinality("1:N") == "1:N"
+    assert _display_cardinality("N:1") == "1:N"
+    assert _display_cardinality("N:N") == "M:N"
+    assert _display_cardinality("M:N") == "M:N"
+    assert _display_cardinality(None) == ""
 
 
 def test_derive_entity_name_suffixes():
@@ -574,7 +586,7 @@ def test_detect_relations_indirect_via_bridge():
         "多个【客户】通过【订单】间接关联多个【产品】"
     )
     # 字段映射：两跳路径拼接（customer.id→sales_order.customer_id、
-    # sales_order.product_id→product.id），基数 1:N + N:1 → N:N
+    # sales_order.product_id→product.id），基数 1:N + N:1 → N:N（检测接口保留方向口径）
     candidate = indirect["relationCandidates"][0]
     assert candidate["cardinality"] == "N:N"
     assert candidate["relationName"] == "间接关联"
@@ -675,7 +687,7 @@ def test_recommend_relations_indirect_via_common_neighbor():
     vo = result[0]
     assert vo["fromExisting"] is False
     assert vo["relationName"] == "间接关联"
-    assert vo["cardinality"] == "N:N"
+    assert vo["cardinality"] == "M:N"
     assert vo["viaEntityTypeId"] == "et-2"
     assert vo["viaEntityName"] == "订单"
     assert vo["otherEntityTypeId"] == "et-3"
@@ -881,7 +893,7 @@ def test_recommend_relations_existing_grouping_and_reversal():
         "targetColumnComment": None,
     }]
     assert forward["semanticDescription"] == (
-        "1个【客户】拥有多个【订单】，一个【订单】被1个【客户】拥有"
+        "1个【客户】拥有多个【订单】，1个【订单】只对应1个【客户】"
     )
 
     reversed_vo = by_id[10]  # et-2 -> et-1 存储方向，需翻转为请求视角
@@ -894,9 +906,25 @@ def test_recommend_relations_existing_grouping_and_reversal():
     assert reversed_vo["fieldPairs"][0]["targetColumnName"] == "order_no"
 
 
+def test_recommend_relations_source_many_side_still_shows_one_to_many():
+    """存储方向 N:1（源端为多）时对外仍展示 1:N，描述按源端为多生成。"""
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.recommend_relations(81, "et-2", "et-1")
+    by_id = {vo["relationId"]: vo for vo in result if vo["fromExisting"]}
+    source_many = by_id[10]
+    assert source_many["cardinality"] == "1:N"
+    assert source_many["semanticDescription"] == (
+        "多个【订单】属于1个【客户】，1个【客户】对应多个【订单】"
+    )
+    # 推荐结果的关系类型只允许三种取值（同名业务键等无法确认的保持空串）
+    assert {vo["cardinality"] for vo in result} <= {"1:1", "1:N", "M:N", ""}
+
+
 def test_recommend_relations_inferred_candidates_and_llm_names():
+    # 模型只用于重命名；即使它返回了混入第三个实体的描述，也必须被忽略
     gateway = FakeGateway(
-        '[{"candidate":1,"relationName":"开设","semanticDescription":"自定义"},'
+        '[{"candidate":1,"relationName":"开设",'
+        '"semanticDescription":"一个经销商可以销售多个商品"},'
         '{"candidate":99,"relationName":"越界"}]'
     )
     service = SemanticRecommendService(base_reader(), gateway)
@@ -907,7 +935,10 @@ def test_recommend_relations_inferred_candidates_and_llm_names():
     assert len(inferred) == 1
     candidate = inferred[0]
     assert candidate["relationName"] == "开设"
-    assert candidate["semanticDescription"] == "自定义"
+    assert candidate["semanticDescription"] == (
+        "1个【客户】开设多个【订单】，1个【订单】只对应1个【客户】"
+    )
+    assert "商品" not in candidate["semanticDescription"]
     assert candidate["cardinality"] == "1:N"
     assert candidate["fieldPairs"] == [{
         "sourceTableName": "customer", "sourceColumnName": "id",
