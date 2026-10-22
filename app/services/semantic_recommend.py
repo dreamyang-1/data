@@ -828,7 +828,11 @@ class SemanticRecommendService:
                 if (signature(candidate["fieldPairs"]) == signature(configured["fieldPairs"])
                         and candidate["cardinality"] != configured["cardinality"]):
                     candidate["cardinality"] = configured["cardinality"]
-                    candidate["semanticDescription"] = configured["semanticDescription"]
+                    # 描述按候选自身关系名重建，避免串用已配置关系的名称
+                    candidate["semanticDescription"] = _build_semantic_description(
+                        source["name"], target["name"],
+                        configured["cardinality"], candidate["relationName"],
+                    )
                     break
         result.extend(inferred)
 

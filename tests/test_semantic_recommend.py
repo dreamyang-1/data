@@ -906,6 +906,28 @@ def test_recommend_relations_existing_grouping_and_reversal():
     assert reversed_vo["fieldPairs"][0]["targetColumnName"] == "order_no"
 
 
+def test_recommend_relations_inferred_aligns_description_with_own_name():
+    """推断候选沿用已配置关系的基数时，描述必须用自身关系名重建，不串用配置名。"""
+    reader = base_reader(relations=[
+        {"id": 9, "name": "拥有", "category": "IDENTIFYING", "type": "1:1",
+         "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+         "source_table_column_name": "customer-id",
+         "target_table_column_name": "sales_order-customer_id"},
+    ])
+    service = SemanticRecommendService(
+        reader, FakeGateway('[{"candidate":1,"relationName":"开设"}]')
+    )
+    inferred = [
+        vo for vo in service.recommend_relations(81, "et-1", "et-2")
+        if not vo["fromExisting"]
+    ][0]
+    assert inferred["cardinality"] == "1:1"
+    assert inferred["semanticDescription"] == (
+        "1个【客户】开设1个【订单】，1个【订单】只对应1个【客户】"
+    )
+    assert "拥有" not in inferred["semanticDescription"]
+
+
 def test_recommend_relations_source_many_side_still_shows_one_to_many():
     """存储方向 N:1（源端为多）时对外仍展示 1:N，描述按源端为多生成。"""
     service = SemanticRecommendService(base_reader(), None)
