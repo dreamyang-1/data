@@ -582,21 +582,14 @@ def test_detect_relations_indirect_via_bridge():
     assert indirect["indirect"] is True
     assert indirect["viaEntityTypeId"] == "et-2"
     assert indirect["viaEntityName"] == "订单"
-    assert indirect["indirectTableName"] == "sales_order"
     assert indirect["semanticDescription"] == (
-        "多个【客户】通过中间表【sales_order】（实体【订单】）间接关联多个【产品】"
+        "多个【客户】通过【订单】间接关联多个【产品】"
     )
-    # 提示信息说明可通过中间表建立关联，并给出子表映射后直接连线的操作方式
-    assert "中间表【sales_order】" in indirect["hint"]
-    assert "子表映射" in indirect["hint"]
-    assert "自动填充关系" in indirect["hint"]
     # 字段映射：两跳路径拼接（customer.id→sales_order.customer_id、
     # sales_order.product_id→product.id），基数 1:N + N:1 → N:N（检测接口保留方向口径）
     candidate = indirect["relationCandidates"][0]
     assert candidate["cardinality"] == "N:N"
     assert candidate["relationName"] == "间接关联"
-    assert candidate["indirectTableName"] == "sales_order"
-    assert "子表映射" in candidate["hint"]
     assert [(p["sourceTableName"], p["sourceColumnName"],
              p["targetTableName"], p["targetColumnName"])
             for p in candidate["fieldPairs"]] == [
@@ -698,12 +691,9 @@ def test_recommend_relations_indirect_via_common_neighbor():
     assert vo["viaEntityTypeId"] == "et-2"
     assert vo["viaEntityName"] == "订单"
     assert vo["otherEntityTypeId"] == "et-3"
-    assert vo["indirectTableName"] == "sales_order"
     assert vo["semanticDescription"] == (
-        "多个【客户】通过中间表【sales_order】（实体【订单】）间接关联多个【产品】"
+        "多个【客户】通过【订单】间接关联多个【产品】"
     )
-    assert "中间表【sales_order】" in vo["hint"]
-    assert "自动填充关系" in vo["hint"]
     assert [(p["sourceTableName"], p["sourceColumnName"],
              p["targetTableName"], p["targetColumnName"])
             for p in vo["fieldPairs"]] == [
@@ -732,85 +722,6 @@ def test_detect_relations_indirect_fixed_reader_calls():
     assert any(row.get("indirect") for row in result)
     assert service._reader.calls == [
         "entities", "relations", "tables", "fields_batch",
-    ]
-
-
-def test_indirect_hint_mentions_bridge_table_without_info():
-    """中间实体没有登记主表时，提示退化为中间实体口径，不编造表名。"""
-    reader = bridge_reader(
-        entities=[
-            {"id": "et-1", "name": "客户", "main_table_name": "customer",
-             "data_source_id": 58},
-            {"id": "et-2", "name": "订单", "main_table_name": None,
-             "data_source_id": 58},
-            {"id": "et-3", "name": "产品", "main_table_name": "product",
-             "data_source_id": 58},
-        ],
-        relations=[
-            {"id": 9, "name": "下单", "category": None, "type": "1:N",
-             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
-             "source_table_column_name": "customer-id",
-             "target_table_column_name": "sales_order-customer_id"},
-            {"id": 10, "name": "含产品", "category": None, "type": "1:N",
-             "source_entity_type_id": "et-2", "target_entity_type_id": "et-3",
-             "source_table_column_name": "sales_order-id",
-             "target_table_column_name": "product-order_id"},
-        ],
-    )
-    service = SemanticRecommendService(reader, None)
-    result = service.recommend_relations(81, "et-1", "et-3")
-    assert len(result) == 1
-    vo = result[0]
-    assert vo["indirectTableName"] is None
-    assert "中间实体【订单】" in vo["hint"]
-    assert "中间表" not in vo["hint"]
-
-
-def test_recommend_relations_autofills_from_sub_table_mapping():
-    """中间表完成子表映射后，两实体直接连线即可拿到可填充的关系候选。
-
-    订单主表 orders、产品主表 product 之间无直接字段证据；把订单明细
-    order_item 映射为【订单】的子表后，recommend_relations 必须按子表字段
-    推导出 order_item.product_id → product.id，并标记 viaSubTable。
-    """
-    reader = FakeReader(
-        entities=[
-            {"id": "et-1", "name": "订单", "main_table_name": "orders",
-             "data_source_id": 58},
-            {"id": "et-2", "name": "产品", "main_table_name": "product",
-             "data_source_id": 58},
-        ],
-        tables=[
-            {"id": 1, "name": "orders", "comment": "订单", "data_source_id": 58},
-            {"id": 2, "name": "order_item", "comment": "订单明细",
-             "data_source_id": 58},
-            {"id": 3, "name": "product", "comment": "产品", "data_source_id": 58},
-        ],
-        fields={
-            1: [field(11, "id", "主键", "bigint"), field(12, "order_no")],
-            2: [field(21, "id", "主键", "bigint"), field(22, "order_id"),
-                field(23, "product_id")],
-            3: [field(31, "id", "主键", "bigint"), field(32, "product_name")],
-        },
-        relations=[],
-    )
-    service = SemanticRecommendService(reader, None)
-    # 未配置子表映射前：两实体没有可关联字段，也没有共同邻居 → 无候选
-    assert service.recommend_relations(81, "et-1", "et-2") == []
-    # 把中间表 order_item 配置为【订单】的子表映射后：直接连线即可自动填充
-    reader.sub_table_mappings = lambda model: [
-        {"entity_type_id": "et-1", "sub_table_name": "order_item"}
-    ]
-    result = service.recommend_relations(81, "et-1", "et-2")
-    assert len(result) == 1
-    vo = result[0]
-    assert vo["fromExisting"] is False
-    assert vo["viaSubTable"] is True
-    assert vo["subTableNames"] == ["order_item"]
-    assert [(p["sourceTableName"], p["sourceColumnName"],
-             p["targetTableName"], p["targetColumnName"])
-            for p in vo["fieldPairs"]] == [
-        ("order_item", "product_id", "product", "id"),
     ]
 
 

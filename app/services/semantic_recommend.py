@@ -20,11 +20,8 @@ Resp 包装、VO 字段）与 Java 版保持一致，后端可直接调用或整
   分批，不逐实体执行字段查询。仅使用当前模型、数据源内的有效映射。
 - 两跳间接推断（2026-10-19 用户需求）：实体 A 与 C 无直接证据，但存在
   B 使 A-B、B-C 均有直接证据（已配置关系或规则命中字段对）时，生成
-  经 B 的间接关系候选（VO 附 indirect/viaEntityTypeId/viaEntityName、
-  中间表名 indirectTableName 与 hint 提示）。提示说明可把中间表配置为
-  子表映射后直接在两端实体连线；子表映射配置完成后 recommend_relations
-  会按子表字段推导出可直接填充的关系候选（附 viaSubTable/subTableNames）。
-  detect_relations 不增加 SQL；recommend_relations
+  经 B 的间接关系候选（VO 附 indirect/viaEntityTypeId/viaEntityName，
+  语义描述注明中间实体）。detect_relations 不增加 SQL；recommend_relations
   仅在无已配置且无直接推导时额外批量装载全部实体映射。
   间接候选不改变"不做无中生有"契约——每一跳都必须有物理/配置证据，
   且关联检测的间接候选可被大模型复核否决。
@@ -746,8 +743,6 @@ class SemanticRecommendService:
                 "indirect": True,
                 "viaEntityTypeId": vo.get("viaEntityTypeId"),
                 "viaEntityName": vo.get("viaEntityName"),
-                "indirectTableName": vo.get("indirectTableName"),
-                "hint": vo.get("hint"),
                 "semanticDescription": vo.get("semanticDescription"),
                 "relationCandidates": [vo],
             })
@@ -1160,15 +1155,6 @@ class SemanticRecommendService:
                         )) for p in candidate["fieldPairs"])
                         if signature not in seen:
                             seen.add(signature)
-                            # 子表映射参与推导：标记关系来自哪张子表，便于连线时直接填充
-                            sub_tables = [
-                                item["tableName"]
-                                for item, main in ((source_table, src), (target_table, tgt))
-                                if item is not main
-                            ]
-                            if sub_tables:
-                                candidate["viaSubTable"] = True
-                                candidate["subTableNames"] = sub_tables
                             candidates.append(candidate)
             return candidates
 
@@ -1297,18 +1283,10 @@ class SemanticRecommendService:
         return hops
 
     def _build_indirect_description(
-        self, source_name: str, via_name: str | None, table_name: str | None,
+        self, source_name: str, via_name: str | None,
         target_name: str, cardinality: str,
     ) -> str:
-        """间接候选语义描述：明确写出中间表（有表名时）与中间实体。"""
-        if _has_text(table_name):
-            middle = f"中间表【{table_name}】"
-            if _has_text(via_name):
-                middle += f"（实体【{via_name}】）"
-        elif _has_text(via_name):
-            middle = f"中间实体【{via_name}】"
-        else:
-            middle = "中间实体"
+        middle = f"【{via_name}】" if via_name else "中间实体"
         if cardinality == "1:1":
             return f"1个【{source_name}】通过{middle}间接关联1个【{target_name}】"
         if cardinality == "N:1":
@@ -1316,23 +1294,6 @@ class SemanticRecommendService:
         if cardinality == "1:N":
             return f"1个【{source_name}】通过{middle}间接关联多个【{target_name}】"
         return f"多个【{source_name}】通过{middle}间接关联多个【{target_name}】"
-
-    def _build_indirect_hint(
-        self, source_name: str, via_name: str | None, table_name: str | None,
-        target_name: str,
-    ) -> str:
-        """间接候选的操作提示：怎样把它变成可直接连线的真实关系。"""
-        if _has_text(table_name):
-            return (
-                f"可通过中间表【{table_name}】建立关联：把该表配置为"
-                f"【{source_name}】或【{target_name}】的子表映射后，"
-                f"直接连接【{source_name}】与【{target_name}】即可自动填充关系"
-            )
-        middle = f"中间实体【{via_name}】" if _has_text(via_name) else "中间实体"
-        return (
-            f"可通过{middle}建立关联：为中间实体补充子表映射后，"
-            f"直接连接【{source_name}】与【{target_name}】即可自动填充关系"
-        )
 
     def _infer_indirect_candidates(
         self, current: dict[str, Any], current_info: dict[str, Any] | None,
@@ -1411,19 +1372,13 @@ class SemanticRecommendService:
                     pairs, cardinality, current["name"], target["name"]
                 )
                 vo["relationName"] = "间接关联"
-                bridge_table = (bridge_info or {}).get("tableName")
                 vo["semanticDescription"] = self._build_indirect_description(
-                    current["name"], bridge.get("name"), bridge_table,
+                    current["name"], bridge.get("name"),
                     target["name"], cardinality,
                 )
                 vo["indirect"] = True
                 vo["viaEntityTypeId"] = bridge_id
                 vo["viaEntityName"] = bridge.get("name")
-                vo["indirectTableName"] = bridge_table
-                vo["hint"] = self._build_indirect_hint(
-                    current["name"], bridge.get("name"), bridge_table,
-                    target["name"],
-                )
                 vo["otherEntityTypeId"] = target["id"]
                 vo["otherEntityName"] = target.get("name")
                 result.append(vo)
