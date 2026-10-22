@@ -988,20 +988,67 @@ def test_recommend_relations_same_name_fk_and_reverse_fk():
     inferred = [vo for vo in result if not vo["fromExisting"]]
     # 1:N（customer.id -> sales_order.customer_id）
     # + N:1（sales_order.id 无对应 customer 主键外键 → 无）
-    # 同名 dept_id 不能证明两端唯一性，基数待确认。
+    # 同名 dept_id 两侧都不是主键 → 多对多 M:N。
     cardinalities = sorted(vo["cardinality"] for vo in inferred)
-    assert cardinalities == ["", "1:N"]
-    nn = next(vo for vo in inferred if vo["cardinality"] == "")
+    assert cardinalities == ["1:N", "M:N"]
+    nn = next(vo for vo in inferred if vo["cardinality"] == "M:N")
     assert nn["relationName"] == "关联"  # 无网关时保留模板
     assert nn["semanticDescription"] == (
-        "【客户】与【订单】存在同名业务键候选，需确认业务含义及关系基数后配置"
+        "多个【客户】关联多个【订单】，1个【客户】可关联多个【订单】，"
+        "1个【订单】也可被多个【客户】关联"
     )
+    assert nn["category"] == "关联关系"
     assert nn["fieldPairs"] == [{
         "sourceTableName": "customer", "sourceColumnName": "dept_id",
         "sourceColumnComment": "部门ID",
         "targetTableName": "sales_order", "targetColumnName": "dept_id",
         "targetColumnComment": "部门ID",
     }]
+
+
+def test_same_name_key_to_shared_dimension_is_many_to_many():
+    """两侧都指向同一外部维度（表名互不匹配）时按多对多推荐，分类字段不留空。"""
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "项目", "main_table_name": "project",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "科室", "main_table_name": "hospital_dept_relation",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "project", "comment": "项目", "data_source_id": 58},
+            {"id": 2, "name": "hospital_dept_relation", "comment": "科室关联",
+             "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint"),
+                field(12, "hospital_id", "医院标识")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "hospital_id", "医院标识")],
+        },
+        relations=[],
+    )
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    assert len(result) == 1
+    candidate = result[0]
+    assert candidate["cardinality"] == "M:N"
+    assert candidate["category"] == "关联关系"
+    assert candidate["semanticDescription"] == (
+        "多个【项目】关联多个【科室】，1个【项目】可关联多个【科室】，"
+        "1个【科室】也可被多个【项目】关联"
+    )
+
+
+def test_existing_relation_without_category_is_filled():
+    reader = base_reader(relations=[
+        {"id": 9, "name": "拥有", "category": None, "type": "1:N",
+         "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+         "source_table_column_name": "customer-id",
+         "target_table_column_name": "sales_order-customer_id"},
+    ])
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    existing = [vo for vo in result if vo["fromExisting"]]
+    assert existing[0]["category"] == "关联关系"
 
 
 def test_recommend_relations_without_llm_keeps_template():

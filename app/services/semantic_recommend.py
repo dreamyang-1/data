@@ -352,6 +352,34 @@ def _relation_name_is_clean(value: str | None) -> bool:
     return name not in ("关联", "关系")
 
 
+def _references_table(column: str | None, table_name: str | None, pk_name: str | None) -> bool:
+    """字段名是否自证指向某张表：列名以表名开头，或与对方主键同名。"""
+    name = (column or "").lower()
+    if not name:
+        return False
+    table = (table_name or "").replace("_", "").lower()
+    if len(table) > 2 and name.replace("_", "").startswith(table):
+        return True
+    return bool(pk_name) and name == (pk_name or "").lower()
+
+
+def _same_key_cardinality(source_refs_target: bool, target_refs_source: bool) -> str:
+    """同名业务键的基数推断（元数据看不到唯一索引，只能按表名自证引用方向）。
+
+    - 只有目标端字段指向源表（如 sales_order.customer_code → customer）→ 1:N；
+    - 只有源端字段指向目标表 → N:1；
+    - 两端互为引用 → 1:1；
+    - 两端都指向第三个业务维度（表名互不匹配）→ N:N。
+    """
+    if source_refs_target and target_refs_source:
+        return "1:1"
+    if target_refs_source:
+        return "1:N"
+    if source_refs_target:
+        return "N:1"
+    return "N:N"
+
+
 def _normalize_cardinality(cardinality: str | None, reversed_pair: bool) -> str:
     base = (cardinality or "1:N").strip().upper()
     if not reversed_pair:
@@ -854,6 +882,8 @@ class SemanticRecommendService:
         # 对外只展示 1:1 / 1:N / M:N 三种关系类型（用户 2026-10-22 要求）
         for vo in result:
             vo["cardinality"] = _display_cardinality(vo.get("cardinality"))
+            # 关系分类：平台统一使用「关联关系」，已配置行缺失分类时补齐
+            vo["category"] = vo.get("category") or "关联关系"
         return result
 
     # ---------- 内部工具 ----------
@@ -1079,7 +1109,7 @@ class SemanticRecommendService:
             "fromExisting": False,
             "relationId": None,
             "relationName": "关联",
-            "category": None,
+            "category": "关联关系",
             "cardinality": cardinality,
             "fieldPairs": pairs,
             "semanticDescription": _build_semantic_description(
@@ -1149,14 +1179,19 @@ class SemanticRecommendService:
                 [pair], "N:1", source["name"], target["name"]
             ))
 
-        # 同名业务键也能在删除/重建实体后重新推荐；字段名不能证明唯一性。
+        # 同名业务键也能在删除/重建实体后重新推荐；基数按“列名是否指向对方表”
+        # 推断方向，两侧都指向同一外部业务维度时按多对多推荐。
+        src_pk_name = (src.get("primary") or {}).get("name")
+        tgt_pk_name = (tgt.get("primary") or {}).get("name")
         same_name_pairs: dict[str, list[dict[str, Any]]] = {}
+        same_name_flags: dict[str, set[tuple[bool, bool]]] = {}
         for src_field in src["fields"]:
             src_name = src_field.get("name") or ""
             if not src_name.lower().endswith(("_id", "_code", "_no", "_key")):
                 continue
             for tgt_field in tgt["fields"]:
-                if (tgt_field.get("name") or "").lower() == src_name.lower():
+                tgt_name = tgt_field.get("name") or ""
+                if tgt_name.lower() == src_name.lower():
                     def type_family(field: dict[str, Any]) -> str:
                         field_type = (field.get("type") or "").lower().split("(")[0].strip()
                         if field_type in {"char", "varchar", "text", "string", "nvarchar", "nchar"}:
@@ -1170,9 +1205,15 @@ class SemanticRecommendService:
                     same_name_pairs.setdefault(src_name, []).append(
                         self._build_pair(src["tableName"], src_field, tgt["tableName"], tgt_field)
                     )
-        for pairs in same_name_pairs.values():
+                    same_name_flags.setdefault(src_name, set()).add((
+                        _references_table(src_name, tgt["tableName"], tgt_pk_name),
+                        _references_table(tgt_name, src["tableName"], src_pk_name),
+                    ))
+        for src_name, pairs in same_name_pairs.items():
+            flags = same_name_flags.get(src_name) or set()
+            cardinality = _same_key_cardinality(*next(iter(flags))) if len(flags) == 1 else "N:N"
             candidates.append(self._build_inferred_candidate(
-                pairs, "", source["name"], target["name"]
+                pairs, cardinality, source["name"], target["name"]
             ))
         return candidates
 

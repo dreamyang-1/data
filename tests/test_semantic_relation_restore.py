@@ -15,8 +15,12 @@ def test_recreate_entity_restores_business_key_without_saved_relation(key):
     assert after == before
     assert len(after) == 1
     assert after[0]["fieldPairs"][0]["sourceColumnName"] == key
-    assert after[0]["cardinality"] == ""
-    assert "待确认" in after[0]["semanticDescription"] or "需确认" in after[0]["semanticDescription"]
+    # 目标列名自证指向源表 customer → 源端为一端，展示 1:N
+    assert after[0]["cardinality"] == "1:N"
+    assert after[0]["semanticDescription"] == (
+        "1个【客户】关联多个【订单】，1个【订单】只对应1个【客户】"
+    )
+    assert after[0]["category"] == "关联关系"
     assert not after[0]["fromExisting"]
 
 
@@ -66,15 +70,21 @@ def test_business_id_takes_precedence_over_surrogate_id():
     candidates = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
     assert len(candidates) == 1
     assert candidates[0]["fieldPairs"][0]["sourceColumnName"] == "customer_id"
-    assert candidates[0]["cardinality"] == ""
+    # 目标列 customer_id 指向源表 customer → 源端一、目标端多
+    assert candidates[0]["cardinality"] == "1:N"
 
 
-def test_llm_cannot_replace_unknown_cardinality_with_unproved_claim():
+def test_llm_cannot_replace_derived_cardinality_with_unproved_claim():
     reader = base_reader(fields={1: [field(11, "customer_code")], 2: [field(21, "customer_code")]}, relations=[])
     gateway = FakeGateway('[{"candidate":1,"relationName":"拥有","semanticDescription":"一个客户有多个订单"}]')
     candidate = SemanticRecommendService(reader, gateway).recommend_relations(81, "et-1", "et-2")[0]
-    assert candidate["cardinality"] == ""
-    assert "需确认" in candidate["semanticDescription"]
+    # 基数由引用方向推导（目标列指向源表 → 1:N），模型描述一律不采用
+    assert candidate["cardinality"] == "1:N"
+    assert candidate["relationName"] == "拥有"
+    assert candidate["semanticDescription"] == (
+        "1个【客户】拥有多个【订单】，1个【订单】只对应1个【客户】"
+    )
+    assert "一个客户有多个订单" != candidate["semanticDescription"]
 
 
 def test_alternative_foreign_keys_are_separate_candidates_not_composite_join():
