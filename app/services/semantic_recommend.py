@@ -44,7 +44,9 @@ class MetadataReader(Protocol):
     """元数据库只读访问协议，行字段与数据库列同名（snake_case）。
 
     所有实现必须过滤软删除行（is_deleted = 0），避免已删除的
-    表/实体/字段/关系进入推荐结果。
+    表/实体/字段/关系进入推荐结果；表与字段还须排除
+    exist_status = 1（异常）的记录——四态中只有 0 存在、2 新增、
+    3 恢复参与推荐，1 异常（源库中已不存在）不参与关系判断与推荐。
     """
 
     def entities(self, semantic_model_id: int) -> list[dict[str, Any]]: ...
@@ -113,7 +115,8 @@ class PymysqlMetadataReader:
     ) -> list[dict[str, Any]]:
         sql = (
             "SELECT id, name, comment, data_source_id FROM semantic_model_table "
-            "WHERE semantic_model_id = %s AND is_deleted = 0"
+            "WHERE semantic_model_id = %s AND is_deleted = 0 "
+            "AND COALESCE(exist_status, 0) <> 1"
         )
         params: list[Any] = [semantic_model_id]
         if data_source_id is not None:
@@ -128,6 +131,7 @@ class PymysqlMetadataReader:
         rows = self._fetch(
             f"SELECT table_id, COUNT(*) AS cnt FROM semantic_model_field "
             f"WHERE table_id IN ({placeholders}) AND is_deleted = 0 "
+            f"AND COALESCE(exist_status, 0) <> 1 "
             f"GROUP BY table_id",
             tuple(table_ids),
         )
@@ -137,7 +141,8 @@ class PymysqlMetadataReader:
         return self._fetch(
             "SELECT id, name, comment, type, enum_values "
             "FROM semantic_model_field "
-            "WHERE table_id = %s AND is_deleted = 0",
+            "WHERE table_id = %s AND is_deleted = 0 "
+            "AND COALESCE(exist_status, 0) <> 1",
             (table_id,),
         )
 
@@ -152,7 +157,8 @@ class PymysqlMetadataReader:
             rows = self._fetch(
                 "SELECT id, table_id, name, comment, type, enum_values "
                 "FROM semantic_model_field "
-                f"WHERE table_id IN ({placeholders}) AND is_deleted = 0",
+                f"WHERE table_id IN ({placeholders}) AND is_deleted = 0 "
+                "AND COALESCE(exist_status, 0) <> 1",
                 tuple(chunk),
             )
             for row in rows:

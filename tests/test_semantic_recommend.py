@@ -1278,6 +1278,33 @@ def test_pymysql_reader_filters_soft_deleted(monkeypatch):
         assert "is_deleted = 0" in sql, f"缺少软删除过滤: {sql}"
 
 
+def test_pymysql_reader_excludes_abnormal_status(monkeypatch):
+    """回归（2026-10-22）：表/字段四态中只有 0 存在、2 新增、3 恢复参与推荐。
+
+    exist_status = 1（源库中已不存在的异常记录）不得进入推荐，
+    因此 tables / field_counts / fields / fields_batch 的 SQL 必须排除 1。
+    """
+    captured: list[str] = []
+    monkeypatch.setattr(
+        "pymysql.connect", lambda **kwargs: _CaptureConn(captured)
+    )
+    reader = semantic_recommend.PymysqlMetadataReader(
+        host="h", port=3306, user="u", password="p", database="d")
+    reader.tables(1, None)
+    reader.tables(1, 58)
+    reader.field_counts([1, 2])
+    reader.fields(1)
+    reader.fields_batch([1, 2])
+    assert len(captured) == 5
+    for sql in captured:
+        assert "COALESCE(exist_status, 0) <> 1" in sql, f"缺少异常状态过滤: {sql}"
+    # 实体与关系配置本身没有 exist_status 列，不应误加过滤
+    reader.entities(1)
+    reader.relations(1)
+    assert "exist_status" not in captured[-2]
+    assert "exist_status" not in captured[-1]
+
+
 def test_gateway_empty_answer_returns_none_and_logs(monkeypatch, caplog):
     """回归：网关空答案必须返回 None 并留 WARNING（qwen3-max 事故根因）。"""
     class _Resp:
