@@ -974,6 +974,14 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                                 or _vector_correct_filter(fallback_key, raw_vals, slot_catalog, op_)
                                 or _vector_locate_value(raw_vals, slot_catalog))
                                if op_ in {'=','!=','IN','NOT IN'} else None)
+                    if located is None and op_ in {'=', '!=', 'IN', 'NOT IN'}:
+                        # 声明实体与字段归属不一致时（例如维度字段“城市名称”被
+                        # 挂在“销售订单”实体下），槽位目录里没有该字段；改在
+                        # 完整授权目录里按声明字段名+值唯一命中绑定，不再为同一
+                        # 问题整轮重新生成 ASL。多义仍保持澄清。
+                        located = (_declared_field_locate(
+                                       original.get('field'), raw_vals, catalog)
+                                   or _vector_locate_value(raw_vals, catalog))
                     if located:
                         located_field, fixed_vals = located
                         operator2 = op_
