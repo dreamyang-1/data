@@ -126,7 +126,7 @@ from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
 from app.observability import TraceSummary
 from app.observability.call_timing import track_operation
-from app.observability.langfuse_client import observe_span, text_metadata, trace_generation
+from app.observability.langfuse_client import observe_comprehension_child, text_metadata, trace_generation
 from app.presentation.reliability import root_quality_status
 from app.presentation import (
     QUERY_EXECUTION_CHAIN,
@@ -2024,6 +2024,42 @@ class DataAnalysisOrchestrator:
                             text += "。"
                         return text
 
+                    def _question_group_analysis(
+                        group_tasks, start, task_order, compound_metrics,
+                    ) -> str:
+                        """单个问题的拆分说明，只描述本问题的任务数与依赖。"""
+                        count = len(group_tasks)
+                        pairs = [
+                            f"任务{start + local + 1}依赖任务{task_order[dep] + 1}"
+                            for local, task in enumerate(group_tasks)
+                            for dep in task.depends_on
+                            if dep in task_order
+                        ]
+                        texts = [str(task.question or "") for task in group_tasks]
+                        metric = next(
+                            (
+                                name for name in compound_metrics or []
+                                if name and any(name in text for text in texts)
+                            ),
+                            None,
+                        )
+                        if count == 1:
+                            body = "拆分为1个任务，单任务直接交付。"
+                        elif pairs:
+                            body = (
+                                f"拆分为{count}个任务，"
+                                + "、".join(pairs)
+                                + "，需按依赖顺序执行。"
+                            )
+                        else:
+                            body = f"拆分为{count}个任务，各任务相互独立，可并行执行。"
+                        if metric:
+                            body = (
+                                f"此问题包含复合指标（{metric}），已按公式成分拆分，"
+                                + body
+                            )
+                        return "分析内容：" + body
+
                     # 规划展示前预判无依赖任务能否复用上一轮数据集：
                     # 与执行期等价复用同一指纹口径，命中的任务名带复用前缀
                     reuse_predicted_tasks: set[str] = set()
@@ -2098,13 +2134,14 @@ class DataAnalysisOrchestrator:
                         ]
                         if groups_valid:
                             group_blocks = []
+                            multiple_questions = len(groups) > 1
                             for group_index, group in enumerate(groups, 1):
                                 start = group.task_offset
                                 group_tasks = plan.tasks[
                                     start:start + group.task_count
                                 ]
                                 if len(group_tasks) == 1:
-                                    group_blocks.append(_planning_task_block(
+                                    block = _planning_task_block(
                                         start + 1,
                                         group_tasks[0].question,
                                         task_requests[start].primary_intent,
@@ -2116,7 +2153,7 @@ class DataAnalysisOrchestrator:
                                             group_tasks[0].task_id
                                             in reuse_predicted_tasks
                                         ),
-                                    ))
+                                    )
                                 else:
                                     lines = [
                                         f"问题{group_index}："
@@ -2137,7 +2174,17 @@ class DataAnalysisOrchestrator:
                                                 in reuse_predicted_tasks
                                             ),
                                         ))
-                                    group_blocks.append("\n".join(lines))
+                                    block = "\n".join(lines)
+                                if multiple_questions:
+                                    # 分析内容针对单个问题的拆分，放在该问题
+                                    # 的任务之后，不再集中到规划开头。
+                                    block += "\n" + _question_group_analysis(
+                                        group_tasks,
+                                        start,
+                                        task_order,
+                                        plan.compound_metrics,
+                                    )
+                                group_blocks.append(block)
                             task_section = "\n\n".join(group_blocks)
                         else:
                             task_section = "\n\n".join(
@@ -2179,8 +2226,11 @@ class DataAnalysisOrchestrator:
                             )
                         if summary[-1] not in "。！？?!":
                             summary += "。"
-                        sections = ["分析内容：" + summary]
-                        sections.append(task_section)
+                        if groups_valid and len(groups) > 1:
+                            # 多问题各自带分析，不再在规划开头输出整体分析
+                            sections = [task_section]
+                        else:
+                            sections = ["分析内容：" + summary, task_section]
                         planning_detail = "\n\n".join(sections)
                     else:
                         single_extraction = chat._planner_extraction
@@ -5999,6 +6049,9 @@ class DataAnalysisOrchestrator:
                 agent_prompt=await self._agent_prompt_text(chat),
                 planner_extraction=chat._planner_extraction,
             )
+            # surface 直通没走通时主链路会按同样输入再分类一次，留一份
+            # 未被本函数改动的分类结果供主链路复用，避免重复意图终审
+            chat._surface_prefetched_request = request.model_copy(deep=True)
         if request.primary_intent not in {
             PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
             PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
@@ -6871,11 +6924,18 @@ class DataAnalysisOrchestrator:
             if deterministic_slot_reply:
                 request.assumptions.append("DETERMINISTIC_SLOT_FAST_PATH")
         else:
+            # surface 直通入口已按同样输入分类过、且问题文本没被规范化
+            # 改写时直接复用那次结果，同一轮不做第二次意图终审
+            prefetched_request = getattr(chat, "_surface_prefetched_request", None)
+            if prefetched_request is not None and classification_question != chat.question:
+                prefetched_request = None
             request = (
                 semantic_decision_request
                 if semantic_decision_request is not None
                 else raw_rule_request
                 if independent_chat or deterministic_business_fast_path
+                else prefetched_request
+                if prefetched_request is not None
                 else await self._classify(
                     classification_question,
                     identity,
@@ -12156,9 +12216,9 @@ class DataAnalysisOrchestrator:
             or planner_extraction.parameters
             or planner_extraction.structured is not None
         )
-        with observe_span(
+        with observe_comprehension_child(
             as_type="span",
-            name="意图识别",
+            name="意图终审（执行层）",
             input={"question": text_metadata(question)},
         ) as intent_span, track_operation(
             "V1_ORCHESTRATION",
