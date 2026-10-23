@@ -125,7 +125,7 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     # A table's consumers do not make every ordinary attribute shared.
     from structured_binding import (catalog_candidates, _exact_choice_keys,
                                     _dimension_filter_field, _dim_bound_field)
-    from binding_ownership import matching_fields, field_owners
+    from binding_ownership import matching_fields, field_owners, resolve_entities
     attribute_catalog = catalog_candidates(knowledge)
     for option in options:
         index = option['filter_index']
@@ -133,8 +133,22 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         if type(source_index) is not int or not 0 <= source_index < len(declared_filters):
             continue
         original = declared_filters[source_index]
+        overreached = set()
+        if isinstance(original, dict) and original.get('entity'):
+            declared_owners = resolve_entities(
+                ((extraction or {}).get('实体') if isinstance(extraction, dict) else None) or [],
+                entity_catalog)
+            claimed_owners = resolve_entities([original.get('entity')], entity_catalog)
+            # 过滤条件声明的实体不在本任务实体集合内属于越界声明（实测
+            # 2026-10-22：任务实体只有销售订单/经销商，条件却声明为医院，
+            # 绑定后得到 hospital.province_id，返回全国经销商 1713 行）。
+            # 越界声明没有任务范围证据，不参与归属；改由任务实体提示裁决，
+            # 仍不唯一则保留歧义走澄清，不猜归属。
+            if claimed_owners and declared_owners and not (claimed_owners & declared_owners):
+                original = {**original, 'entity': None}
+                overreached = declared_owners
         source_filters[index] = original
-        required = parameter_owners(original, {'entities': entity_catalog})
+        required = overreached or parameter_owners(original, {'entities': entity_catalog})
         if isinstance(original, dict) and not original.get('entity'):
             aliases = entity_label_candidates(original.get('field') or original.get('name'), entity_catalog)
             # A bare geography/dictionary label identifies the value catalog,
@@ -185,6 +199,15 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         elif required:
             matches = [i for i, choice in enumerate(option['choices'])
                        if choice.get('owner_entity') in required]
+            if not matches:
+                # 声明实体对共享字典无边（q61sh 实测 2026-10-22：规划器把省份
+                # 过滤声明到销售订单上，字段绑定阶段已按目录证据改挂维度）时，
+                # 用结构化提取的实体提示唯一确定归属；提示不唯一仍走澄清，
+                # 不猜归属。
+                declared = (extraction or {}).get('实体') if isinstance(extraction, dict) else None
+                hinted = resolve_entities(declared or [], entity_catalog)
+                matches = [i for i, choice in enumerate(option['choices'])
+                           if choice.get('owner_entity') in hinted]
             deterministic.append({'filter_index': index, 'bind_owner': True,
                                   'choice_index': matches[0] if len(matches) == 1 else None,
                                   'reason': '按结构化条件所属实体和已发布关系绑定'})
@@ -258,6 +281,16 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
             continue
         bindings = [b for b in bindings if not isinstance(b, dict) or b.get('filter_index') != index]
         matches = [i for i, choice in enumerate(option['choices']) if choice.get('owner_entity') in required]
+        if not matches:
+            # 索引对应重算必须携带与确定性阶段相同的 extraction['实体'] 提示
+            # 回退（覆盖率/上海实测 2026-10-22：声明实体=销售订单对共享字典
+            # 无边，确定性阶段已按提示解析出 bind_owner=经销商，本循环若只按
+            # 声明实体匹配会把已解析绑定覆盖成未解析占位并重新拦停）。提示
+            # 仍不唯一才留占位走澄清，不猜归属。
+            declared = (extraction or {}).get('实体') if isinstance(extraction, dict) else None
+            hinted = resolve_entities(declared or [], entity_catalog)
+            matches = [i for i, choice in enumerate(option['choices'])
+                       if choice.get('owner_entity') in hinted]
         if len(matches) == 1:
             bindings.append({'filter_index': index, 'choice_index': matches[0], 'bind_owner': True,
                              'reason': '结构化条件明确指定所属实体，按已发布关系绑定该实体'})
@@ -314,9 +347,12 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                         "source": "SCOPED_RELATION_AND_DICTIONARY"})
         knowledge.setdefault('_filter_owner_bindings', []).append(copy.deepcopy(repairs[-1]))
     from structured_binding import issue
+    # 2026-10-23 用户要求：结构化过滤参数是硬约束。已按“声明字段名+唯一值”
+    # 确定性落库的条件不再进入归属追问，否则同一问题会反复重生成 ASL。
+    hard_constraints = set(knowledge.get('_hard_constraint_filter_indices') or ())
     for option in options:
         index = option['filter_index']
-        if index in target_indices:
+        if index in target_indices or index in hard_constraints:
             continue
         if index not in seen:
             ast.setdefault('ambiguity', []).append(issue('过滤条件归属', option['predicate'],
