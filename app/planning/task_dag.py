@@ -1662,6 +1662,12 @@ class SingleQuestionPlanner:
             semantic_context = semantic_context[:prior_start].rstrip()
 
         system_content = ""
+        if root_intent is not None:
+            system_content += (
+                "\n已识别任务意图：" + root_intent.value
+                + "。结合补全后的问题和当前语义文件规划，不重新判断整轮意图；"
+                "意图标签不能替代问题中的筛选、排名和依赖条件。\n"
+            )
         # 通用规则块放在前部：贴着Schema末尾时会干扰指标选择，
         # 使模型在多个可对应的登记指标之间选错（实测多次复现）
         system_content += general_rules
