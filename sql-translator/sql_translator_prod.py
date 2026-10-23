@@ -3234,6 +3234,9 @@ class SQLTranslatorProd:
         """
         additional_joins = []
         existing_tables = self._get_existing_join_tables(entity_code, model_id)
+        from dimension_role_joins import scoped_dimension_joins
+        additional_joins.extend(scoped_dimension_joins(
+            self, entity_code, dimensions, filters, model_id, existing_tables))
         dimension_anchor_entities = []
         for dimension in dimensions:
             if not isinstance(dimension, dict):
