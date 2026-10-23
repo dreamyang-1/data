@@ -1,15 +1,33 @@
 """Bind planner slots to finite catalog candidates; never extract from a question."""
 import json
+import logging
 import re
 from datetime import date, datetime, timedelta
 from query_binding_review import _metadata, _object, _field
-from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields
+from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields, normalize_unit
+
+logger = logging.getLogger(__name__)
 from binding_ownership import (entity_label_candidates, field_owners, matching_fields,
                                normalized, parameter_catalog, registered_terms, resolve_entities, value_allowed)
 from binding_errors import invoke_binding_object
 
 SECTIONS = {'指标': 'metrics', '维度': 'dimensions', '展示字段': 'display_fields', '过滤条件': 'filters', '排序': 'sort'}
 OPERATORS = {'=', '!=', '>', '>=', '<', '<=', 'IN', 'NOT IN', 'LIKE', 'BETWEEN'}
+
+
+def _grain_slot_unit(label):
+    """维度槽位出现纯时间粒度词（季度/月度/年度…）时还原成分组粒度。
+
+    结构化抽取常把“季度对比”拆出「季度」维度槽位，而 ASL 合同规定
+    时间粒度由程序依据结构化时间参数赋值、不作为维度返回；该词形
+    不能被当成缺失的业务维度拦停澄清。
+    """
+    if not isinstance(label, str):
+        return None
+    text = re.sub(r'\s+', '', label)
+    text = re.sub(r'^(?:按|以)', '', text)
+    text = re.sub(r'(?:对比|分布|趋势|汇总|统计|粒度|维度)$', '', text)
+    return normalize_unit(text)
 
 
 def filter_value_queries(extraction):
@@ -268,6 +286,27 @@ def _related_display_field(groups, field, catalog):
     return target_table not in starts and target_table in seen
 
 
+def _metric_covers_display_field(metrics, field, catalog):
+    """已投影指标的公式是否引用该展示字段的物理列。
+
+    明细查询常把同一度量同时写进指标与展示字段（如“含税销售总额”与
+    “含税金额”）。指标已经按标准口径聚合投影，展示位的原始列若因分组
+    粒度无法附加，不应再作为独立字段返回。
+    """
+    target = str(field or '').replace('`', '').strip().lower()
+    if not target:
+        return False
+    for item in metrics or []:
+        code = item.get('name') if isinstance(item, dict) else item
+        meta = catalog['metrics'].get(code) or {}
+        # 公式在目录中可能位于 calculation_rule.calc_formula（元数据发布结构）
+        # 或顶层 calculation_formula，统一序列化后比对物理列名。
+        text = json.dumps(meta, ensure_ascii=False, default=str).replace('`', '').lower()
+        if target in text:
+            return True
+    return False
+
+
 def _group_exposes_field(group, field, catalog):
     """Recognize the identity/label pair already projected by SQL Translator."""
     code = group['name']
@@ -307,8 +346,18 @@ def _group_exposes_field(group, field, catalog):
         return True
     attrs = _object(entity.get('attributes')) or []
     flag = lambda value: str(value).lower() in {'true', '1', 'yes'}
-    identities = {a.get('field_mapping') for a in attrs if a.get('field_mapping') in fields
-                  and (flag(a.get('is_primary_key')) or a.get('attr_code') in {code+'_id', code+'_code'})}
+    def _identity(attr):
+        # 行标识证据：主键/唯一标记、实体自有编码命名，或代理主键列 id。
+        # 2026-10-23 回归：模型130「业务员ID」发布为 is_primary_key=0 且
+        # attr_code='id'，分组落成 salesperson.id 时身份证据为空，同表
+        # 主名称展示被误报无唯一关联。列名/编码为 id 只会出现在行标识
+        # 上，业务编码列（如 department_code）不会误判，粒度保护不变。
+        column = str(attr.get('field_mapping') or '').split('.')[-1]
+        return (flag(attr.get('is_primary_key')) or flag(attr.get('is_unique'))
+                or attr.get('attr_code') in {code+'_id', code+'_code'}
+                or attr.get('attr_code') == 'id' or column == 'id')
+    identities = {a.get('field_mapping') for a in attrs
+                  if a.get('field_mapping') in fields and _identity(a)}
     labels = {a.get('field_mapping') for a in attrs
               if (flag(a.get('is_main_attribute')) or a.get('attr_code') == code+'_name')
               and any(str(a.get('field_mapping', '')).split('.')[0] == identity.split('.')[0]
@@ -491,8 +540,28 @@ def _exact_choice_keys(target, original, catalog):
     owner = next(iter(owners))
     entity = catalog['entities'][owner]
     if target == 'dimensions':
-        return [key for key, metadata in catalog['dimensions'].items()
-                if key == owner or normalized(metadata.get('dim_name')) == normalized(entity.get('entity_name'))]
+        named = [key for key, metadata in catalog['dimensions'].items()
+                 if key == owner or normalized(metadata.get('dim_name')) == normalized(entity.get('entity_name'))]
+        if named:
+            return named
+        # 裸实体维度词兜底（Q60 实测 2026-10-22）：维度名与实体名不同字时，
+        # 目录 bind_entities 是唯一可用的归属证据。只认该实体独占发布的
+        # 维度（映射实体恰好等于该实体）；多个候选保留歧义并给出真实名单。
+        owned = []
+        evidence = {}
+        for key, metadata in catalog['dimensions'].items():
+            resolved = set()
+            for mapping in _object(metadata.get('bind_entities')) or []:
+                if isinstance(mapping, dict):
+                    resolved |= resolve_entities(mapping.get('entity'), catalog['entities'])
+            evidence[key] = sorted(resolved)
+            if resolved == {owner}:
+                owned.append(key)
+        if not owned:
+            # 诊断：裸实体维度词零命中时转储维度归属证据（q60x 实测 2026-10-22）
+            logger.warning('Bare-entity dimension fallback empty: owner=%s label=%r evidence=%s',
+                           owner, label, json.dumps(evidence, ensure_ascii=False)[:1500])
+        return owned
     return [key for key, metadata in catalog['fields'].items()
             if any(attr.get('is_main_attribute') is True and owner in field_owners(attr)
                    for attr in metadata.get('attribute_bindings') or [metadata])]
@@ -728,7 +797,8 @@ def _temporal_bounds(value):
     return start.isoformat(), end.isoformat()
 
 
-def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=None):
+def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=None,
+         row_level_detail=None):
     """Model chooses bindings; deterministic assembly owns shape/operators/literals."""
     ast = dict(version='2.0', intent='query', subject={}, metrics=[], dimensions=[], filters=[],
                time_context=None, sort=None, limit=None, having=[], ambiguity=[])
@@ -882,6 +952,17 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
             allowed = (catalog['metrics'] if target == 'metrics' else
                        {**catalog['dimensions'], **slot_catalog['fields']} if target == 'dimensions' else
                        {**catalog['metrics'], **catalog['dimensions'], **slot_catalog['fields']} if target == 'sort' else slot_catalog['fields'])
+            if target == 'filters' and isinstance(original, dict):
+                # 依赖任务的筛选值常被规划器写成占位引用，抽取阶段落成空列表。
+                # 空列表无法生成有效 SQL，剥离该条件继续执行；
+                # 执行期依赖接管若约束已编译仍会注入真实名单。
+                empty_op = str(original.get('op') or original.get('operator') or '').upper()
+                if empty_op in {'IN', 'NOT IN'} and original.get('value') == []:
+                    repairs.append({'type': 'EMPTY_FILTER_VALUE_DROPPED',
+                                    'source': 'STRUCTURED_EXTRACTION',
+                                    'field': original.get('field') or label,
+                                    'operator': empty_op})
+                    continue
             if choice.get('error') or not isinstance(key,str) or key not in allowed:
                 if target == 'filters' and isinstance(original, dict):
                     # 模型绑不出字段时，过滤值若在授权字段上唯一命中则字段+值一起修正
@@ -903,6 +984,33 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                         repairs.append({'type': 'VECTOR_FILTER_VALUE_CORRECTED', 'source': 'VECTOR_CATALOG_FIELD_FALLBACK',
                                         'original_field': original.get('field'),
                                         'field': located_field, 'original_values': raw_vals, 'values': fixed_vals})
+                        continue
+                if target == 'dimensions':
+                    # 维度槽位是纯时间粒度词（如「季度」）时不拦停澄清：
+                    # 时间分组粒度由程序控制，把词形并入已绑定时间维度的
+                    # granularity（或待后续时间维度绑定时经 时间粒度.unit 生效）。
+                    grain = _grain_slot_unit(label)
+                    temporal = extraction.get('时间粒度')
+                    declared = ''
+                    if isinstance(temporal, dict) and temporal.get('unit'):
+                        declared = normalize_unit(temporal['unit']) or ''
+                    if grain and (not declared or declared == grain):
+                        applied = None
+                        if ast['metrics']:
+                            for dim in ast['dimensions']:
+                                if not isinstance(dim, dict) or dim.get('granularity'):
+                                    continue
+                                meta = (catalog['dimensions'].get(dim.get('name'))
+                                        or catalog['fields'].get(dim.get('name')) or {})
+                                if is_temporal(meta):
+                                    dim['granularity'] = grain
+                                    applied = dim.get('name')
+                                    break
+                        if isinstance(temporal, dict) and not temporal.get('unit'):
+                            temporal['unit'] = grain
+                        repairs.append({'type': 'STRUCTURED_GRAIN_SLOT_AS_GRANULARITY',
+                                        'source': 'STRUCTURED_EXTRACTION', 'field': label,
+                                        'granularity': grain, 'applied_dimension': applied})
                         continue
                 reason = choice.get('error') or '未匹配到可执行的标准字段'
                 ownership_conflict = bool(len(exact_keys) > 1 or (required_owners and isinstance(key, str) and key in catalog['fields'] and key not in slot_catalog['fields']))
@@ -938,6 +1046,31 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                             fields = ast.setdefault('display_fields', [])
                             if not any(d['name'] == key for d in fields):
                                 fields.append({'name': key, 'alias': allowed[key].get('attr_name') or key})
+                        elif _metric_covers_display_field(ast['metrics'], key, catalog):
+                            # 明细口径由调用方意图契约决定；结构化抽取的“意图”
+                            # 只是建议值，缺失时不能据此把明细字段当成汇总省略。
+                            is_row_level = (
+                                row_level_detail
+                                if row_level_detail is not None
+                                else '明细' in str(extraction.get('意图') or '')
+                            )
+                            if is_row_level:
+                                # 明细返回行级原始列，指标会被行级口径清空；
+                                # 该列与分组字段同处事实行，直接作为返回列投影。
+                                if key not in {d['name'] for d in ast['dimensions']}:
+                                    ast['dimensions'].append(dict(
+                                        name=key, attr=None, level=None, granularity=None))
+                                repairs.append({'type': 'DISPLAY_FIELD_AS_ROW_PROJECTION',
+                                                'source': 'STRUCTURED_EXTRACTION',
+                                                'field': key})
+                            else:
+                                # 汇总场景下该度量已由标准指标按聚合口径投影，
+                                # 不再作为额外的行级列附加。
+                                repairs.append({'type': 'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC',
+                                                'source': 'STRUCTURED_EXTRACTION',
+                                                'field': key,
+                                                'metrics': [m['name'] for m in ast['metrics']
+                                                            if isinstance(m, dict)]})
                         else:
                             ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '该展示属性与分组对象之间没有可确认的唯一关联，无法在不改变统计粒度的情况下返回'))
                 elif key not in {d['name'] for d in ast['dimensions']}:
@@ -1119,8 +1252,14 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 append_filter({'field':key,'operator':operator,'value':vals if operator in {'IN','NOT IN','BETWEEN'} else vals[0]})
             elif target == 'sort':
                 direction = str(original.get('order') or original.get('direction') or '').upper() if isinstance(original,dict) else ''
-                if len(extraction[source])>1 or direction not in {'ASC','DESC'}:
+                if direction not in {'ASC','DESC'}:
                     ast['ambiguity'].append(issue(source, original, '当前ASL仅支持一个明确升序/降序的排序字段'));continue
+                if ast.get('sort'):
+                    # ASL 的 sort 是单一字段；多级排序保留用户声明的主排序，
+                    # 次级排序不阻断执行（同分时由结果自然顺序呈现）。
+                    repairs.append({'type':'SECONDARY_SORT_IGNORED','source':'STRUCTURED_EXTRACTION',
+                                    'field':key,'direction':direction})
+                    continue
                 if key in catalog['metrics'] and key not in {m['name'] for m in ast['metrics']}:
                     # 按指标排序时该指标必须同时进 SELECT，否则 ORDER BY 会引用
                     # 一个未投影的指标编码，SQL 与发布公式对不上（METRIC_FORMULA_STALE）
