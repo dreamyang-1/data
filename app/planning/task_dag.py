@@ -25,7 +25,11 @@ from app.config import Settings
 from app.observability.langfuse_client import trace_generation
 from app.domain.models import PlannerExtraction, PrimaryIntent
 from app.planning.dependency_contract import projection
-from app.analysis.chain_tools.temporal_window import has_pop_signal, has_yoy_signal
+from app.analysis.chain_tools.temporal_window import (
+    has_pop_signal,
+    has_yoy_signal,
+    parse_absolute_range,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +86,65 @@ _CHINESE_INTENT_LABELS = frozenset(_CHINESE_INTENT_TO_PRIMARY)
 
 _EXTRACTION_PROMPT_PATH = Path(__file__).with_name("structured_extraction_prompt.txt")
 _EXTRACTION_PROMPT_MARKER = "【用户提示词（业务场景上下文）】"
+
+
+# 结构化提取会把问题原文片段幻觉成筛选值（Q60 实测：商品名称 EQ
+# "2025年销售额占比前3的产品线下各"——原文跨逗号拼接的叙述性片段）。
+# 真实业务值（商品/经销商/医院/省份名等）不会同时携带时间前缀、排名
+# 短语、指标描述、群扫指代等多重叙述标记；命中特征的筛选值在进入
+# 合同、ASL 与 mentions 通道前剥离，不猜标准值，也不依赖向量校验拦停。
+_PROSE_VALUE_MARKERS = (
+    re.compile(r'\d{4}\s*年'),
+    re.compile(r'前\d+'),
+    re.compile(r'占比|排名|销量|销售额|金额|总数|数量|总计|合计|平均|最高|最低'),
+    re.compile(r'(?:各|每)(?:条|个|笔|项|类|产品|商品|订单|经销商|医院|省份|客户|业务)'),
+    re.compile(r'上述|前序|依赖任务|任务\d'),
+    re.compile(r'[的与和及或下各]$'),
+)
+
+
+def _is_prose_placeholder_value(value: Any) -> bool:
+    text = str(value).strip()
+    if len(text) < 6:
+        return False
+    return sum(bool(pattern.search(text)) for pattern in _PROSE_VALUE_MARKERS) >= 2
+
+
+def _strip_prose_placeholder_filters(structured: dict[str, Any] | None) -> None:
+    """剥离抽取阶段幻觉出的散文占位筛选值，只删条件不猜值。
+
+    抽取模型偶发把任务问题的叙述片段当成等值过滤值写进过滤条件——
+    该值永远无法通过向量标准值绑定，只会把整个任务拦停在澄清/失败。
+    剥离等价于按“任务自身无该条件”执行（原问题本就没有这个条件），
+    与空列表占位剥离（EMPTY_FILTER_VALUE_DROPPED）同一哲学。模板引用
+    （${task_N.字段}）与真实业务值不受影响。
+    """
+    if not isinstance(structured, dict):
+        return
+    conditions = structured.get('过滤条件')
+    if not isinstance(conditions, list):
+        return
+    kept = []
+    for item in conditions:
+        if not isinstance(item, dict):
+            kept.append(item)
+            continue
+        raw = item.get('value')
+        if isinstance(raw, list):
+            values = [value for value in raw
+                      if not (isinstance(value, str) and _is_prose_placeholder_value(value))]
+            if len(values) != len(raw):
+                logger.warning('prose placeholder filter value dropped: field=%r value=%r',
+                               item.get('field'), raw)
+            if values:
+                kept.append(dict(item, value=values))
+            continue
+        if isinstance(raw, str) and _is_prose_placeholder_value(raw):
+            logger.warning('prose placeholder filter dropped: field=%r value=%r',
+                           item.get('field'), raw)
+            continue
+        kept.append(item)
+    structured['过滤条件'] = kept
 
 
 def _ground_location_owners(extraction: dict[str, Any] | None, question: str) -> None:
@@ -665,30 +728,228 @@ _ANALYSIS_QUESTION_INTENTS = {
 }
 
 
+# 同比/对比计算任务的期间提及解析：
+# - 绝对期间：2025年 / 2025年11月（兼容"年度/月份"写法）；
+# - 相对基期：去年同期 / 上年同期 / 上一年 / 去年 等。相对说法锚定上下文
+#   里的绝对期间统一前推一年；锚定不了就不产出期间，不猜年份。
+_ABSOLUTE_PERIOD_MENTION = re.compile(r"(20\d{2})\s*年(?:\s*(\d{1,2})\s*月(?:份)?)?")
+_RELATIVE_BASELINE_MENTION = re.compile(r"去年同期|上年同期|上一年度|上一年|上年度|上年|去年")
+
+
+def _period_sort_key(period: tuple[int, int | None]) -> tuple[int, int]:
+    year, month = period
+    return (year, 0 if month is None else month)
+
+
+def _period_label(period: tuple[int, int | None]) -> str:
+    year, month = period
+    return f"{year}年{month}月" if month else f"{year}年"
+
+
+def _task_period_text(task) -> str:
+    """任务的期间语料：问题文本 + 交付物说明 + 结构化时间范围。"""
+    structured = task.structured if isinstance(task.structured, dict) else {}
+    granularity = structured.get('时间粒度')
+    time_range = granularity.get('time_range') if isinstance(granularity, dict) else None
+    return ' '.join(
+        str(part) for part in (task.question, task.expected_output, time_range) if part
+    )
+
+
+def _mentioned_absolute_periods(text: str) -> list[tuple[int, int | None]]:
+    periods: list[tuple[int, int | None]] = []
+    for match in _ABSOLUTE_PERIOD_MENTION.finditer(str(text or '')):
+        month = match.group(2)
+        periods.append((int(match.group(1)), int(month) if month else None))
+    return periods
+
+
+def _covered_periods(task) -> set[tuple[int, int | None]]:
+    """取数任务已覆盖的期间：结构化时间范围的绝对区间 + 文本期间提及。"""
+    covered: set[tuple[int, int | None]] = set()
+    structured = task.structured if isinstance(task.structured, dict) else {}
+    granularity = structured.get('时间粒度')
+    time_range = str(granularity.get('time_range') or '') if isinstance(granularity, dict) else ''
+    absolute = parse_absolute_range(time_range)
+    if absolute is not None:
+        covered.update(
+            (year, None) for year in range(absolute[0].year, absolute[1].year + 1)
+        )
+    covered.update(_mentioned_absolute_periods(_task_period_text(task)))
+    return covered
+
+
+def _period_uncovered(
+    period: tuple[int, int | None], covered: set[tuple[int, int | None]]
+) -> bool:
+    """整年取数覆盖该年任意期间；单月取数只覆盖同一期间。"""
+    year, month = period
+    if (year, None) in covered:
+        return False
+    if month is None:
+        return True
+    return (year, month) not in covered
+
+
+def _baseline_periods_referenced_by(dropped, anchor_fallback):
+    """被丢弃计算任务声明的期间：绝对期间 + 相对基期（锚定最近绝对期间）。
+
+    相对基期锚定同一任务文本里最晚的绝对期间；该文本没有绝对期间时
+    锚定现有取数任务已覆盖的最晚期间。两处都锚定不了就不产出。
+    """
+    referenced: list[tuple[int, int | None]] = []
+    seen: set[tuple[int, int | None]] = set()
+
+    def _add(period: tuple[int, int | None]) -> None:
+        if period not in seen:
+            seen.add(period)
+            referenced.append(period)
+
+    for task in dropped:
+        text = _task_period_text(task)
+        absolutes = _mentioned_absolute_periods(text)
+        anchor = max(absolutes, key=_period_sort_key) if absolutes else anchor_fallback
+        for period in absolutes:
+            _add(period)
+        if anchor is not None and _RELATIVE_BASELINE_MENTION.search(text):
+            _add((anchor[0] - 1, anchor[1]))
+    return referenced
+
+
+def _replace_period_label(text: str | None, base_label: str) -> str | None:
+    """把文本里的绝对期间写法替换为基期标签；没有期间写法时返回 None。"""
+    source = str(text or '')
+    matches = sorted(
+        _ABSOLUTE_PERIOD_MENTION.finditer(source),
+        key=lambda match: len(match.group(0)), reverse=True,
+    )
+    for match in matches:
+        for token in {match.group(0), re.sub(r'\s+', '', match.group(0))}:
+            if token and token in source:
+                return source.replace(token, base_label, 1)
+    return None
+
+
+def _structured_metric_clause(structured: dict[str, Any] | None) -> str:
+    """从既有结构化参数渲染指标从句，不引入新的业务名词。"""
+    if not isinstance(structured, dict):
+        return ''
+    metrics = '、'.join(
+        str(item.get('name') if isinstance(item, dict) else item).strip()
+        for item in structured.get('指标') or []
+        if (item.get('name') if isinstance(item, dict) else item)
+    )
+    dimensions = '、'.join(
+        str(item).strip() for item in structured.get('维度') or [] if str(item).strip()
+    )
+    grouping = f"各{dimensions}" if dimensions else ''
+    if metrics:
+        return f"{grouping}的{metrics}" if grouping else metrics
+    return f"{grouping}的查询结果" if grouping else ''
+
+
+def _baseline_retrieval_task(first, period: tuple[int, int | None]):
+    """为缺失期间合成独立取数任务：口径复制当前期任务，只替换时间范围。
+
+    结构化参数整体深拷贝当前期取数任务（实体/指标/维度/筛选等目录绑定
+    字段原样保留），仅时间范围写为基期期间；问题文本按同口径改写。
+    """
+    label = _period_label(period)
+    structured = (
+        copy.deepcopy(first.structured) if isinstance(first.structured, dict) else None
+    )
+    if structured is not None:
+        granularity = structured.get('时间粒度')
+        if isinstance(granularity, dict):
+            structured['时间粒度'] = {**granularity, 'time_range': label}
+        else:
+            structured['时间粒度'] = {'unit': None, 'time_range': label, 'anchor': None}
+        parameters = tuple(extraction_to_parameters(structured))
+    else:
+        parameters = ()
+    question = _replace_period_label(first.question, label)
+    if question is None:
+        clause = _structured_metric_clause(structured)
+        question = f"查询{label}{clause}" if clause else f"查询{label}数据"
+    name = _replace_period_label(first.name, label)
+    return DecomposedTask(
+        question=question, depends_on=(), expected_output=None,
+        intent=PrimaryIntent.METRIC_QUERY, parameters=parameters,
+        structured=structured, name=name,
+    )
+
+
+def _missing_baseline_retrieval_tasks(first, dropped):
+    """对比计算任务声明了多个期间时，为未被取数覆盖的期间合成基期任务。
+
+    同比/对比计算由系统分析工具完成，但其声明的每个期间都必须有独立
+    取数任务：缺少基期取数时基期从未被查询，同比只能回答"缺基期"。
+    期间从被丢弃计算任务的问题文本、交付物说明与结构化时间参数解析；
+    解析不了的期间不猜，维持原有单取数折叠结果。
+    """
+    covered = _covered_periods(first)
+    anchor_fallback = max(covered, key=_period_sort_key) if covered else None
+    referenced = _baseline_periods_referenced_by(dropped, anchor_fallback)
+    missing = sorted(
+        (period for period in referenced if _period_uncovered(period, covered)),
+        key=_period_sort_key,
+    )
+    return [_baseline_retrieval_task(first, period) for period in missing]
+
+
+def _uses_analysis_tool_gap_operations(structured: dict) -> bool:
+    """计算结构是否使用分析工具不具备的操作能力（monthly_growth/extrema等）。
+
+    这些统计操作只存在于计算执行器；subtract/divide/derive/aggregate
+    属于分析型计算，由趋势/对比等分析工具按口径完成并校验。
+    """
+    gap_types = {"monthly_growth", "extrema", "extrema_difference"}
+    spec = structured.get("结果操作")
+    if not isinstance(spec, dict):
+        return False
+    operation = spec.get("operation")
+    if not isinstance(operation, dict):
+        return False
+    if operation.get("type") == "pipeline":
+        steps = operation.get("operations") or operation.get("steps") or []
+    else:
+        steps = [operation]
+    return any(
+        isinstance(step, dict) and step.get("type") in gap_types
+        for step in steps
+    )
+
+
 def _collapse_analysis_computation_tasks(decomposition):
-    """分析类问题只保留一个取数任务：模型自造的分析计算任务交给分析工具。
+    """分析类问题只保留取数任务：模型自造的分析计算任务交给分析工具。
 
     同比/环比/趋势等分析计算由系统分析工具完成。模型把这类计算拆成
     "不再查询数据库"的任务时会自造非法结果操作（实测两轮重试均复发），
     这里直接丢弃这些任务、保留首个取数任务，由分析任务规划器按登记
     模板补充规范的分析任务，提示词约束作为第一道防线而不是唯一防线。
+    被丢弃的计算任务声明了对比基期期间（如"基于2025年和2024年"、
+    "去年同期"）时，为现有取数未覆盖的期间合成基期取数任务：基期查询
+    即使返回空也如实呈现"基期无数据"，而不是基期从未被查询。
     """
     tasks = list(decomposition.tasks)
     if len(tasks) <= 1:
         return decomposition
-    intent = decomposition.intent or next(
+    intent = (decomposition.intent if decomposition.intent in _ANALYSIS_QUESTION_INTENTS else None) or next(
         (task.intent for task in tasks if task.intent in _ANALYSIS_QUESTION_INTENTS),
         None,
     )
     if intent not in _ANALYSIS_QUESTION_INTENTS:
         return decomposition
+    def local_calculation(task):
+        return ("不再查询数据库" in task.question
+                or database_query_choice(task.structured) is False)
     # Explicit calculator/statistical deliverables must be repaired, not
     # silently replaced with a generic analysis of the first query.
     if any(re.search(r'平方|立方|开根|方差|标准差|中位数|分位数|协方差|相关系数|对数|取余|阶乘|绝对值',
                      task.question+' '+(task.expected_output or '')) for task in tasks
-           if '不再查询数据库' in task.question):
+           if local_calculation(task)):
         return decomposition
-    data_tasks = [task for task in tasks if "不再查询数据库" not in task.question]
+    data_tasks = [task for task in tasks if not local_calculation(task)]
     if len(data_tasks) == len(tasks) or not data_tasks:
         return decomposition
     # The analysis-tool fallback is only for one retrieval and unsupported
@@ -705,16 +966,37 @@ def _collapse_analysis_computation_tasks(decomposition):
                 dependencies=[f'task-{dep+1}' for dep in task.depends_on])
         except TaskInputBindingError:
             continue
-        return decomposition
-    dropped = [task for task in tasks if "不再查询数据库" in task.question]
+        # 登记复合指标的计算绑定是既有合同（冻结测试覆盖其完整计划），
+        # 不参与"规整给分析工具"的丢弃；只有模型自造的结果操作才按
+        # 分析工具缺口判定：subtract/divide/derive 等分析型计算规整给
+        # 分析工具，monthly_growth/extrema 等统计操作保留计算链路。
+        if value.get('计算绑定') or _uses_analysis_tool_gap_operations(value):
+            return decomposition
+        spec = value.get('结果操作') or {}
+        operation = spec.get('operation') or {}
+        steps = operation.get('operations') or operation.get('steps') or [operation]
+        if operation and not any(step.get('type') == 'derive'
+            and step.get('operator') in {'add', 'subtract', 'multiply', 'divide'}
+            for step in steps if isinstance(step, dict)):
+            # A standalone sort/TopN/filter or aggregate is a deliverable,
+            # not a substitute for one of the six analysis tools.
+            return decomposition
+    dropped = [task for task in tasks if local_calculation(task)]
     logger.info(
         "analysis computation tasks collapsed: intent=%s kept=%r dropped=%r",
         intent, data_tasks[0].question[:80],
         [task.question[:60] for task in dropped],
     )
-    first = data_tasks[0]
+    first = replace(data_tasks[0], intent=intent)
     if first.depends_on:
         first = replace(first, depends_on=())
+    baseline_tasks = _missing_baseline_retrieval_tasks(first, dropped)
+    if baseline_tasks:
+        logger.info(
+            "baseline retrieval tasks synthesized for collapsed computation: %s",
+            [task.question[:80] for task in baseline_tasks],
+        )
+        return replace(decomposition, intent=intent, tasks=(first, *baseline_tasks))
     return replace(decomposition, intent=intent, tasks=(first,))
 
 
@@ -786,10 +1068,61 @@ def _respect_shared_region_denominator(decomposition, source):
     return replace(decomposition, tasks=tuple(tasks))
 
 
+def _align_task_names_with_scope(decomposition):
+    """规划后校验兜底：任务名与自身等值过滤矛盾时按过滤值修正展示名。
+
+    规划器偶发把带具体区域限定的任务写成“各省份”式泛化描述——可执行
+    question 与结构化过滤条件仍保留具体地区（SQL 口径正确），但任务卡
+    展示名与抽取自相矛盾会误导用户。仅修正展示名，不改结构化参数、
+    可执行 question 与任何执行行为；无等值过滤的任务不受影响。
+    """
+    from app.planning.task_plan_stages import filter_scope_text
+    tasks = []
+    for task in decomposition.tasks:
+        name = task.name
+        data = task.structured if isinstance(task.structured, dict) else {}
+        for item in data.get('过滤条件') or []:
+            if not isinstance(item, dict) or not name:
+                continue
+            op = str(item.get('op') or item.get('operator') or '=').strip()
+            value = item.get('value')
+            # 抽取的等值过滤值常落成单元素列表（fingerprint 渲染成裸值）
+            if isinstance(value, list) and len(value) == 1:
+                value = value[0]
+            if op not in {'=', '=='} or not isinstance(value, str):
+                continue
+            value = value.strip()
+            if not value or value.startswith('${'):
+                continue
+            dim_word = re.sub(r'(?:名称|编码|编号)$', '',
+                              str(item.get('field') or item.get('entity') or ''))
+            if not dim_word:
+                continue
+            generalized = re.compile(r'[各每]\s*' + re.escape(dim_word))
+            if generalized.search(name):
+                name = generalized.sub(value, name)
+        if name:
+            # 名称里尚未出现的筛选条件必须补上：这些条件是该任务真正执行的
+            # 查询范围（含系统补的地区/时间口径），原问题没有也要让用户看见。
+            scope = filter_scope_text(data, existing=name)
+            if scope:
+                suffix = f'（{scope}）'
+                room = 60 - len(suffix)
+                if room >= 2:
+                    name = (name if len(name) <= room else name[:room]) + suffix
+        if name != task.name:
+            logger.warning('task name aligned with equality filter: %r -> %r',
+                           task.name, name)
+            tasks.append(replace(task, name=name))
+        else:
+            tasks.append(task)
+    return replace(decomposition, tasks=tuple(tasks))
+
+
 _EXTRACTION_SCHEMA_DESCRIPTION = (
     "结构化提取JSON，严格按系统提示词中的结构化提取规范输出，"
     "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重/是否查询数据库；"
-    "意图取值限定为 指标查询、趋势分析、对比分析、占比分析、排名分析、明细查询 之一。"
+    "意图取值限定为 指标查询、趋势分析、对比分析、占比分析、异常分析、归因分析、预测分析、排名分析、明细查询 之一。"
     "数据查询任务的指标名：用户说法是某个登记指标的同义词时输出该指标的登记原名，"
     "与任何登记指标都对应不上时置空，不得用语义相近的指标顶替，不得自造指标名；"
     "不需要查询业务数据的问题（闲聊、超出业务范围）输出null；"
@@ -910,7 +1243,7 @@ class SingleQuestionPlanner:
             decomposition = _collapse_analysis_computation_tasks(decomposition)
             last_result = decomposition
             off_data, off_meta = self._normalize_decomposition_metrics(decomposition)
-            unsplit_compound = self._unsplit_compound_metrics(decomposition)
+            unsplit_compound = list(self._unsplit_compound_metrics(decomposition))
             empty_extraction = (
                 not any(task.structured is not None for task in decomposition.tasks)
                 and decomposition.intent not in _NO_DATA_INTENTS
@@ -984,10 +1317,12 @@ class SingleQuestionPlanner:
                                 degraded.name or degraded.question[:60],
                                 degraded.question[:120], task_exc,
                             )
-                    return _respect_shared_region_denominator(last_result, question)
+                    return _align_task_names_with_scope(
+                        _respect_shared_region_denominator(last_result, question))
                 retry_feedback = '计算操作不完整或无效，请修正后重新输出完整计划：' + str(exc)
                 continue
-            return _respect_shared_region_denominator(last_result, question)
+            return _align_task_names_with_scope(
+                _respect_shared_region_denominator(last_result, question))
         return last_result
 
     @staticmethod
@@ -1388,6 +1723,8 @@ class SingleQuestionPlanner:
         except ValueError as exc:
             raise TaskInputBindingError(str(exc)) from exc
         question_intent = self._sanitize_intent(extracted.get('intent') or planned.get('intent'))
+        from app.analysis.intents import resolve_analysis_intent
+        question_intent = resolve_analysis_intent(question_intent, question)
         raw_tasks = []
         for boundary, parameters_for_task in zip(boundaries, parameters):
             value = copy.deepcopy(parameters_for_task)
@@ -1506,6 +1843,7 @@ class SingleQuestionPlanner:
                 metric_catalog=metric_catalog,
                 required_metrics=tuple(boundaries[task_index].metric_targets),
             )
+            _strip_prose_placeholder_filters(structured)
             if item.clarification:
                 structured = structured or {}
                 structured['计算待确认'] = copy.deepcopy(item.clarification)
@@ -1556,6 +1894,12 @@ class SingleQuestionPlanner:
                     "period-change intent rerouted to TREND_ANALYSIS: question=%s",
                     task_question[:120],
                 )
+            if "不再查询数据库" not in task_question:
+                task_intent = resolve_analysis_intent(task_intent, task_question)
+                if structured is not None:
+                    from app.analysis.intents import LABELS
+                    if task_intent in LABELS:
+                        structured[_EXTRACTION_INTENT_KEY] = LABELS[task_intent]
             if task_intent is PrimaryIntent.TREND_ANALYSIS:
                 # 趋势引擎按相邻行计算逐期变化，时间乱序直接拒算，
                 # 排序统一在提取出口归一为时间升序

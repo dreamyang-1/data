@@ -535,9 +535,11 @@ def test_detect_relations_validates_input():
 
 
 def test_detect_relations_fixed_reader_calls():
-    """回归：读取次数固定为 4（entities/relations/tables/fields_batch）。
+    """回归：读取次数固定（entities/relations/tables/fields_batch）。
 
     原实现逐实体查表清单和字段（85 实体模型约 173 条 SQL，实测 2.6s）。
+    存在无直接证据的对时，物理中间表推断再固定追加 1 次表清单查询
+    （没有候选表时不再查字段）。
     """
     entities = [
         {"id": "et-1", "name": "客户", "main_table_name": "customer",
@@ -554,7 +556,9 @@ def test_detect_relations_fixed_reader_calls():
     reader = base_reader(entities=entities)
     service = SemanticRecommendService(reader, None)
     service.detect_relations(81, "et-1")
-    assert reader.calls == ["entities", "relations", "tables", "fields_batch"]
+    assert reader.calls == [
+        "entities", "relations", "tables", "fields_batch", "tables",
+    ]
 
 
 # ---------- 接口三扩展：两跳间接推断（2026-10-19 用户需求） ----------
@@ -1320,6 +1324,122 @@ def test_check_relation_suggestions_none_without_bridge():
     assert SemanticRecommendService(
         reader, None
     ).check_relation_suggestions(81, "et-1")["hasSuggestion"] is False
+
+
+def table_bridge_reader(**overrides):
+    """医院-科室无直接字段、无子表映射，只能经物理中间表 hospital_dept_relation 关联。
+
+    科室主表 department 没有 id 主键，键为 dept_code；中间表同时含
+    hospital_id（指向医院）与 dept_code（指向科室）。
+    """
+    data = dict(
+        entities=[
+            {"id": "et-1", "name": "科室", "main_table_name": "department",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "医院", "main_table_name": "hospital",
+             "data_source_id": 58},
+            {"id": "et-3", "name": "经销商", "main_table_name": "dealer",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "department", "comment": "科室",
+             "data_source_id": 58},
+            {"id": 2, "name": "hospital", "comment": "医院",
+             "data_source_id": 58},
+            {"id": 3, "name": "hospital_dept_relation", "comment": "医院科室关联",
+             "data_source_id": 58},
+            {"id": 4, "name": "dealer", "comment": "经销商",
+             "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "dept_code", "科室编码"),
+                field(12, "dept_name", "科室名称")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "hospital_id", "医院标识"),
+                field(23, "city_id", "城市ID", "bigint")],
+            3: [field(31, "id", "主键", "bigint"),
+                field(32, "hospital_id", "医院标识"),
+                field(33, "dept_code", "科室编码"),
+                field(34, "relation_type", "关系类型", "tinyint")],
+            4: [field(41, "id", "主键", "bigint"),
+                field(42, "dealer_name", "经销商名称")],
+        },
+        relations=[],
+    )
+    data.update(overrides)
+    return FakeReader(**data)
+
+
+def test_detect_relations_table_bridge_without_sub_table_mapping():
+    """2026-10-23 用户需求：先发现中间表再让业务配置子表映射。"""
+    result = SemanticRecommendService(
+        table_bridge_reader(), None
+    ).detect_relations(81, "et-1")
+    assert len(result) == 1
+    row = result[0]
+    assert row["otherEntityName"] == "医院"
+    assert row["indirect"] is True
+    assert row["viaEntityTypeId"] is None
+    assert row["viaEntityName"] == "hospital_dept_relation"
+    assert row["viaTableName"] == "hospital_dept_relation"
+    assert "子表映射" in row["suggestion"]
+    candidate = row["relationCandidates"][0]
+    assert candidate["cardinality"] == "N:N"
+    assert candidate["viaTableName"] == "hospital_dept_relation"
+    assert candidate["fieldPairs"] == [
+        {"sourceTableName": "department", "sourceColumnName": "dept_code",
+         "sourceColumnComment": "科室编码",
+         "targetTableName": "hospital_dept_relation",
+         "targetColumnName": "dept_code",
+         "targetColumnComment": "科室编码"},
+        {"sourceTableName": "hospital_dept_relation",
+         "sourceColumnName": "hospital_id",
+         "sourceColumnComment": "医院标识",
+         "targetTableName": "hospital", "targetColumnName": "hospital_id",
+         "targetColumnComment": "医院标识"},
+    ]
+    assert candidate["semanticDescription"] == (
+        "1个【科室】可通过中间表【hospital_dept_relation】关联多个【医院】，"
+        "1个【医院】可被多个【科室】通过中间表【hospital_dept_relation】关联"
+    )
+
+
+def test_recommend_relations_table_bridge_when_no_direct_relation():
+    result = SemanticRecommendService(
+        table_bridge_reader(), None
+    ).recommend_relations(81, "et-1", "et-2")
+    assert len(result) == 1
+    vo = result[0]
+    assert vo["indirect"] is True
+    assert vo["viaTableName"] == "hospital_dept_relation"
+    assert vo["cardinality"] == "M:N"
+    assert vo["relationName"] == "间接关联"
+
+
+def test_recommend_relations_table_bridge_skipped_when_direct_relation():
+    """已有直接关系时不再找中间表（用户 2026-10-22）。"""
+    reader = table_bridge_reader(relations=[
+        {"id": 41, "name": "开设", "category": "ASSOCIATION", "type": "1:N",
+         "source_entity_type_id": "et-2", "target_entity_type_id": "et-1",
+         "source_table_column_name": "hospital-id",
+         "target_table_column_name": "department-id"},
+    ])
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    assert [vo["fromExisting"] for vo in result] == [True]
+    assert all(not vo.get("indirect") for vo in result)
+
+
+def test_check_relation_suggestions_reports_table_bridge():
+    result = SemanticRecommendService(
+        table_bridge_reader(), None
+    ).check_relation_suggestions(81, "et-1")
+    assert result["hasSuggestion"] is True
+    suggestion = result["suggestions"][0]
+    assert suggestion["otherEntityTypeId"] == "et-2"
+    assert suggestion["viaEntityTypeId"] is None
+    assert suggestion["viaTableName"] == "hospital_dept_relation"
+    assert "中间表【hospital_dept_relation】" in suggestion["message"]
+    assert "子表映射" in suggestion["message"]
 
 
 def test_check_relation_suggestions_validates_input():

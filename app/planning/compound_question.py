@@ -274,9 +274,20 @@ def _unique_mentions(text: str, candidates: tuple[str, ...]) -> list[str]:
     return sorted(selected, key=lambda value: text.find(value))
 
 
+_QUARTER_RANGE_PATTERN = re.compile(
+    r"(?:\d{4})?[QqHh][1-4](?:-[0-9A-Za-z]+)*"
+)
+
+
 def _business_identifiers(text: str) -> list[str]:
     normalized = text.translate(_DASH_TRANSLATION)
-    return list(dict.fromkeys(_BUSINESS_IDENTIFIER_PATTERN.findall(normalized)))
+    matches = _BUSINESS_IDENTIFIER_PATTERN.findall(normalized)
+    # 季度/半年度区间写法（Q2-Q4、2025H1-H2）是时间条件不是业务型号编码，
+    # 交给时间通道校验；按业务编码字面强比对曾把等价改写（“Q2至Q4”）的
+    # 规划整体误杀成“任务计划遗漏原问题中的业务型号或编码”。
+    return list(dict.fromkeys(
+        match for match in matches if not _QUARTER_RANGE_PATTERN.fullmatch(match)
+    ))
 
 
 def _cn_rank_number(match: re.Match[str]) -> str:
@@ -424,7 +435,23 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
         for condition in sorted(registered_conditions,key=len,reverse=True):
             numeric_question = re.sub(re.escape(condition.casefold()) + r'(?![\d.])', '', numeric_question)
         task_numbers = set(re.findall(r"\d+(?:\.\d+)?", numeric_question))
-        if not task_numbers.issubset(source_numbers):
+        # 结构化时间粒度已声明的月份/日期边界数字是合法绑定数字：“春季”
+        # 被结构化抽取展开成“3月-5月”时，任务文本复读这些边界不是自造
+        # 数值，不计入 unexpected（两段时段对比问题误报复盘）。数字口径
+        # 仍以下游按结构化参数与向量目录的校验为准。
+        declared_time_numbers: set[str] = set()
+        grain = (getattr(task, 'extraction', None) or {}).get('时间粒度')
+        if isinstance(grain, dict):
+            for key in ('time_range', 'anchor'):
+                value = grain.get(key)
+                if isinstance(value, str):
+                    declared_time_numbers.update(re.findall(
+                        r"\d+(?:\.\d+)?",
+                        _normalize_grounding_numbers(
+                            re.sub(r"\s+", "", value).casefold()),
+                    ))
+        unexpected_numbers = task_numbers - source_numbers - declared_time_numbers
+        if unexpected_numbers:
             # 2026-10-21 用户裁决：数字不再拦截。"第一名→1"、"去年同期→2024"
             # 属等价改写或由原问题年份直接推导，字面强比对只会误杀整个规划
             # （实测复现：多任务计划被整体拒绝后无任务执行）。拆分不完美
@@ -433,11 +460,21 @@ def _validate_grounding(plan: TaskPlan, source_question: str,
             logger.warning(
                 "grounding numeric mismatch tolerated task=%s unexpected=%r question=%r",
                 getattr(task, "task_id", ""),
-                sorted(task_numbers - source_numbers),
+                sorted(unexpected_numbers),
                 task.question,
             )
         if not {value for value in metric_terms if value in compact}.issubset(source_metrics):
-            raise TaskPlanningError("子任务包含原问题中不存在的指标")
+            # 2026-10-21 用户裁决延续：与数字校验同类——原问题"销售结构中的
+            # 占比"隐含"销售额"等指标名改写是合法展开不是自造指标，字面强
+            # 比对曾把整个规划拒成"未能生成完整的可执行计划"（Q16实测复现，
+            # 零任务执行）。指标口径交给下游按结构化参数与向量目录校验，
+            # 这里只留诊断日志。
+            logger.warning(
+                "grounding metric mismatch tolerated task=%s metrics=%r question=%r",
+                getattr(task, "task_id", ""),
+                sorted({value for value in metric_terms if value in compact} - source_metrics),
+                task.question,
+            )
         if not {value for value in temporal_terms if value in compact}.issubset(source_temporal):
             raise TaskPlanningError("子任务包含原问题中不存在的时间条件")
         quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", task.question))

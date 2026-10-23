@@ -983,8 +983,10 @@ async def test_computation_binding_failure_degrades_instead_of_blocking(monkeypa
     from app.planning import SingleQuestionPlanner
     from app.planning.task_dag import DecomposedTask, QuestionDecomposition
 
+    # 2026-10-22 宽松化后缺字段 sort/sort_limit 已被容忍（丢弃/降级），
+    # 降级机制改用真实的未知操作类型触发，保持“重试耗尽不拦停”覆盖。
     bad = {'是否查询数据库': '否',
-           '结果操作': {'operation': {'type': 'sort', 'field': '', 'descending': False}}}
+           '结果操作': {'operation': {'type': 'self_sql', 'sql': 'SELECT 1'}}}
     decomposition = QuestionDecomposition(intent=PrimaryIntent.METRIC_QUERY, tasks=(
         DecomposedTask(question='查询2025年各经销商销售排名',
                        structured={'意图': '统计查询'}),
@@ -1010,6 +1012,111 @@ async def test_computation_binding_failure_degrades_instead_of_blocking(monkeypa
         '提取第一名和第二名经销商名称，不再查询数据库',
     ]
     assert result.tasks[1].structured.get('结果操作') is None
+
+
+def _yoy_decomposition(compute_question: str, time_range: str = '2025年'):
+    from app.planning.task_dag import DecomposedTask, QuestionDecomposition
+
+    return QuestionDecomposition(intent=PrimaryIntent.COMPARISON_ANALYSIS, tasks=(
+        DecomposedTask(
+            question='查询2025年各经销商的销售额',
+            structured={'意图': '统计查询', '指标': [{'name': '销售额'}], '维度': ['经销商'],
+                        '时间粒度': {'unit': 'year', 'time_range': time_range, 'anchor': None}}),
+        DecomposedTask(question=compute_question, depends_on=(0,)),
+    ))
+
+
+@pytest.mark.parametrize(("compute_question", "expected_label"), [
+    ('基于2025年和2024年各经销商的销售额计算同比增长率，不再查询数据库', '2024年'),
+    ('计算2025年销售额相对去年同期的同比增长率，不再查询数据库', '2024年'),
+    ('对比2025年各经销商销售额与上一年销售额计算增长率，不再查询数据库', '2024年'),
+    ('基于2025年11月和去年同期各经销商的销售额计算同比增长率，不再查询数据库', '2024年11月'),
+])
+def test_collapse_synthesizes_base_period_retrieval_for_yoy_computation(
+        compute_question, expected_label) -> None:
+    # 折叠"基于2025年和2024年计算同比增长率"类计算任务时，必须为现有取数
+    # 未覆盖的基期合成独立取数任务：基期查询即使返回空也如实呈现"基期无
+    # 数据"，而不是基期从未被查询。
+    from app.planning.task_dag import _collapse_analysis_computation_tasks
+
+    result = _collapse_analysis_computation_tasks(
+        _yoy_decomposition(compute_question))
+
+    assert [task.question for task in result.tasks] == [
+        '查询2025年各经销商的销售额',
+        f'查询{expected_label}各经销商的销售额',
+    ]
+    baseline = result.tasks[1]
+    assert baseline.structured['时间粒度']['time_range'] == expected_label
+    assert baseline.structured['指标'] == [{'name': '销售额'}]
+    assert baseline.structured['维度'] == ['经销商']
+    assert f'{expected_label}（时间范围）' in baseline.parameters
+    assert baseline.depends_on == ()
+    assert baseline.structured is not result.tasks[0].structured
+    # 当前期间取数任务保持原样
+    assert result.tasks[0].structured['时间粒度']['time_range'] == '2025年'
+    assert result.intent == PrimaryIntent.COMPARISON_ANALYSIS
+
+
+@pytest.mark.parametrize(("compute_question", "kept_time_range"), [
+    ('计算2025年各经销商销售额的环比增长率并排名，不再查询数据库', '2025年'),
+    ('基于2025年和2024年各经销商的销售额计算同比增长率，不再查询数据库', '2024年至2025年'),
+])
+def test_collapse_single_period_computation_keeps_existing_behavior(
+        compute_question, kept_time_range) -> None:
+    # 单期间计算任务（无对比诉求或期间已被取数覆盖）的折叠行为保持不变；
+    # 计算任务未声明可解析基期时不猜测，维持原单取数折叠结果。
+    from app.planning.task_dag import _collapse_analysis_computation_tasks
+
+    result = _collapse_analysis_computation_tasks(
+        _yoy_decomposition(compute_question, time_range=kept_time_range))
+
+    assert [task.question for task in result.tasks] == ['查询2025年各经销商的销售额']
+    assert result.tasks[0].structured['时间粒度']['time_range'] == kept_time_range
+
+
+def test_collapse_unresolvable_baseline_phrase_does_not_invent_period() -> None:
+    # 相对基期锚定不了任何绝对期间时不产出基期任务（不猜年份）。
+    from app.planning.task_dag import (
+        DecomposedTask, QuestionDecomposition, _collapse_analysis_computation_tasks)
+
+    decomposition = QuestionDecomposition(intent=PrimaryIntent.COMPARISON_ANALYSIS, tasks=(
+        DecomposedTask(
+            question='查询各经销商的销售额',
+            structured={'意图': '统计查询', '指标': [{'name': '销售额'}], '维度': ['经销商']}),
+        DecomposedTask(question='计算各经销商销售额的同比变化，不再查询数据库', depends_on=(0,)),
+    ))
+    result = _collapse_analysis_computation_tasks(decomposition)
+
+    assert [task.question for task in result.tasks] == ['查询各经销商的销售额']
+
+
+@pytest.mark.asyncio
+async def test_plan_question_keeps_base_period_retrieval_after_collapse(monkeypatch) -> None:
+    # 端到端复现：规划器把同比问题拆成"取数+计算同比增长率"两个任务时，
+    # 折叠丢弃计算任务后必须保留2024基期取数任务，基期不能从未被查询。
+    from app.planning import SingleQuestionPlanner
+
+    decomposition = _yoy_decomposition(
+        '基于2025年和2024年各经销商的销售额计算同比增长率，不再查询数据库')
+    settings = Settings(
+        _env_file=None, env='test',
+        intent_model_api_key=SecretStr('test-key'),
+        multi_question_model_enabled=True,
+    )
+    planner = SingleQuestionPlanner(settings)
+
+    async def decompose(*args, **kwargs):
+        return decomposition
+
+    monkeypatch.setattr(planner, '_model_decompose', decompose)
+    result = await planner.plan_question('2025年各经销商的销售额同比增长率是多少？')
+
+    assert len(result.tasks) == 2
+    assert result.tasks[0].structured['时间粒度']['time_range'] == '2025年'
+    assert result.tasks[1].structured['时间粒度']['time_range'] == '2024年'
+    assert result.tasks[1].depends_on == ()
+    assert result.intent == PrimaryIntent.COMPARISON_ANALYSIS
 
 
 @pytest.mark.asyncio
@@ -2599,3 +2706,51 @@ async def test_classify_metadata_overlay_keeps_user_metric_name() -> None:
 
     assert result.primary_intent == PrimaryIntent.METRIC_DEFINITION
     assert [metric.input for metric in result.metrics] == ["科室业务匹配度"]
+
+
+def test_task_name_aligned_with_equality_filter():
+    # 规划器偶发把带具体区域限定的任务名写成“各省份”式泛化（可执行
+    # question 与结构化过滤仍保留具体地区，SQL 口径正确），任务卡展示名
+    # 与抽取自相矛盾会误导用户。兜底只修正展示名，不改结构化参数。
+    from app.planning.task_dag import (
+        DecomposedTask,
+        QuestionDecomposition,
+        _align_task_names_with_scope,
+    )
+
+    decomposition = QuestionDecomposition(intent=PrimaryIntent.METRIC_QUERY, tasks=(
+        DecomposedTask(
+            question='统计上海地区各经销商的有效订单去重医院数',
+            name='统计最近12个月各经销商的有效订单去重医院数',
+            structured={'意图': '统计查询', '过滤条件': [
+                {'entity': '省份', 'field': '省份名称', 'op': '=', 'value': '上海'}]}),
+        DecomposedTask(
+            question='统计上海地区的区域全部医院总数',
+            name='统计各省份的区域全部医院总数',
+            structured={'意图': '统计查询', '过滤条件': [
+                {'entity': '省份', 'field': '省份名称', 'op': '=', 'value': '上海'}]}),
+        DecomposedTask(
+            # 实测规划链路里等值过滤值常落成单元素列表
+            question='统计上海地区的区域全部医院总数',
+            name='统计各省份的区域全部医院总数',
+            structured={'意图': '统计查询', '过滤条件': [
+                {'entity': '医院', 'field': '省份', 'op': '=', 'value': ['上海']}]}),
+        DecomposedTask(
+            question='查询2025年各省份的区域全部医院总数',
+            name='查询2025年各省份的区域全部医院总数',
+            structured={'意图': '统计查询', '过滤条件': []}),
+    ))
+    aligned = _align_task_names_with_scope(decomposition)
+    # 任务1的泛化词是“各经销商”，等值过滤维度是省份；名称里缺少实际执行的
+    # “上海”限定，按结构化条件补上，避免任务描述看不出真实查询范围
+    assert aligned.tasks[0].name == '统计最近12个月各经销商的有效订单去重医院数（省份为上海）'
+    # 任务2的“各省份”与 省份名称=上海 矛盾，按过滤值修正展示名
+    assert aligned.tasks[1].name == '统计上海的区域全部医院总数'
+    # 任务3同形态但值为单元素列表，同样修正
+    assert aligned.tasks[2].name == '统计上海的区域全部医院总数'
+    # 无等值过滤的泛化描述是合法的按维度分组表述，不改写
+    assert aligned.tasks[3].name == '查询2025年各省份的区域全部医院总数'
+    # 结构化参数与可执行 question 不受影响
+    assert aligned.tasks[1].question == '统计上海地区的区域全部医院总数'
+    assert aligned.tasks[1].structured['过滤条件'][0]['value'] == '上海'
+    assert aligned.tasks[2].structured['过滤条件'][0]['value'] == ['上海']
