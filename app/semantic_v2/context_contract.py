@@ -1,6 +1,6 @@
 """Joint current-turn recognition and bounded context proposal contract."""
 from copy import deepcopy
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
@@ -31,6 +31,20 @@ class ContextProposal(StrictModel):
         '与已绑定业务域无关的生活类求助）时输出 true，此时 relation 必须是 '
         'NEW_TASK，系统会跳过任务规划直接回答。与业务数据、已绑定业务域或'
         '历史任务沾边的问题一律输出 false。'))
+    data_source: Literal['SNAPSHOT', 'NEW_QUERY'] | None = Field(default=None, description=(
+        '仅 relation 不是 NEW_TASK 的追问轮输出，判断本轮要的数据能否直接来自'
+        '上一轮查询的结果：只是选列、筛行、排序、取前N，或对上一轮已有数字做'
+        '简单对比计算时输出 SNAPSHOT；需要上一轮没有的新指标、新维度、新粒度、'
+        '新时间范围或新关联数据时输出 NEW_QUERY。判定方法是拿本轮要的数据逐项'
+        '对照 task_context 里上一轮任务的指标、维度、字段和时间，上一轮结果里'
+        '没有的数据不能凭空判定可复用。拿不准一律输出 NEW_QUERY。relation 为 '
+        'NEW_TASK 或 null 时输出 null。'))
+    snapshot_operation: dict[str, Any] | None = Field(default=None, description=(
+        'data_source 为 SNAPSHOT 时必填，说明如何用上一轮结果直接得出本轮答案。'
+        'type 取值：select（只保留部分列，columns 为列名数组，列名用上一轮任务'
+        '的指标、维度、字段名）；filter（按值筛行，field 为列名，value 为筛选值）；'
+        'sort（按某列排序，field 为列名，descending 为布尔）；limit（取前N行，'
+        'count 为正整数）。data_source 不是 SNAPSHOT 时输出 null。'))
 
     @model_validator(mode='after')
     def consistent_proposal(self):
@@ -47,6 +61,10 @@ class ContextProposal(StrictModel):
             raise ValueError('RELATION_REQUIRES_TARGET_VERSION')
         elif (self.relation == 'ANSWER_CLARIFICATION') != (self.pending_id is not None):
             raise ValueError('PENDING_RELATION_CONSISTENCY')
+        if self.relation in (None, 'NEW_TASK') and self.data_source is not None:
+            raise ValueError('DATA_SOURCE_REQUIRES_FOLLOW_UP')
+        if self.data_source != 'SNAPSHOT' and self.snapshot_operation is not None:
+            raise ValueError('SNAPSHOT_OPERATION_REQUIRES_SNAPSHOT')
         return self
 
 
@@ -86,7 +104,10 @@ def proposal_schema(context, current_schema):
     # Pydantic model_validator predicates are not automatically exported. The
     # model must see the same relation/target/status consistency as validation.
     # v1 captures remain v1: exporting these constraints does not rescore them.
-    null_target = {key: {'type': 'null'} for key in ('target_task_id', 'task_version', 'pending_id')}
+    null_target = {key: {'type': 'null'} for key in
+                   ('target_task_id', 'task_version', 'pending_id', 'data_source',
+                    'snapshot_operation')}
+    snapshot_source = {'anyOf': [{'enum': ['SNAPSHOT', 'NEW_QUERY']}, {'type': 'null'}]}
     schema['$defs']['ContextProposal']['allOf'] = [
         {'if': {'properties': {'status': {'enum': ['UNRESOLVED', 'AMBIGUOUS']}}},
          'then': {'properties': {**null_target, 'relation': {'type': 'null'}}}},
@@ -95,7 +116,9 @@ def proposal_schema(context, current_schema):
         {'if': {'properties': {'status': {'const': 'ACCEPTED'}}},
          'then': {'properties': {'relation': {'type': 'string'}}}},
         {'if': {'properties': {'status': {'const': 'ACCEPTED'}, 'relation': {'enum': list(RELATIONS[1:])}}},
-         'then': {'properties': {'target_task_id': {'type': 'string'}, 'task_version': {'type': 'integer'}}}},
+         'then': {'properties': {'target_task_id': {'type': 'string'}, 'task_version': {'type': 'integer'},
+                                 'data_source': snapshot_source,
+                                 'snapshot_operation': {'type': ['object', 'null']}}}},
         {'if': {'properties': {'relation': {'const': 'ANSWER_CLARIFICATION'}}},
          'then': {'properties': {'pending_id': {'type': 'string'}}},
          'else': {'properties': {'pending_id': {'type': 'null'}}}},
@@ -115,7 +138,8 @@ def lightweight_proposal_schema(current_schema):
     schema['properties'].update(deepcopy(current_schema['properties']))
     schema['$defs'].update(deepcopy(current_schema['$defs']))
     definition = schema['$defs']['ContextProposal']['properties']
-    for key in ('target_task_id', 'task_version', 'pending_id'):
+    for key in ('target_task_id', 'task_version', 'pending_id',
+                'data_source', 'snapshot_operation'):
         definition[key] = {'type': 'null'}
     schema['$defs']['ContextProposal']['allOf'] = [
         {'if': {'properties': {'status': {'enum': ['UNRESOLVED', 'AMBIGUOUS']}}},

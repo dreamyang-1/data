@@ -62,7 +62,7 @@ def _definition_rows(scope, *, credentials=False, attribute_id=None):
     """
     import mysql_tool as mysql
     sql = """SELECT DISTINCT b.semantic_model_id, e.business_domain_id,
-        e.id AS entity_id, e.code AS entity_code, e.name AS entity_name,
+        e.id AS entity_id, e.code AS entity_code, e.name AS entity_name, e.main_table_name,
         a.id AS attribute_id, a.code AS attr_code, a.attr_name, a.data_type,
         a.mapping_table, a.mapping_column, a.vectorization, a.is_main_attribute,
         t.id AS table_id, f.id AS field_id, ds.id AS data_source_id,
@@ -97,8 +97,16 @@ def _definition_rows(scope, *, credentials=False, attribute_id=None):
     return mysql._query(sql, tuple(params))
 
 
+def _normalized_codes(row):
+    import mysql_tool as mysql
+    return {**row,
+        "entity_code": mysql._catalog_code(row.get("entity_code"), row.get("main_table_name")),
+        "attr_code": mysql._catalog_code(row.get("attr_code"), row.get("mapping_column"))}
+
+
 def field_identity(row, scope):
     import mysql_tool as mysql
+    row = _normalized_codes(row)
     if (_positive(row.get("semantic_model_id")) != scope["semantic_model_id"]
             or (scope["business_domain_ids"] and row.get("business_domain_id") not in scope["business_domain_ids"])):
         raise CatalogEvidenceError("CATALOG_VALUE_SOURCE_SCOPE_MISMATCH")
@@ -122,7 +130,9 @@ def capture_value_sources(scope):
     scope = catalog_scope(scope["semantic_model_id"], scope["business_domain_ids"])
     fields, seen, issues = [], set(), []
     failure_code = None
-    for row in _definition_rows(scope):
+    logical_owners = {}
+    for raw_row in _definition_rows(scope):
+        row = _normalized_codes(raw_row)
         try:
             field = field_identity(row, scope)
         except CatalogEvidenceError as exc:
@@ -130,6 +140,12 @@ def capture_value_sources(scope):
             issues.extend(_mapping_issues(row, scope))
             continue
         key = field["business_domain_id"], field["entity_id"], field["attribute_id"]
+        logical_key = field["business_domain_id"], field["entity_code"], field["attr_code"]
+        if logical_key in logical_owners and logical_owners[logical_key] != key:
+            failure_code = failure_code or "CATALOG_VALUE_SOURCE_MAPPING_AMBIGUOUS"
+            issues.append(_mapping_issue(row, "attr_code", "AMBIGUOUS"))
+            continue
+        logical_owners[logical_key] = key
         if key in seen:
             # Duplicated physical registrations are not first-wins authority.
             failure_code = failure_code or "CATALOG_VALUE_SOURCE_MAPPING_AMBIGUOUS"

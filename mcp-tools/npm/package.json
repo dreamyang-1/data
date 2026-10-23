@@ -1,0 +1,13 @@
+{
+  "name": "mcp-tools-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "YoAgent MCP tools bundle (npm packages)",
+  "dependencies": {
+    "@executeautomation/playwright-mcp-server": "^1.0.12",
+    "@forgespace/ui-mcp": "^0.25.0",
+    "email-mcp-server": "^2.0.1",
+    "mcp-image-optimizer": "^1.0.4",
+    "uiforge-mcp": "^0.4.1"
+  }
+}

@@ -783,6 +783,13 @@ class ChatRequest(StrictModel):
     )
     # 任务规划产出的提取结果，由编排器在进程内透传到本轮分类请求。
     _planner_extraction: PlannerExtraction | None = PrivateAttr(default=None)
+    # 桥内前置判断产出的复合/单一结论（含各子问题的意图与业务域），
+    # 编排器据此直接规划，避免二次判断。
+    _compound_judgment: Any = PrivateAttr(default=None)
+    # 识别模型对追问轮的数据来源判定（SNAPSHOT/NEW_QUERY）及快照操作，
+    # 执行层据此做快照路由，规划节点据此展示追问判定行。
+    _model_data_source: str | None = PrivateAttr(default=None)
+    _model_data_source_op: dict | None = PrivateAttr(default=None)
     # 语义识别判成业务无关的问题时置位，编排器据此跳过拆分与分类模型直接聊天回复。
     _v2_off_topic: bool = PrivateAttr(default=False)
     # 业务无关且原始问题命中危险词表时置位，编排器直答分支据此返回拦截
@@ -1334,6 +1341,14 @@ class AtomicTask(StrictModel):
     primary_intent: PrimaryIntent | None = None
 
 
+class QuestionTaskGroup(StrictModel):
+    """复合规划里一个子问题与其拆出任务的区间，规划节点按问题分组展示用。"""
+
+    question: str = Field(min_length=1, max_length=1000)
+    task_offset: int = Field(ge=0)
+    task_count: int = Field(ge=1)
+
+
 class TaskPlan(StrictModel):
     schema_version: str = "1.0"
     planner: Literal["STRUCTURED_MODEL", "DETERMINISTIC_RULE"]
@@ -1343,6 +1358,11 @@ class TaskPlan(StrictModel):
     shared_conditions: list[str] = Field(default_factory=list, max_length=20)
     # 拆分模型对任务结构的一句话说明，规划节点展示执行顺序用；缺省时展示层按依赖自行合成。
     analyze_summary: str | None = Field(default=None, max_length=200)
+    # 子问题到任务的归属区间；单一问题的规则拆分不填，展示层退回任务平铺。
+    question_groups: list[QuestionTaskGroup] | None = None
+    # 规范依赖指标列登记了成分的复合指标名，按公式成分拆分时填，
+    # 规划节点的分析内容据此说明此问题包含复合指标。
+    compound_metrics: list[str] = Field(default_factory=list, max_length=10)
 
 
 class TaskExecutionResult(StrictModel):

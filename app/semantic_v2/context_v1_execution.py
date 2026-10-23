@@ -32,6 +32,11 @@ from app.domain.models import (
 from app.services.progress import emit_progress
 from app.services.orchestrator import danger_keyword_hits
 from app.observability.call_timing import track_operation
+from app.planning import (
+    CompoundQuestionJudge,
+    extract_semantic_spec_section,
+    judgment_display_section,
+)
 from app.presentation import render_resolved_intent_context_v2
 from app.presentation.catalog_diagnostics import catalog_configuration_answer
 from app.stores import MessageIdReuseConflictError
@@ -119,6 +124,9 @@ class ResolvedContextTurn:
     fallback_reason: str | None = None
     publish_context_from_v1: bool = False
     source_question: str | None = None
+    # 识别模型对追问轮的数据来源判定（SNAPSHOT/NEW_QUERY）及快照操作
+    data_source: str | None = None
+    snapshot_operation: dict | None = None
 
 
 async def _emit_v1_triage_reason(reason: str | None) -> None:
@@ -516,6 +524,7 @@ class V2ContextV1ExecutionBridge:
         demo_mode: bool = False,
         surface_asl_execution_enabled: bool = False,
         agent_prompt_store: Any | None = None,
+        compound_judge: Callable[..., Awaitable[Any]] | None = None,
     ):
         self.store = store
         self.catalog = catalog
@@ -534,6 +543,7 @@ class V2ContextV1ExecutionBridge:
         self.demo_mode = demo_mode
         self.surface_asl_execution_enabled = surface_asl_execution_enabled
         self.agent_prompt_store = agent_prompt_store
+        self.compound_judge = compound_judge
         self._locks: dict[str, asyncio.Lock] = {}
 
     async def _open_external_lifecycle(
@@ -992,6 +1002,8 @@ class V2ContextV1ExecutionBridge:
                     fallback_reason=result.fallback_reason,
                     publish_context_from_v1=True,
                     source_question=chat.question,
+                    data_source=result.data_source,
+                    snapshot_operation=result.snapshot_operation,
                 ),
                 provenance,
             )
@@ -1025,6 +1037,8 @@ class V2ContextV1ExecutionBridge:
                 plan_state=result.plan_state,
                 display=display,
                 semantic_parse=result.parse,
+                data_source=result.data_source,
+                snapshot_operation=result.snapshot_operation,
             ),
             provenance,
         )
@@ -1507,18 +1521,69 @@ class V2ContextV1ExecutionBridge:
                     off_topic=True,
                 )
             elif step is not None:
-                await emit_progress(
-                    "INTENT_RECOGNITION",
-                    "RUNNING",
-                    render_resolved_intent_context_v2(
-                        original_question=chat.question,
-                        completed_question=resolved.completed_question,
-                        business_domains=business_domain_labels,
-                    ),
-                    progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
-                    display_model="IntentRecognitionContextProgressV2",
-                    display_version="V2",
+                intent_message = render_resolved_intent_context_v2(
+                    original_question=chat.question,
+                    completed_question=resolved.completed_question,
+                    business_domains=business_domain_labels,
                 )
+                # 走拆分器的新问：补全问题先亮出来，再做复合/单一判断。
+                # 判断结论、拆分出的子问题及各问题的意图、业务域作为意图
+                # 节点的收尾展示；结论暂存 chat 透传到执行层，编排器规划时
+                # 直接复用。判断是一轮模型调用，先发进度保持节点可见输出。
+                if (
+                    self.compound_judge is not None
+                    and semantic_decision.status == "REQUIRES_V1_FALLBACK"
+                ):
+                    judge_semantic_context = (
+                        extract_semantic_spec_section(chat.prompt.render())
+                        if chat.prompt is not None
+                        else ""
+                    )
+                    await emit_progress(
+                        "INTENT_RECOGNITION",
+                        "RUNNING",
+                        intent_message,
+                    )
+                    await emit_progress(
+                        "INTENT_RECOGNITION",
+                        "RUNNING",
+                        "正在判断问题类型，并识别各问题的意图与业务域。",
+                    )
+                    judgment_section = ""
+                    try:
+                        judgment = await self.compound_judge(
+                            resolved.completed_question,
+                            semantic_context=judge_semantic_context,
+                            semantic_model_id=chat.semantic_model_id,
+                        )
+                    except Exception:
+                        logger.warning(
+                            "compound judgment failed in bridge", exc_info=True
+                        )
+                    else:
+                        chat._compound_judgment = judgment
+                        judgment_section = judgment_display_section(judgment)
+                    await emit_progress(
+                        "INTENT_RECOGNITION",
+                        "RUNNING",
+                        (
+                            judgment_section
+                            if judgment_section
+                            else "问题类型判断未完成，按补全后的问题继续执行。"
+                        ),
+                        progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+                        display_model="IntentRecognitionContextProgressV2",
+                        display_version="V2",
+                    )
+                else:
+                    await emit_progress(
+                        "INTENT_RECOGNITION",
+                        "RUNNING",
+                        intent_message,
+                        progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+                        display_model="IntentRecognitionContextProgressV2",
+                        display_version="V2",
+                    )
             running = await self.store.reserve(
                 snapshot,
                 chat=chat,
@@ -1566,6 +1631,9 @@ class V2ContextV1ExecutionBridge:
                 _surface_extraction_items(resolved)
             )
             execution_chat._semantic_decision = semantic_decision
+            # 识别模型对追问轮的数据来源判定，供执行层做快照路由与规划展示
+            execution_chat._model_data_source = resolved.data_source
+            execution_chat._model_data_source_op = resolved.snapshot_operation
             with track_operation(
                 "V1_ORCHESTRATION",
                 "bridge.v1_execution",
@@ -1780,6 +1848,13 @@ def build_context_v1_execution_handler(
             settings, "surface_asl_execution_enabled", False
         ),
         agent_prompt_store=agent_prompt_store,
+        # 拆分判断提前到补全问题展示前执行，仅在编排器会走拆分器时注入；
+        # 多问题开关关闭时编排器不做任务规划，判断结论也没有展示意义。
+        compound_judge=(
+            CompoundQuestionJudge(settings).judge
+            if settings.multi_question_enabled
+            else None
+        ),
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         startup_receipt={
             **receipt,

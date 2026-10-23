@@ -1,0 +1,40 @@
+{
+  "status": "IMPLEMENTED_RELEASE_HELD",
+  "scope": "Structured follow-up database routing integrated with the observed server source snapshot",
+  "root_causes": [
+    "Structured extraction discarded the database-routing field",
+    "Planner presentation overwrote explicit choices",
+    "Ordinary, surface and compound entrypoints independently followed model source advice",
+    "Optional dataset reuse could silently fall back to a fresh query",
+    "Prefixed display-limit requests were interpreted as rankings"
+  ],
+  "behavior": {
+    "explicit_no": "Use a scoped immutable conversation result; unavailable results terminate without a database fallback",
+    "explicit_yes": "Request fresh business data",
+    "missing_or_invalid": "Preserve the legacy routing behavior",
+    "compound": "Keep task-specific route choices instead of replacing a plan with a root snapshot",
+    "dependent": "Keep predecessor identity constraints separate from whether the child needs new data",
+    "cache": "Do not mix explicit database routes in result deduplication or message fingerprints",
+    "display": "Preserve the current node order and distinguish display limits from numeric ranking"
+  },
+  "verification": {
+    "new_server_tests_passed": 34,
+    "focused_local_passed": 79,
+    "final_local_route_scope_and_dependent_query_tests_passed": 244,
+    "server_full_baseline": {"passed": 2520, "failed": 99, "errors": 80},
+    "server_full_candidate": {"passed": 2554, "failed": 99, "errors": 80},
+    "new_failure_identities": [],
+    "removed_failure_identities": [],
+    "notes": "Full regression continued through pre-existing collection errors; counts do not mean the entire suite passed. This comparison covers the captured source snapshot, not concurrent changes made afterward. Older local planner tests also differ from the native server planner contract; these assertions were not rewritten."
+  },
+  "release": {
+    "deployed": false,
+    "restarted_by_this_change": false,
+    "blockers": [
+      "Existing failing release gate requires an applicable explicit exception",
+      "Server orchestrator and model contracts changed concurrently after the tested snapshot; preserve and revalidate them before publication"
+    ],
+    "configuration_changed": false,
+    "semantic_data_or_indexes_changed": false
+  }
+}

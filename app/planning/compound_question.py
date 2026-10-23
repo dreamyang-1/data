@@ -1,0 +1,1497 @@
+"""复合问题链路：拆分前置判断与多任务规划。
+
+与单一问题链路（task_dag.SingleQuestionPlanner）职责隔离：
+- 本模块独占“是否拆分、拆成什么子问题”的判断职责，判断发生在意图识别阶段；
+- 拆出的每个子问题交给 SingleQuestionPlanner 独立做意图识别与参数提取，
+  复合问题的意图和业务域因此按子问题分别产出；
+- 拆分模型不可用时有确定性规则兜底，兜底拆不出时按单一问题处理。
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import re
+from dataclasses import dataclass
+from typing import Any
+
+import httpx
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.config import Settings
+from app.domain.models import AtomicTask, QuestionTaskGroup, TaskPlan
+from app.observability.langfuse_client import trace_generation
+from app.planning.calculation_targets import declared_calculation_targets
+from app.planning.task_dag import (
+    DecomposedTask,
+    PlannerOutcome,
+    QuestionDecomposition,
+    SingleQuestionPlanner,
+    TaskPlanningError,
+    _normalize_metric_name,
+    _strip_json_fences,
+    database_query_choice,
+)
+
+
+# ---------------------------------------------------------------------------
+# 拆分判断用的文本模式
+# ---------------------------------------------------------------------------
+
+_ACTION_PATTERN = (
+    r"查询|查一下|统计|分析|比较|对比|占比|预测|解释|口径|血缘|"
+    r"生成|导出|下载|检查|找出|列出|筛选|匹配|拆分|计算|"
+    r"算(?:出|一下)?|(?:再)?加(?:上)?|是多少"
+)
+_NEW_SENTENCE_ACTION_START = (
+    r"(?:请|麻烦|帮我|请帮我|再)?\s*"
+    r"(?:查询|查一下|统计|分析|比较|对比|预测|解释|生成|导出|下载|"
+    r"检查|找出|列出|筛选|匹配|拆分|计算|算)"
+)
+_TASK_SPLIT_PATTERN = re.compile(
+    rf"[;；?？\n]+|[。！!]\s*(?={_NEW_SENTENCE_ACTION_START})|"
+    r"(?:，|,)?(?:另外|同时|此外|然后|再帮我|还要|以及还要)"
+)
+_DASH_TRANSLATION = str.maketrans({
+    "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+    "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+    "\uff0d": "-",
+})
+_BUSINESS_IDENTIFIER_PATTERN = re.compile(
+    r"(?<![0-9A-Za-z])(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
+    r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+"
+)
+_REPORT_FACET = re.compile(
+    r"(?:整体)?(?:销售|订单|收入|利润|成本|库存|业务|业绩)(?:趋势|走势|变化)"
+    r"|(?:医院|客户|门店|地区|区域|渠道|品类|商品|经销商|供应商)"
+    r"(?:覆盖(?:情况|数据)?|分布)"
+    r"|(?:合作)?(?:经销商|供应商|客户|医院|门店|渠道)"
+    r"(?:数据|情况|清单|名单|画像|表现)"
+    r"|(?:销售|订单|收入|利润|成本|库存|业务|业绩)"
+    r"(?:规模|汇总|概览|构成|结构|排名)"
+)
+
+
+# ---------------------------------------------------------------------------
+# 判断结果
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CompoundJudgmentEntry:
+    """一个拆出的子问题：完整可独立执行的业务问题文本 + 该问题的意图与业务域。"""
+
+    question: str
+    intent: str | None = None
+    business_domain: str | None = None
+    expected_output: str | None = None
+    # 规则兜底拆分可能带任务依赖；模型判断的子问题完全独立，不使用该字段
+    depends_on: tuple[int, ...] = ()
+
+
+@dataclass(frozen=True)
+class CompoundJudgment:
+    """前置判断产出：复合/单一结论，复合时给出 2-5 个子问题。
+
+    单一问题时 intent/business_domain 描述整个问题；复合时每个子问题
+    在自己的条目上携带意图与业务域。
+    """
+
+    is_compound: bool
+    entries: tuple[CompoundJudgmentEntry, ...] = ()
+    intent: str | None = None
+    business_domain: str | None = None
+    analyze_summary: str | None = None
+    split_reason_code: str | None = None
+    shared_conditions: tuple[str, ...] = ()
+    # 报告类拆分的交付形态，与 TaskPlan.final_deliverable 对齐：仅 COMBINED_REPORT 或 None
+    final_deliverable: str | None = None
+    # 判断方式：STRUCTURED_MODEL 或 DETERMINISTIC_RULE
+    judge_source: str = "STRUCTURED_MODEL"
+
+
+# ---------------------------------------------------------------------------
+# 拆分判断模型输出契约
+# ---------------------------------------------------------------------------
+
+
+class _JudgeTask(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=2, max_length=1000)
+    intent: str = Field(
+        max_length=20,
+        description="必填；该子问题的问题意图，取值为意图枚举之一",
+    )
+    business_domain: str | None = Field(
+        default=None,
+        max_length=60,
+        description="该子问题涉及的业务域名称，从业务语义规范中识别；识别不到输出null",
+    )
+    expected_output: str | None = Field(
+        default=None,
+        max_length=300,
+        description="Short independently verifiable business deliverable",
+    )
+
+
+class _JudgeResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    split: bool = Field(description="必填；true=复合问题拆为多个子问题，false=单一问题")
+    intent: str | None = Field(
+        default=None,
+        max_length=20,
+        description="split=false时必填；整个问题的问题意图，取值为意图枚举之一",
+    )
+    business_domain: str | None = Field(
+        default=None,
+        max_length=60,
+        description="split=false时填写；整个问题涉及的业务域名称，从业务语义规范中识别；识别不到输出null",
+    )
+    sub_questions: list[_JudgeTask] = Field(
+        max_length=5,
+        description="split=true时填2到5个完整业务子问题；split=false时必须为空数组",
+    )
+    analyze_summary: str | None = Field(
+        default=None,
+        max_length=200,
+        description="仅拆分时必填；一句话向用户说明子问题结构，子问题相互独立可并行，用“问题N”指代",
+    )
+    split_reason_code: str | None = Field(
+        default=None,
+        max_length=80,
+        description="仅拆分时填写；DISTINCT_DELIVERABLES, EXPLICIT_SEPARATE_RESULTS, "
+        "MUTUALLY_EXCLUSIVE_BUSINESS_BRANCHES, or COMPOSITE_REPORT_FACETS 之一",
+    )
+    shared_conditions: list[str] = Field(default_factory=list, max_length=20)
+
+
+_JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输出符合JSON Schema的JSON，不回答用户问题，不调用工具。
+
+你的职责：判断用户问题是一个可单独验收的业务目标（单一问题），还是多个完全独立、需要分别交付的业务目标（复合问题）；同时对每个问题（或单一问题本身）识别问题意图和所属业务域。不做参数提取，不做执行层的任务拆解，这些由后续环节完成。
+
+复合问题的判定标准：多个业务目标完全独立，各自都能单独验收，互相不消费对方的结果。只要其中一个目标需要使用另一个目标返回的名单、范围、排名或计算结果，就说明它们共同构成一个业务目标，属于单一问题，由后续任务拆解环节处理，不在这里拆分。
+
+你的输出描述业务任务边界，不描述底层技术步骤。不要把ASL、SQL、取数、校验或洞察这些内部步骤当成业务目标。
+
+先在内部完成以下判断，但不要输出推理过程：
+1. 提取每个业务目标的动作、指标、返回对象或展示字段、分组维度、筛选值、时间范围与粒度、排序数量、分析或交付要求。
+2. 判断每项目标能否形成可单独验收的答案或数据集；再判断目标之间是否完全独立。
+3. 按判断结果输出：
+   - split=false：只有一个可验收业务目标，sub_questions必须为空，intent/business_domain描述整个问题。
+   - split=true：2到5个完全独立的子问题，每个子问题各自输出intent和business_domain。
+
+数据分析任务边界：
+1. 同一业务对象、筛选范围和结果粒度下的多个指标、多个展示字段或多个分组维度，通常可由一份ASL和一个数据集承载，属于一个子问题。例如“按月统计今年上海市销售额和订单笔数”“查询产品名称、规格型号和生产厂家”均为split=false。
+2. 围绕同一份数据完成查询并做趋势、占比、同比环比、排序、异常检测或口语化总结，若最终共同形成一个分析结果，属于一个子问题。例如“查询今年上海市销售额并分析月度趋势”为split=false。
+3. 不同返回对象、不同关系类型、不同业务主题或用户明确要求分别交付时，应拆分。例如同一产品的“合作经销商名单”和“合作医院名单”是两个子问题；两个句子分别查询不同产品和不同对象也是两个子问题。
+4. 同一语义属性下互斥且业务口径不同的分类分支，需要分别返回时应拆分。例如“主要适用科室”和“次要适用科室”是两个并行子问题；“所有适用科室”仍是一个子问题。
+5. 多个筛选值本身不等于多个子问题。例如“分析费森尤斯产品在上海市和江苏省的销售趋势”可在同一数据集中按地区展示，属于一个子问题；只有用户明确要求分别形成独立结果时才拆分。
+6. 两个完整查询即使只用句号、逗号或口语连接，也要按真实目标拆分，不能依赖“另外、同时、以及”等固定连接词。
+7. 依赖式目标组合不属于复合问题：排名后再查询入选对象的关系或明细（如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”）、分别查询多个结果再比较合并（如“分别查询今年和去年销售额，并比较同比变化”）、明细查询带指标阈值条件（如“订单笔数大于5笔的经销商名单”）都输出split=false，由后续任务拆解环节处理。
+8. 规范指标层级中登记的指标（包括业务语义由其他指标运算合成的复合口径指标，如覆盖率、平均每单金额）可直接作为一个查询目标执行，输出split=false；不得按其依赖指标拆成多个查询加计算。
+9. 指标说法与规范指标层级比对后分两种情况：说法由规范内指标派生（对规范内指标求增长率、均值、占比、排名、最高最低等派生口径），按正常问题处理不拆分；说法与规范内任何指标都无关、也无法由规范内指标派生时，同样不拆分（后续环节会按指标口径解释处理）。判断是否“无法派生”按业务语义判断，不要求字面上包含指标名：围绕规范内实体或业务对象的度量（数量、金额、快慢、高低、升降、排名）提出的说法，都可由该业务对象在规范内的指标派生；只有规范中连对应业务对象的度量都不存在的纯概念词，才属于无法派生。
+10. “前N名销售人员以及所属公司”等同一对象的唯一关联属性，不是额外的分组目标；把关联属性保留在查询的展示字段中。任何用户要求返回的属性不得遗漏。
+
+问题意图枚举（intent字段从中选择最贴合的一个，只输出枚举名本身）：
+指标查询、明细查询、趋势分析、对比分析、占比分析、异常分析、归因分析、预测分析、报表生成、解释口径、闲聊、非数据任务。
+
+业务域（business_domain）从注入的业务语义规范中识别，输出业务域名称（如“医药销售域”）；规范中识别不到时输出null。
+
+子问题生成规则：
+1. 每个子问题必须是自然、完整、可独立理解和执行的业务问题。补全原句中对该子问题生效的产品、地区、指标、时间、筛选、排序及排除条件，不保留只有“另一个、上述条件”等内容的空泛指代。
+2. 只允许复用用户原文明确提供的事实和共享条件；不得创造指标、日期、数量、业务对象、筛选值、口径或数据库字段，不负责替用户消除业务歧义。
+3. 子问题之间完全独立，不互相消费结果。保持用户目标的原始顺序，不重复、不遗漏，子问题总数为2到5。若无需拆分，split输出false且sub_questions输出空数组。
+4. 拆分时analyze_summary必填：一句面向用户的话说明子问题结构，子问题相互独立可并行，用“问题N”指代，不描述内部技术步骤。
+
+判定示例：
+- “查询空心纤维血液透析器合作的经销商名单。查询外周插管中心静脉导管合作的医院名单。” → split=true，两个并行子问题，均补全各自产品和返回对象。
+- “查询TDC-3产品的主要适用科室和次要适用科室。” → split=true，两个并行子问题，均保留TDC-3。
+- “查询空心纤维血液透析器合作的经销商和医院名单。” → split=true，因为返回对象和关系结果不同。
+- “找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院。” → split=false：后一步消费前一步名单，是一个业务目标，由任务拆解环节处理。
+- “分别查询今年和去年上海市销售额，并比较同比变化。” → split=false：比较依赖两份查询结果，是一个业务目标。
+- “查询订单笔数大于5笔的经销商名单。” → split=false：阈值筛选是执行细节，是一个业务目标。
+- “2025年上海市平均每单销售金额是多少。” → split=false：平均每单销售金额是规范登记的复合口径指标，可直接查询。
+- “查看上海各经销商科室业务匹配度。” → split=false：科室业务匹配度与规范内任何指标都无关且无法派生，不拆分，后续环节按指标口径解释处理。
+- “统计各经销商近12月的平均月度销量增长率。” → split=false：平均月度销量增长率由规范内指标“销量”派生，属于一个可验收目标。
+- “分析费森尤斯产品在上海市和江苏省最近一年的销售趋势。” → split=false。
+"""
+
+
+# ---------------------------------------------------------------------------
+# 多任务计划校验与执行辅助
+# ---------------------------------------------------------------------------
+
+
+def validate_plan(plan: TaskPlan, *, source_question: str | None = None) -> None:
+    if not 2 <= len(plan.tasks) <= 5:
+        raise TaskPlanningError("任务计划必须包含2到5个原子任务")
+    task_ids = [task.task_id for task in plan.tasks]
+    if len(task_ids) != len(set(task_ids)):
+        raise TaskPlanningError("任务ID重复")
+    known: set[str] = set()
+    for task in plan.tasks:
+        if not task.question.strip():
+            raise TaskPlanningError("原子任务问题不能为空")
+        if task.task_id in task.depends_on:
+            raise TaskPlanningError("任务不能依赖自身")
+        unknown = set(task.depends_on) - known
+        if unknown:
+            raise TaskPlanningError(
+                "任务依赖必须引用排在其前面的任务：" + ",".join(sorted(unknown))
+            )
+        known.add(task.task_id)
+    if source_question is not None:
+        _validate_grounding(plan, source_question)
+
+
+def _unique_mentions(text: str, candidates: tuple[str, ...]) -> list[str]:
+    # 取最长词优先，避免“退款”嵌在“退款率”里被当成两个独立指标，
+    # 导致共享条件不再向子问题补齐。
+    selected: list[str] = []
+    for value in sorted(candidates, key=len, reverse=True):
+        if value in text and not any(value in existing for existing in selected):
+            selected.append(value)
+    return sorted(selected, key=lambda value: text.find(value))
+
+
+def _business_identifiers(text: str) -> list[str]:
+    normalized = text.translate(_DASH_TRANSLATION)
+    return list(dict.fromkeys(_BUSINESS_IDENTIFIER_PATTERN.findall(normalized)))
+
+
+def _normalize_grounding_numbers(text: str) -> str:
+    """口语日期写法与规范写法等价"""
+    text = re.sub(
+        r"(?<!\d)(\d{2})(?=年)",
+        lambda m: f"20{m.group(1)}" if int(m.group(1)) <= 49 else m.group(1),
+        text,
+    )
+    text = re.sub(r"(?<!\d)0(\d)(?=[月日号])", r"\1", text)
+    # “最多/最高”常被改写为“第1名/前1名”，序数措辞里的1不参与数字比对
+    return re.sub(
+        r"第\s*[一1]\s*[名位席]|前\s*[一1]\s*[名位席个家]|top\s*1(?!\d)",
+        "首位",
+        text,
+    )
+
+
+def _goal_signals(text: str) -> set[str]:
+    patterns = {
+        "TREND": r"趋势|走势|按(?:日|周|月|季|年)变化",
+        "COMPARE": r"同比|环比|对比|比较|差多少|增长率",
+        "COMPOSITION": r"占比|构成|份额|结构",
+        "ANOMALY": r"异常|突增|突降|离群|不正常",
+        "ROOT_CAUSE": r"归因|原因|为什么|影响因素",
+        "FORECAST": r"预测|预估|预计|推算",
+        "DETAIL": r"明细|名单|逐笔|每一条|列表",
+        "RANK": r"(?:前|后)[\d一二三四五六七八九十百]+|最高|最低|排名|排序|降序|升序|从高到低|从低到高",
+        "DEFINITION": r"口径|定义|公式|怎么算",
+        "LINEAGE": r"血缘|来源表|来源字段|来自哪",
+        "QUALITY": r"数据质量|缺失|重复|空值|对账|延迟",
+        "DELIVERY": r"报告|报表|导出|下载|生成(?:excel|xlsx|pdf|word|docx)",
+    }
+    return {name for name, pattern in patterns.items() if re.search(pattern, text)}
+
+
+def _qualified_facet_parts(question: str) -> tuple[str, list[str]] | None:
+    """返回共享前缀和两个对比性、可在原文落地的业务分支措辞。"""
+    normalized = question.strip(" ，,。！？?；;")
+    qualifier_groups = (
+        ("主要", "次要"),
+        ("正常", "异常"),
+        ("新增", "存量"),
+        ("线上", "线下"),
+        ("有效", "无效"),
+        ("合作", "未合作"),
+    )
+    qualifier_to_group = {
+        qualifier: frozenset(group)
+        for group in qualifier_groups
+        for qualifier in group
+    }
+    qualifier_pattern = re.compile("|".join(
+        re.escape(value)
+        for value in sorted(qualifier_to_group, key=len, reverse=True)
+    ))
+    split_match = re.search(r"(?:、|，|,|以及|和|与|及)", normalized)
+    if split_match is None:
+        return None
+    qualifiers = list(qualifier_pattern.finditer(normalized))
+    if len(qualifiers) != 2:
+        return None
+    left, right = qualifiers
+    if left.group(0) == right.group(0):
+        return None
+    if qualifier_to_group[left.group(0)] != qualifier_to_group[right.group(0)]:
+        return None
+    if left.start() > split_match.start() or right.start() < split_match.end():
+        return None
+    suffix = normalized[right.end():].strip(" ，,。！？?；;")
+    if not suffix or len(suffix) > 30:
+        return None
+    if not re.search(_ACTION_PATTERN, normalized):
+        return None
+    prefix = normalized[: left.start()]
+    if not prefix:
+        return None
+    return prefix, [left.group(0) + suffix, right.group(0) + suffix]
+
+
+def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
+    """拒绝模型自造的日期、数字、指标和带引号的过滤值。"""
+    source_for_grounding = re.sub(
+        r"(?:^|[;；\n])\s*[一二三四五1-5][、.)．]\s*",
+        " ",
+        source_question,
+    )
+    source_compact = _normalize_grounding_numbers(
+        re.sub(r"\s+", "", source_for_grounding).casefold()
+    )
+    planned_compact = _normalize_grounding_numbers(
+        "".join(re.sub(r"\s+", "", task.question) for task in plan.tasks).casefold()
+    )
+    source_numbers = set(re.findall(r"\d+(?:\.\d+)?", source_compact))
+    metric_terms = (
+        "销售额", "订单量", "销售量", "客户数", "客单价", "退款额", "退款率",
+        "毛利额", "毛利率", "利润额", "利润率", "库存量", "转化率",
+    )
+    temporal_terms = (
+        "今天", "昨天", "本周", "上周", "本月", "上月", "本季度", "上季度",
+        "今年", "去年", "明年", "最近一周", "最近一个月", "最近三个月",
+        "最近半年", "最近一年",
+    )
+    source_metrics = {value for value in metric_terms if value in source_compact}
+    source_temporal = {value for value in temporal_terms if value in source_compact}
+    source_quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", source_question))
+    source_identifiers = set(_business_identifiers(source_question))
+    for task in plan.tasks:
+        compact = _normalize_grounding_numbers(
+            re.sub(r"\s+", "", task.question).casefold()
+        )
+        if not set(re.findall(r"\d+(?:\.\d+)?", compact)).issubset(source_numbers):
+            raise TaskPlanningError("子任务包含原问题中不存在的数字或日期")
+        if not {value for value in metric_terms if value in compact}.issubset(source_metrics):
+            raise TaskPlanningError("子任务包含原问题中不存在的指标")
+        if not {value for value in temporal_terms if value in compact}.issubset(source_temporal):
+            raise TaskPlanningError("子任务包含原问题中不存在的时间条件")
+        quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", task.question))
+        if not quoted.issubset(source_quoted):
+            raise TaskPlanningError("子任务包含原问题中不存在的过滤值")
+        task_identifiers = set(_business_identifiers(task.question))
+        if not task_identifiers.issubset(source_identifiers):
+            raise TaskPlanningError("子任务包含原问题中不存在的业务型号或编码")
+
+    # 落地校验是双向的：只防自造不够，计划悄悄丢掉用户要求的一部分同样要拒绝。
+    if not source_numbers.issubset(set(re.findall(r"\d+(?:\.\d+)?", planned_compact))):
+        raise TaskPlanningError("任务计划遗漏原问题中的数字或日期")
+    if not source_metrics.issubset({value for value in metric_terms if value in planned_compact}):
+        raise TaskPlanningError("任务计划遗漏原问题中的指标")
+    if not source_temporal.issubset({value for value in temporal_terms if value in planned_compact}):
+        raise TaskPlanningError("任务计划遗漏原问题中的时间条件")
+    if not source_quoted.issubset(set(re.findall(
+        r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", " ".join(task.question for task in plan.tasks)
+    ))):
+        raise TaskPlanningError("任务计划遗漏原问题中的过滤值")
+    planned_identifiers = set(
+        _business_identifiers(" ".join(task.question for task in plan.tasks))
+    )
+    if not source_identifiers.issubset(planned_identifiers):
+        raise TaskPlanningError("任务计划遗漏原问题中的业务型号或编码")
+
+    facet_parts = _qualified_facet_parts(source_question)
+    if facet_parts is not None:
+        _, required_facets = facet_parts
+        coverage = {
+            facet: sum(facet in task.question for task in plan.tasks)
+            for facet in required_facets
+        }
+        if any(count != 1 for count in coverage.values()):
+            raise TaskPlanningError("任务计划遗漏或重复了并列业务分支")
+
+    source_goals = _goal_signals(source_compact)
+    if plan.final_deliverable == "COMBINED_REPORT":
+        # 交付动作由根DAG在所有分析子任务成功后统一执行；
+        # 要求每个子任务都带“报告”会错误地触发每份数据集各导一次。
+        source_goals.discard("DELIVERY")
+    planned_goals = _goal_signals(planned_compact)
+    if not source_goals.issubset(planned_goals):
+        raise TaskPlanningError("任务计划遗漏原问题中的分析目标")
+    constraint_markers = {
+        marker for marker in ("不要", "不看", "不查", "排除", "剔除", "只看", "仅看")
+        if marker in source_compact
+    }
+    if not constraint_markers.issubset({marker for marker in constraint_markers if marker in planned_compact}):
+        raise TaskPlanningError("任务计划遗漏原问题中的排除或限定条件")
+
+
+def execution_layers(plan: TaskPlan) -> list[list[AtomicTask]]:
+    remaining = {task.task_id: task for task in plan.tasks}
+    completed: set[str] = set()
+    layers: list[list[AtomicTask]] = []
+    while remaining:
+        ready = [
+            task for task in remaining.values()
+            if set(task.depends_on).issubset(completed)
+        ]
+        if not ready:
+            raise TaskPlanningError("任务DAG存在环路或无效依赖")
+        layers.append(ready)
+        completed.update(task.task_id for task in ready)
+        for task in ready:
+            remaining.pop(task.task_id)
+    return layers
+
+
+def query_fingerprint(question: str) -> str:
+    normalized = question.casefold().strip()
+    normalized = re.sub(r"[\s，。！？；、,.!?;:：]+", "", normalized)
+    normalized = re.sub(r"^(?:请|帮我|麻烦|请帮我)+", "", normalized)
+    return normalized
+
+
+def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
+    """合并完全相同的原子查询，被合并任务保留别名供最终输出引用。"""
+    canonical_by_key: dict[tuple[str, tuple[str, ...], bool | None], str] = {}
+    aliases: dict[str, str] = {}
+    unique: list[AtomicTask] = []
+    resolved: dict[str, str] = {}
+    for task in plan.tasks:
+        dependencies = tuple(dict.fromkeys(resolved.get(dep, dep) for dep in task.depends_on))
+        key = (query_fingerprint(task.question), dependencies, database_query_choice(task.extraction))
+        existing = canonical_by_key.get(key)
+        if existing is not None:
+            aliases[task.task_id] = existing
+            resolved[task.task_id] = existing
+            continue
+        canonical_by_key[key] = task.task_id
+        resolved[task.task_id] = task.task_id
+        unique.append(task.model_copy(update={"depends_on": list(dependencies)}))
+    # TaskPlan 公开契约要求至少两个节点；全部重复的计划由编排器按单任务执行，
+    # 不为这种情况放松公开契约。
+    if len(unique) == len(plan.tasks):
+        return plan, aliases
+    return plan.model_copy(update={"tasks": unique}, deep=True), aliases
+
+
+# ---------------------------------------------------------------------------
+# 确定性规则兜底拆分
+# ---------------------------------------------------------------------------
+
+
+def _has_action(text: str) -> bool:
+    return bool(re.search(_ACTION_PATTERN, text))
+
+
+def _depends_on_previous(text: str) -> bool:
+    return bool(re.search(
+        r"基于(?:上一步|前面|上述|这个结果)|从中|其中|这些结果|"
+        r"再对(?:它|其)|(?:再|并)?(?:找出|计算|算).*(?:最高|最低|差|结果)|"
+        r"最高比最低", text
+    ))
+
+
+def _ranked_relation_plan(question: str) -> TaskPlan | None:
+    match = re.fullmatch(
+        r"(?P<ranking>(?:查询|找出|列出).+?(?:最高|最低|最大|最小)"
+        r"(?:的)?(?:前)?[一二两三四五六七八九十\d]*个?(?:产品|商品))"
+        r"(?:，|,)?(?:并|再|然后)(?P<relation>列出|查询|找出)"
+        r"(?P<tail>(?:涉及|关联|对应).+)",
+        question.strip(" 。"),
+    )
+    if match is None:
+        return None
+    return TaskPlan(
+        tasks=[
+            AtomicTask(task_id="task-1", question=match.group("ranking")),
+            AtomicTask(
+                task_id="task-2",
+                question=f"{match.group('relation')}上述产品{match.group('tail')}",
+                depends_on=["task-1"],
+            ),
+        ],
+        planner="DETERMINISTIC_RULE",
+    )
+
+
+def _parallel_ranking_plan(question: str) -> TaskPlan | None:
+    """两个各自带排名口径的目标即使共用动词也要拆开。"""
+    normalized = question.strip(" ，,。")
+    # “分别查询A和B”“查询A，以及B”常省略第二个动词；
+    # 只有两侧都带明确排名形态才拆，避免误拆普通指标/维度并列。
+    match = re.match(
+        r"^(?P<prefix>分别)?(?P<verb>查询|统计|找出|列出)"
+        r"(?P<left>.+?(?:前[一二两三四五六七八九十\d]+|最高|最多|最低|最少).+?)"
+        r"(?:，|,)?(?:以及|同时(?:查询|统计)?|和|与)"
+        r"(?P<right>.+(?:前[一二两三四五六七八九十\d]+|最高|最多|最低|最少).*)$",
+        normalized,
+    )
+    if match is None:
+        return None
+    verb = match.group("verb")
+    left = match.group("left").strip(" ，,")
+    right = re.sub(r"^(?:查询|统计|找出|列出)", "", match.group("right")).strip(" ，,")
+    if not left or not right:
+        return None
+    return TaskPlan(
+        tasks=[
+            AtomicTask(task_id="task-1", question=f"{verb}{left}"),
+            AtomicTask(task_id="task-2", question=f"{verb}{right}"),
+        ],
+        planner="DETERMINISTIC_RULE",
+    )
+
+
+def _report_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
+    """明确多分析面的报告拆成可独立验证的查询。
+
+    报告是最终交付物而不是查询形态；把多个分析面压成一份探索性ASL
+    可能只返回其中一个聚合。该确定性路径保留共享主体/筛选文本，
+    每个点名的分析面各自查询后再组装报告。
+    """
+    if not re.search(r"(?:分析)?报告|报表", question, re.IGNORECASE):
+        return None
+    facet_report = re.fullmatch(
+        r"(?:请|帮我|给我)?(?:生成|制作|输出)?"
+        r"(?P<scope>.+?)(?:销售)?分析(?:报告|报表)[，,；;]?"
+        r"(?:包含|包括)(?P<facets>.+)",
+        question.strip(" 。"),
+    )
+    if facet_report is not None:
+        scope = facet_report.group("scope").strip(" ，,")
+        facets = facet_report.group("facets")
+        tasks: list[AtomicTask] = []
+        for label, task_text in (
+            ("趋势", f"分析{scope}销售趋势"),
+            ("排名", f"分析{scope}销售排名"),
+            ("异常", f"分析{scope}销售异常"),
+        ):
+            if label in facets:
+                tasks.append(AtomicTask(
+                    task_id=f"task-{len(tasks) + 1}", question=task_text,
+                ))
+        if len(tasks) >= 2:
+            return TaskPlan(
+                tasks=tasks,
+                planner="DETERMINISTIC_RULE",
+                final_deliverable="COMBINED_REPORT",
+            )
+    body = re.sub(
+        r"[，,；;]?\s*(?:(?:并|再)?(?:输出|生成|形成|制作|导出)|给我)"
+        r".{0,24}?(?:分析)?(?:报告|报表).*$",
+        "",
+        question.strip(),
+        flags=re.IGNORECASE,
+    ).strip(" ，,；;。")
+    matches = list(_REPORT_FACET.finditer(body))
+    # 后续扩展分析面表达式出现重叠时，保留更长的那个匹配。
+    selected: list[re.Match[str]] = []
+    for match in matches:
+        if selected and match.start() < selected[-1].end():
+            if match.end() - match.start() > selected[-1].end() - selected[-1].start():
+                selected[-1] = match
+            continue
+        selected.append(match)
+    if len(selected) < 2:
+        return None
+
+    prefix = body[: selected[0].start()]
+    prefix = re.sub(
+        r"^\s*(?:请|麻烦|帮我|给我|请帮我)?\s*"
+        r"(?:分析|查询|统计|查看|看看|梳理)?\s*(?:一下|下)?\s*(?:关于)?",
+        "",
+        prefix,
+    ).strip(" ，,；;、")
+    if not prefix:
+        return None
+
+    tasks = []
+    uses_default_history = not re.search(
+        r"(?:19|20)\d{2}年|最近|过去|近(?:一|二|三|四|五|六|七|八|九|十|\d+)"
+        r"(?:天|日|周|个月|月|季度|年)|本(?:周|月|季度|年)|上(?:周|月|季度|年)",
+        question,
+    )
+    selected = selected[:max_tasks]
+    for index, match in enumerate(selected):
+        end = selected[index + 1].start() if index + 1 < len(selected) else len(body)
+        facet = body[match.start():end].strip(" ，,；;、和及与")
+        if not facet:
+            continue
+        matched_facet = match.group(0)
+        explicit_detail = bool(re.search(r"清单|名单|明细", matched_facet))
+        report_object = re.search(
+            r"医院|客户|门店|地区|区域|渠道|品类|商品|经销商|供应商",
+            matched_facet,
+        )
+        bounded_count_facet = bool(
+            report_object
+            and not explicit_detail
+            and re.search(r"覆盖|分布|数据|情况|表现", matched_facet)
+        )
+        if bounded_count_facet:
+            object_name = report_object.group(0)
+            if "覆盖" in matched_facet:
+                task_question = f"统计{prefix}已合作{object_name}数"
+            elif matched_facet.startswith("合作"):
+                task_question = f"统计{prefix}已合作{object_name}数"
+            else:
+                task_question = f"统计{prefix}{facet}中的唯一{object_name}总数"
+        elif explicit_detail:
+            task_question = f"列出{prefix}{facet}明细"
+        else:
+            task_question = f"分析{prefix}{facet}"
+        if uses_default_history:
+            task_question += "，使用数据源全部可用历史"
+        tasks.append(AtomicTask(
+            task_id=f"task-{len(tasks) + 1}",
+            question=task_question,
+        ))
+    if len(tasks) < 2:
+        return None
+    return TaskPlan(
+        tasks=tasks,
+        planner="DETERMINISTIC_RULE",
+        final_deliverable="COMBINED_REPORT",
+    )
+
+
+def _parallel_qualified_facet_plan(question: str) -> TaskPlan | None:
+    """一个共享动作下两个对比性业务分支拆成并行查询。
+
+    只识别对比性业务限定词，不拆“名称、规格型号”这类普通展示字段并列。
+    """
+    parts = _qualified_facet_parts(question)
+    if parts is None:
+        return None
+    prefix, facets = parts
+    tasks = [
+        AtomicTask(
+            task_id=f"task-{index + 1}",
+            question=(prefix + facet).strip(),
+        )
+        for index, facet in enumerate(facets)
+    ]
+    return TaskPlan(tasks=tasks, planner="DETERMINISTIC_RULE")
+
+
+def _inline_dependent_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
+    """没有标点分隔的显式“查询→计算”链也要拆。"""
+    referenced_result = re.fullmatch(
+        r"(?P<first>.+?)(?:，|,)?(?:并)?再"
+        r"(?P<relation>从|根据|基于)"
+        r"(?P<second>(?:上述|上一步|前述|前面|这些|该|其).+"
+        r"(?:筛选|过滤|查找|查询|列出|统计|分析).+)",
+        question,
+    )
+    dependent_filter = re.fullmatch(
+        r"(.+?)(?:，|,)?并根据(.{1,80}?)(筛选出|过滤出)(.+)", question
+    )
+    if referenced_result:
+        pieces = [
+            referenced_result.group("first"),
+            referenced_result.group("relation") + referenced_result.group("second"),
+        ]
+    elif dependent_filter:
+        pieces = [
+            dependent_filter.group(1),
+            "根据" + dependent_filter.group(2)
+            + dependent_filter.group(3) + dependent_filter.group(4),
+        ]
+    else:
+        pieces = re.split(
+            r"(?:(?:，|,)?(?:并(?:再)?|然后|再)|(?:，|,))(?="
+            r"(?:计算|算(?:出|一下)?|找出|筛选|过滤|排序).{0,80}"
+            r"(?:差|客单价|占比|最高|最低|最大|最小|排序|筛选|过滤))",
+            question,
+        )
+    pieces = [piece.strip(" ，,。.") for piece in pieces if piece.strip(" ，,。.")]
+    if len(pieces) < 2 or not _has_action(pieces[0]):
+        return None
+    if not all(_has_action(piece) for piece in pieces[1:]):
+        return None
+    shared_identifiers = _business_identifiers(question)
+    for index in range(1, len(pieces)):
+        for identifier in shared_identifiers:
+            if identifier not in pieces[index]:
+                pieces[index] += f"，业务对象为{identifier}"
+    if (
+        any("差" in piece for piece in pieces[1:])
+        and len(re.findall(r"(?:1[0-2]|0?[1-9])月", pieces[0])) >= 2
+        and not re.search(r"按月|每月|分月|分别", pieces[0])
+    ):
+        pieces[0] += "，分别按月返回"
+    tasks = [
+        AtomicTask(
+            task_id=f"task-{index + 1}",
+            question=piece,
+            depends_on=[] if index == 0 else [f"task-{index}"],
+        )
+        for index, piece in enumerate(pieces[:max_tasks])
+    ]
+    return TaskPlan(tasks=tasks, planner="DETERMINISTIC_RULE")
+
+
+def _rule_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
+    qualified_facet_plan = _parallel_qualified_facet_plan(question)
+    if qualified_facet_plan is not None:
+        return qualified_facet_plan
+    normalized = re.sub(r"\r\n?", "\n", question).strip()
+    normalized = re.sub(
+        r"(?:^|[\s;；])[一二三四五12345][、.)．]\s*", "\n", normalized
+    )
+    if _TASK_SPLIT_PATTERN.search(normalized) is None:
+        dependent_plan = _inline_dependent_plan(normalized, max_tasks=max_tasks)
+        if dependent_plan is not None:
+            return dependent_plan
+    pieces = _TASK_SPLIT_PATTERN.split(normalized)
+    pieces = [piece.strip(" ，,。.") for piece in pieces if piece.strip(" ，,。.")]
+    actionable = [piece for piece in pieces if _has_action(piece)]
+    if len(actionable) < 2:
+        return None
+    tasks: list[AtomicTask] = []
+    shared_metrics = _unique_mentions(
+        normalized,
+        (
+            "销售额", "订单量", "订单", "销售量", "销量", "客户数", "客单价",
+            "退款额", "退款率", "退款", "毛利额", "毛利率", "利润额", "利润率",
+            "库存量", "库存", "转化率",
+        ),
+    )
+    shared_periods = _unique_mentions(
+        normalized,
+        (
+            "今天", "昨天", "本周", "上周", "本月", "上月", "本季度", "上季度",
+            "今年", "去年", "最近一周", "最近一个月", "最近三个月", "最近半年",
+            "最近一年",
+        ),
+    )
+    explicit_periods = re.findall(
+        r"(?:19|20)\d{2}年(?:1[0-2]|0?[1-9])月份?"
+        r"|(?:19|20)\d{2}年"
+        r"|(?:19|20)\d{2}[-/.](?:1[0-2]|0?[1-9])",
+        normalized,
+    )
+    if not shared_periods and explicit_periods:
+        shared_periods = list(dict.fromkeys(explicit_periods))
+    for index, piece in enumerate(actionable[:max_tasks]):
+        dependency = (
+            [f"task-{index}"]
+            if index > 0 and _depends_on_previous(piece)
+            else []
+        )
+        enriched = piece
+        if len(shared_metrics) == 1 and shared_metrics[0] not in enriched:
+            enriched += f"，指标为{shared_metrics[0]}"
+        if len(shared_periods) == 1 and shared_periods[0] not in enriched:
+            enriched += f"，时间范围为{shared_periods[0]}"
+        tasks.append(
+            AtomicTask(
+                task_id=f"task-{index + 1}",
+                question=enriched,
+                depends_on=dependency,
+            )
+        )
+    return TaskPlan(tasks=tasks, planner="DETERMINISTIC_RULE")
+
+
+def _rule_split_candidate(question: str) -> bool:
+    action_count = len(re.findall(_ACTION_PATTERN, question))
+    separators = bool(
+        _TASK_SPLIT_PATTERN.search(question)
+        or re.search(r"[、]|(?:以及|和|与|及)", question)
+    )
+    numbered = len(re.findall(r"(?:^|\s)[一二三四五12345][、.)．]", question)) >= 2
+    inline_dependency = bool(re.search(
+        r"(?:"
+        r"(?:并(?:再)?|然后|再)(?:计算|算(?:出|一下)?|找出|筛选|过滤|排序)"
+        r".{0,80}(?:差|客单价|占比|最高|最低|最大|最小|排序|筛选|过滤)"
+        r"|匹配.{1,80}(?:所属|适用).{1,40}(?:并|然后|再).{0,20}(?:筛选|过滤)"
+        r"|(?:再)?加(?:上)?.{0,40}[，,](?:计算|算).{0,40}客单价"
+        r"|(?:并)?再(?:从|根据|基于)(?:上述|上一步|前述|前面|这些|该|其)"
+        r".{1,80}(?:筛选|过滤|查找|查询|列出|统计|分析)"
+        r")",
+        question,
+    ))
+    qualified_facets = _qualified_facet_parts(question) is not None
+    return (
+        action_count >= 2 and (separators or numbered or inline_dependency)
+    ) or qualified_facets
+
+
+def rule_split_plan(question: str, *, max_tasks: int) -> TaskPlan | None:
+    """判断模型不可用时的确定性拆分兜底。
+
+    只覆盖结构明确、被验证过的形态：排名+关系依赖、双排名并行、
+    多分析面报告、通用分句拆分。拆不出可靠结构时返回None按单一处理。
+    """
+    plan = _ranked_relation_plan(question)
+    if plan is not None:
+        return plan
+    plan = _parallel_ranking_plan(question)
+    if plan is not None:
+        return plan
+    plan = _report_plan(question, max_tasks=max_tasks)
+    if plan is not None:
+        return plan
+    if not _rule_split_candidate(question):
+        return None
+    plan = _rule_plan(question, max_tasks=max_tasks)
+    if plan is None or len(plan.tasks) < 2:
+        return None
+    return plan
+
+
+def _plan_from_judgment(judgment: CompoundJudgment) -> TaskPlan:
+    tasks = [
+        AtomicTask(
+            task_id=f"task-{index + 1}",
+            question=entry.question.strip(),
+            depends_on=[f"task-{dep + 1}" for dep in entry.depends_on],
+            expected_output=entry.expected_output,
+        )
+        for index, entry in enumerate(judgment.entries)
+    ]
+    return TaskPlan(
+        tasks=tasks,
+        planner="STRUCTURED_MODEL" if judgment.judge_source == "STRUCTURED_MODEL" else "DETERMINISTIC_RULE",
+        split_reason_code=judgment.split_reason_code or "UNSPECIFIED",
+        shared_conditions=list(dict.fromkeys(judgment.shared_conditions)),
+        analyze_summary=judgment.analyze_summary,
+        final_deliverable=judgment.final_deliverable,
+        question_groups=[
+            QuestionTaskGroup(
+                question=entry.question.strip(),
+                task_offset=index,
+                task_count=1,
+            )
+            for index, entry in enumerate(judgment.entries)
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# 指标顶替兜底用的问句切分模式：只服务于从用户原话里抠指标短语，
+# 抠不出来就返回空串走通用未定义话术，不参与意图判定。
+# ---------------------------------------------------------------------------
+
+_USER_METRIC_ACTION = re.compile(
+    r"^(?:请|麻烦|帮我|请帮我|再|给我)?\s*"
+    r"(?:查询|查看|查一下|看一下|看看|统计|分析|列出|找出|筛选|计算|算一下|算)"
+)
+_USER_METRIC_FILLER = re.compile(
+    r"^(?:今年|去年|本月|上月|上个月|本季度|本年|最近一年|近一年|"
+    r"全部|所有|每个|各|分别|目前|当前)"
+)
+_USER_METRIC_OBJECT = re.compile(
+    r"^(?:[一-龥]{1,3}(?:省|市|自治区))?"
+    r"(?:各)?(?:经销商|医院|产品|商品|客户|供应商|门店|渠道|厂家|品牌|地区|区域)"
+)
+_METRIC_SUFFIX = re.compile(
+    r"(?:匹配度|满意度|占比|度|率|比|值|额|总数|笔数|次数|天数|人数|家数|数量|数|量|时长|周期)$"
+)
+# 计算任务问题里“计算……的×××”的指标名，供顶替检查把计算目标也算进
+# 计划声明的口径；“作为×××”等用户指标别名尾巴要先截掉。
+_CALC_METRIC_PATTERN = re.compile(
+    r"(?:计算|算出|汇总|求得)[^，。;；]{0,20}的"
+    r"([^，。;；]{2,16}?(?:匹配度|满意度|占比|率|度|比|值|额|总数|笔数|次数|天数|人数|家数|数量|数|量|时长|周期))"
+)
+
+
+def _calc_metric_names(question: str) -> list[str]:
+    """从计算任务问题里抠出被计算的指标名，用户别名尾巴（作为×××）截掉。"""
+    names: list[str] = declared_calculation_targets(question)
+    for match in _CALC_METRIC_PATTERN.finditer(question or ""):
+        name = match.group(1).strip()
+        # “计算A作为B”句式里A才是计划实际计算的规范指标
+        name = re.split(r"作为|记作|写作|即", name)[0].strip(" 的，,、")
+        if 2 <= len(name) <= 16:
+            names.append(name)
+    return names
+
+
+def user_metric_phrase(question: str) -> str:
+    """从用户原话里截取指标短语，供顶替兜底时保留原文指标名。
+
+    去掉开头动词、时间范围和业务对象后，取以指标后缀结尾的片段；
+    拿不到就返回空串，由调用方退回不带指标名的通用话术。
+    """
+    text = question.strip(" 。，,？?：:、！!").strip()
+    action = _USER_METRIC_ACTION.match(text)
+    if action:
+        text = text[action.end():].strip(" 的，,、")
+    for _ in range(8):
+        before = text
+        for pattern in (_USER_METRIC_FILLER, _USER_METRIC_OBJECT):
+            match = pattern.match(text)
+            if match:
+                text = text[match.end():].strip(" 的，,、")
+        if text == before:
+            break
+    segments = re.split(r"[的按在从与和及各每]", text)
+    for part in reversed(segments):
+        part = part.strip(" ，,、")
+        if not part:
+            continue
+        # 片段以业务对象开头且剥掉后仍是指标短语时才剥，避免把
+        # “医院覆盖率”这类指标本身的前缀误删。
+        object_match = _USER_METRIC_OBJECT.match(part)
+        if object_match:
+            remainder = part[object_match.end():].strip(" 的，,、")
+            if len(remainder) >= 4 and _METRIC_SUFFIX.search(remainder):
+                part = remainder
+        if 2 <= len(part) <= 16 and _METRIC_SUFFIX.search(part):
+            return part
+    return ""
+
+
+def _plan_metric_names(plan: TaskPlan) -> list[str]:
+    """计划里各数据查询任务声明的指标名，作为顶替检查的比对基准。"""
+    names: list[str] = []
+    for task in plan.tasks:
+        extraction = task.extraction
+        if not isinstance(extraction, dict):
+            if "不再查询数据库" in (task.question or ""):
+                names.extend(_calc_metric_names(task.question))
+            continue
+        for item in extraction.get("指标") or []:
+            name = item.get("name") if isinstance(item, dict) else item
+            if isinstance(name, str) and name.strip():
+                names.append(name.strip())
+        if "不再查询数据库" in (task.question or ""):
+            names.extend(_calc_metric_names(task.question))
+    return names
+
+
+def _question_covers_metric(question: str, name: str) -> bool:
+    """用户原话逐字提到该指标，或命中指标名里任一不少于3字的连续片段，视为覆盖。
+
+    片段匹配是放宽方向：白话叫法（如“覆盖率”指“区域医院覆盖率”）不误判，
+    而完全不相干的指标名在原话里不会留下任何片段。
+    """
+    if name in question:
+        return True
+    for size in range(len(name) - 1, 2, -1):
+        for start in range(len(name) - size + 1):
+            if name[start:start + size] in question:
+                return True
+    return False
+
+
+class MetricSubstitutionDetected(RuntimeError):
+    """概念词被拆成统计+计算任务：该说法在规范里无指标可派生，应转单一问题走口径解释。"""
+
+
+# ---------------------------------------------------------------------------
+# 前置判断器
+# ---------------------------------------------------------------------------
+
+
+class CompoundQuestionJudge:
+    """复合/单一前置判断：意图识别阶段执行，只判断和拆分子问题，不提取参数。"""
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
+        self.settings = settings
+        self._transport = transport
+
+    async def judge(
+        self,
+        question: str,
+        *,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> CompoundJudgment:
+        """判断问题是否复合。判断模型失败时落确定性规则，规则也拆不出按单一处理。"""
+        if (
+            self.settings.intent_model_enabled
+            and self.settings.multi_question_model_enabled
+            and self.settings.intent_model_api_key
+        ):
+            for attempt in range(2):
+                try:
+                    judgment = await self._model_judge(
+                        question,
+                        semantic_context=semantic_context,
+                        semantic_model_id=semantic_model_id,
+                    )
+                    if not judgment.is_compound:
+                        # 模型判单一是权威的，但三类结构明确的规则仍可胜出：
+                        # 排名+关系依赖、双排名并行、多分析面报告。
+                        precise = (
+                            _ranked_relation_plan(question)
+                            or _parallel_ranking_plan(question)
+                            or _report_plan(
+                                question, max_tasks=self.settings.multi_question_max_tasks
+                            )
+                        )
+                        if precise is not None:
+                            validate_plan(precise, source_question=question)
+                            return self._judgment_from_rule_plan(precise)
+                        return judgment
+                    plan = _plan_from_judgment(judgment)
+                    validate_plan(plan, source_question=question)
+                    return judgment
+                except (httpx.HTTPError, KeyError, ValueError, RuntimeError,
+                        json.JSONDecodeError, TaskPlanningError):
+                    # 传输、Schema 或落地校验失败先整体重试一次，仍失败才落规则
+                    if attempt == 1:
+                        break
+        rule_plan = rule_split_plan(question, max_tasks=self.settings.multi_question_max_tasks)
+        if rule_plan is None:
+            return CompoundJudgment(is_compound=False, judge_source="DETERMINISTIC_RULE")
+        validate_plan(rule_plan, source_question=question)
+        return self._judgment_from_rule_plan(rule_plan)
+
+    @staticmethod
+    def _judgment_from_rule_plan(plan: TaskPlan) -> CompoundJudgment:
+        order = {task.task_id: index for index, task in enumerate(plan.tasks)}
+        entries = tuple(
+            CompoundJudgmentEntry(
+                question=task.question,
+                depends_on=tuple(order[dep] for dep in task.depends_on if dep in order),
+                expected_output=task.expected_output,
+            )
+            for task in plan.tasks
+        )
+        return CompoundJudgment(
+            is_compound=True,
+            entries=entries,
+            analyze_summary=plan.analyze_summary,
+            split_reason_code=plan.split_reason_code,
+            shared_conditions=tuple(plan.shared_conditions),
+            final_deliverable=plan.final_deliverable,
+            judge_source="DETERMINISTIC_RULE",
+        )
+
+    async def _model_judge(
+        self,
+        question: str,
+        *,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> CompoundJudgment:
+        from app.domain.semantic_description import load_semantic_description
+
+        schema = _JudgeResult.model_json_schema()
+        system_content = _JUDGE_SYSTEM_PROMPT
+        # 语义规范只用于识别复合指标、业务对象这类需要按规范拆分的形态；
+        # 注入链路与参数提取一致：远程描述文件 > 平台粘贴段 > 内置兜底。
+        reference = await load_semantic_description(self.settings, semantic_model_id)
+        remote_spec = (
+            reference["content"]
+            if reference["source"].startswith("semantic_model_")
+            else ""
+        )
+        if remote_spec:
+            system_content += (
+                "\n业务语义规范（仅用于识别需要按规范拆分的复合指标与业务对象）：\n"
+                + remote_spec + "\n"
+            )
+        elif semantic_context.strip():
+            system_content += (
+                "\n业务语义规范（仅用于识别需要按规范拆分的复合指标与业务对象）：\n"
+                + semantic_context + "\n"
+            )
+        body = {
+            "model": self.settings.intent_model_name,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_content + "\nJSON Schema：" + json.dumps(
+                        schema, ensure_ascii=False, separators=(",", ":")
+                    ),
+                },
+                {"role": "user", "content": question},
+            ],
+            "temperature": 0,
+            "enable_thinking": False,
+        }
+        headers = {
+            "Authorization": (
+                "Bearer " + self.settings.intent_model_api_key.get_secret_value()
+            ),
+            "Content-Type": "application/json",
+        }
+        with trace_generation(
+            name="compound-question-judge",
+            model=body.get("model"),
+            messages=body.get("messages"),
+        ) as generation:
+            async with httpx.AsyncClient(
+                base_url=self.settings.intent_model_base_url.rstrip("/"),
+                timeout=self.settings.multi_question_model_timeout_seconds,
+                transport=self._transport,
+            ) as client:
+                response = await client.post(
+                    "/chat/completions", headers=headers, json=body
+                )
+                response.raise_for_status()
+                payload = response.json()
+                generation.set_response(payload)
+        content = payload["choices"][0]["message"].get("content")
+        if not content:
+            raise ValueError("compound judge returned empty content")
+        result = _JudgeResult.model_validate(json.loads(_strip_json_fences(content)))
+        if not result.split:
+            if result.sub_questions:
+                raise ValueError("single decision must not contain sub questions")
+            return CompoundJudgment(
+                is_compound=False,
+                intent=(result.intent or "").strip() or None,
+                business_domain=(result.business_domain or "").strip() or None,
+            )
+        if len(result.sub_questions) < 2:
+            raise ValueError("compound decision must contain at least two sub questions")
+        entries = tuple(
+            CompoundJudgmentEntry(
+                question=item.question.strip(),
+                intent=(item.intent or "").strip() or None,
+                business_domain=(item.business_domain or "").strip() or None,
+                expected_output=(
+                    item.expected_output.strip()
+                    if item.expected_output and item.expected_output.strip()
+                    else None
+                ),
+            )
+            for item in result.sub_questions
+        )
+        summary = (result.analyze_summary or "").strip()[:200] or None
+        return CompoundJudgment(
+            is_compound=True,
+            entries=entries,
+            analyze_summary=summary,
+            split_reason_code=(result.split_reason_code or "").strip() or None,
+            shared_conditions=tuple(dict.fromkeys(result.shared_conditions)),
+        )
+
+
+# ---------------------------------------------------------------------------
+# 复合任务规划器
+# ---------------------------------------------------------------------------
+
+
+class CompoundTaskPlanner:
+    """把前置判断拆出的子问题落成可执行计划：每个子问题独立做任务拆解与参数提取。"""
+
+    def __init__(
+        self,
+        settings: Settings,
+        single_planner: SingleQuestionPlanner,
+    ) -> None:
+        self.settings = settings
+        self._single = single_planner
+
+    async def plan(
+        self,
+        judgment: CompoundJudgment,
+        *,
+        source_question: str,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> TaskPlan:
+        if not judgment.is_compound or len(judgment.entries) < 2:
+            raise TaskPlanningError("复合规划需要至少两个子问题")
+        # 子问题互不依赖（拆解与提取只看子问题文本），全部并行
+        decompositions = await asyncio.gather(*(
+            self._single.plan_question(
+                entry.question,
+                semantic_context=semantic_context,
+                semantic_model_id=semantic_model_id,
+            )
+            for entry in judgment.entries
+        ))
+        tasks: list[AtomicTask] = []
+        question_groups: list[QuestionTaskGroup] = []
+        for entry, decomposition in zip(judgment.entries, decompositions):
+            offset = len(tasks)
+            entry_tasks = decomposition.tasks
+            if not entry_tasks:
+                # 提取模型不可用时按单任务兜底，任务无提取参数
+                entry_tasks = (
+                    DecomposedTask(question=entry.question),
+                )
+            for local_index, task in enumerate(entry_tasks):
+                task_question = task.question or entry.question
+                expected_output = task.expected_output or entry.expected_output
+                if expected_output is None and "不再查询数据库" in task_question:
+                    expected_output = (
+                        "、".join(declared_calculation_targets(task_question)) or None
+                    )
+                if len(entry_tasks) == 1 and entry.depends_on:
+                    # 规则兜底的判断可能带子问题级依赖，单任务时直接映射
+                    depends_on = [
+                        f"task-{dep + 1}" for dep in entry.depends_on
+                        if 0 <= dep < offset
+                    ]
+                else:
+                    depends_on = [
+                        f"task-{offset + dep + 1}" for dep in task.depends_on
+                    ]
+                tasks.append(AtomicTask(
+                    task_id=f"task-{offset + local_index + 1}",
+                    question=task_question.strip(),
+                    depends_on=depends_on,
+                    expected_output=expected_output,
+                    parameters=list(task.parameters),
+                    extraction=task.structured,
+                    primary_intent=task.intent or decomposition.intent,
+                ))
+            question_groups.append(QuestionTaskGroup(
+                question=entry.question.strip(),
+                task_offset=offset,
+                task_count=len(entry_tasks),
+            ))
+        plan = TaskPlan(
+            tasks=tasks,
+            planner=(
+                "STRUCTURED_MODEL"
+                if judgment.judge_source == "STRUCTURED_MODEL"
+                else "DETERMINISTIC_RULE"
+            ),
+            split_reason_code=judgment.split_reason_code or "UNSPECIFIED",
+            shared_conditions=list(dict.fromkeys(judgment.shared_conditions)),
+            analyze_summary=judgment.analyze_summary,
+            final_deliverable=judgment.final_deliverable,
+            question_groups=question_groups,
+        )
+        validate_plan(plan, source_question=source_question)
+        self._reject_metric_substitution(plan, source_question)
+        return plan
+
+    @staticmethod
+    def _reject_metric_substitution(plan: TaskPlan, source_question: str) -> None:
+        """计算任务的指标在用户原话里毫无踪影时判定为相近指标顶替。
+
+        拆分判断器提示词约束不住模型时在这里确定性拦截：含计算任务的计划，
+        其声明指标必须在原话里出现（逐字或不少于3字的连续片段），否则整个
+        拆分作废，转单一问题按指标口径解释处理。只拦带计算任务的计划，
+        普通查询计划不动，避免误伤白话问法。
+        """
+        if not any("不再查询数据库" in (task.question or "") for task in plan.tasks):
+            return
+        names = _plan_metric_names(plan)
+        if not names:
+            return
+        if any(_question_covers_metric(source_question, name) for name in names):
+            return
+        raise MetricSubstitutionDetected(source_question)
+
+
+# ---------------------------------------------------------------------------
+# 路由门面：编排器的单一入口
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CompoundRouteResult:
+    """路由结果：判断结论 + 复合计划或单一提取，二者只居其一。"""
+
+    judgment: CompoundJudgment
+    plan: TaskPlan | None = None
+    single: PlannerOutcome | None = None
+
+
+def _question_annotation(intent: str | None, business_domain: str | None) -> str:
+    """单个问题的意图与业务域标注，判断器没给出的项不展示。"""
+    parts: list[str] = []
+    if intent:
+        parts.append(f"意图：{intent}")
+    if business_domain:
+        parts.append(f"业务域：{business_domain}")
+    if not parts:
+        return ""
+    return "，" + "，".join(parts)
+
+
+def judgment_display_section(judgment: CompoundJudgment | None) -> str:
+    """意图识别节点展示的复合/单一判断段：判断结论、子问题列表及各自的意图与业务域。"""
+    if judgment is None:
+        return ""
+    if not judgment.is_compound:
+        annotation = _question_annotation(
+            judgment.intent, judgment.business_domain
+        )
+        if annotation:
+            return f"问题类型：单一问题{annotation}。"
+        return "问题类型：单一问题。"
+    lines = [f"问题类型：复合问题，拆分为{len(judgment.entries)}个子问题："]
+    lines.extend(
+        f"问题{index}：{entry.question}"
+        + _question_annotation(entry.intent, entry.business_domain)
+        for index, entry in enumerate(judgment.entries, 1)
+    )
+    return "\n".join(lines)
+
+
+class CompoundQuestionRouter:
+    """前置判断 + 分发的单一入口：复合走 CompoundTaskPlanner，单一走 SingleQuestionPlanner。"""
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
+        self.settings = settings
+        self._judge = CompoundQuestionJudge(settings, transport=transport)
+        self._single = SingleQuestionPlanner(settings, transport=transport)
+        self._planner = CompoundTaskPlanner(settings, self._single)
+
+    @property
+    def single_planner(self) -> SingleQuestionPlanner:
+        return self._single
+
+    async def judge_only(
+        self,
+        question: str,
+        *,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> CompoundJudgment:
+        """只做复合/单一前置判断，不分发执行。供意图识别节点提前展示判断结论。"""
+        return await self._judge.judge(
+            question,
+            semantic_context=semantic_context,
+            semantic_model_id=semantic_model_id,
+        )
+
+    async def plan_with_judgment(
+        self,
+        judgment: CompoundJudgment,
+        question: str,
+        *,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> CompoundRouteResult:
+        """按既有判断结论分发：复合走 CompoundTaskPlanner，单一走 SingleQuestionPlanner。"""
+        if judgment.is_compound:
+            try:
+                plan = await self._planner.plan(
+                    judgment,
+                    source_question=question,
+                    semantic_context=semantic_context,
+                    semantic_model_id=semantic_model_id,
+                )
+            except MetricSubstitutionDetected:
+                # 概念词被误拆成统计+计算：整个拆分作废，
+                # 按单一问题走单一路径（会判成指标口径解释）
+                judgment = CompoundJudgment(is_compound=False)
+                return await self._route_single(
+                    question,
+                    judgment=judgment,
+                    semantic_context=semantic_context,
+                    semantic_model_id=semantic_model_id,
+                )
+            return CompoundRouteResult(judgment=judgment, plan=plan)
+        return await self._route_single(
+            question,
+            judgment=judgment,
+            semantic_context=semantic_context,
+            semantic_model_id=semantic_model_id,
+        )
+
+    async def route_and_plan(
+        self,
+        question: str,
+        *,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> CompoundRouteResult:
+        judgment = await self.judge_only(
+            question,
+            semantic_context=semantic_context,
+            semantic_model_id=semantic_model_id,
+        )
+        return await self.plan_with_judgment(
+            judgment,
+            question,
+            semantic_context=semantic_context,
+            semantic_model_id=semantic_model_id,
+        )
+
+    async def _route_single(
+        self,
+        question: str,
+        *,
+        judgment: CompoundJudgment,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> CompoundRouteResult:
+        decomposition = await self._single.plan_question(
+            question,
+            semantic_context=semantic_context,
+            semantic_model_id=semantic_model_id,
+        )
+        if len(decomposition.tasks) <= 1:
+            first = next(iter(decomposition.tasks), None)
+            outcome = PlannerOutcome(
+                single_intent=(
+                    (first.intent if first is not None else None)
+                    or decomposition.intent
+                ),
+                single_parameters=(
+                    first.parameters if first is not None else ()
+                ),
+                single_structured=(
+                    first.structured if first is not None else None
+                ),
+                metric_catalog=decomposition.metric_catalog,
+            )
+            return CompoundRouteResult(judgment=judgment, single=outcome)
+        # 单一问题拆解出多个任务：与复合计划同样按任务DAG执行
+        tasks = [
+            AtomicTask(
+                task_id=f"task-{index + 1}",
+                question=task.question.strip(),
+                depends_on=[f"task-{dep + 1}" for dep in task.depends_on],
+                expected_output=task.expected_output,
+                parameters=list(task.parameters),
+                extraction=task.structured,
+                primary_intent=task.intent or decomposition.intent,
+            )
+            for index, task in enumerate(decomposition.tasks)
+        ]
+        plan = TaskPlan(
+            tasks=tasks,
+            planner="STRUCTURED_MODEL",
+            split_reason_code="TASK_DECOMPOSITION",
+            compound_metrics=self._compound_metrics_in_split(decomposition),
+        )
+        validate_plan(plan, source_question=question)
+        return CompoundRouteResult(judgment=judgment, plan=plan)
+
+    @staticmethod
+    def _compound_metrics_in_split(
+        decomposition: QuestionDecomposition,
+    ) -> list[str]:
+        """拆分结果里出现的复合指标名：指标命中规范依赖指标映射时登记。
+
+        计算任务的指标名保留用户原文叫法，归一到登记名后再比对；
+        结果去重并保持首次出现顺序。
+        """
+        dependencies = decomposition.metric_dependencies
+        catalog = decomposition.metric_catalog
+        if not dependencies or catalog is None:
+            return []
+        registered, aliases = catalog
+        compound: list[str] = []
+        for task in decomposition.tasks:
+            structured = task.structured
+            if not isinstance(structured, dict):
+                continue
+            metrics = structured.get("指标")
+            if not isinstance(metrics, list):
+                continue
+            for item in metrics:
+                name = item.get("name") if isinstance(item, dict) else item
+                if not isinstance(name, str) or not name.strip():
+                    continue
+                normalized = _normalize_metric_name(name.strip(), registered, aliases)
+                if normalized in dependencies and normalized not in compound:
+                    compound.append(normalized)
+        return compound

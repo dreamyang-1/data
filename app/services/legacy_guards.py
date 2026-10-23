@@ -153,6 +153,12 @@ def pending_answer_admissibility(current: CanonicalAnalysisRequest, pending: Can
             return 'ANSWER_PENDING'
     if current.primary_intent in {PrimaryIntent.CHAT, PrimaryIntent.CAPABILITY_HELP, PrimaryIntent.OUT_OF_SCOPE}:
         return 'NEW_TASK'
+    if 'semantic_ambiguity' in expected:
+        # ASL绑定阶段的自由文本澄清（missing_slots只有semantic_ambiguity、无候选选项），
+        # 待补要素（时间、指标等）只写在上面的澄清文案里，本函数无法逐槽核对；
+        # 闲聊类输入已被上一行分流，其余数据类输入一律视为对该澄清的回答，
+        # 交恢复流程合并进原任务判断，不再拦在UNBOUND。
+        return 'ANSWER_PENDING'
     if (('time_range' in expected and current.time_range is not None
          and 'DEFAULT_TIME_RANGE=LATEST_ONE_YEAR' not in current.assumptions)
             or ('metric' in expected and current.metrics)

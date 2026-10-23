@@ -13,18 +13,19 @@ from test_catalog_sql_sources import install, rows
 from test_catalog_publication import authority
 
 
-def test_all_missing_entity_and_attribute_codes_are_reported_once(monkeypatch):
-    records = [source(entity_code="", entity_name="医院", attr_code=""),
+def test_unresolvable_missing_codes_are_reported_once(monkeypatch):
+    # STALE_TEST: absent codes with valid mappings are now a supported projection.
+    records = [source(entity_code="", entity_name="医院", attr_code="", mapping_column=None),
                source(entity_code="", entity_name="医院", attribute_id=1206, attr_code="name")]
     monkeypatch.setattr(values, "_definition_rows", lambda scope: deepcopy(records))
     with pytest.raises(CatalogEvidenceError) as caught:
         values.capture_value_sources(SCOPE)
     exc = caught.value
     assert str(exc) == "CATALOG_VALUE_SOURCE_MAPPING_INVALID"
-    assert len(exc.issues) == 2
-    assert [v["key"] for v in exc.issues] == ["entity_code", "attr_code"]
+    assert len(exc.issues) == 3
+    assert [v["key"] for v in exc.issues] == ["entity_code", "attr_code", "mapping_column"]
     assert exc.issues[1]["attribute_id"] == 1205
-    assert exc.issues[1]["mapping_column"] == "city"
+    assert exc.issues[1]["mapping_column"] is None
     encoded = json.dumps(exc.issues)
     for secret in ("fixture-secret", "fixture_login", "fixture.invalid", "fixture_business"):
         assert secret not in encoded
@@ -34,7 +35,10 @@ def test_all_missing_entity_and_attribute_codes_are_reported_once(monkeypatch):
     ("mapping_table", ""), ("mapping_column", " "), ("host", None), ("db_name", ""),
     ("db_type", ""), ("port", 0), ("attribute_id", True), ("data_source_id", "7")])
 def test_each_configuration_slot_reports_the_actual_key(monkeypatch, key, new):
-    monkeypatch.setattr(values, "_definition_rows", lambda scope: [source(**{key: new})])
+    changes = {key: new}
+    if key == "attr_code":
+        changes["mapping_column"] = None  # Neither a code nor its mapping exists.
+    monkeypatch.setattr(values, "_definition_rows", lambda scope: [source(**changes)])
     with pytest.raises(CatalogEvidenceError) as caught:
         values.capture_value_sources(SCOPE)
     assert any(issue["key"] == key for issue in caught.value.issues)

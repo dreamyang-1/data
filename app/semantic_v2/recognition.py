@@ -523,6 +523,10 @@ class RecognizedPlan(m.StrictModel):
     edit_trace: list[StructuredEditTrace] = Field(default_factory=list)
     context_trace: JsonValue = None
     context_contract_version: str = CONTRACT_VERSION
+    # 追问轮的数据来源判定（SNAPSHOT/NEW_QUERY）及模型给出的快照操作，
+    # 由 context_proposal 透传给执行层做路由与展示
+    data_source: str | None = None
+    snapshot_operation: dict | None = None
 
 
 class SurfaceContextParse(ContextAwareParse):
@@ -563,8 +567,10 @@ class RecognizedStandaloneNewTask(m.StrictModel):
     next_state: ScopedArtifact
     fallback_reason: str
     execution_route: Literal['V1_EXECUTION_FALLBACK_NEW_TASK'] = (
-        'V1_EXECUTION_FALLBACK_NEW_TASK'
-    )
+        'V1_EXECUTION_FALLBACK_NEW_TASK')
+    # 追问轮的数据来源判定及快照操作，来自 context_proposal
+    data_source: str | None = None
+    snapshot_operation: dict | None = None
 
 
 class RecognizedTaskContextEdit(m.StrictModel):
@@ -859,6 +865,8 @@ class RawTurnPlanner:
                     'session': session, 'parse': parsed, 'context_trace': context_trace,
                     'completed_question': completed,
                     'barrier': self._standalone_new_task_barrier(current, request.message_id),
+                    'data_source': recognized.context_proposal.data_source,
+                    'snapshot_operation': recognized.context_proposal.snapshot_operation,
                 }, 'ASL_OWNS_CONTEXT_BINDING')
         # 独立新问题且没有任何承接信号（没指代、没追问词）时标记直通
         surface_handoff = (
@@ -1084,7 +1092,9 @@ class RawTurnPlanner:
         return RecognizedPlan(parse=parsed, resolution=resolution.model_dump(mode='json'),
             plan=plan.model_dump(mode='json'), next_state=session.seal(kind='CONVERSATION', payload=next_state),
             plan_state=session.seal(kind='LAST_REQUEST', payload=plan.logical_plan), edit_trace=edit_trace,
-            context_trace=context_trace)
+            context_trace=context_trace,
+            data_source=recognized.context_proposal.data_source,
+            snapshot_operation=recognized.context_proposal.snapshot_operation)
 
     @staticmethod
     def _is_standalone_new_task(parse, context_trace):
@@ -1243,6 +1253,8 @@ class RawTurnPlanner:
                 kind='CONVERSATION', payload=candidate['barrier']
             ),
             fallback_reason=str(failure),
+            data_source=candidate.get('data_source'),
+            snapshot_operation=candidate.get('snapshot_operation'),
         )
 
     @staticmethod
