@@ -142,6 +142,8 @@ class SplitAPIContractTests(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(205, result["row_count"])
         self.assertEqual(["value"], result["columns"])
+        # STALE_TEST: the confirmed full-result contract limits only final UI
+        # rendering, not SQL transport or downstream validation/analysis.
         self.assertEqual(rows, result["data"])
         self.assertEqual(205, result["preview_count"])
         self.assertFalse(result["preview_truncated"])

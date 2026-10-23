@@ -9,8 +9,9 @@ import copy
 import hashlib
 import json
 import re
+import pymysql
 
-from sql_translator_prod import SemanticCatalog, RedisDSLLoader, SQLTranslatorProd, _positive_int, _normalize_asl_compatibility
+from sql_translator_prod import SemanticCatalog, MySQLDSLLoader, SQLTranslatorProd, _positive_int, _normalize_asl_compatibility
 
 CONTRACT_VERSION = 'single-domain-v1'
 
@@ -140,6 +141,9 @@ class ScopedCatalog(SemanticCatalog):
             predicate = (f'{base} AND EXISTS (SELECT 1 FROM semantic_model_indicator i '
                          f'WHERE i.semantic_model_id={model} AND i.business_domain_id={domain} '
                          'AND i.is_deleted=0 AND i.indicator_code=s.indicator_code)')
+        elif table == 'semantic_model_data_source':
+            predicate = (f'{base} AND EXISTS (SELECT 1 FROM semantic_model_entity_type e '
+                         f'WHERE {entity} AND e.data_source_id=s.id)')
         elif table in {'semantic_model_table', 'semantic_model_field'}:
             physical = 's' if table.endswith('_table') else 't'
             owned = (f'EXISTS (SELECT 1 FROM semantic_model_entity_type e WHERE {entity} '
@@ -211,12 +215,10 @@ class ScopedCatalog(SemanticCatalog):
         return graph
 
 
-class ScopedLoader(RedisDSLLoader):
+class ScopedLoader(MySQLDSLLoader):
     def __init__(self, scope, base, catalog=None):
-        super().__init__(base.redis_config)
         self.scope = scope
-        self._redis = base.redis
-        self.catalog = catalog or ScopedCatalog(scope)
+        super().__init__(catalog or ScopedCatalog(scope))
 
     def _payload_matches_model(self, data, model_id):
         self.scope.check_model(model_id)
@@ -224,9 +226,9 @@ class ScopedLoader(RedisDSLLoader):
                 and str(data.get('business_domain_id')) == str(self.scope.business_domain_ids[0])
                 and data.get('is_deleted') not in (1, True, '1'))
 
-    def _get_redis_key(self, type_prefix, code, model_id=None):
+    def _snapshot(self, model_id):
         self.scope.check_model(model_id)
-        return super()._get_redis_key(type_prefix, code, model_id)
+        return super()._snapshot(model_id)
 
     def _iter_kind(self, kind, model_id=None):
         self.scope.check_model(model_id)
@@ -255,25 +257,7 @@ class ScopedLoader(RedisDSLLoader):
 
     def _build_table_index(self, model_id=None):
         self.scope.check_model(model_id)
-        if self._index_built_model_id == model_id:
-            return
-        self._table_to_entity.clear()
-        self._entity_id_to_code.clear()
-        for key in self.redis.scan_iter(match=f'semantic_model:{model_id}:entity:*', count=1000):
-            raw = self.redis.get(key)
-            try:
-                data = json.loads(raw) if raw else None
-            except (ValueError, TypeError):
-                continue
-            if not self._payload_matches_model(data, model_id):
-                continue
-            code, identifier = data.get('code'), data.get('id')
-            table = data.get('main_table_name') or data.get('mapping_table')
-            if code and table:
-                self._table_to_entity.setdefault(table, []).append(code)
-            if code and identifier:
-                self._entity_id_to_code[str(identifier)] = code
-        self._index_built_model_id = model_id
+        return super()._build_table_index(model_id)
 
     def _adapt_entity(self, data, model_id=None):
         data = copy.deepcopy(data)
@@ -443,6 +427,10 @@ class ScopedTranslator(SQLTranslatorProd):
                     raise ScopeError('DATA_SOURCE_SCOPE_MISMATCH', 'Translator changed the semantic plan source')
             result.update(self.scope.evidence())
             return result
+        except (pymysql.MySQLError, OSError, TimeoutError, ConnectionError) as exc:
+            result = self._controlled_translation_failure(exc, is_execute=False)
+            result.update(self.scope.evidence())
+            return result
         except (ValueError, TypeError) as exc:
             return self.failure(getattr(exc, 'code', 'INVALID_ASL'), str(exc))
 
@@ -453,8 +441,7 @@ class ScopedTranslator(SQLTranslatorProd):
         self.scope.check_model(model_id)
         if not data_source_id:
             raise ScopeError('DATA_SOURCE_SCOPE_MISMATCH', 'Scoped execution requires the planned data source')
-        raw = self.loader.redis.get(f'semantic_model:data_source:{data_source_id}')
-        data = json.loads(raw) if raw else None
+        data = super().fetch_data_source(model_id, data_source_id)
         if (not isinstance(data, dict) or str(data.get('semantic_model_id')) != str(model_id)
                 or str(data.get('id')) != str(data_source_id) or data.get('is_deleted') in (1, True, '1')):
             raise ScopeError('DATA_SOURCE_SCOPE_MISMATCH', 'Planned data source is missing or belongs to another model')

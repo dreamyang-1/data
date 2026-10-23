@@ -10,7 +10,7 @@ SQL翻译器 HTTP API 服务（生产版）
   4. POST /api/cache/refresh - 刷新DSL缓存
   5. GET  /api/health      - 健康检查
 
-DSL 数据来源：由运行环境配置的 Redis。
+DSL 数据来源：由运行环境配置的权威 MySQL。
 """
 
 import json
@@ -185,7 +185,7 @@ class APIHandler(BaseHTTPRequestHandler):
             self._send_response(200, {
                 'status': 'ok',
                 'message': 'SQL翻译器API服务（生产版）运行正常',
-                'dsl_source': 'redis',
+                'dsl_source': 'mysql',
                 'build': BUILD_INFO,
                 'endpoints': {
                     'translate': 'POST /api/translate - 仅翻译ASL为SQL',
@@ -655,13 +655,13 @@ def main():
     log(f"当前目录: {os.getcwd()}")
     log(f"脚本目录: {CURRENT_DIR}")
     log("启动API服务（生产版）...")
-    # 预热：创建翻译器并测试 Redis 连接
+    # 仅检查权威目录连接；Redis 清空或不可用不影响语义查询。
     try:
         t = get_translator()
-        t.loader.redis.ping()
-        log("Redis 连接正常")
+        t.catalog._query('SELECT 1 AS catalog_ready')
+        log("MySQL 语义目录连接正常")
     except Exception as e:
-        log(f"Redis 连接失败: {e}")
+        log(f"MySQL 语义目录连接失败: {type(e).__name__}")
     host = os.getenv('SQL_TRANSLATOR_API_HOST', '0.0.0.0').strip() or '0.0.0.0'
     try:
         port = int(os.getenv('SQL_TRANSLATOR_API_PORT', '48000'))
