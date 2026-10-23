@@ -2620,7 +2620,13 @@ class DataAnalysisOrchestrator:
         raw_rule_request = self._classify_with_rules(
             admission_question, identity, chat.conversation_id
         )
-        bind_authorized_scope(raw_rule_request, chat.authorized_semantic_scope)
+        bind_authorized_scope(
+            raw_rule_request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
+        )
         raw_rule_request.application_id = chat.application_id
         independent_chat = raw_rule_request.primary_intent == PrimaryIntent.CHAT
         standalone_complete_business = bool(
@@ -2849,6 +2855,7 @@ class DataAnalysisOrchestrator:
             self.question_rewriter is not None
             and not independent_chat
             and not deterministic_business_fast_path
+            and not chat._completed_question_execution
         ):
             rewrite = await self.question_rewriter.rewrite(
                 chat.question,
@@ -2968,7 +2975,13 @@ class DataAnalysisOrchestrator:
                     # One answer consumes one catalog ambiguity. Slot-readiness
                     # recalculation below cannot decide the remaining semantic
                     # choices; advance Pending before any planning/retrieval.
-                    bind_authorized_scope(request, chat.authorized_semantic_scope)
+                    bind_authorized_scope(
+                        request,
+                        chat.authorized_semantic_scope,
+                        execution_resolved_business_domain_ids=(
+                            chat._demo_execution_resolved_business_domain_ids
+                        ),
+                    )
                     return await self._request_clarification(
                         request, rounds, source_stage="SLOT_MERGE",
                     )
@@ -3155,7 +3168,22 @@ class DataAnalysisOrchestrator:
                                 request.missing_slots = required_missing_slots(request)
                         request.rewritten_question = render_execution_question(request)
 
-        if rewrite is not None:
+        if chat._completed_question_execution:
+            # The V2 context bridge has already produced the exact standalone
+            # question that V1 must execute.  V1 intent extraction remains in
+            # charge of planning, but neither its model completion nor its
+            # legacy context rewriter may replace that text a second time.
+            request.original_question = chat.question
+            request.rewritten_question = chat.question
+            request.rewrite_context_applied = False
+            request.rewrite_degraded = False
+            request.rewrite_events = []
+            request.assumptions = [
+                value for value in request.assumptions
+                if value != "MODEL_QUESTION_COMPLETION_APPLIED"
+            ]
+            request.assumptions.append("V2_COMPLETED_QUESTION_PRESERVED")
+        elif rewrite is not None:
             model_completion_applied = (
                 "MODEL_QUESTION_COMPLETION_APPLIED" in request.assumptions
             )
@@ -3205,7 +3233,13 @@ class DataAnalysisOrchestrator:
             request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
             request.assumptions.append("DETERMINISTIC_TIME_FAST_PATH")
 
-        bind_authorized_scope(request, chat.authorized_semantic_scope)
+        bind_authorized_scope(
+            request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
+        )
         if rewrite is not None and rewrite.semantic_matches:
             # The entity-attribute endpoint is scoped to the current semantic
             # model/domain.  Use its latest dimension labels for both the raw
@@ -4066,9 +4100,14 @@ class DataAnalysisOrchestrator:
             turn_decision,
             chat.question,
         )
-        execution_question, canonical_question, execution_source = (
-            select_data_execution_question(request, turn_decision, chat.question)
-        )
+        if chat._completed_question_execution:
+            execution_question = chat.question
+            canonical_question = chat.question
+            execution_source = "V2_COMPLETED_QUESTION"
+        else:
+            execution_question, canonical_question, execution_source = (
+                select_data_execution_question(request, turn_decision, chat.question)
+            )
         request.rewritten_question = execution_question
         request.assumptions.append(f"EXECUTION_QUERY_SOURCE={execution_source}")
         turn_decision.context_after = self.turn_admission_gate.context_snapshot(request)
@@ -4126,7 +4165,13 @@ class DataAnalysisOrchestrator:
             if turn_decision.inherit_business_context
             else None
         )
-        bind_authorized_scope(request, chat.authorized_semantic_scope)
+        bind_authorized_scope(
+            request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
+        )
         request.dependency_constraints = list(chat.dependency_constraints)
         request.assumptions = list(dict.fromkeys([
             *request.assumptions,
@@ -4541,9 +4586,13 @@ class DataAnalysisOrchestrator:
                     error_code=exc.code,
                     upstream_code=exc.upstream_code,
                 )
-                return await self._finish_terminal(
-                    request, self._fallback(request, self._dependency_message(exc), error_code=exc.code)
+                failure = self._fallback(
+                    request,
+                    self._dependency_message(exc),
+                    error_code=exc.code,
                 )
+                failure._upstream_error_code = exc.upstream_code
+                return await self._finish_terminal(request, failure)
 
         query_result = await self._requery_system_default_trend_at_watermark(
             request,

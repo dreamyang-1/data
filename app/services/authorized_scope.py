@@ -3,14 +3,28 @@ from app.domain.models import CanonicalAnalysisRequest, ChatRequest
 from app.domain.semantic_scope import AuthorizedSemanticScope
 
 
-def bind_authorized_scope(request: CanonicalAnalysisRequest, scope: AuthorizedSemanticScope) -> None:
+def bind_authorized_scope(
+    request: CanonicalAnalysisRequest,
+    scope: AuthorizedSemanticScope,
+    *,
+    execution_resolved_business_domain_ids: tuple[int, ...] = (),
+) -> None:
     request.authorized_semantic_scope = scope
     request.semantic_model_id = scope.semantic_model_id
     request.business_domain_ids = list(scope.business_domain_ids)
     request.business_domain_selection_mode = scope.scope_mode
     request.database_id = scope.database_id
     request.knowledge_base_names = list(scope.knowledge_base_names)
-    request.resolved_business_domain_ids = [d for d in request.resolved_business_domain_ids if scope.contains_domain(d)]
+    resolved = list(request.resolved_business_domain_ids)
+    if not resolved and execution_resolved_business_domain_ids:
+        resolved = list(execution_resolved_business_domain_ids)
+        request.assumptions = list(dict.fromkeys([
+            *request.assumptions,
+            "DEMO_EXECUTION_ENVELOPE_SCOPE",
+        ]))
+    request.resolved_business_domain_ids = [
+        d for d in resolved if scope.contains_domain(d)
+    ]
     request.semantic_filter_bindings = [b for b in request.semantic_filter_bindings if scope.contains_domain(b.business_domain_id)]
 
 

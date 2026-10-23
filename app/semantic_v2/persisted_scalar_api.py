@@ -254,6 +254,12 @@ redis.call('SET', KEYS[1], ARGV[2], 'EX', ttl)
 return 1
 """
 
+    _INSTALL_IF_ABSENT = """
+if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end
+redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
+return 1
+"""
+
     _BEGIN_CAS = """
 local current = redis.call('GET', KEYS[1])
 local version = 0
@@ -385,6 +391,56 @@ return 1
         raw = await self.redis.get(key)
         value = self._empty(context, state_identity) if raw is None else json.loads(raw)
         return self._snapshot(key, value, context, state_identity)
+
+    async def install_catalog_resealed_context(
+        self,
+        *,
+        envelope: dict,
+        context: AuthorizedScopeContext,
+        state_identity: dict,
+    ) -> PersistedSessionSnapshot:
+        """Atomically install an already validated envelope under a new pin.
+
+        The envelope schema and state version are unchanged. This operation is
+        only used by the demo Catalog coordinator after a metadata-only,
+        same-source refresh has re-sealed an opaque execution-backed context.
+        Existing state at the target pin always wins.
+        """
+
+        require(
+            self.namespace_mode == "STABLE_DEPLOYMENT",
+            "CATALOG_CONTEXT_RESEAL_REQUIRES_STABLE_STORE",
+        )
+        value = deepcopy(envelope)
+        value["context_fingerprint"] = context.fingerprint()
+        value["state_identity"] = dict(state_identity)
+        encoded = json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+        require(
+            len(value.get("messages", {})) <= self.max_messages,
+            "PERSISTED_SESSION_MESSAGE_LIMIT_REACHED",
+        )
+        require(
+            len(encoded.encode("utf-8")) <= self.max_envelope_bytes,
+            "PERSISTED_SESSION_SIZE_LIMIT_REACHED",
+        )
+        key = self._key(context, state_identity)
+        result = await self.redis.eval(
+            self._INSTALL_IF_ABSENT,
+            1,
+            key,
+            encoded,
+            self.ttl_seconds,
+        )
+        if int(result) == 1:
+            self.created_keys.add(key)
+            return self._snapshot(key, value, context, state_identity)
+        return await self.load(context, state_identity)
 
     async def _publish(self, previous: PersistedSessionSnapshot, value: dict, context, state_identity):
         if self.namespace_mode == "STABLE_DEPLOYMENT":
@@ -536,6 +592,7 @@ return 1
             "status": "RUNNING",
             "execution_stage": "V2_CONTEXT_RESOLVED",
             "bridge_route": bridge_route,
+            "context_sequence": previous.revision + 1,
             "started_at": started_at.isoformat(),
             "pending_state": (
                 pending_state.model_dump(mode="json")
@@ -589,6 +646,12 @@ return 1
         context: AuthorizedScopeContext,
         state_identity: dict,
         v1_execution_called: bool,
+        execution_anchor: dict | None = None,
+        demo_execution_envelope: dict | None = None,
+        reused_demo_execution_envelope_id: str | None = None,
+        demo_fallback: bool = False,
+        demo_fallback_reason: str | None = None,
+        demo_fallback_source: str | None = None,
     ) -> PersistedSessionSnapshot:
         record = previous.message(message_id)
         require(
@@ -608,6 +671,14 @@ return 1
             "v1_execution_called": v1_execution_called,
             "response": response.model_dump(mode="json"),
             "result": None,
+            "execution_anchor": execution_anchor,
+            "demo_execution_envelope": demo_execution_envelope,
+            "reused_demo_execution_envelope_id": (
+                reused_demo_execution_envelope_id
+            ),
+            "demo_fallback": demo_fallback,
+            "demo_fallback_reason": demo_fallback_reason,
+            "demo_fallback_source": demo_fallback_source,
         }
         return await self._publish(previous, value, context, state_identity)
 

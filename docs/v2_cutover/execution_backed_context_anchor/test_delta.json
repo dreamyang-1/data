@@ -1,0 +1,11 @@
+﻿{
+  "status": "EXECUTION_BACKED_CONTEXT_ANCHOR_OFFLINE_GATE_PASS",
+  "baseline": {"passed": 242, "failed": 0, "collection_errors": 0},
+  "final": {"passed": 245, "failed": 0, "collection_errors": 0},
+  "focused_module": {"passed": 19, "failed": 0},
+  "new_tests": 3,
+  "contract_coverage": ["A", "B", "C", "D", "E", "F", "G"],
+  "old_pass_to_new_fail": 0,
+  "external_calls": {"model": 0, "sql": 0, "production_writes": 0, "benchmark": 0},
+  "runtime_validation": "PENDING_REAL_PLATFORM_NEW_CONVERSATION"
+}

@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     runtime_mode: Literal[
         "V1", "V2_LIMITED_SCALAR", "V2_CONTEXT_V1_EXECUTION"
     ] = "V1"
+    # Explicit demo-only recovery behavior for the V2-context/V1-execution
+    # bridge.  The default remains disabled so normal production behavior and
+    # fail-closed execution-scope handling are unchanged.
+    demo_mode: bool = False
     # v2 separates fingerprint-aware idempotency records from pre-upgrade Redis
     # values that cannot prove which request payload produced a cached response.
     session_key_prefix: str = "youo:data-analysis:v2"
