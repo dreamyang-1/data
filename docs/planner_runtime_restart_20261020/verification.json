@@ -1,0 +1,149 @@
+{
+  "classification": "PROVEN",
+  "failure": {
+    "stage": "TASK_PLANNING",
+    "exception": "NameError",
+    "missing_name": "build_analysis_task_plan",
+    "existing_disk_import": "app.planning.analysis_task_planner.build_analysis_task_plan",
+    "original_service_start": "2026-10-20 14:47:50 Asia/Shanghai",
+    "disk_source_modified": "2026-10-20T15:36:55.585338",
+    "request_effect": "error event after intent completion; no complete event"
+  },
+  "action": {
+    "status": "RESTARTED_HEALTHY",
+    "restarted": [
+      "data-analysis-agent.service"
+    ],
+    "started": "2026-10-20T15:55:08.724150",
+    "source_writes": 0,
+    "sources_unchanged": true,
+    "configuration_unchanged": true,
+    "health": {
+      "AgentReady": 200,
+      "AgentLive": 200,
+      "Oagnet": 200,
+      "SQL": 200
+    },
+    "candidate_sources_match": true
+  },
+  "source_fingerprints": [
+    {
+      "path": "app/services/orchestrator.py",
+      "remote_sha256": "d7b3a17c6b20725a4a51cf40edf2b5d43e4f61b8d99419e6afb49540f1877a32"
+    },
+    {
+      "path": "app/planning/analysis_task_planner.py",
+      "remote_sha256": "55e7bf4d420f07ebe861b7f3ff72310922c76cd07f815d8bcff174ca6b9102b0"
+    },
+    {
+      "path": "app/planning/task_plan_stages.py",
+      "remote_sha256": "07e57c5deb499d0048a28c22f84278a294f3962509514127ee0cd795a4a1f251"
+    },
+    {
+      "path": "app/planning/task_dag.py",
+      "remote_sha256": "acf9d74cdffa528fa7672ebc39847e2aaafd925a2685edb9cfb7fec9a840652a"
+    },
+    {
+      "path": "app/api.py",
+      "remote_sha256": "0759268d3339dcc5e0352a0f0a037963354c151b81b2b75118c76775e110aaa1"
+    },
+    {
+      "path": "app/analysis/planning.py",
+      "remote_sha256": "c9b45d568e3d4de0ab271846f8d0d8f0a34103ea341630b4de1f25e6c0a7d9c5"
+    },
+    {
+      "path": "app/analysis/operators.py",
+      "remote_sha256": "d85e00533b8260821d46035b82b96940f5f7f213659d9d0245a0cd09af074535"
+    },
+    {
+      "path": "app/config.py",
+      "remote_sha256": "bc2d183d8f293c39c74d1f2f0c0b7f67bc01c2789aa5cdec04d701e5742991e6"
+    }
+  ],
+  "validation": [
+    {
+      "case": "before",
+      "status": null,
+      "elapsed_seconds": 20.784,
+      "error_event_count": 1,
+      "visible_headings": [
+        "意图识别"
+      ],
+      "row_counts": []
+    },
+    {
+      "case": "candidate_original",
+      "status": "COMPLETED",
+      "elapsed_seconds": 68.714,
+      "error_event_count": 0,
+      "visible_headings": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析"
+      ],
+      "row_counts": [
+        1
+      ]
+    },
+    {
+      "case": "candidate_similar",
+      "status": "COMPLETED",
+      "elapsed_seconds": 48.023,
+      "error_event_count": 0,
+      "visible_headings": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行"
+      ],
+      "row_counts": [
+        0
+      ]
+    },
+    {
+      "case": "after_original",
+      "status": "COMPLETED",
+      "elapsed_seconds": 56.423,
+      "error_event_count": 0,
+      "visible_headings": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析"
+      ],
+      "row_counts": [
+        1
+      ]
+    },
+    {
+      "case": "after_similar",
+      "status": "COMPLETED",
+      "elapsed_seconds": 61.888,
+      "error_event_count": 0,
+      "visible_headings": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行"
+      ],
+      "row_counts": [
+        0
+      ]
+    }
+  ],
+  "functional_source_changes": 0,
+  "full_offline_suite_rerun": false,
+  "validation_note": "Operational reload only: exact-source isolated startup and four complete read-only API requests, plus before-restart failure reproduction. No new application behavior or test assertions.",
+  "business_rows_persisted": false,
+  "credentials_or_signed_urls_persisted": false,
+  "semantic_or_index_writes": 0,
+  "concurrent_local_changes_preserved": [
+    "app/services/orchestrator.py",
+    "app/planning/analysis_task_planner.py"
+  ]
+}
