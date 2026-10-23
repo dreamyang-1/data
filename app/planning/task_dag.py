@@ -22,7 +22,11 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import Settings
-from app.observability.langfuse_client import trace_generation
+from app.observability.langfuse_client import (
+    ensure_structural_span,
+    structural_child,
+    trace_generation,
+)
 from app.domain.models import PlannerExtraction, PrimaryIntent
 from app.planning.dependency_contract import projection
 from app.analysis.chain_tools.temporal_window import (
@@ -83,6 +87,24 @@ _CHINESE_INTENT_TO_PRIMARY = {
     "预测分析": PrimaryIntent.FORECAST_ANALYSIS,
 }
 _CHINESE_INTENT_LABELS = frozenset(_CHINESE_INTENT_TO_PRIMARY)
+
+# 系统意图枚举对应的展示契约中文意图键：根意图下沉到任务时用来
+# 同步覆写提取JSON的意图键，保证中文键与任务意图一致。
+# 同名多键（统计查询/指标查询/排名分析都映射METRIC_QUERY）取提示词
+# 主键"指标查询"（2026-10-23 起意图统一来自意图识别节点，不再采信
+# 提取模型输出的意图键）。
+_PRIMARY_INTENT_LABELS = {
+    PrimaryIntent.METRIC_QUERY: "指标查询",
+    PrimaryIntent.DETAIL_QUERY: "明细查询",
+    PrimaryIntent.TREND_ANALYSIS: "趋势分析",
+    PrimaryIntent.COMPARISON_ANALYSIS: "对比分析",
+    PrimaryIntent.COMPOSITION_ANALYSIS: "占比分析",
+    PrimaryIntent.ANOMALY_ANALYSIS: "异常分析",
+    PrimaryIntent.ROOT_CAUSE_ANALYSIS: "归因分析",
+    PrimaryIntent.FORECAST_ANALYSIS: "预测分析",
+    PrimaryIntent.METRIC_DEFINITION: "解释口径",
+    PrimaryIntent.DATA_LINEAGE: "数据血缘",
+}
 
 _EXTRACTION_PROMPT_PATH = Path(__file__).with_name("structured_extraction_prompt.txt")
 _EXTRACTION_PROMPT_MARKER = "【用户提示词（业务场景上下文）】"
@@ -1205,8 +1227,13 @@ class SingleQuestionPlanner:
         question: str,
         semantic_context: str = "",
         semantic_model_id: int | None = None,
+        root_intent: PrimaryIntent | None = None,
     ) -> QuestionDecomposition:
-        """问题级入口：任务拆解 + 逐任务意图识别与参数提取，带一次纠错重试。"""
+        """问题级入口：任务拆解 + 逐任务意图识别与参数提取，带一次纠错重试。
+
+        root_intent 是意图识别节点判定的根意图：提供时整轮规划不再做
+        意图判断，问题意图与全部任务意图直接取根意图。
+        """
         retry_feedback: str | None = None
         last_result = QuestionDecomposition()
         if not (
@@ -1224,6 +1251,7 @@ class SingleQuestionPlanner:
                     semantic_context=semantic_context,
                     semantic_model_id=semantic_model_id,
                     retry_feedback=retry_feedback,
+                    root_intent=root_intent,
                 )
             except TaskInputBindingError as exc:
                 if attempt == attempts - 1:
@@ -1616,6 +1644,7 @@ class SingleQuestionPlanner:
         semantic_context: str = "",
         semantic_model_id: int | None = None,
         retry_feedback: str | None = None,
+        root_intent: PrimaryIntent | None = None,
     ) -> QuestionDecomposition:
         from app.domain.semantic_description import load_semantic_description
 
@@ -1681,50 +1710,60 @@ class SingleQuestionPlanner:
         planning_question = question
         if retry_feedback:
             planning_question += "\n上一轮需要修正：" + retry_feedback
-        planned = await self._task_model_json(
-            "single-question-task-plan",
-            PLANNING_PROMPT + system_content + "\nJSON Schema："
-            + json.dumps(TaskBoundaries.model_json_schema(), ensure_ascii=False),
-            planning_question,
-        )
-        boundary_plan_complete = bool(planned.get('tasks')) and all(
-            isinstance(item, dict) and 'extraction' not in item for item in planned.get('tasks', []))
-        # The legacy top-level single form is accepted as a boundary only;
-        # its combined extraction is deliberately ignored until phase two.
-        if not planned.get('tasks'):
-            if 'extraction' not in planned and ('intent' not in planned or 'split' in planned):
-                raise ValueError('任务规划没有返回任务列表')
-            planned = {**planned, 'tasks': [{'question': question}]}
-        planned_boundaries = TaskBoundaries.model_validate(planned).tasks
-        boundaries = complete_boundaries(planned_boundaries,
-            spec=spec_for_catalog, catalog=metric_catalog, dependencies=dependencies, source_question=question,
-            default_times=_registered_default_times(question,spec_for_catalog))
-        if target_contract is not None and boundary_plan_complete:
-            from app.planning.task_plan_stages import boundary_targets
-            try:
-                target_contract.validate(boundaries, metric_catalog, boundary_targets)
-            except ValueError as exc:
-                raise TaskInputBindingError(str(exc)) from exc
-        parameter_request = json.dumps({
-            'original_question': question,
-            'tasks': [dict(task_index=index, **task.model_dump(exclude_none=True))
-                      for index, task in enumerate(boundaries)],
-        }, ensure_ascii=False)
-        # Intent is returned with extraction; no separate intent model call.
-        extracted = await self._task_model_json(
-            "single-question-task-parameters",
-            _SINGLE_SYSTEM_PROMPT + system_content + '\n已规划任务JSON：\n' + parameter_request,
-            question,
-            timeout=max(self.settings.multi_question_model_timeout_seconds,
-                        min(60, self.settings.multi_question_model_timeout_seconds * len(boundaries))),
-        )
+        # 步骤层只归拢树形展示：结构节点全轮共享（复合问题并行规划时
+        # 不会各开节点），每个子问题的两次模型调用收进各自的子节点
+        ensure_structural_span("task_planning", name="任务拆分与规划")
+        with structural_child("task_planning", as_type="span", name="子问题规划：" + str(question)[:24]):
+            planned = await self._task_model_json(
+                "single-question-task-plan",
+                PLANNING_PROMPT + system_content + "\nJSON Schema："
+                + json.dumps(TaskBoundaries.model_json_schema(), ensure_ascii=False),
+                planning_question,
+            )
+            boundary_plan_complete = bool(planned.get('tasks')) and all(
+                isinstance(item, dict) and 'extraction' not in item for item in planned.get('tasks', []))
+            # The legacy top-level single form is accepted as a boundary only;
+            # its combined extraction is deliberately ignored until phase two.
+            if not planned.get('tasks'):
+                if 'extraction' not in planned and ('intent' not in planned or 'split' in planned):
+                    raise ValueError('任务规划没有返回任务列表')
+                planned = {**planned, 'tasks': [{'question': question}]}
+            planned_boundaries = TaskBoundaries.model_validate(planned).tasks
+            boundaries = complete_boundaries(planned_boundaries,
+                spec=spec_for_catalog, catalog=metric_catalog, dependencies=dependencies, source_question=question,
+                default_times=_registered_default_times(question,spec_for_catalog))
+            if target_contract is not None and boundary_plan_complete:
+                from app.planning.task_plan_stages import boundary_targets
+                try:
+                    target_contract.validate(boundaries, metric_catalog, boundary_targets)
+                except ValueError as exc:
+                    raise TaskInputBindingError(str(exc)) from exc
+            parameter_request = json.dumps({
+                'original_question': question,
+                'tasks': [dict(task_index=index, **task.model_dump(exclude_none=True))
+                          for index, task in enumerate(boundaries)],
+            }, ensure_ascii=False)
+            # Intent is returned with extraction; no separate intent model call.
+            extracted = await self._task_model_json(
+                "single-question-task-parameters",
+                _SINGLE_SYSTEM_PROMPT + system_content + '\n已规划任务JSON：\n' + parameter_request,
+                question,
+                timeout=max(self.settings.multi_question_model_timeout_seconds,
+                            min(60, self.settings.multi_question_model_timeout_seconds * len(boundaries))),
+            )
         try:
             parameters = parameter_items(extracted, boundaries)
         except ValueError as exc:
             raise TaskInputBindingError(str(exc)) from exc
-        question_intent = self._sanitize_intent(extracted.get('intent') or planned.get('intent'))
-        from app.analysis.intents import resolve_analysis_intent
-        question_intent = resolve_analysis_intent(question_intent, question)
+        if root_intent is not None:
+            # 意图识别节点的根意图即整轮规划的唯一意图来源：
+            # 任务拆分与参数提取阶段不再做意图判断，
+            # 提取模型输出的顶层意图一并忽略（2026-10-23 用户要求）
+            question_intent = root_intent
+        else:
+            question_intent = self._sanitize_intent(extracted.get('intent') or planned.get('intent'))
+            from app.analysis.intents import resolve_analysis_intent
+            question_intent = resolve_analysis_intent(question_intent, question)
         raw_tasks = []
         for boundary, parameters_for_task in zip(boundaries, parameters):
             value = copy.deepcopy(parameters_for_task)
@@ -1835,9 +1874,13 @@ class SingleQuestionPlanner:
         tasks: list[DecomposedTask] = []
         for task_index, item in enumerate(raw_tasks):
             task_question = item.question.strip() or question
-            task_intent = self._sanitize_intent(
-                str((item.extraction or {}).get(_EXTRACTION_INTENT_KEY) or '')
-            ) or question_intent
+            if root_intent is not None:
+                # 任务意图直接取根意图，不再采信提取JSON里的意图键
+                task_intent = root_intent
+            else:
+                task_intent = self._sanitize_intent(
+                    str((item.extraction or {}).get(_EXTRACTION_INTENT_KEY) or '')
+                ) or question_intent
             structured = self._sanitize_extraction(
                 item.extraction, intent=task_intent,
                 metric_catalog=metric_catalog,
@@ -1857,9 +1900,13 @@ class SingleQuestionPlanner:
             task_question = _confirmed_hospital_department_scope(
                 task_question, question, structured, semantic_model_id
             )
-            if structured is not None and task_intent in {
-                None, *_CHINESE_INTENT_TO_PRIMARY.values(),
-            }:
+            if (
+                root_intent is None
+                and structured is not None
+                and task_intent in {
+                    None, *_CHINESE_INTENT_TO_PRIMARY.values(),
+                }
+            ):
                 # 提取JSON里的中文意图键是最终展示契约，可回填任务意图
                 task_intent = _CHINESE_INTENT_TO_PRIMARY.get(
                     str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip(),
@@ -1895,11 +1942,15 @@ class SingleQuestionPlanner:
                     task_question[:120],
                 )
             if "不再查询数据库" not in task_question:
-                task_intent = resolve_analysis_intent(task_intent, task_question)
+                if root_intent is None:
+                    task_intent = resolve_analysis_intent(task_intent, task_question)
                 if structured is not None:
                     from app.analysis.intents import LABELS
                     if task_intent in LABELS:
                         structured[_EXTRACTION_INTENT_KEY] = LABELS[task_intent]
+                    elif root_intent is not None and task_intent in _PRIMARY_INTENT_LABELS:
+                        # 根意图下沉时中文意图键与根意图保持一致
+                        structured[_EXTRACTION_INTENT_KEY] = _PRIMARY_INTENT_LABELS[task_intent]
             if task_intent is PrimaryIntent.TREND_ANALYSIS:
                 # 趋势引擎按相邻行计算逐期变化，时间乱序直接拒算，
                 # 排序统一在提取出口归一为时间升序

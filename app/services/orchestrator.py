@@ -126,7 +126,7 @@ from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
 from app.observability import TraceSummary
 from app.observability.call_timing import track_operation
-from app.observability.langfuse_client import observe_comprehension_child, text_metadata, trace_generation
+from app.observability.langfuse_client import ensure_structural_span, text_metadata, trace_generation
 from app.presentation.reliability import root_quality_status
 from app.presentation import (
     QUERY_EXECUTION_CHAIN,
@@ -1628,6 +1628,9 @@ class DataAnalysisOrchestrator:
                 (
                     raw_request.primary_intent in METADATA_INTENTS
                     or DEFINITION_QUESTION_PATTERN.match(chat.question)
+                    or self._judgment_definition_direct(
+                        getattr(chat, "_compound_judgment", None)
+                    )
                 )
                 and confirmed_pending_choice is None
                 and not chat._is_regeneration_execution
@@ -1660,6 +1663,9 @@ class DataAnalysisOrchestrator:
                 definition_direct = (
                     raw_request.primary_intent in METADATA_INTENTS
                     or bool(DEFINITION_QUESTION_PATTERN.match(chat.question or ""))
+                    or self._judgment_definition_direct(
+                        getattr(chat, "_compound_judgment", None)
+                    )
                 )
                 if (
                     definition_direct
@@ -1669,8 +1675,33 @@ class DataAnalysisOrchestrator:
                     # 不做任务拆分与规划，也不展示规划节点。
                     # V1 回退轮 _completed_question_execution 恒为真，
                     # 故不以此作为拦截条件。
+                    # 指标名取语义识别对该问题标注为“指标”的原文提及，
+                    # 按“名称（指标）”参数交给意图终审换算成 metrics，
+                    # 交语义服务解析；未标注时不猜，维持澄清兜底。
+                    definition_metric_names = []
+                    for item in (
+                        getattr(chat, "_semantic_extraction_items", None) or ()
+                    ):
+                        if not isinstance(item, dict):
+                            continue
+                        if not any(
+                            "指标" in str(label)
+                            for label in (item.get("labels") or ())
+                        ):
+                            continue
+                        name = str(
+                            item.get("normalized_surface")
+                            or item.get("surface")
+                            or ""
+                        ).strip()
+                        if name:
+                            definition_metric_names.append(name)
                     chat._planner_extraction = PlannerExtraction(
                         intent=PrimaryIntent.METRIC_DEFINITION, structured=None,
+                        parameters=[
+                            f"{name}（指标）"
+                            for name in dict.fromkeys(definition_metric_names)
+                        ],
                     )
                     chat._planner_task_name = planning_question
                     chat._planner_task_question = planning_question
@@ -12216,11 +12247,14 @@ class DataAnalysisOrchestrator:
             or planner_extraction.parameters
             or planner_extraction.structured is not None
         )
-        with observe_comprehension_child(
-            as_type="span",
-            name="意图终审（执行层）",
-            input={"question": text_metadata(question)},
-        ) as intent_span, track_operation(
+        # 问题意图判断节点全轮共享：主问题与各个子任务的 jev 终审都挂到
+        # 同一个节点下，不再每次分类各开一个 span
+        intent_verdict_span = ensure_structural_span(
+            "intent_verdict",
+            name="问题意图判断",
+            parent_key=("intent_judge", "comprehension"),
+        )
+        with track_operation(
             "V1_ORCHESTRATION",
             "v1.intent_recognition",
         ) as timing:
@@ -12231,7 +12265,9 @@ class DataAnalysisOrchestrator:
             timing_started = time.perf_counter()
             # jev 意图边车与分类/规划链路并行，对所有意图来源做终审；
             # 失败或低置信时保持原判定，原链路即兜底，主链路不受隧道波动影响
-            jev_task = start_intent_sidecar(self.settings, question)
+            jev_task = start_intent_sidecar(
+                self.settings, question, parent=intent_verdict_span
+            )
             classify = self.classifier.classify
             signature = inspect.signature(classify).parameters
             supports_pre_resolved = "pre_resolved" in signature
@@ -12282,7 +12318,7 @@ class DataAnalysisOrchestrator:
             self._apply_platform_metric_vocabulary(result, agent_prompt)
             # 步骤层只归拢展示，qwen 分类与 jev 终审各自以子节点呈现
             try:
-                intent_span.update(output={
+                intent_verdict_span.update(output={
                     "intent": str(result.primary_intent),
                     "intent_source": result.intent_source,
                 })
@@ -15062,6 +15098,41 @@ class DataAnalysisOrchestrator:
             or getattr(chat, "_dag_definition_direct", False)
         )
 
+    @staticmethod
+    def _judgment_definition_direct(judgment: Any) -> bool:
+        """意图优先的口径直答判定：意图识别节点的拆分判断结论把整个问题
+        判为单一问题的解释口径时，整轮跳过任务拆分与规划，直接依据语义
+        文件作答。复合问题的拆分判断不在此列。"""
+        if judgment is None or getattr(judgment, "is_compound", False):
+            return False
+        intent = getattr(judgment, "intent", None)
+        return intent in ("解释口径", PrimaryIntent.METRIC_DEFINITION.value)
+
+    async def _definition_llm_answer(
+        self, request: CanonicalAnalysisRequest,
+        resolved_items: list[dict],
+    ) -> str:
+        """解释口径直答：把问题与语义文件交给模型生成解释文本。
+
+        resolved_items 是向量库命中的 RESOLVED 指标登记记录（源自语义
+        文件）；整份语义文件由 synthesize_definition 自行加载。失败时
+        抛错由调用方回退模板，模型未配置时返回空串同样回退。
+        """
+        synthesizer = self.analysis_synthesizer
+        method = getattr(synthesizer, 'synthesize_definition', None)
+        if not callable(method):
+            return ""
+        definitions = [
+            item.get('definition') for item in resolved_items
+            if isinstance(item.get('definition'), dict)
+        ]
+        question = request.rewritten_question or request.original_question
+        return str(await method(
+            question,
+            definitions=definitions,
+            semantic_model_id=request.semantic_model_id,
+        ))
+
     async def _metadata_answer(self, request: CanonicalAnalysisRequest, identity: TrustedIdentity, semantic_model_id: int | None) -> AgentResponse:
         if request.primary_intent == PrimaryIntent.SEMANTIC_CATALOG_QUERY:
             return await self._catalog_overview_answer(request, semantic_model_id)
@@ -15072,7 +15143,31 @@ class DataAnalysisOrchestrator:
                 results = await lookup(request, identity)
             except AdapterError as exc:
                 return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
-            return definition_response(request, results)
+            response = definition_response(request, results)
+            # 口径解释正文改为“问题+语义文件”交给模型生成；模板结果仅在
+            # 模型不可用或未命中指标时保留（澄清与能力说明分支不变）。
+            resolved_items = [
+                item for item in (results or [])
+                if isinstance(item, dict) and item.get('status') == 'RESOLVED'
+            ]
+            # 未命中指标登记时同样把问题+整份语义文件交给模型：语义文件
+            # 登记了该指标就解释，未登记则按提示词说明未登记、不猜测；
+            # 模型失败或未配置时保留模板（澄清/能力说明兜底不变）。
+            try:
+                explanation = await self._definition_llm_answer(
+                    request, resolved_items
+                )
+            except Exception:
+                logger.warning(
+                    "definition llm answer failed; keep template",
+                    exc_info=True,
+                )
+            else:
+                if explanation:
+                    response.answer = explanation
+                    if not resolved_items:
+                        response.status = 'COMPLETED'
+            return response
         if request.primary_intent == PrimaryIntent.DATA_LINEAGE and not request.metrics:
             # Legacy's downstream protocol supports metric lineage only. Do not
             # disguise this external contract gap as missing user information.

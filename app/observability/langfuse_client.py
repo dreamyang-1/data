@@ -277,6 +277,193 @@ def observe_span(
             logger.debug("Langfuse observation close failed: %s", name, exc_info=True)
 
 
+# 请求级结构节点登记：trace_id → {key: span}。
+# 规划/分类等代码跑在独立 asyncio 任务里，contextvar 登记传不回 API
+# 入口所在的任务，按 OTel trace 归桶才能保证请求结束时统一关闭
+_structural_by_trace: dict[int, dict] = {}
+_structural_lock = threading.RLock()
+
+
+def _current_trace_key() -> int | None:
+    """当前 OTel 上下文的 trace id；不在有效 span 内返回 None。"""
+    try:
+        from opentelemetry import trace as otel_trace
+
+        span_context = otel_trace.get_current_span().get_span_context()
+        if span_context is not None and span_context.is_valid:
+            return span_context.trace_id
+    except Exception:
+        logger.debug("Langfuse trace key resolve failed", exc_info=True)
+    return None
+
+
+def register_structural_span(key: str, observation: Any) -> None:
+    """登记请求级结构节点，后续判定/规划节点挂到它下面。"""
+    if observation is None or observation is _NULL_OBSERVATION:
+        return
+    trace_key = _current_trace_key()
+    if trace_key is None:
+        return
+    with _structural_lock:
+        bucket = _structural_by_trace.setdefault(trace_key, {})
+        existing = bucket.get(key)
+        if existing is None:
+            bucket[key] = observation
+            return
+    # 并行分支重复创建的多余节点直接关掉，不留没人关闭的孤儿 span
+    try:
+        observation.end()
+    except Exception:
+        logger.debug("Langfuse duplicate structural span close failed: %s", key, exc_info=True)
+
+
+def get_structural_span(key: str) -> Any | None:
+    trace_key = _current_trace_key()
+    if trace_key is None:
+        return None
+    with _structural_lock:
+        return _structural_by_trace.get(trace_key, {}).get(key)
+
+
+def _resolve_structural_parent(parent_key: Any) -> Any | None:
+    keys = (parent_key,) if isinstance(parent_key, str) else tuple(parent_key or ())
+    for candidate in keys:
+        span = get_structural_span(candidate)
+        if span is not None:
+            return span
+    return None
+
+
+def ensure_structural_span(
+    key: str, *, name: str, parent_key: Any = None, input: Any = None
+) -> Any:
+    """取已登记的结构节点；没有就创建一个并登记。
+
+    创建的节点不占当前上下文、不在这里关闭，统一由 end_structural_spans
+    在请求结束时收尾；parent_key 给定时挂到对应结构节点下（可传元组
+    按顺序回退），否则挂当前上下文。
+    """
+    existing = get_structural_span(key)
+    if existing is not None:
+        return existing
+    if not is_enabled():
+        return _NULL_OBSERVATION
+    parent = _resolve_structural_parent(parent_key)
+    try:
+        if parent is not None:
+            observation = parent.start_observation(as_type="span", name=name, input=input)
+        else:
+            observation = _client.start_observation(as_type="span", name=name, input=input)
+    except Exception:
+        logger.debug("Langfuse structural span creation failed: %s", name, exc_info=True)
+        return _NULL_OBSERVATION
+    register_structural_span(key, observation)
+    return observation
+
+
+def end_structural_spans() -> None:
+    """请求结束时统一关闭本轮登记的结构节点，由 API 入口的 finally 调用。"""
+    trace_key = _current_trace_key()
+    if trace_key is None:
+        return
+    with _structural_lock:
+        spans = _structural_by_trace.pop(trace_key, {})
+    for key, observation in spans.items():
+        end = getattr(observation, "end", None)
+        if not callable(end):
+            continue
+        try:
+            end()
+        except Exception:
+            logger.debug("Langfuse structural span close failed: %s", key, exc_info=True)
+
+
+@contextmanager
+def structural_child(
+    parent_key: Any, *, as_type: str = "span", name: str, input: Any = None, **kwargs: Any
+) -> Iterator[Any]:
+    """在指定结构节点下建子节点并置为当前，子级模型调用自动嵌套。
+
+    父节点已关闭也能挂靠（OTel 上下文不依赖父级存活）；parent_key 可传
+    元组按顺序回退，全部缺失时退回当前上下文嵌套，树保持未归拢时的结构。
+    """
+    parent = _resolve_structural_parent(parent_key)
+    if parent is None or not is_enabled():
+        with observe_span(as_type=as_type, name=name, input=input, **kwargs) as observation:
+            yield observation
+        return
+    try:
+        manager = parent.start_as_current_observation(
+            as_type=as_type, name=name, input=input, **kwargs
+        )
+        observation = manager.__enter__()
+    except Exception:
+        logger.debug("Langfuse structural child creation failed: %s", name, exc_info=True)
+        yield _NULL_OBSERVATION
+        return
+    try:
+        yield observation
+    except BaseException as exc:
+        try:
+            manager.__exit__(type(exc), exc, exc.__traceback__)
+        except Exception:
+            logger.debug("Langfuse observation close failed: %s", name, exc_info=True)
+        raise
+    else:
+        try:
+            manager.__exit__(None, None, None)
+        except Exception:
+            logger.debug("Langfuse observation close failed: %s", name, exc_info=True)
+
+
+@contextmanager
+def generation_under(
+    parent: Any, *, name: str, model: Any = None, input: Any = None, **kwargs: Any
+) -> Iterator[Any]:
+    """把模型调用 generation 建到指定 span 下面。
+
+    parent 是真实 span 时建显式子节点（不占当前上下文，跨阶段归拢用）；
+    否则退回当前上下文嵌套。
+    """
+    if parent is None or parent is _NULL_OBSERVATION or not is_enabled():
+        with observe_span(
+            as_type="generation", name=name, model=model, input=input, **kwargs
+        ) as observation:
+            yield observation
+        return
+    try:
+        observation = parent.start_observation(
+            as_type="generation", name=name, model=model, input=input, **kwargs
+        )
+    except Exception:
+        logger.debug("Langfuse generation creation failed: %s", name, exc_info=True)
+        yield _NULL_OBSERVATION
+        return
+    try:
+        yield observation
+    finally:
+        try:
+            observation.end()
+        except Exception:
+            logger.debug("Langfuse generation close failed: %s", name, exc_info=True)
+
+
+def set_comprehension_span(observation: Any) -> None:
+    """兼容入口：登记“问题理解与补全”结构节点。"""
+    register_structural_span("comprehension", observation)
+
+
+@contextmanager
+def observe_comprehension_child(
+    *, as_type: str = "span", name: str, input: Any = None, **kwargs: Any
+) -> Iterator[Any]:
+    """兼容入口：在“问题理解与补全”节点下建子节点。"""
+    with structural_child(
+        "comprehension", as_type=as_type, name=name, input=input, **kwargs
+    ) as observation:
+        yield observation
+
+
 @contextmanager
 def trace_attributes(**kwargs: Any) -> Iterator[None]:
     if not is_enabled() or _propagate_attributes is None:

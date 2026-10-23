@@ -26,6 +26,7 @@ from app.domain.models import (
 from app.stores import MessageIdReuseConflictError
 from app.observability.langfuse_client import (
     StageSpanTracker,
+    end_structural_spans,
     hash_identifier,
     observe_span,
     summarize_value,
@@ -321,6 +322,11 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                         status_message=type(exc).__name__,
                     )
                     raise
+                finally:
+                    # 本轮登记的结构节点（问题理解与补全/意图判断/任务拆分
+                    # 与规划等）统一在请求结束时关闭；必须赶在根 span 退出
+                    # 前调用，否则拿不到当前 trace 无法定位登记桶
+                    end_structural_spans()
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail="analysis request deadline exceeded") from exc
     except MessageIdReuseConflictError as exc:
@@ -1032,6 +1038,11 @@ async def chat_stream(
                 if off_topic_flag:
                     # 业务无关的问题由聊天模型直接回答，不亮任务规划节点
                     return [dict(event, status="COMPLETED")]
+                if bool(event.get("definition_direct")):
+                    # 单一问题的解释口径：意图识别后跳过任务拆分与规划，
+                    # 直接依据语义文件作答，规划节点对这轮不再点亮
+                    latest_progress_stage = "INTENT_RECOGNITION"
+                    return [dict(event, status="COMPLETED")]
                 return [
                     dict(event, status="COMPLETED"),
                 ]
@@ -1694,6 +1705,48 @@ class _CompositeChildProgressOrderer:
         self.parsing_stopped: set[str] = set()
         self.parsing_barrier_open = False
         self.deferred_execution: list[dict[str, Any]] = []
+        # 并发子任务的解析校验块按任务序号发布：各任务ASL完成顺序不稳定，
+        # 到达即发布会让“任务2”先于“任务1”出现（2026-10-22 用户反馈）。
+        self.parsing_pending: dict[int, list[dict[str, Any]]] = {}
+        self.parsing_finished_indices: set[int] = set()
+        self.next_parsing_index = 0
+
+    @staticmethod
+    def _parsing_task_index(event: dict[str, Any]) -> int:
+        try:
+            return max(0, int(event.get("task_index") or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _is_parsing_terminal(self, event: dict[str, Any]) -> bool:
+        return str(event.get("status") or "").upper() in (
+            self._TERMINAL_STATUSES | {"NEEDS_INPUT"}
+        )
+
+    def _advance_parsing(self) -> list[dict[str, Any]]:
+        """Release buffered parsing blocks in task order as earlier ones end."""
+        released: list[dict[str, Any]] = []
+        while True:
+            index = self.next_parsing_index
+            buffered = self.parsing_pending.pop(index, None)
+            if buffered:
+                released.extend(self._label(buffered))
+                if not any(self._is_parsing_terminal(item) for item in buffered):
+                    # 该任务的解析流还没结束，后续事件到齐前保持当前序号
+                    break
+            elif index not in self.parsing_finished_indices:
+                break
+            self.next_parsing_index = index + 1
+        return released
+
+    def _mark_parsing_crossed(self, index: int) -> list[dict[str, Any]]:
+        """Execution milestones imply the task's parsing (if any) has finished."""
+        if index < self.next_parsing_index:
+            return []
+        self.parsing_finished_indices.add(index)
+        if index == self.next_parsing_index:
+            return self._advance_parsing()
+        return []
 
     @staticmethod
     def _task_key(event: dict[str, Any]) -> str:
@@ -1755,20 +1808,36 @@ class _CompositeChildProgressOrderer:
         task_key = self._task_key(event)
         visible: list[dict[str, Any]] = []
         if section == "parsing":
-            visible.extend(self._label([event]))
-            if str(event.get("status") or "").upper() in {"NEEDS_INPUT", "FAILED"}:
+            status = str(event.get("status") or "").upper()
+            task_index = self._parsing_task_index(event)
+            if task_index < self.next_parsing_index:
+                # 已按序发布过的任务的补充里程碑，按到达顺序直通
+                visible.extend(self._label([event]))
+            elif task_index == self.next_parsing_index:
+                visible.extend(self._label([event]))
+                if self._is_parsing_terminal(event):
+                    self.parsing_finished_indices.add(task_index)
+                    visible.extend(self._advance_parsing())
+            else:
+                self.parsing_pending.setdefault(task_index, []).append(event)
+                if self._is_parsing_terminal(event):
+                    self.parsing_finished_indices.add(task_index)
+            if status in {"NEEDS_INPUT", "FAILED"}:
                 self.parsing_stopped.add(task_key)
-            if str(event.get("status") or "").upper() in self._TERMINAL_STATUSES | {"NEEDS_INPUT"}:
+            if status in self._TERMINAL_STATUSES | {"NEEDS_INPUT"}:
                 self.parsing_completed.add(task_key)
         else:
             if section == "execution":
                 # Tasks with no ASL (files, skipped tasks) also cross the
                 # parsing barrier; don't invent a successful ASL for them.
                 self.parsing_completed.add(task_key)
+                visible.extend(self._mark_parsing_crossed(
+                    self._parsing_task_index(event)
+                ))
             if not self.parsing_barrier_open:
                 self.deferred_execution.append(event)
             else:
-                return self._push_after_parsing(event)
+                return [*visible, *self._push_after_parsing(event)]
         if not self.parsing_barrier_open and self._all_tasks_completed(self.parsing_completed):
             self.parsing_barrier_open = True
             for pending in self.deferred_execution:
@@ -1838,6 +1907,9 @@ class _CompositeChildProgressOrderer:
 
     def flush(self) -> list[dict[str, Any]]:
         released = []
+        for index in sorted(self.parsing_pending):
+            released.extend(self._label(self.parsing_pending.pop(index)))
+        self.parsing_pending.clear()
         for event in self.deferred_execution:
             released.extend(self._push_after_parsing(event))
         self.deferred_execution.clear()
@@ -2035,6 +2107,7 @@ def _stream_error_payload(exc: HTTPException) -> dict[str, Any]:
 # 路径、参数与 Resp 包装和 youoagent-api 的 Java 版保持一致：
 #   GET /semanticModelEntityType/recommendTables
 #   GET /semanticModelEntityType/recommendFields
+#   GET /semanticModelEntityType/relationSuggestions
 #   GET /semanticModelRelationConfig/detectRelations
 #   GET /semanticModelRelationConfig/recommendRelations
 
@@ -2079,6 +2152,21 @@ async def recommend_fields_endpoint(
 ) -> dict[str, Any]:
     return await _recommend_call(
         semantic_recommend.get_service().recommend_fields, table_id
+    )
+
+
+@recommend_router.get(
+    "/semanticModelEntityType/relationSuggestions",
+    summary="实体保存时的关联建议（存在中间表关联但未配置关系时提示）",
+)
+async def relation_suggestions_endpoint(
+    semantic_model_id: int = Query(alias="semanticModelId", gt=0),
+    entity_type_id: str = Query(alias="entityTypeId", min_length=1, max_length=64),
+    business_domain_id: int | None = Query(alias="businessDomainId", default=None, gt=0),
+) -> dict[str, Any]:
+    return await _recommend_call(
+        semantic_recommend.get_service().check_relation_suggestions,
+        semantic_model_id, entity_type_id, business_domain_id,
     )
 
 

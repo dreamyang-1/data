@@ -21,8 +21,15 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import Settings
-from app.domain.models import AtomicTask, QuestionTaskGroup, TaskPlan
-from app.observability.langfuse_client import trace_generation
+from app.decision.domain_decider import apply_jev_domain_override
+from app.domain.models import (
+    AtomicTask,
+    PlannerExtraction,
+    PrimaryIntent,
+    QuestionTaskGroup,
+    TaskPlan,
+)
+from app.observability.langfuse_client import ensure_structural_span, trace_generation
 from app.planning.calculation_targets import declared_calculation_targets
 from app.planning.task_dag import (
     DecomposedTask,
@@ -198,7 +205,7 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 
 数据分析任务边界：
 1. 同一业务对象、筛选范围和结果粒度下的多个指标、多个展示字段或多个分组维度，通常可由一份ASL和一个数据集承载，属于一个子问题。例如“按月统计今年上海市销售额和订单笔数”“查询产品名称、规格型号和生产厂家”均为split=false。
-2. 围绕同一份数据完成查询并做趋势、占比、同比环比、排序、异常检测或口语化总结，若最终共同形成一个分析结果，属于一个子问题。例如“查询今年上海市销售额并分析月度趋势”为split=false。
+2. 围绕同一份数据完成查询及同一分析链路的全部能力，属于一个子问题。若明确要求分别交付趋势分析、异常检测、归因或预测等多个分析目标，应拆为独立子问题，每个子问题完整保留指标、筛选、时间与粒度。例如“查询今年上海市销售额并分析月度趋势”为split=false。
 3. 不同返回对象、不同关系类型、不同业务主题或用户明确要求分别交付时，应拆分。例如同一产品的“合作经销商名单”和“合作医院名单”是两个子问题；两个句子分别查询不同产品和不同对象也是两个子问题。
 4. 同一语义属性下互斥且业务口径不同的分类分支，需要分别返回时应拆分。例如“主要适用科室”和“次要适用科室”是两个并行子问题；“所有适用科室”仍是一个子问题。
 5. 多个筛选值本身不等于多个子问题。例如“分析费森尤斯产品在上海市和江苏省的销售趋势”可在同一数据集中按地区展示，属于一个子问题；只有用户明确要求分别形成独立结果时才拆分。
@@ -553,7 +560,12 @@ def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
             for operand in operands:
                 if isinstance(operand, dict) and operand.get('source_task_id') in resolved:
                     operand['source_task_id'] = resolved[operand['source_task_id']]
-        calculation = {key: extraction[key] for key in ('计算绑定', '结果操作') if extraction and key in extraction}
+        analysis_binding = (extraction or {}).get('分析绑定')
+        if analysis_binding:
+            for period in analysis_binding.get('periods') or []:
+                period['task'] = resolved.get(period['task'], period['task'])
+            analysis_binding['optional_dependencies'] = [resolved.get(dep, dep) for dep in analysis_binding.get('optional_dependencies') or []]
+        calculation = {key: extraction[key] for key in ('计算绑定', '结果操作', '分析绑定') if extraction and key in extraction}
         key = (query_fingerprint(task.question), dependencies, database_query_choice(extraction),
                json.dumps(calculation, ensure_ascii=False, sort_keys=True) if calculation else '')
         existing = canonical_by_key.get(key)
@@ -1086,6 +1098,14 @@ class MetricSubstitutionDetected(RuntimeError):
 # ---------------------------------------------------------------------------
 
 
+def _analysis_goal_label(label, question):
+    from app.analysis.intents import LABELS, analysis_goals
+    goals = analysis_goals(question)
+    if goals and (not label or label in LABELS.values() or label == '指标查询'):
+        return '、'.join(LABELS[intent] for intent in goals)
+    return (label or '').strip() or None
+
+
 class CompoundQuestionJudge:
     """复合/单一前置判断：意图识别阶段执行，只判断和拆分子问题，不提取参数。"""
 
@@ -1251,38 +1271,48 @@ class CompoundQuestionJudge:
         if not content:
             raise ValueError("compound judge returned empty content")
         result = _JudgeResult.model_validate(json.loads(_strip_json_fences(content)))
+        judgment: CompoundJudgment
         if not result.split:
             if result.sub_questions:
                 raise ValueError("single decision must not contain sub questions")
-            return CompoundJudgment(
+            judgment = CompoundJudgment(
                 is_compound=False,
-                intent=(result.intent or "").strip() or None,
+                intent=_analysis_goal_label(result.intent, question),
                 business_domain=(result.business_domain or "").strip() or None,
             )
-        if len(result.sub_questions) < 2:
-            raise ValueError("compound decision must contain at least two sub questions")
-        entries = tuple(
-            CompoundJudgmentEntry(
-                question=item.question.strip(),
-                label=(item.label.strip() if item.label and item.label.strip() else None),
-                intent=(item.intent or "").strip() or None,
-                business_domain=(item.business_domain or "").strip() or None,
-                expected_output=(
-                    item.expected_output.strip()
-                    if item.expected_output and item.expected_output.strip()
-                    else None
-                ),
+        else:
+            if len(result.sub_questions) < 2:
+                raise ValueError("compound decision must contain at least two sub questions")
+            entries = tuple(
+                CompoundJudgmentEntry(
+                    question=item.question.strip(),
+                    label=(item.label.strip() if item.label and item.label.strip() else None),
+                    intent=_analysis_goal_label(item.intent, item.question),
+                    business_domain=(item.business_domain or "").strip() or None,
+                    expected_output=(
+                        item.expected_output.strip()
+                        if item.expected_output and item.expected_output.strip()
+                        else None
+                    ),
+                )
+                for item in result.sub_questions
             )
-            for item in result.sub_questions
-        )
-        summary = (result.analyze_summary or "").strip()[:200] or None
-        return CompoundJudgment(
-            is_compound=True,
-            entries=entries,
-            analyze_summary=summary,
-            split_reason_code=(result.split_reason_code or "").strip() or None,
-            shared_conditions=tuple(dict.fromkeys(result.shared_conditions)),
-        )
+            summary = (result.analyze_summary or "").strip()[:200] or None
+            judgment = CompoundJudgment(
+                is_compound=True,
+                entries=entries,
+                analyze_summary=summary,
+                split_reason_code=(result.split_reason_code or "").strip() or None,
+                shared_conditions=tuple(dict.fromkeys(result.shared_conditions)),
+            )
+        # jev 业务域终审：候选取业务域总览表，置信度达标覆写，失败保留判断器原值
+        try:
+            judgment = await apply_jev_domain_override(
+                self.settings, judgment, question, remote_spec or semantic_context
+            )
+        except Exception:
+            logger.warning("jev domain override failed in compound judge", exc_info=True)
+        return judgment
 
 
 # ---------------------------------------------------------------------------
@@ -1308,15 +1338,20 @@ class CompoundTaskPlanner:
         source_question: str,
         semantic_context: str = "",
         semantic_model_id: int | None = None,
+        root_intent: PrimaryIntent | None = None,
     ) -> TaskPlan:
         if not judgment.is_compound or len(judgment.entries) < 2:
             raise TaskPlanningError("复合规划需要至少两个子问题")
-        # 子问题互不依赖（拆解与提取只看子问题文本），全部并行
+        # 子问题互不依赖（拆解与提取只看子问题文本），全部并行。
+        # 结构节点必须先于并行分支登记：子任务各自拷贝上下文，节点在
+        # 并行前登记，各子问题规划才能挂到同一个任务拆分与规划节点下
+        ensure_structural_span("task_planning", name="任务拆分与规划")
         decompositions = await asyncio.gather(*(
             self._single.plan_question(
                 entry.question,
                 semantic_context=semantic_context,
                 semantic_model_id=semantic_model_id,
+                root_intent=root_intent,
             )
             for entry in judgment.entries
         ))
@@ -1331,6 +1366,21 @@ class CompoundTaskPlanner:
                 entry_tasks = (
                     DecomposedTask(question=entry.question),
                 )
+            from app.planning.analysis_task_planner import build_analysis_task_plan, standardize_period_analysis_plan
+            expanded = standardize_period_analysis_plan(entry.question, decomposition)
+            if expanded is None and len(entry_tasks) == 1 and not entry_tasks[0].depends_on:
+                original = entry_tasks[0]
+                expanded = build_analysis_task_plan(entry.question, PlannerExtraction(
+                    intent=original.intent or decomposition.intent,
+                    parameters=list(original.parameters), structured=original.structured),
+                    task_question=original.question, task_name=original.name)
+            if expanded is not None:
+                indexes = {task.task_id: index for index, task in enumerate(expanded.tasks)}
+                entry_tasks = tuple(DecomposedTask(question=task.question, name=task.name,
+                    depends_on=tuple(indexes[dep] for dep in task.depends_on),
+                    expected_output=task.expected_output, intent=task.primary_intent,
+                    parameters=tuple(task.parameters), structured=task.extraction)
+                    for task in expanded.tasks)
             for local_index, task in enumerate(entry_tasks):
                 task_question = task.question or entry.question
                 expected_output = task.expected_output or entry.expected_output
@@ -1347,6 +1397,14 @@ class CompoundTaskPlanner:
                             raise TaskPlanningError('问题依赖必须引用前序问题')
                         depends_on.extend(group_terminals[dep])
                     depends_on = list(dict.fromkeys(depends_on))
+                structured = copy.deepcopy(task.structured)
+                analysis_binding = (structured or {}).get('分析绑定')
+                if analysis_binding:
+                    def rebase(task_id):
+                        return f"task-{offset + int(task_id.split('-')[-1])}"
+                    for period in analysis_binding.get('periods') or []:
+                        period['task'] = rebase(period['task'])
+                    analysis_binding['optional_dependencies'] = [rebase(dep) for dep in analysis_binding.get('optional_dependencies') or []]
                 tasks.append(AtomicTask(
                     task_id=f"task-{offset + local_index + 1}",
                     question=task_question.strip(),
@@ -1354,7 +1412,7 @@ class CompoundTaskPlanner:
                     depends_on=depends_on,
                     expected_output=expected_output,
                     parameters=list(task.parameters),
-                    extraction=materialize_computation_binding(task.structured,
+                    extraction=materialize_computation_binding(structured,
                         task_index=local_index, task_offset=offset, dependencies=depends_on),
                     primary_intent=task.intent or decomposition.intent,
                 ))
@@ -1541,8 +1599,13 @@ class CompoundQuestionRouter:
         *,
         semantic_context: str = "",
         semantic_model_id: int | None = None,
+        root_intent: PrimaryIntent | None = None,
     ) -> CompoundRouteResult:
-        """按既有判断结论分发：复合走 CompoundTaskPlanner，单一走 SingleQuestionPlanner。"""
+        """按既有判断结论分发：复合走 CompoundTaskPlanner，单一走 SingleQuestionPlanner。
+
+        root_intent 是意图识别节点的根意图，透传给全部任务拆解，
+        规划阶段不再做意图判断。
+        """
         if judgment.is_compound:
             try:
                 plan = await self._planner.plan(
@@ -1550,6 +1613,7 @@ class CompoundQuestionRouter:
                     source_question=question,
                     semantic_context=semantic_context,
                     semantic_model_id=semantic_model_id,
+                    root_intent=root_intent,
                 )
             except MetricSubstitutionDetected:
                 # 概念词被误拆成统计+计算：整个拆分作废，
@@ -1560,6 +1624,7 @@ class CompoundQuestionRouter:
                     judgment=judgment,
                     semantic_context=semantic_context,
                     semantic_model_id=semantic_model_id,
+                    root_intent=root_intent,
                 )
             return CompoundRouteResult(judgment=judgment, plan=plan)
         return await self._route_single(
@@ -1567,6 +1632,7 @@ class CompoundQuestionRouter:
             judgment=judgment,
             semantic_context=semantic_context,
             semantic_model_id=semantic_model_id,
+            root_intent=root_intent,
         )
 
     async def route_and_plan(
@@ -1575,6 +1641,7 @@ class CompoundQuestionRouter:
         *,
         semantic_context: str = "",
         semantic_model_id: int | None = None,
+        root_intent: PrimaryIntent | None = None,
     ) -> CompoundRouteResult:
         judgment = await self.judge_only(
             question,
@@ -1586,6 +1653,7 @@ class CompoundQuestionRouter:
             question,
             semantic_context=semantic_context,
             semantic_model_id=semantic_model_id,
+            root_intent=root_intent,
         )
 
     async def _route_single(
@@ -1595,11 +1663,13 @@ class CompoundQuestionRouter:
         judgment: CompoundJudgment,
         semantic_context: str = "",
         semantic_model_id: int | None = None,
+        root_intent: PrimaryIntent | None = None,
     ) -> CompoundRouteResult:
         decomposition = await self._single.plan_question(
             question,
             semantic_context=semantic_context,
             semantic_model_id=semantic_model_id,
+            root_intent=root_intent,
         )
         if len(decomposition.tasks) <= 1:
             first = next(iter(decomposition.tasks), None)
@@ -1623,6 +1693,11 @@ class CompoundQuestionRouter:
                 metric_catalog=decomposition.metric_catalog,
             )
             return CompoundRouteResult(judgment=judgment, single=outcome)
+        from app.planning.analysis_task_planner import standardize_period_analysis_plan
+        canonical_analysis = standardize_period_analysis_plan(question, decomposition)
+        if canonical_analysis is not None:
+            validate_plan(canonical_analysis, source_question=question)
+            return CompoundRouteResult(judgment=judgment, plan=canonical_analysis)
         # 单一问题拆解出多个任务：与复合计划同样按任务DAG执行
         tasks = [
             AtomicTask(
