@@ -106,8 +106,8 @@ async def test_one_row_total_with_own_dimension_code_broadcasts_as_scalar():
 
 
 @pytest.mark.asyncio
-async def test_one_row_operand_sharing_identity_still_requires_alignment():
-    """1行操作数与分子共享同一身份字段时不得当标量广播，保持按编号对齐合同。"""
+async def test_single_denominator_broadcasts_even_with_shared_identity():
+    """用户明确要求：单行分母按所有分子行广播，不再拦截对象范围不一致。"""
     agent=service();chat,_=context()
     rows=[{'经销商（编码）':'C1','金额':100},{'经销商（编码）':'C2','金额':200}]
     await persist(agent,chat,list(rows[0]),rows,conversation='dealers',
@@ -120,7 +120,8 @@ async def test_one_row_operand_sharing_identity_still_requires_alignment():
         'denominator':{'source_task_id':'b','column':'单数'},
         'result_field':'均额','format':'number'}})
     result=await agent._respond_pure_computation(chat,IDENTITY,task,{'a':'dealers','b':'orders'})
-    assert result.status=='FAILED'
+    assert result.status=='COMPLETED'
+    assert sorted(float(row['均额']) for row in result.evidence[0].payload['preview']) == [50, 100]
 
 
 @pytest.mark.asyncio

@@ -243,10 +243,14 @@ def _arithmetic(binding, inputs):
     if first.dataset_id == second.dataset_id:
         columns, rows = list(first.columns), [dict(row) for row in left]
         operands = [(row[left_column], row[right_column]) for row in rows]
-    elif ((len(left) == 1 and _row_scalar(first, second))
+    elif (operator == 'divide' and left and len(right) == 1
+          or (len(left) == 1 and _row_scalar(first, second))
           or (len(right) == 1 and _row_scalar(second, first))):
-        left_scalar = len(left) == 1 and _row_scalar(first, second)
-        right_scalar = len(right) == 1 and _row_scalar(second, first)
+        # User-authorized fallback: one denominator applies to every numerator,
+        # even when their grouped identities differ. Other arithmetic is unchanged.
+        forced_denominator = operator == 'divide' and len(right) == 1
+        left_scalar = not forced_denominator and len(left) == 1 and _row_scalar(first, second)
+        right_scalar = forced_denominator or (len(right) == 1 and _row_scalar(second, first))
         main, source_rows = (second, right) if left_scalar and not right_scalar else (first, left)
         columns, rows = list(main.columns), [dict(row) for row in source_rows]
         operands = [(left[0 if len(left) == 1 else index][left_column],
