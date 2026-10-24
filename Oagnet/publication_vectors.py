@@ -4,6 +4,7 @@ No global text cache, new collections, query-time rebuilding or API changes.
 Legacy records without an embedding signature are regenerated once.
 """
 from contextlib import contextmanager
+from contextvars import ContextVar
 import hashlib
 import json
 import math
@@ -22,6 +23,18 @@ _OWNER_KEYS = (
     "field_mapping", "table_id", "source_table", "source_field",
 )
 
+# 发布失败时记录最内层失败阶段，供 API 在错误响应里返回详细原因
+_failed_stage: ContextVar[str | None] = ContextVar(
+    "oagnet_publication_failed_stage", default=None
+)
+
+
+def consume_failed_stage() -> str | None:
+    """取出并清空当前请求记录的失败阶段（最内层）。"""
+    stage = _failed_stage.get()
+    _failed_stage.set(None)
+    return stage
+
 
 @contextmanager
 def publication_stage(name, *, model, domain=None):
@@ -32,6 +45,9 @@ def publication_stage(name, *, model, domain=None):
         yield
     except BaseException:
         outcome = "FAILED"
+        # 只保留最内层失败阶段，外层包装阶段不覆盖，便于定位真实原因
+        if _failed_stage.get() is None:
+            _failed_stage.set(name)
         raise
     finally:
         logger.info("publication stage=%s model=%s domain=%s status=%s elapsed_ms=%s",

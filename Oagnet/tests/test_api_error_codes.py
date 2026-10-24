@@ -1,6 +1,7 @@
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -90,13 +91,97 @@ def test_upstream_rate_limit_preserves_retry_after_contract() -> None:
 
     assert response.status_code == 429
     assert response.headers["Retry-After"] == "7"
-    assert response.json() == {
-        "success": False,
-        "detail": {
-            "code": "ASL_UPSTREAM_RATE_LIMITED",
-            "message": "upstream ASL model is rate limited; retry later",
-        },
+    payload = response.json()
+    assert payload["detail"] == {
+        "code": "ASL_UPSTREAM_RATE_LIMITED",
+        "message": "upstream ASL model is rate limited; retry later",
     }
+    # 详细失败信息同时提升到顶层，调用方无需解析嵌套 detail
+    assert payload["code"] == "ASL_UPSTREAM_RATE_LIMITED"
+    assert payload["message"] == "upstream ASL model is rate limited; retry later"
+    assert payload["success"] is False
+
+
+def _rebuild_patches(**overrides):
+    base = dict(
+        prepare_physical_catalog=lambda *args, **kwargs: SimpleNamespace(attribute_enums={}),
+        rebuild_index_by_scope=lambda *args, **kwargs: {},
+        mysql_advisory_lock=lambda _name: nullcontext(),
+        consistent_catalog_read=lambda: nullcontext(),
+    )
+    base.update(overrides)
+    return [patch.object(api, name, value) for name, value in base.items()]
+
+
+def test_rebuild_failure_returns_detailed_message_and_stage():
+    patches = _rebuild_patches(
+        rebuild_index_by_scope=lambda *args, **kwargs: (_ for _ in ()).throw(
+            ValueError("实体医院缺少主键映射")),
+    )
+    for item in patches:
+        item.start()
+    try:
+        response = TestClient(api.app).post(
+            "/vector/rebuild",
+            json={"semantic_model_id": 6, "business_domain_id": 7},
+        )
+    finally:
+        for item in reversed(patches):
+            item.stop()
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["code"] == "VECTOR_SOURCE_INVALID"
+    assert "ValueError" not in payload["message"]
+    assert "实体医院缺少主键映射" in payload["message"]
+    # 失败阶段取最内层 stage，便于定位
+    assert "（阶段：语义向量重建）" in payload["message"]
+    assert payload["detail"]["message"] == payload["message"]
+
+
+def test_rebuild_unexpected_failure_returns_exception_detail():
+    patches = _rebuild_patches(
+        prepare_physical_catalog=lambda *args, **kwargs: (_ for _ in ()).throw(
+            ConnectionError("milvus 连接被拒绝")),
+    )
+    for item in patches:
+        item.start()
+    try:
+        response = TestClient(api.app).post(
+            "/vector/rebuild",
+            json={"semantic_model_id": 6, "business_domain_id": 7},
+        )
+    finally:
+        for item in reversed(patches):
+            item.stop()
+
+    assert response.status_code == 500
+    payload = response.json()
+    assert payload["code"] == "VECTOR_REBUILD_FAILED"
+    assert "ConnectionError" not in payload["message"]
+    assert "向量数据库 连接被拒绝" in payload["message"]
+    assert "（阶段：物理目录准备）" in payload["message"]
+
+
+def test_entity_attribute_sync_failure_returns_detailed_message():
+    with patch.object(
+        api, "replace_entity_attribute_index",
+        side_effect=RuntimeError("读取属性配置超时"),
+    ), patch.object(api, "mysql_advisory_lock", lambda _name: nullcontext()):
+        response = TestClient(api.app).post(
+            "/vector/entity-attributes/sync",
+            json={
+                "semantic_model_id": 999901,
+                "business_domain_id": 999902,
+                "event_id": "detail-contract-test",
+            },
+        )
+
+    assert response.status_code == 409
+    payload = response.json()
+    assert payload["code"] == "ENTITY_ATTRIBUTE_SYNC_BUSY"
+    assert "读取属性配置超时" in payload["message"]
+    assert payload["detail"]["message"] == payload["message"]
 
 
 def test_agent_query_three_way_fanout_queues_model_calls() -> None:
