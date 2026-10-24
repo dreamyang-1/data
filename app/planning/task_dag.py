@@ -1712,9 +1712,9 @@ class SingleQuestionPlanner:
             system_content += "\n" + prior_block + "\n"
         metric_catalog = _parse_metric_catalog(spec_for_catalog)
         from app.planning.task_plan_stages import (
-            PLANNING_PROMPT, PARAMETER_PROMPT, TaskBoundaries,
+            PLANNING_PROMPT, TaskOutlines, TaskBoundary,
             complete_boundaries, parameter_items, registered_metric_conditions,
-            registered_metric_predicates, metric_definition, component_task_title,
+            component_task_title,
         )
         dependencies = _parse_metric_dependencies(spec_for_catalog)
         from app.planning.metric_target_contract import object_average_contract
@@ -1732,7 +1732,7 @@ class SingleQuestionPlanner:
             planned = await self._task_model_json(
                 "single-question-task-plan",
                 PLANNING_PROMPT + system_content + "\nJSON Schema："
-                + json.dumps(TaskBoundaries.model_json_schema(), ensure_ascii=False),
+                + json.dumps(TaskOutlines.model_json_schema(), ensure_ascii=False),
                 planning_question,
             )
             boundary_plan_complete = bool(planned.get('tasks')) and all(
@@ -1743,7 +1743,8 @@ class SingleQuestionPlanner:
                 if 'extraction' not in planned and ('intent' not in planned or 'split' in planned):
                     raise ValueError('任务规划没有返回任务列表')
                 planned = {**planned, 'tasks': [{'question': question}]}
-            planned_boundaries = TaskBoundaries.model_validate(planned).tasks
+            planned_boundaries = [TaskBoundary(**item.model_dump(exclude_none=True))
+                                  for item in TaskOutlines.model_validate(planned).tasks]
             boundaries = complete_boundaries(planned_boundaries,
                 spec=spec_for_catalog, catalog=metric_catalog, dependencies=dependencies, source_question=question,
                 default_times=_registered_default_times(question,spec_for_catalog))
@@ -1788,99 +1789,6 @@ class SingleQuestionPlanner:
                 value['是否查询数据库'] = '否'
                 value.pop('计算绑定', None)
                 value.pop('结果操作', None)
-            if isinstance(value, dict):
-                if boundary._cohort_key:
-                    value['维度'] = [boundary._cohort_key]
-                    value['展示字段'] = [{'field':boundary._cohort_key}]
-                    value['是否去重'] = '是'
-                    value['排序'] = []
-                    value['限制'] = None
-                if boundary._whole_object_scope:
-                    key, _, member = boundary._whole_object_scope
-                    # Eligibility has its own complete-key query. Inheriting
-                    # its row filters here would turn a whole-object statistic
-                    # back into a matching-member statistic. Runtime injects
-                    # the verified predecessor keys through the existing ASL
-                    # dependency constraint, never via guessed placeholders.
-                    value['过滤条件'] = []
-                    value['维度'] = [key]
-                    value['展示字段'] = [{'field':key}]
-                    value['实体'] = [item for item in value.get('实体') or [] if item != member]
-                    value['时间粒度'] = {'unit':None,'time_range':None,'anchor':None}
-                if boundary.component_input:
-                    value['意图'] = '指标查询'
-                    if not boundary.preserve_ranking:
-                        value['排序'] = []
-                        value['限制'] = None
-                    # A formula input is an aggregate measure, not an extra
-                    # grouping column. Preserve keys and unrelated display
-                    # attributes (e.g. salesperson's company).
-                    definitions=[metric_definition(spec_for_catalog,name) for name in boundary.metric_targets]
-                    display=[]
-                    for item in value.get('展示字段') or []:
-                        field=str(item.get('field') or item.get('name') or '') if isinstance(item,dict) else str(item)
-                        canonical=_normalize_metric_name(field,*metric_catalog)
-                        is_input=(canonical in boundary.metric_targets or any(field and field in text for text in definitions))
-                        if field in boundary.grain or not is_input:
-                            display.append(item)
-                    value['展示字段']=display
-                    for condition in value.get('过滤条件') or []:
-                        if not isinstance(condition, dict):
-                            continue
-                        field = str(condition.get('field') or '')
-                        canonical = _normalize_metric_name(field, *metric_catalog)
-                        if canonical in metric_catalog[0] and any(
-                                field and field in rule for rule in boundary.sample_requirements):
-                            # Parent sample rules refer to aggregated measures,
-                            # not similarly named source-row attributes.
-                            condition['field'] = canonical
-                    sample_metrics=[name for parent in boundaries for name in parent.metric_targets
-                        if name in dependencies and metric_definition(spec_for_catalog,name) in boundary.sample_requirements]
-                    predicates=registered_metric_predicates(spec_for_catalog,sample_metrics,metric_catalog)
-                    conditions=value.get('过滤条件') or []
-                    for predicate in predicates:
-                        matched=False
-                        for condition in conditions:
-                            if not isinstance(condition,dict):
-                                continue
-                            field=_normalize_metric_name(str(condition.get('field') or ''),*metric_catalog)
-                            actual=condition.get('value');actual=actual if isinstance(actual,list) else [actual]
-                            if (field==predicate['field'] and condition.get('op')==predicate['op']
-                                    and len(actual)==1 and str(actual[0])==str(predicate['value'][0])):
-                                condition.update(copy.deepcopy(predicate));matched=True
-                        if not matched:
-                            conditions.append(copy.deepcopy(predicate))
-                    value['过滤条件']=conditions
-                if boundary_plan_complete and '不再查询数据库' not in boundary.question:
-                    value.pop('计算绑定', None)
-                    value.pop('结果操作', None)
-                    if boundary.depends_on and not boundary.definition_only:
-                        value['是否查询数据库'] = '是'
-                elif boundary_plan_complete and not boundary.postprocess and any(
-                        name in dependencies for name in boundary.metric_targets):
-                    # The registered division is already planned against
-                    # aggregate inputs. Do not run a second, unplanned raw-row
-                    # pipeline invented during parameter extraction.
-                    value.pop('结果操作', None)
-                required = [name for name in boundary.metric_targets if name in metric_catalog[0]]
-                if not boundary.definition_only and (required or (boundary_plan_complete and not boundary.metric_targets)):
-                    # A declared output measure remains a measure even when
-                    # its rows are presented as a detail result.
-                    value['指标'] = [{'name': name} for name in required]
-                    # Detail fields already come from parameter extraction.
-                    # A planning grain such as "医院" is an entity, not an
-                    # additional display field called "医院".
-                    if required or not value.get('展示字段'):
-                        existing = value.get('维度') or []
-                        value['维度'] = existing + [name for name in boundary.grain if name not in existing]
-                if boundary.expected_output:
-                    requirement = str(value.get('输出要求') or '').strip()
-                    # “默认输出表格”是模型编造的默认格式而非用户要求，
-                    # 合并边界交付物时不作为既有要求保留（2026-10-21）。
-                    if requirement == "默认输出表格":
-                        requirement = ''
-                    if boundary.expected_output not in requirement:
-                        value['输出要求'] = (requirement + '；' if requirement else '') + boundary.expected_output
             planned_task = boundary.model_dump(exclude={
                 'metric_targets', 'grain', 'sample_requirements', 'component_input', 'preserve_ranking', 'definition_only'})
             if isinstance(value, dict):
@@ -1899,17 +1807,9 @@ class SingleQuestionPlanner:
             structured = self._sanitize_extraction(
                 item.extraction, intent=task_intent,
                 metric_catalog=metric_catalog,
-                required_metrics=tuple(boundaries[task_index].metric_targets),
+                preserve_query_fields=True,
             )
             _strip_prose_placeholder_filters(structured)
-            if item.clarification:
-                structured = structured or {}
-                structured['计算待确认'] = copy.deepcopy(item.clarification)
-                structured.pop('结果操作', None)
-            elif item.postprocess:
-                structured = structured or {}
-                structured.pop('计算绑定', None)
-                structured['结果操作'] = copy.deepcopy(item.postprocess)
             _ground_location_owners(structured, task_question)
             _ground_inferred_hospital_location(structured, question, semantic_model_id)
             task_question = _confirmed_hospital_department_scope(
@@ -2122,6 +2022,7 @@ class SingleQuestionPlanner:
         intent: PrimaryIntent | None,
         metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None,
         required_metrics: tuple[str, ...] = (),
+        preserve_query_fields: bool = False,
     ) -> dict[str, Any] | None:
         """清洗模型输出的结构化提取：纯闲聊类意图强制为空，键与取值做形态归一。
 
@@ -2156,10 +2057,10 @@ class SingleQuestionPlanner:
                 if cleaned is not None and cleaned != "":
                     items.append(cleaned)
             structured[key] = items
-        if intent_label == "明细查询" or (
+        if not preserve_query_fields and (intent_label == "明细查询" or (
             intent == PrimaryIntent.DETAIL_QUERY
             and intent_label not in _CHINESE_INTENT_LABELS
-        ):
+        )):
             # 明细查询只按展示字段出列：模型把返回列误提进指标/维度时，
             # 迁入展示字段后再清空，避免下游丢列或误走聚合口径。
             # 例外：排序、极值等条件依赖的注册指标保留在指标通道，供

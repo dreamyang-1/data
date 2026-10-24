@@ -74,7 +74,8 @@ async def test_local_projection_cannot_invent_same_owner_field(field):
         {'question':'查询经销商名称','extraction':{'意图':'明细查询','实体':['经销商'],
             '展示字段':[{'entity':'经销商','field':'经销商名称'}],'是否查询数据库':'是'}},
         {'question':f'根据上述查询结果返回{field}，不再查询数据库','depends_on':[0],
-         'extraction':{'意图':'明细查询','展示字段':[{'entity':'经销商','field':field}],'是否查询数据库':'否'}}]}
+         'extraction':{'意图':'明细查询','展示字段':[{'entity':'经销商','field':field}],'是否查询数据库':'否',
+             '结果操作':{'source_task_index':0,'operation':{'type':'select','columns':[field]}}}}]}
     planner,_=planner_for(payload)
     if field=='经销商类别':
         with pytest.raises(TaskPlanningError):
@@ -148,7 +149,7 @@ async def test_registered_metric_list_compiles_bound_filter(op,value,expected):
 
 
 @pytest.mark.asyncio
-async def test_invalid_result_operation_uses_remaining_correction_attempt():
+async def test_planning_operation_is_ignored_before_parameter_extraction():
     question='统计2025年各经销商订单笔数'
     invalid={'intent':'METRIC_QUERY','tasks':[{'question':question,'extraction':query_extraction(),
         'postprocess':{'operation':{'type':'derive','operator':'-','left_field':'订单笔数',
@@ -156,9 +157,10 @@ async def test_invalid_result_operation_uses_remaining_correction_attempt():
     correct={'intent':'METRIC_QUERY','tasks':[{'question':question,'extraction':query_extraction()}]}
     planner,calls=planner_for(invalid,correct)
     result=await planner.plan_question(question,semantic_context=CATALOG)
-    # Invalid planning operation is corrected before the separate extraction.
-    assert len(calls)==3 and len(result.tasks)==1
-    assert sum('你是任务规划器' in item['messages'][0]['content'] for item in calls)==2
+    # Planning has no authority to generate operations or trigger their retry.
+    assert len(calls)==2 and len(result.tasks)==1
+    assert sum('你是任务规划器' in item['messages'][0]['content'] for item in calls)==1
+    assert '结果操作' not in result.tasks[0].structured
 
 
 @pytest.mark.asyncio
