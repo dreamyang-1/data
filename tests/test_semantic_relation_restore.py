@@ -18,7 +18,7 @@ def test_recreate_entity_restores_business_key_without_saved_relation(key):
     # 目标列名自证指向源表 customer → 源端为一端，展示 1:N
     assert after[0]["cardinality"] == "1:N"
     assert after[0]["semanticDescription"] == (
-        "1个【客户】关联多个【订单】，1个【订单】只对应1个【客户】"
+        "1 个【客户】关联多个【订单】"
     )
     assert after[0]["category"] == "关联关系"
     assert not after[0]["fromExisting"]
@@ -82,7 +82,7 @@ def test_llm_cannot_replace_derived_cardinality_with_unproved_claim():
     assert candidate["cardinality"] == "1:N"
     assert candidate["relationName"] == "拥有"
     assert candidate["semanticDescription"] == (
-        "1个【客户】拥有多个【订单】，1个【订单】只对应1个【客户】"
+        "1 个【客户】拥有多个【订单】"
     )
     assert "一个客户有多个订单" != candidate["semanticDescription"]
 

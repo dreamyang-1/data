@@ -2162,7 +2162,7 @@ async def recommend_fields_endpoint(
 
 @recommend_router.get(
     "/semanticModelEntityType/relationSuggestions",
-    summary="实体保存时的关联建议（存在中间表关联但未配置关系时提示）",
+    summary="实体保存时的关联建议（兼容接口，已停用中间表推荐）",
 )
 async def relation_suggestions_endpoint(
     semantic_model_id: int = Query(alias="semanticModelId", gt=0),
