@@ -191,6 +191,9 @@ class QwenAnalysisSynthesizer:
         if context is not None:
             # Preserve callers' existing bounded, row-free context contract.
             prompt_input["agent_context"] = context.prompt_payload()
+        if semantic_model_id is not None:
+            from app.domain.semantic_description import without_embedded_semantic_spec
+            agent_prompt = without_embedded_semantic_spec(agent_prompt)
         agent_section = (
             "\n智能体用户设定（平台配置，仅用于表达风格，分析事实仍以本轮问题和数据为准）：\n" + agent_prompt.strip()
             if agent_prompt.strip() else ""
@@ -221,6 +224,9 @@ class QwenAnalysisSynthesizer:
                 self.settings, semantic_model_id
             ),
         }
+        if semantic_model_id is not None:
+            from app.domain.semantic_description import without_embedded_semantic_spec
+            agent_prompt = without_embedded_semantic_spec(agent_prompt)
         agent_section = (
             "\n智能体用户设定（平台配置，仅用于表达风格，分析事实仍以本轮问题和数据为准）：\n" + agent_prompt.strip()
             if agent_prompt.strip() else ""

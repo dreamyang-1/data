@@ -1680,32 +1680,18 @@ class SingleQuestionPlanner:
         # 通用规则块放在前部：贴着Schema末尾时会干扰指标选择，
         # 使模型在多个可对应的登记指标之间选错（实测多次复现）
         system_content += general_rules
-        # 规范只注入一次：远程按模型生成的描述文件优先，
-        # 平台提示词粘贴段兼容存量，提示词文件内置规范最后兜底。
+        # 有模型标识时只读取当前模型的平台注册文件；文件不可用时，
+        # 不把智能体配置中可能属于另一模型的旧规范当作替代文件。
         reference = await load_semantic_description(self.settings, semantic_model_id)
-        remote_spec = (
-            reference["content"]
-            if reference["source"].startswith("semantic_model_")
-            else ""
-        )
+        remote_spec = reference["content"] if reference.get("available") else ""
         if remote_spec:
             system_content += _semantic_context_section(
                 remote_spec, origin="语义模型描述文件"
             )
             spec_for_catalog = remote_spec
-        elif semantic_context.strip():
+        elif semantic_model_id is None and semantic_context.strip():
             system_content += _semantic_context_section(semantic_context)
             spec_for_catalog = semantic_context
-        elif semantic_model_id is None:
-            # 完全没有模型标识时才用静态内置规范兜底；
-            # 指定了模型ID但远程文件拉取失败时，不能用医药域旧快照污染其他业务域。
-            embedded_spec = extraction_embedded_spec()
-            spec_for_catalog = embedded_spec or ""
-            if embedded_spec:
-                system_content += (
-                    "\n平台业务语义规范（结构化提取与参数口径的判定依据）：\n"
-                    + embedded_spec + "\n"
-                )
         else:
             spec_for_catalog = ""
         if prior_block:
