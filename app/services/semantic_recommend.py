@@ -498,6 +498,22 @@ def _same_type_family(left: dict[str, Any], right: dict[str, Any]) -> bool:
     return not left_family or not right_family or left_family == right_family
 
 
+def _comment_references(comment: str | None) -> set[tuple[str, str]]:
+    """提取注释明确声明的 table.column 引用，不用字段相似度猜改名后的键。"""
+    text = comment or ""
+    references: set[tuple[str, str]] = set()
+    for match in re.finditer(
+        r"(?:关联|引用|参照|\breferences?\b)\s*[:：]?\s*"
+        r"[`\"]?([A-Za-z_]\w*)[`\"]?\s*\.\s*[`\"]?([A-Za-z_]\w*)[`\"]?",
+        text, re.IGNORECASE,
+    ):
+        if re.search(r"(?:不|未|无|非)(?:直接)?\s*$|\b(?:not|never)\s*$",
+                     text[:match.start()], re.IGNORECASE):
+            continue
+        references.add((match[1].lower(), match[2].lower()))
+    return references
+
+
 def _entity_key_fields(info: dict[str, Any]) -> list[dict[str, Any]]:
     """实体的业务键候选：主键 + 自证指向本表的标识列。
 
@@ -1590,6 +1606,30 @@ class SemanticRecommendService:
                 pairs, cardinality, source["name"], target["name"],
                 source.get("id"), target.get("id"),
             ))
+        # 改名后的外键可能不再满足同名/后缀规则，但注释仍明确指向当前表列。
+        # 只绑定当前实体映射中实际存在的字段，沿用类型兼容与数据源边界。
+        pair_keys = ("sourceTableName", "sourceColumnName", "targetTableName", "targetColumnName")
+        seen_pairs = {tuple(pair[key] for key in pair_keys)
+                      for candidate in candidates for pair in candidate["fieldPairs"]}
+        for referencing, referenced, reverse in ((src, tgt, False), (tgt, src, True)):
+            for field in referencing["fields"]:
+                references = _comment_references(field.get("comment"))
+                for key in referenced["fields"]:
+                    if (referenced["tableName"].lower(), (key.get("name") or "").lower()) not in references:
+                        continue
+                    if not _same_type_family(field, key):
+                        continue
+                    pair = self._build_pair(referencing["tableName"], field, referenced["tableName"], key)
+                    if reverse:
+                        pair = _swap_field_pair(pair)
+                    signature = tuple(pair[name] for name in pair_keys)
+                    if signature in seen_pairs:
+                        continue
+                    seen_pairs.add(signature)
+                    candidates.append(self._build_inferred_candidate(
+                        [pair], "1:N" if reverse else "N:1", source["name"], target["name"],
+                        source.get("id"), target.get("id"),
+                    ))
         return candidates
 
     # ---------- 两跳间接推断（2026-10-19 用户需求） ----------
