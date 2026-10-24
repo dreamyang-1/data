@@ -234,16 +234,19 @@ def track_operation(
         operation=operation,
         attributes=attributes,
     )
-    try:
-        yield handle
-    except BaseException as exc:
-        handle.finish(
-            "CANCELLED" if type(exc).__name__ == "CancelledError" else "FAILED",
-            error_type=type(exc).__name__,
-        )
-        raise
-    else:
-        handle.finish("COMPLETED")
+    from app.observability.langfuse_client import trace_operation
+
+    with trace_operation(operation, attributes):
+        try:
+            yield handle
+        except BaseException as exc:
+            handle.finish(
+                "CANCELLED" if type(exc).__name__ == "CancelledError" else "FAILED",
+                error_type=type(exc).__name__,
+            )
+            raise
+        else:
+            handle.finish("COMPLETED")
 
 
 def log_performance_trace(trace: RequestPerformanceTrace) -> None:

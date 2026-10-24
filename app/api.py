@@ -29,6 +29,7 @@ from app.observability.langfuse_client import (
     end_structural_spans,
     hash_identifier,
     observe_span,
+    register_structural_span,
     summarize_value,
     text_metadata,
     trace_attributes,
@@ -67,14 +68,11 @@ async def _forward_traced_progress(
     downstream,
     event: dict[str, Any],
 ) -> None:
-    """Deliver visible progress before recording optional telemetry.
+    """Queue telemetry without waiting for SDK/export work on the SSE loop."""
 
-    Langfuse's synchronous span lifecycle may perform network or exporter work.
-    Running it during an SSE request delayed both the queued milestone and all
-    heartbeats. Streaming already has a request/root span, so its public stage
-    events go straight to the transport and never wait for optional per-stage
-    telemetry. Non-streaming calls retain their stage spans off the ASGI loop.
-    """
+    enqueue = getattr(stage_tracker, "enqueue", None)
+    if callable(enqueue):
+        enqueue(event)
 
     if downstream is not None:
         result = downstream(event)
@@ -85,7 +83,6 @@ async def _forward_traced_progress(
         # continues into its next synchronous catalog/validation section.
         await asyncio.sleep(0)
         return
-    await asyncio.to_thread(stage_tracker.handle, event)
 
 
 class SpreadsheetImportRequest(StrictModel):
@@ -257,6 +254,8 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                     "regenerate": bool(chat.regenerate),
                 },
             ) as root_span:
+                register_structural_span("request", root_span)
+                trace_response = None
                 try:
                     with timing_scope(performance_tracker):
                         with progress_scope(trace_progress):
@@ -279,6 +278,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                         if isolated_handler is not None
                         else result["response"]
                     )
+                    trace_response = response
                     timing_terminal_status = response.status
                     if performance_tracker is not None:
                         performance_trace = performance_tracker.finish(
@@ -323,10 +323,15 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                     )
                     raise
                 finally:
-                    # 本轮登记的结构节点（问题理解与补全/意图判断/任务拆分
-                    # 与规划等）统一在请求结束时关闭；必须赶在根 span 退出
-                    # 前调用，否则拿不到当前 trace 无法定位登记桶
-                    end_structural_spans()
+                    def finish_trace() -> None:
+                        try:
+                            stage_tracker.finish(trace_response, status=timing_terminal_status)
+                        except Exception:
+                            logger.debug("Langfuse request finalization failed", exc_info=True)
+                        finally:
+                            end_structural_spans()
+
+                    await asyncio.to_thread(finish_trace)
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail="analysis request deadline exceeded") from exc
     except MessageIdReuseConflictError as exc:

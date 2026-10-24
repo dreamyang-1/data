@@ -157,11 +157,16 @@ class PlatformHttpClient:
         timeout: float | None = None,
         bearer_token: str | None = None,
     ) -> Any:
-        return await self._request(
-            "POST", base_url, path, payload, identity=identity,
-            application_id=application_id, idempotency_key=idempotency_key,
-            retryable=retryable, timeout=timeout, bearer_token=bearer_token
-        )
+        from app.observability.langfuse_client import trace_http_call, record_http_result
+
+        with trace_http_call("POST", path, payload) as span:
+            result = await self._request(
+                "POST", base_url, path, payload, identity=identity,
+                application_id=application_id, idempotency_key=idempotency_key,
+                retryable=retryable, timeout=timeout, bearer_token=bearer_token
+            )
+            record_http_result(span, result)
+            return result
 
     async def get(
         self,
@@ -173,11 +178,16 @@ class PlatformHttpClient:
         timeout: float | None = None,
         bearer_token: str | None = None,
     ) -> Any:
-        return await self._request(
-            "GET", base_url, path, None, identity=identity,
-            application_id=application_id, retryable=True, timeout=timeout,
-            bearer_token=bearer_token
-        )
+        from app.observability.langfuse_client import trace_http_call, record_http_result
+
+        with trace_http_call("GET", path, None) as span:
+            result = await self._request(
+                "GET", base_url, path, None, identity=identity,
+                application_id=application_id, retryable=True, timeout=timeout,
+                bearer_token=bearer_token
+            )
+            record_http_result(span, result)
+            return result
 
     async def health(self, base_url: str) -> bool:
         try:
