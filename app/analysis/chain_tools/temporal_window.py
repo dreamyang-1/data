@@ -1,9 +1,7 @@
 """趋势/环比/同比链路共用的取数窗口对齐与边桶完整性检测。
 
-月粒度趋势要求每个数据点都是完整自然月：滑动起点（如“最近12个月”
-从今天起算得到的月中日期）会把首个月桶截成半月，导致首尾比较和环比
-全部失真。本模块在结构化提取发出 ASL 之前把相对范围改写成桶对齐的
-绝对区间，并在引擎侧检测窗口边界截断的首/尾桶。
+查询日期与分组粒度独立。滚动日期保留日界，只有明确要求完整自然周期
+才对齐周期边界；比较基期由分析规划器单独登记，不改变目标窗口。
 """
 from __future__ import annotations
 
@@ -34,6 +32,7 @@ _CN_DIGITS = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六":
 # 分组粒度到桶跨月数的映射；周粒度单独处理。
 _BUCKET_MONTHS = {"month": 1, "quarter": 3, "half_year": 6, "year": 12}
 _GRAIN_ALIASES = {
+    "日": "day", "天": "day", "day": "day",
     "月": "month", "月份": "month", "month": "month", "months": "month",
     "季度": "quarter", "季": "quarter", "quarter": "quarter",
     "半年": "half_year", "half_year": "half_year",
@@ -50,13 +49,21 @@ def normalize_grain(unit: Any) -> str | None:
 
 
 def has_pop_signal(question: str) -> bool:
-    compact = str(question or "").replace(" ", "")
-    return any(token in compact for token in POP_SIGNALS)
+    return _has_comparison_signal(question, POP_SIGNALS)
 
 
 def has_yoy_signal(question: str) -> bool:
+    return _has_comparison_signal(question, YOY_SIGNALS)
+
+
+def _has_comparison_signal(question: str, signals) -> bool:
     compact = str(question or "").replace(" ", "")
-    return any(token in compact for token in YOY_SIGNALS)
+    for token in signals:
+        for match in re.finditer(re.escape(token), compact):
+            prefix = compact[max(0, match.start() - 12):match.start()]
+            if not re.search(r"(?:不要|不用|无需|不需要|不做|不计算|不看)(?:进行|计算|分析|查看|做)?$", prefix):
+                return True
+    return False
 
 
 def _cn_number(text: str) -> int | None:
@@ -142,8 +149,24 @@ def _align_full_weeks(weeks: int, today: date) -> tuple[date, date] | None:
 
 
 def _parse_absolute_period(text: str) -> tuple[date, date] | None:
-    """解析单个绝对期间（年/月/日），返回该期间的闭区间。"""
+    """解析单个绝对期间（年/半年/月/日），返回该期间的闭区间。"""
     compact = str(text or "").strip().replace(" ", "").replace("年份", "年").replace("月份", "月")
+    year_only = _YEAR_LABEL.fullmatch(compact)
+    if year_only:
+        year = int(year_only.group(1))
+        return date(year, 1, 1), date(year, 12, 31)
+    quarter = _QUARTER_LABEL.fullmatch(compact)
+    if quarter:
+        number = quarter.group(2)
+        number = int(number) if number.isdigit() else _CN_DIGITS[number]
+        start = date(int(quarter.group(1)), (number - 1) * 3 + 1, 1)
+        return start, _last_day(_month_index(start) + 2)
+    half_year = re.fullmatch(r"(20\d{2})\s*年?\s*(上|下)半年(?:度)?", compact)
+    if half_year is not None:
+        year = int(half_year.group(1))
+        first_month = 1 if half_year.group(2) == "上" else 7
+        start = date(year, first_month, 1)
+        return start, _last_day(_month_index(start) + 5)
     match = _ABSOLUTE_PERIOD.fullmatch(compact)
     if match is None:
         return None
@@ -161,12 +184,21 @@ def _parse_absolute_period(text: str) -> tuple[date, date] | None:
 
 
 def parse_absolute_range(time_range: str) -> tuple[date, date] | None:
-    """解析“X至Y”形式的绝对区间；无法确定起止时返回 None。"""
+    """解析"X至Y"绝对区间或单个绝对期间；无法确定起止时返回 None。
+
+    "2025年7月至12月"这类终止段缺年份的表述，终止段继承起点年份。
+    """
     parts = _RANGE_SPLIT.split(str(time_range or "").strip())
+    if len(parts) == 1:
+        return _parse_absolute_period(parts[0])
     if len(parts) != 2:
         return None
     first = _parse_absolute_period(parts[0])
     last = _parse_absolute_period(parts[1])
+    if last is None and first is not None:
+        anchor_year = re.search(r"20\d{2}", parts[0])
+        if anchor_year is not None:
+            last = _parse_absolute_period(f"{anchor_year.group(0)}年{parts[1]}")
     if first is None or last is None or last[1] < first[0]:
         return None
     return first[0], last[1]
@@ -234,43 +266,61 @@ def align_structured_time_window(
     grain = normalize_grain(time_grain.get("unit"))
     if grain is None:
         return None
-    compact_question = str(question or "").replace(" ", "")
-    wants_yoy = any(token in compact_question for token in YOY_SIGNALS)
-
-    aligned_start: date | None = None
-    aligned_end: date | None = None
-    notes: list[str] = []
-
-    rolling = _rolling_window_spec(time_range)
-    if rolling is not None:
-        amount, unit = rolling
-        if unit == "week":
-            window = _align_full_weeks(amount, today) if grain == "week" else None
-        else:
-            window = _align_full_buckets(amount, grain, today)
-        if window is not None:
-            aligned_start, aligned_end = window
-            notes.append(f"相对范围“{time_range}”已对齐为{grain}桶边界")
-
-    if aligned_start is None and wants_yoy:
-        # 绝对区间只需为同比扩展基期，无需桶对齐。
-        absolute = parse_absolute_range(time_range)
-        if absolute is not None:
-            aligned_start, aligned_end = absolute
-
-    if aligned_start is None or aligned_end is None:
+    # 此兼容入口只解析目标日期，绝不隐式加入同比或环比基期。
+    window = resolve_target_window(time_range, grain, today=today)
+    if window is None or parse_absolute_range(time_range) is not None:
         return None
-    if wants_yoy:
-        aligned_start = _shift_months(aligned_start, -12)
-        notes.append("同比计算需要上年同期基期，窗口起点已向前扩展12个月")
-
     rewritten = dict(time_grain)
-    rewritten["time_range"] = f"{aligned_start.isoformat()}至{aligned_end.isoformat()}"
+    rewritten["time_range"] = f"{window[0].isoformat()}至{window[1].isoformat()}"
     rewritten["window_alignment"] = {
         "derived_from": time_range,
-        "reasons": notes,
+        "reasons": ["按用户日期语义解析目标窗口；分组粒度不改变日期范围"],
     }
     return rewritten
+
+
+def shift_calendar_months(value: date, months: int) -> date:
+    """日历月回推，保留日号；闰日等超出目标月时截到合法月末。"""
+    year, month = divmod(_month_index(value) + months, 12)
+    return date(year, month + 1, min(value.day, calendar.monthrange(year, month + 1)[1]))
+
+
+def resolve_target_window(text: str, grain: str | None, *, today: date) -> tuple[date, date] | None:
+    absolute = parse_absolute_range(text)
+    if absolute:
+        return absolute
+    covering = disjunctive_periods_to_range(text)
+    if covering:
+        return parse_absolute_range(covering)
+    raw = str(text or "").strip()
+    complete = "完整" in raw
+    normalized = raw.replace("完整", "").replace("自然", "")
+    rolling = _rolling_window_spec(normalized)
+    if rolling is None:
+        return None
+    amount, unit = rolling
+    if complete:
+        if unit == "week":
+            return _align_full_weeks(amount, today)
+        return _align_full_buckets(amount, grain or "month", today)
+    if unit == "week":
+        return today - timedelta(weeks=amount), today
+    return shift_calendar_months(today, -amount), today
+
+
+def bucket_bounds(label: str, grain: str | None = None) -> tuple[date, date] | None:
+    """共享周期身份，供范围裁剪和连续性校验使用。"""
+    for candidate in ([grain] if grain else ["day", "month", "quarter", "week", "year"]):
+        if candidate:
+            result = _bucket_bounds(label, candidate)
+            if result:
+                return result
+    return None
+
+
+def in_target_window(label: str, start: date, end_exclusive: date, grain: str | None = None) -> bool:
+    bounds = bucket_bounds(label, grain)
+    return bool(bounds and bounds[0] < end_exclusive and bounds[1] > start)
 
 
 def extend_window_for_pop_baseline(time_grain: dict[str, Any]) -> dict[str, Any] | None:
