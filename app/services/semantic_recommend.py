@@ -519,7 +519,9 @@ def _comment_references(comment: str | None) -> set[tuple[str, str]]:
     return references
 
 
-def _entity_key_fields(info: dict[str, Any]) -> list[dict[str, Any]]:
+def _entity_key_fields(
+    info: dict[str, Any], entity_name: str | None = None,
+) -> list[dict[str, Any]]:
     """实体的业务键候选：主键 + 自证指向本表的标识列。
 
     元数据里很多业务表没有名为 id 的主键（如 department 只有 dept_code），
@@ -528,6 +530,9 @@ def _entity_key_fields(info: dict[str, Any]) -> list[dict[str, Any]]:
     primary = info.get("primary")
     primary_name = (primary or {}).get("name")
     keys: list[dict[str, Any]] = [primary] if primary else []
+    entity_label = re.sub(r"\s+", "", entity_name or "").casefold()
+    identity_labels = {entity_label + suffix for suffix in ("编码", "代码", "编号", "标识", "唯一标识", "id", "uuid")}
+    table_name = (info.get("tableName") or "").lower().replace("-", "_")
     for item in info.get("fields") or []:
         name = (item.get("name") or "").lower()
         if not name or any(name == (key.get("name") or "").lower() for key in keys):
@@ -536,6 +541,15 @@ def _entity_key_fields(info: dict[str, Any]) -> list[dict[str, Any]]:
             keys.append(item)
         elif primary is None and name.endswith(("_code", "_no", "_key")):
             keys.append(item)
+        else:
+            # guoyao_company 同时有 id 和 guoyao_code：表名中的业务词与
+            # “国药公司编码”共同确认该编码属于本实体，不把第三方公共键当直连。
+            stem, separator, suffix = name.rpartition("_")
+            label = re.split(r"[（(，,;；。\n]", item.get("comment") or "", maxsplit=1)[0]
+            label = re.sub(r"\s+", "", label).casefold()
+            if (entity_label and separator and suffix in ("id", "code", "no", "key", "uuid")
+                    and f"_{stem}_" in f"_{table_name}_" and label in identity_labels):
+                keys.append(item)
     return keys
 
 
@@ -1414,10 +1428,10 @@ class SemanticRecommendService:
                     (target.get("main_table_name") or "").lower().replace("-", "_").split("_")
                 )
                 src_key = name in {
-                    (key.get("name") or "").lower() for key in _entity_key_fields(src)
+                    (key.get("name") or "").lower() for key in _entity_key_fields(src, source.get("name"))
                 }
                 tgt_key = name in {
-                    (key.get("name") or "").lower() for key in _entity_key_fields(tgt)
+                    (key.get("name") or "").lower() for key in _entity_key_fields(tgt, target.get("name"))
                 }
                 aligned = src_key or tgt_key or (
                     prefix in src_tokens and prefix in tgt_tokens
