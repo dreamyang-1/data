@@ -776,12 +776,8 @@ def test_detect_relations_llm_reviews_rule_pairs_and_ignores_suggestions():
     assert confirmed["llmReason"] == "订单表客户ID指向客户主键"
 
 
-def test_detect_relations_llm_denial_drops_rule_pair():
-    """2026-10-15 用户契约：模型否决且无已配置关系的对不返回。
-
-    只有存在关联关系（已配置/规则命中且模型未否决/模型确认建议）的实体对
-    才出现在结果里。
-    """
+def test_detect_relations_llm_denial_keeps_direct_rule_pair():
+    """2026-10-24 用户要求：有直接字段关系必须推荐，模型否决不删除。"""
     reader = base_reader(
         entities=[
             {"id": "et-1", "name": "客户", "main_table_name": "customer",
@@ -822,11 +818,12 @@ def test_detect_relations_llm_denial_drops_rule_pair():
     service = SemanticRecommendService(reader, FakeGateway(answer))
     result = service.detect_relations(81, "et-1")
 
-    # 规则顺序是 [et-3, et-2]（entities 顺序）；模型确认 et-2、否决 et-3 后
-    # et-3（无已配置关系）整体不返回
-    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
+    # 模型置信度只影响排序，两个有直接字段证据的实体都保留。
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2", "et-3"]
     assert result[0]["llmConfirmed"] is True
     assert result[0]["llmFieldPairs"][0]["sourceColumnName"] == "customer_id"
+    assert result[1]["llmConfirmed"] is False
+    assert result[1]["inferredCount"] == 1
 
 
 def test_detect_relations_llm_failure_keeps_rule_result():
@@ -1043,8 +1040,11 @@ def test_recommend_relations_existing_relation_suppresses_shared_dimension_key()
     assert result[0]["relationName"] == "包含"
 
 
-def test_same_name_key_to_shared_dimension_is_many_to_many():
-    """两侧都指向同一外部维度（表名互不匹配）时按多对多推荐，分类字段不留空。"""
+def test_same_name_key_to_shared_dimension_is_not_direct_relation():
+    """两侧都指向同一外部维度（表名互不匹配）时不再当作直连多对多。
+
+    共用维度键不是实体间关系（用户 2026-10-23：医院↔经销商“同省”这类推荐是错的）。
+    """
     reader = base_reader(
         entities=[
             {"id": "et-1", "name": "项目", "main_table_name": "project",
@@ -1066,13 +1066,7 @@ def test_same_name_key_to_shared_dimension_is_many_to_many():
         relations=[],
     )
     result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
-    assert len(result) == 1
-    candidate = result[0]
-    assert candidate["cardinality"] == "M:N"
-    assert candidate["category"] == "关联关系"
-    assert candidate["semanticDescription"] == (
-        "1 个【项目】可关联多个【科室】，1 个【科室】可被多个【项目】关联"
-    )
+    assert result == []
 
 
 def test_existing_relation_without_category_is_filled():

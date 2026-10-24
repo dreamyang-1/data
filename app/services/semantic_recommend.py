@@ -22,6 +22,7 @@ Resp 包装、VO 字段）与 Java 版保持一致，后端可直接调用或整
   中间表的间接关联。实体保存时的旧建议接口保留响应结构，返回空建议。
 - 语义描述只有多对多保留双向两句，其余基数为单句。已有实体子表字段
   映射及关系方向归一行为保持不变。
+- 直接字段证据命中后必须返回；模型只补充复核意见与排序，不删除候选。
 """
 from __future__ import annotations
 
@@ -280,6 +281,32 @@ def _attr_name_is_clean(value: str) -> bool:
     )
 
 
+def _matches_table_key(field_name: str | None, table_name: str | None) -> bool:
+    """按完整业务名称匹配键，兼容常见表前缀和已有紧连角色名。
+
+    dim_city.city_code 与 city 对齐；customer_type_id 不因 customer 前缀
+    指向 customer。已有 customerbilling_id 这类紧连角色名仍保持兼容。
+    """
+    column = (field_name or "").strip().lower()
+    stem, separator, suffix = column.rpartition("_")
+    if not separator or suffix not in ("id", "code", "no", "key", "uuid"):
+        return False
+    table = (table_name or "").strip().lower().replace("-", "_")
+    names = [table]
+    while "_" in table and table.split("_", 1)[0] in ("dim", "tb", "t"):
+        table = table.split("_", 1)[1]
+        names.append(table)
+    for name in names:
+        compact = name.replace("_", "")
+        if len(compact) <= 2:
+            continue
+        if stem.replace("_", "") == compact:
+            return True
+        if stem.startswith(name) and "_" not in stem[len(name):]:
+            return True
+    return False
+
+
 def _is_foreign_key_to(
     field_name: str | None, other_table_name: str | None, other_pk_name: str | None
 ) -> bool:
@@ -289,9 +316,7 @@ def _is_foreign_key_to(
     lower = field_name.lower()
     if lower == "id" or not lower.endswith("_id"):
         return False
-    stripped = (other_table_name or "").replace("_", "").lower()
-    column_stripped = lower.replace("_", "")
-    if len(stripped) > 2 and column_stripped.startswith(stripped):
+    if _matches_table_key(lower, other_table_name):
         return True
     return bool(other_pk_name) and lower == other_pk_name.lower()
 
@@ -436,12 +461,11 @@ def _relation_name_is_clean(value: str | None) -> bool:
 
 
 def _references_table(column: str | None, table_name: str | None, pk_name: str | None) -> bool:
-    """字段名是否自证指向某张表：列名以表名开头，或与对方主键同名。"""
+    """字段的业务名称对应某张表（兼容表前缀），或与对方主键同名。"""
     name = (column or "").lower()
     if not name:
         return False
-    table = (table_name or "").replace("_", "").lower()
-    if len(table) > 2 and name.replace("_", "").startswith(table):
+    if _matches_table_key(name, table_name):
         return True
     return bool(pk_name) and name == (pk_name or "").lower()
 
@@ -840,7 +864,6 @@ class SemanticRecommendService:
             configured = configured_count.get(other["id"], 0)
             candidates = self._infer_relation_candidates(
                 current, other, current_info, info_map.get(other["id"]),
-                skip_cross_dimension=configured > 0,
             )
             inferred = sum(len(c["fieldPairs"]) for c in candidates)
             if configured <= 0 and inferred <= 0:
@@ -854,7 +877,7 @@ class SemanticRecommendService:
                 "inferred": inferred > 0,
                 "inferredCount": inferred,
             })
-        # 大模型复核（2026-10-15）：确认/否决/修正规则命中的字段对并排序；
+        # 大模型复核：补充规则命中字段对的意见并排序，不删除直接关系；
         # 失败时静默降级，result 保持纯规则结果与原顺序。
         # 2026-10-15 用户契约：模型不做无中生有的建议——未配置且规则未命中
         # 的实体对一律不返回。
@@ -962,7 +985,6 @@ class SemanticRecommendService:
             source, target,
             info_map.get(source_entity_type_id),
             info_map.get(target_entity_type_id),
-            skip_cross_dimension=bool(existing),
         )
         self._enhance_relation_candidates_with_llm(
             source["name"], target["name"], inferred
@@ -1129,9 +1151,10 @@ class SemanticRecommendService:
         evidence: dict[str, list[dict[str, Any]]],
         info_map: dict[str, dict[str, Any] | None],
     ) -> None:
-        """大模型复核关联检测（2026-10-15）：对规则已命中的对核对/修正字段
+        """大模型复核关联检测：对规则已命中的对补充字段
         对并排序。模型不做无中生有的建议——只复核 result 中已存在的对
         （已配置或规则命中），未配置且规则未命中的对一律不返回。
+        已命中的直接关系不因模型否决、漏字段或失败而删除。
 
         单次批量调用覆盖全部候选对；网关失败或输出不可解析时静默降级，
         result 保持纯规则结果与原顺序。新增字段：
@@ -1186,6 +1209,7 @@ class SemanticRecommendService:
                 + "1. 核对规则推导出的字段对是否有真实业务对应意义，可修正或补充字段对。\n"
                 + "2. cardinality 取值：1:1、1:N、N:1、N:N（以当前实体为源）。\n"
                 + "3. confidence 取值：high/medium/low。\n"
+                + "4. 已配置关系和规则命中的直接字段关系都会保留；你的判断仅用于补充意见和排序。\n"
                 + "只输出 JSON 数组，不要任何解释或 markdown 代码块，格式："
                 + "[{\"otherEntityTypeId\":\"候选实体ID\",\"confirmed\":true,"
                 "\"cardinality\":\"1:N\",\"confidence\":\"high\","
@@ -1210,7 +1234,8 @@ class SemanticRecommendService:
                     continue
                 pairs = _valid_field_pairs(item.get("fieldPairs"))[:10]
                 vo["llmReviewed"] = True
-                vo["llmConfirmed"] = bool(item.get("confirmed"))
+                confirmed = item.get("confirmed")
+                vo["llmConfirmed"] = confirmed if isinstance(confirmed, bool) else None
                 vo["llmConfidence"] = (
                     item.get("confidence")
                     if item.get("confidence") in ("high", "medium", "low")
@@ -1225,13 +1250,8 @@ class SemanticRecommendService:
                     cardinality if cardinality in ("1:1", "1:N", "N:1", "N:N") else None
                 )
                 vo["llmFieldPairs"] = pairs
-            # 过滤（2026-10-15 用户契约）：没有关联关系的对不返回——
-            # 模型否决且无已配置关系的对整体移除
-            result[:] = [
-                vo for vo in result
-                if vo.get("related") or vo.get("llmConfirmed") is not False
-            ]
-            # 排序：已配置 > 规则命中且模型未否决
+            # 直接关系以已配置关系和字段证据为准，模型意见不影响是否返回。
+            # 排序：已配置 > 规则命中，模型置信度只影响同组顺序。
             conf_rank = {"high": 0, "medium": 1, "low": 2}
 
             def sort_key(vo: dict[str, Any]) -> tuple:
@@ -1283,7 +1303,6 @@ class SemanticRecommendService:
     def _infer_relation_candidates(
         self, source: dict[str, Any], target: dict[str, Any],
         source_info: dict[str, Any] | None, target_info: dict[str, Any] | None,
-        *, skip_cross_dimension: bool = False,
     ) -> list[dict[str, Any]]:
         """按当前实体的物理字段推导候选，不依赖已删除的关系配置。
 
@@ -1307,7 +1326,6 @@ class SemanticRecommendService:
                         source, target,
                         {k: v for k, v in source_table.items() if k != "mappedTables"},
                         {k: v for k, v in target_table.items() if k != "mappedTables"},
-                        skip_cross_dimension=skip_cross_dimension,
                     ):
                         signature = tuple(tuple(p[k] for k in (
                             "sourceTableName", "sourceColumnName", "targetTableName", "targetColumnName"
@@ -1324,7 +1342,8 @@ class SemanticRecommendService:
             if src["primary"] and _is_foreign_key_to(
                 field.get("name"), src["tableName"], src["primary"].get("name")
             )
-            and not any(f.get("name") == field.get("name") for f in src["fields"])
+            and not any((f.get("name") or "").lower() == (field.get("name") or "").lower()
+                        for f in src["fields"])
         ]
         # 目标表主键 ↔ 源表外键（源:目标 = N:1）
         fk_pk_pairs = [
@@ -1333,7 +1352,8 @@ class SemanticRecommendService:
             if tgt["primary"] and _is_foreign_key_to(
                 field.get("name"), tgt["tableName"], tgt["primary"].get("name")
             )
-            and not any(f.get("name") == field.get("name") for f in tgt["fields"])
+            and not any((f.get("name") or "").lower() == (field.get("name") or "").lower()
+                        for f in tgt["fields"])
         ]
         for pair in pk_fk_pairs:
             candidates.append(self._build_inferred_candidate(
@@ -1354,7 +1374,7 @@ class SemanticRecommendService:
         same_name_flags: dict[str, set[tuple[bool, bool]]] = {}
         for src_field in src["fields"]:
             src_name = src_field.get("name") or ""
-            if not src_name.lower().endswith(("_id", "_code", "_no", "_key")):
+            if not src_name.lower().endswith(("_id", "_code", "_no", "_key", "_uuid")):
                 continue
             for tgt_field in tgt["fields"]:
                 tgt_name = tgt_field.get("name") or ""
@@ -1372,15 +1392,43 @@ class SemanticRecommendService:
                     ))
         for src_name, pairs in same_name_pairs.items():
             flags = same_name_flags.get(src_name) or set()
-            # 两端列名都不指向对方表：只是共用第三个维度（如都带 province_id），
+            # 两端列名都不指向对方表：只是共用第三个维度键（如都带 province_id），
             # 属于经中间表/中间维度的关联，不是两个实体间的直连关系。
-            # 已有直接证据（主外键或已配置关系）时不再找中间表建关系（用户 2026-10-22）。
             cross_dimension = bool(flags) and not any(
                 left or right for left, right in flags
             )
-            if cross_dimension and (skip_cross_dimension or candidates):
-                continue
-            cardinality = _same_key_cardinality(*next(iter(flags))) if len(flags) == 1 else "N:N"
+            aligned_cardinality: str | None = None
+            if cross_dimension:
+                # 共享键只有在「是某一端的实体键」（科室 dept_code、销售公司
+                # guoyao_code）或「落在两端主表共同的命名域」（org_dept 与
+                # dept_level 的 dept_code）时才是对齐键；其余（province_id /
+                # hospital_id / salesperson_code / 映射子表上的 product_code）
+                # 指向第三方维度，不推荐（用户 2026-10-23：医院↔经销商“同省”、
+                # 科室↔销售订单“产生”、销售项目↔销售订单“承接”均为错误多对多）。
+                name = src_name.lower()
+                prefix = name.rsplit("_", 1)[0]
+                src_tokens = set(
+                    (source.get("main_table_name") or "").lower().replace("-", "_").split("_")
+                )
+                tgt_tokens = set(
+                    (target.get("main_table_name") or "").lower().replace("-", "_").split("_")
+                )
+                src_key = name in {
+                    (key.get("name") or "").lower() for key in _entity_key_fields(src)
+                }
+                tgt_key = name in {
+                    (key.get("name") or "").lower() for key in _entity_key_fields(tgt)
+                }
+                aligned = src_key or tgt_key or (
+                    prefix in src_tokens and prefix in tgt_tokens
+                )
+                if not aligned:
+                    continue
+                if src_key != tgt_key:
+                    aligned_cardinality = "1:N" if src_key else "N:1"
+            cardinality = aligned_cardinality or (
+                _same_key_cardinality(*next(iter(flags))) if len(flags) == 1 else "N:N"
+            )
             candidates.append(self._build_inferred_candidate(
                 pairs, cardinality, source["name"], target["name"],
                 source.get("id"), target.get("id"),
