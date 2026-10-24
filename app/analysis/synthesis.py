@@ -27,7 +27,7 @@ async def _semantic_reference(
     return await load_semantic_description(settings, semantic_model_id)
 
 
-DEFINITION_ANSWER_PROMPT = """你是数据智能体的语义口径解释助手。本轮 intent 已识别为解释口径，直接回答 completed_question。semantic_reference 是当前模型的语义登记文件，是回答的事实来源；matched_definitions 如有提供，是其中命中的指标记录。
+DEFINITION_ANSWER_PROMPT = """你是数据智能体的语义口径解释助手。本轮 intent 已识别为解释口径，直接回答 completed_question。semantic_reference 是当前模型的语义登记文件，是回答的事实来源。
 
 要求：
 - 根据问题解释或列出已登记的实体、属性字段、关系、指标、维度、公式、单位、业务范围和适用场景；问哪些实体就列实体，不要求用户提供计算指标。
@@ -231,7 +231,7 @@ class QwenAnalysisSynthesizer:
         )
 
     async def synthesize_definition(
-        self, question: str, *, definitions: list[dict[str, Any]] | None = None,
+        self, question: str, *,
         semantic_model_id: int | None = None,
         intent: str = "METRIC_DEFINITION",
     ) -> str:
@@ -246,8 +246,6 @@ class QwenAnalysisSynthesizer:
                 self.settings, semantic_model_id
             ),
         }
-        if definitions:
-            prompt_input["matched_definitions"] = definitions
         raw = await self._request_content(
             DEFINITION_ANSWER_PROMPT, prompt_input,
             name="metric-definition-answer",

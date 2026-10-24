@@ -15159,36 +15159,19 @@ class DataAnalysisOrchestrator:
         response = await self._metadata_answer(request, identity, chat.semantic_model_id)
         return await self._finish_terminal(request, response)
 
-    async def _definition_llm_answer(
-        self, request: CanonicalAnalysisRequest,
-        resolved_items: list[dict],
-    ) -> str:
-        """把已确认的意图、补全问题和可选定义交给模型；模型加载当前语义文件。"""
-        synthesizer = self.analysis_synthesizer
-        method = getattr(synthesizer, 'synthesize_definition', None)
-        if not callable(method):
-            return ""
-        definitions = [
-            item.get('definition') for item in resolved_items
-            if isinstance(item.get('definition'), dict)
-        ]
-        question = request.rewritten_question or request.original_question
-        return str(await method(
-            question,
-            intent=request.primary_intent.value,
-            definitions=definitions,
-            semantic_model_id=request.semantic_model_id,
-        ))
-
     async def _metadata_answer(self, request: CanonicalAnalysisRequest, identity: TrustedIdentity, semantic_model_id: int | None) -> AgentResponse:
         if request.primary_intent == PrimaryIntent.SEMANTIC_CATALOG_QUERY:
             return await self._catalog_overview_answer(request, semantic_model_id)
-        if (request.primary_intent == PrimaryIntent.METRIC_DEFINITION
-                and callable(getattr(self.analysis_synthesizer, 'synthesize_definition', None))):
+        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
             # Entity/field/relationship questions need the semantic document,
             # not a successful metric lookup or executable query parameters.
             try:
-                explanation = await self._definition_llm_answer(request, [])
+                method = getattr(self.analysis_synthesizer, "synthesize_definition", None)
+                explanation = await method(
+                    request.rewritten_question or request.original_question,
+                    intent=request.primary_intent.value,
+                    semantic_model_id=request.semantic_model_id,
+                ) if callable(method) else ""
             except Exception:
                 logger.warning("definition document answer failed", exc_info=True)
                 explanation = ""
@@ -15200,15 +15183,7 @@ class DataAnalysisOrchestrator:
                     answer=explanation,
                 )
             return self._fallback(request, "口径解释暂时无法生成，请稍后重试。")
-        lookup = getattr(self.adapters.semantic, 'lookup_definitions', None)
-        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION and callable(lookup):
-            from app.services.metric_definition_answer import definition_response
-            try:
-                results = await lookup(request, identity)
-            except AdapterError as exc:
-                return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
-            return definition_response(request, results)
-        if request.primary_intent == PrimaryIntent.DATA_LINEAGE and not request.metrics:
+        if not request.metrics:
             # Legacy's downstream protocol supports metric lineage only. Do not
             # disguise this external contract gap as missing user information.
             return self._fallback(request, "已识别要追溯的对象，但当前血缘服务尚不支持该类对象。需要由血缘服务补齐支持后查询。")
@@ -15223,117 +15198,61 @@ class DataAnalysisOrchestrator:
                 )
                 timing.mark_first_result()
             if len(resolved) != 1:
-                if (
-                    request.primary_intent == PrimaryIntent.METRIC_DEFINITION
-                    and request.metrics
-                ):
-                    # 规范里查不到该指标时明确回“未定义”，不做相近指标的解释，
-                    # 也不引导用户换指标。
-                    return self._fallback(
-                        request,
-                        f"「{request.metrics[0].input}」未在当前业务语义规范中定义，"
-                        "无法提供该指标的口径解释。",
-                    )
                 return self._fallback(request, "没有找到唯一、已发布的指标定义。")
             scoped_metadata = getattr(self.adapters.semantic, 'scoped_metadata', None)
             if callable(scoped_metadata):
                 item = await scoped_metadata(request, resolved[0], identity)
             else:
-                item = await (self.adapters.semantic.definition(resolved[0]) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.adapters.semantic.lineage(resolved[0], identity))
+                item = await self.adapters.semantic.lineage(resolved[0], identity)
         except AdapterError as exc:
             logger.warning(
                 "semantic metadata retrieval failed; falling back request_id=%s code=%s upstream_code=%s",
                 request.request_id, exc.code, exc.upstream_code,
             )
             return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
-        if request.primary_intent == PrimaryIntent.DATA_LINEAGE:
-            business_lineage = [
-                str(value).strip() for value in (item.payload.get("business_lineage") or [])
-                if str(value).strip()
-            ]
-            physical_sources = [
-                value for value in (item.payload.get("physical_sources") or [])
-                if isinstance(value, dict)
-            ]
-            if not business_lineage and not physical_sources:
-                return self._fallback(request, "血缘服务未返回可验证的业务或物理链路。")
-            sections = []
-            if business_lineage:
-                sections.append("业务血缘：" + " → ".join(business_lineage))
-            if physical_sources:
-                source_lines = []
-                for source in physical_sources[:20]:
-                    table = next((str(source.get(key)).strip() for key in (
-                        "table", "table_name", "source_table", "dataset"
-                    ) if source.get(key)), "未知表")
-                    field = next((str(source.get(key)).strip() for key in (
-                        "field", "column", "column_name", "source_field"
-                    ) if source.get(key)), "")
-                    transform = next((str(source.get(key)).strip() for key in (
-                        "transformation", "expression", "job", "task"
-                    ) if source.get(key)), "")
-                    line = table + (f".{field}" if field else "")
-                    if transform:
-                        line += f"（转换：{transform[:200]}）"
-                    source_lines.append(line)
-                sections.append("物理来源：" + "；".join(source_lines))
-            physical_complete = bool(physical_sources)
-            warnings = [] if physical_complete else ["上游仅返回业务血缘，未提供表/字段级物理来源"]
-            answer = "\n".join(sections)
-            reliability = ReliabilityReport(
-                level="HIGH" if physical_complete and business_lineage else "LIMITED",
-                score=1.0 if physical_complete and business_lineage else 0.65,
-                gates={
-                    "metadata_found": True,
-                    "business_lineage_present": bool(business_lineage),
-                    "physical_lineage_present": physical_complete,
-                },
-                warnings=warnings,
-            )
-        else:
-            payload = item.payload if isinstance(item.payload, dict) else {}
-            metric_name = str(
-                payload.get("metric_name")
-                or resolved[0].canonical_name
-                or resolved[0].input
-            ).strip()
-            description = str(
-                payload.get("definition") or payload.get("description") or ""
-            ).strip()
-            unit = str(payload.get("unit") or resolved[0].unit or "").strip()
-            scenarios = [
-                str(value).strip()
-                for value in (payload.get("applicable_scenarios") or [])
-                if str(value).strip()
-            ]
-            synonyms = [
-                str(value).strip()
-                for value in (payload.get("synonyms") or [])
-                if str(value).strip()
-            ]
-            filter_explanations = []
-            for value in payload.get("global_filters") or []:
-                text = str(value)
-                match = re.search(
-                    r"filterExplanation['\"]?\s*:\s*['\"]([^'\"]+)", text
-                )
-                if match:
-                    filter_explanations.append(match.group(1).strip())
-            sections = [f"指标名称：{metric_name}"]
-            if description:
-                sections.append(f"统计口径：{description}")
-            if unit:
-                sections.append(f"单位：{unit}")
-            if filter_explanations:
-                sections.append("数据范围：" + "；".join(dict.fromkeys(filter_explanations)))
-            if scenarios:
-                sections.append("适用场景：" + "、".join(scenarios))
-            if synonyms:
-                sections.append("常用叫法：" + "、".join(synonyms))
-            answer = "\n".join(sections)
-            reliability = ReliabilityReport(
-                level="HIGH", score=1, gates={"metadata_found": True}
-            )
+        business_lineage = [
+            str(value).strip() for value in (item.payload.get("business_lineage") or [])
+            if str(value).strip()
+        ]
+        physical_sources = [
+            value for value in (item.payload.get("physical_sources") or [])
+            if isinstance(value, dict)
+        ]
+        if not business_lineage and not physical_sources:
+            return self._fallback(request, "血缘服务未返回可验证的业务或物理链路。")
+        sections = []
+        if business_lineage:
+            sections.append("业务血缘：" + " → ".join(business_lineage))
+        if physical_sources:
+            source_lines = []
+            for source in physical_sources[:20]:
+                table = next((str(source.get(key)).strip() for key in (
+                    "table", "table_name", "source_table", "dataset"
+                ) if source.get(key)), "未知表")
+                field = next((str(source.get(key)).strip() for key in (
+                    "field", "column", "column_name", "source_field"
+                ) if source.get(key)), "")
+                transform = next((str(source.get(key)).strip() for key in (
+                    "transformation", "expression", "job", "task"
+                ) if source.get(key)), "")
+                line = table + (f".{field}" if field else "")
+                if transform:
+                    line += f"（转换：{transform[:200]}）"
+                source_lines.append(line)
+            sections.append("物理来源：" + "；".join(source_lines))
+        physical_complete = bool(physical_sources)
+        warnings = [] if physical_complete else ["上游仅返回业务血缘，未提供表/字段级物理来源"]
+        answer = "\n".join(sections)
+        reliability = ReliabilityReport(
+            level="HIGH" if physical_complete and business_lineage else "LIMITED",
+            score=1.0 if physical_complete and business_lineage else 0.65,
+            gates={
+                "metadata_found": True,
+                "business_lineage_present": bool(business_lineage),
+                "physical_lineage_present": physical_complete,
+            },
+            warnings=warnings,
+        )
         return AgentResponse(request_id=request.request_id, conversation_id=request.conversation_id, status="COMPLETED", intent=request.primary_intent, intent_source=request.intent_source, intent_confidence=request.intent_confidence, answer=answer, evidence=[item], reliability=reliability)
 
     @staticmethod

@@ -25,7 +25,7 @@ def direct_agent():
     agent = make_orchestrator()
     agent.settings.surface_asl_execution_enabled = True
     agent.analysis_synthesizer = SimpleNamespace(synthesize_definition=AsyncMock(return_value='已登记实体：医院、销售订单。'))
-    agent.adapters.semantic.lookup_definitions = AsyncMock(side_effect=AssertionError('metric lookup is not a prerequisite'))
+    agent.adapters.semantic.resolve_metrics = AsyncMock(side_effect=AssertionError('metric lookup is not a prerequisite'))
     agent.adapters.query.query_surface = AsyncMock(side_effect=AssertionError('definition must not query'))
     agent._classify = AsyncMock(side_effect=AssertionError('recognized intent must not be classified again'))
     return agent
@@ -48,8 +48,8 @@ async def test_recognized_definition_bypasses_query_normalization_without_metric
     assert response.requested_business_domain_ids == [296] and response.semantic_model_id == 130
     assert response.analysis_plan is None and response.dataset_id is None and not response.missing_slots
     agent.analysis_synthesizer.synthesize_definition.assert_awaited_once_with(
-        QUESTION, intent='METRIC_DEFINITION', definitions=[], semantic_model_id=130)
-    agent.adapters.semantic.lookup_definitions.assert_not_awaited()
+        QUESTION, intent='METRIC_DEFINITION', semantic_model_id=130)
+    agent.adapters.semantic.resolve_metrics.assert_not_awaited()
     agent.adapters.query.query_surface.assert_not_awaited()
     agent._classify.assert_not_awaited()
     assert not events
@@ -67,14 +67,21 @@ async def test_surface_classifier_definition_does_not_fall_back_to_query_pipelin
 
 
 @pytest.mark.asyncio
-async def test_definition_model_failure_does_not_trigger_metric_clarification():
+@pytest.mark.parametrize('failure', ['error', 'empty', 'absent'])
+async def test_definition_model_failure_does_not_trigger_metric_clarification(failure):
     agent, turn = direct_agent(), chat()
     turn._compound_judgment = CompoundJudgment(is_compound=False, intent='解释口径')
-    agent.analysis_synthesizer.synthesize_definition.side_effect = RuntimeError('model unavailable')
+    if failure == 'error':
+        agent.analysis_synthesizer.synthesize_definition.side_effect = RuntimeError('model unavailable')
+    elif failure == 'empty':
+        agent.analysis_synthesizer.synthesize_definition.return_value = ''
+    else:
+        agent.analysis_synthesizer = None
     response = await agent._handle(turn, IDENTITY)
     assert response.status == 'SAFE_FALLBACK' and response.intent == PrimaryIntent.METRIC_DEFINITION
     assert not response.clarification_questions and '指标' not in response.answer
-    agent.adapters.semantic.lookup_definitions.assert_not_awaited()
+    agent.adapters.semantic.resolve_metrics.assert_not_awaited()
+    agent.adapters.query.query_surface.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -110,7 +117,7 @@ def test_definition_stream_has_no_planning_or_query_stages(monkeypatch):
         monkeypatch.setattr(agent, 'handle', recognized)
         agent.analysis_synthesizer = SimpleNamespace(synthesize_definition=AsyncMock(return_value='已登记实体：医院、销售订单。'))
         planner = agent.task_planner = SimpleNamespace(plan_question=AsyncMock(side_effect=AssertionError('must not plan')))
-        agent.adapters.semantic.lookup_definitions = AsyncMock(side_effect=AssertionError('must not lookup metrics'))
+        agent.adapters.semantic.resolve_metrics = AsyncMock(side_effect=AssertionError('must not lookup metrics'))
         response = client.post('/agent_chat/stream', json={'semantic_model_id': 130, 'application_id': 'app',
             'conversation_id': 'definition-entities', 'message_id': 'm1', 'question': QUESTION})
     events = [json.loads(line[5:]) for line in response.text.splitlines() if line.startswith('data:')]

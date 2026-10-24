@@ -489,75 +489,21 @@ class HttpSemanticAdapter:
             )
         return metrics
 
-    async def lookup_definitions(self, request, identity):
-        """Explanation-only lookup; never invoke the SQL metadata service."""
-        HttpDataRetrievalAdapter._enforce_bound_scope(request, request.semantic_model_id, None)
-        HttpDataRetrievalAdapter._require_supported_retrieval_scope(request)
-        names = list(dict.fromkeys(metric.input for metric in request.metrics if metric.input))
-        if not names:
-            return []
-        data = await self.client.post(self.settings.asl_generator_base_url,
-            '/vector/metric-definitions/lookup', {
-                'semantic_model_id': request.semantic_model_id,
-                'business_domain_ids': list(request.business_domain_ids),
-                'query': request.rewritten_question or request.original_question,
-                'metric_names': names,
-            }, identity=identity, application_id=request.application_id)
-        if (not isinstance(data, dict) or data.get('success') is not True
-                or data.get('semantic_model_id') != request.semantic_model_id
-                or data.get('business_domain_ids') != list(request.business_domain_ids)
-                or not isinstance(data.get('results'), list)):
-            raise AdapterError('SEMANTIC_SCOPE_UNCONFIRMED', 'Vector definition scope was not confirmed')
-        results = data['results']
-        if [item.get('input') for item in results if isinstance(item, dict)] != names:
-            raise AdapterError('SEMANTIC_RESPONSE_INVALID', 'Vector definitions did not cover the requested metrics')
-        for item in results:
-            if item.get('status') not in {'RESOLVED', 'NOT_FOUND', 'AMBIGUOUS'}:
-                raise AdapterError('SEMANTIC_RESPONSE_INVALID', 'Invalid vector definition status')
-            if item['status'] == 'RESOLVED':
-                definition = item.get('definition') or {}
-                if (definition.get('semantic_model_id') != request.semantic_model_id
-                        or request.business_domain_ids and definition.get('business_domain_id') not in request.business_domain_ids):
-                    raise AdapterError('SEMANTIC_SCOPE_MISMATCH', 'Vector metric belongs to another scope')
-        return results
-
     async def scoped_metadata(self, request, metric, identity):
-        """Keep the current request grant through definition/lineage retrieval."""
-        from urllib.parse import urlencode
+        """Keep the current request grant through lineage retrieval."""
         scope = request.authorized_semantic_scope
         if scope is None or not scope.business_domain_ids:
-            return await (self.definition(metric) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.lineage(metric, identity))
+            return await self.lineage(metric, identity)
         if not metric.metric_id or not metric.metric_id.startswith(f'{scope.semantic_model_id}:'):
             raise AdapterError('SEMANTIC_SCOPE_MISMATCH', 'Metric belongs to another model')
         payload = scope.model_dump(mode='json')
-        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
-            path = self.settings.semantic_definition_path.format(metric_id=metric.metric_id, version=metric.version)
-            path += '?' + urlencode({'scope': json.dumps(payload, separators=(',', ':'))})
-            data = await self.client.get(self.settings.semantic_base_url, path, identity=identity, application_id=request.application_id)
-            kind = 'METRIC_DEFINITION'
-        else:
-            path = self.settings.semantic_lineage_path.format(metric_id=metric.metric_id)
-            data = await self.client.post(self.settings.semantic_base_url, path,
-                {'version': metric.version, 'semantic_model_id': scope.semantic_model_id,
-                 'authorized_semantic_scope': payload}, identity=identity, application_id=request.application_id)
-            kind = 'DATA_LINEAGE'
+        path = self.settings.semantic_lineage_path.format(metric_id=metric.metric_id)
+        data = await self.client.post(self.settings.semantic_base_url, path,
+            {'version': metric.version, 'semantic_model_id': scope.semantic_model_id,
+             'authorized_semantic_scope': payload}, identity=identity, application_id=request.application_id)
         HttpDataRetrievalAdapter._confirm_translator_scope(request, data)
-        return EvidenceItem(evidence_id=f'{kind}:{metric.metric_id}:{metric.version}', kind=kind, source_ref=path, payload=data)
-
-    async def definition(self, metric: MetricRef) -> EvidenceItem:
-        path = self.settings.semantic_definition_path.format(
-            metric_id=metric.metric_id, version=metric.version
-        )
-        data = await self.client.get(
-            self.settings.semantic_base_url,
-            path,
-        )
-        return EvidenceItem(
-            evidence_id=f"definition:{metric.metric_id}:{metric.version}",
-            kind="METRIC_DEFINITION",
-            source_ref=path,
-            payload=data,
-        )
+        return EvidenceItem(evidence_id=f'DATA_LINEAGE:{metric.metric_id}:{metric.version}',
+            kind='DATA_LINEAGE', source_ref=path, payload=data)
 
     async def lineage(self, metric: MetricRef, identity: TrustedIdentity) -> EvidenceItem:
         path = self.settings.semantic_lineage_path.format(metric_id=metric.metric_id)

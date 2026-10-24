@@ -4,11 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.adapters.base import AdapterError
-from app.adapters.http import HttpSemanticAdapter
-from app.config import Settings
-from app.domain.models import CanonicalAnalysisRequest, MetricRef, PrimaryIntent, TrustedIdentity
-from app.services.metric_definition_answer import definition_response
+from app.domain.models import AgentResponse, CanonicalAnalysisRequest, MetricRef, PrimaryIntent, TrustedIdentity
 
 
 def request(**updates):
@@ -18,67 +14,10 @@ def request(**updates):
         metrics=[MetricRef(input='订单笔数')], **updates)
 
 
-def found(name='订单笔数'):
-    return {'input': name, 'status': 'RESOLVED', 'definition': {
-        'record_id': 'm-orders', 'semantic_model_id': 130, 'business_domain_id': 205,
-        'metric_name': name, 'metric_code': 'orders', 'unit': '笔',
-        'business_definition': {'description': '订单号去重计数'},
-        'calculation_rule': {'calc_formula': 'COUNT(DISTINCT order_key)'}}}
-
-
-def test_definition_answer_uses_vector_evidence_without_query_analysis():
-    response = definition_response(request(), [found()])
-    assert response.status == 'COMPLETED'
-    assert '订单号去重计数' in response.answer
-    assert response.analysis_plan is None and response.dataset_id is None
-    assert [item.kind for item in response.evidence] == ['METRIC_DEFINITION']
-    assert [step.stage for step in response.analysis_process] == ['KNOWLEDGE_RETRIEVAL']
-
-
-@pytest.mark.parametrize('status', ['NOT_FOUND', 'AMBIGUOUS'])
-def test_absent_or_ambiguous_definition_cannot_invent_an_answer(status):
-    response = definition_response(request(), [{'input': '订单笔数', 'status': status}])
-    assert response.status == 'SAFE_FALLBACK' and not response.evidence
-    assert not response.dataset_id and 'COUNT' not in response.answer
-
-
-def test_multiple_definition_results_keep_missing_topic_visible():
-    response = definition_response(request(), [found(), {'input': '未登记指标', 'status': 'NOT_FOUND'}])
-    assert response.status == 'PARTIAL_SUCCESS'
-    assert '订单号去重计数' in response.answer and '未登记指标' in response.answer
-
-
-def test_missing_definition_text_is_disclosed_instead_of_claiming_complete():
-    item = found(); item['definition'].update(business_definition={}, calculation_rule={})
-    response = definition_response(request(), [item])
-    assert response.status == 'PARTIAL_SUCCESS' and '尚未登记' in response.answer
-
-
-@pytest.mark.asyncio
-async def test_http_definition_lookup_calls_only_vector_service_and_keeps_scope():
-    client = SimpleNamespace(post=AsyncMock(return_value={'success': True,
-        'semantic_model_id': 130, 'business_domain_ids': [205], 'results': [found()]}))
-    settings = Settings(_env_file=None, env='test', asl_generator_base_url='http://vectors', semantic_base_url='http://sql')
-    adapter = HttpSemanticAdapter(settings, client)
-    result = await adapter.lookup_definitions(request(business_domain_ids=[205]), TrustedIdentity(tenant_id='t', user_id='u'))
-    assert result == [found()]
-    args = client.post.call_args.args
-    assert args[:2] == ('http://vectors', '/vector/metric-definitions/lookup')
-    assert args[2]['business_domain_ids'] == [205] and args[2]['metric_names'] == ['订单笔数']
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize('mutation', ['model', 'domain', 'record_model', 'record_domain', 'missing_topic'])
-async def test_vector_definition_response_must_confirm_current_scope_and_topics(mutation):
-    body = {'success': True, 'semantic_model_id': 130, 'business_domain_ids': [205], 'results': [found()]}
-    if mutation == 'model': body['semantic_model_id'] = 131
-    elif mutation == 'domain': body['business_domain_ids'] = []
-    elif mutation == 'record_model': body['results'][0]['definition']['semantic_model_id'] = 131
-    elif mutation == 'record_domain': body['results'][0]['definition']['business_domain_id'] = 206
-    else: body['results'] = []
-    adapter = HttpSemanticAdapter(Settings(_env_file=None, env='test'), SimpleNamespace(post=AsyncMock(return_value=body)))
-    with pytest.raises(AdapterError):
-        await adapter.lookup_definitions(request(business_domain_ids=[205]), TrustedIdentity(tenant_id='t', user_id='u'))
+def model_response(answer):
+    value = request()
+    return AgentResponse(request_id=value.request_id, conversation_id=value.conversation_id,
+        status='COMPLETED', intent=PrimaryIntent.METRIC_DEFINITION, answer=answer)
 
 
 @pytest.mark.asyncio
@@ -109,7 +48,7 @@ async def test_mixed_dag_marks_definition_subtask_for_direct_answer():
 
     async def respond(child, identity):
         flags[child.question] = getattr(child, '_dag_definition_direct', False)
-        return definition_response(request(), [found('销售额')])
+        return model_response('销售额说明')
 
     agent._handle = AsyncMock(side_effect=respond)
     tasks = [
@@ -142,12 +81,12 @@ def test_definition_direct_flag_overrides_rewritten_intent():
     assert DataAnalysisOrchestrator._is_definition_direct(rewritten, plain) is False
 
 
-def test_stream_definition_skips_fixed_query_stages_and_models(monkeypatch):
+def test_stream_definition_uses_answer_model_without_query_stages(monkeypatch):
     from test_api import TestClient, build_test_app
     app = build_test_app()
     with TestClient(app) as client:
         agent = app.state.container.orchestrator
-        agent.adapters.semantic.lookup_definitions = AsyncMock(return_value=[found('销售额')])
+        agent.analysis_synthesizer = SimpleNamespace(synthesize_definition=AsyncMock(return_value='销售额说明'))
         query = agent.adapters.query.query = AsyncMock(side_effect=AssertionError('definition must not execute SQL'))
         recovery = agent._recover_live_published_metrics = AsyncMock(side_effect=AssertionError('definition must not recover SQL metrics'))
         response = client.post('/agent_chat/stream', json={'semantic_model_id': 130, 'application_id': 'app',
@@ -158,7 +97,8 @@ def test_stream_definition_skips_fixed_query_stages_and_models(monkeypatch):
     stages = {event.get('meta', {}).get('stage') for event in events if event.get('type') == 'message_chunk'}
     assert not {'ASL_GENERATION', 'SQL_TRANSLATION', 'SQL_EXECUTION', 'DATA_RETRIEVAL', 'RELIABILITY_CHECK', 'INSIGHT_ANALYSIS'}.intersection(stages)
     assert 'FINAL_OUTPUT' in stages
-    assert not complete['analysis_plan'] and all(e['kind'] == 'METRIC_DEFINITION' for e in complete['evidence'])
+    assert not complete['analysis_plan'] and complete['answer'] == '销售额说明'
+    agent.analysis_synthesizer.synthesize_definition.assert_awaited_once()
     query.assert_not_awaited(); recovery.assert_not_awaited()
 
 
@@ -174,7 +114,7 @@ async def test_all_definition_dag_returns_each_answer_without_root_insight():
     agent.analysis_synthesizer = SimpleNamespace(synthesize_combined=synthesis)
     async def explain(chat, identity):
         assert not getattr(chat, '_dag_pure_computation', False)
-        return definition_response(request(), [found(chat.question)])
+        return model_response(chat.question)
     agent._handle = AsyncMock(side_effect=explain)
     tasks = [AtomicTask(task_id='task-1', question='解释订单笔数口径', primary_intent=PrimaryIntent.METRIC_DEFINITION,
                 extraction={'是否查询数据库': '否'}),
