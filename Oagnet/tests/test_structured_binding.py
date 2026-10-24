@@ -450,3 +450,44 @@ def test_exact_structured_slot_wins_over_nearby_model_dimension():
     assert ast['dimensions'][0]['name'] == 'hospital.date'
     assert any(item.get('type') == 'STRUCTURED_SLOT_KEY_CORRECTED'
                for item in repairs)
+
+
+def test_surface_requirements_fill_structured_limit_and_dedup():
+    """问题式生成或修复丢掉的限制/去重口径必须从结构化参数确定性回填。"""
+    from structured_binding import apply_surface_requirements
+
+    ast = {'version': '2.0', 'metrics': [], 'dimensions': [{'name': '医院名称'}],
+           'limit': None, 'projection_mode': None, 'ambiguity': []}
+    repairs = apply_surface_requirements(ast, {'限制': 1000, '是否去重': '是'})
+    assert ast['limit'] == 1000
+    assert ast['projection_mode'] == 'DISTINCT'
+    assert [r['type'] for r in repairs] == ['APPLY_STRUCTURED_LIMIT', 'APPLY_STRUCTURED_DEDUP']
+
+
+def test_surface_requirements_respect_existing_values_and_ambiguity():
+    from structured_binding import apply_surface_requirements
+
+    # 结构化限制是权威要求：ASL 已有的 limit 以结构化参数为准；
+    # 已声明 ROWS / 有指标时不补去重
+    ast = {'metrics': [{'name': '医院总数'}], 'dimensions': [], 'limit': 5,
+           'projection_mode': None, 'ambiguity': []}
+    repairs = apply_surface_requirements(ast, {'限制': 1000, '是否去重': '是'})
+    assert ast['limit'] == 1000
+    assert [r['type'] for r in repairs] == ['APPLY_STRUCTURED_LIMIT']
+    assert ast.get('projection_mode') is None
+
+    detail = {'metrics': [], 'dimensions': [{'name': '医院名称'}], 'limit': None,
+              'projection_mode': 'ROWS', 'ambiguity': []}
+    assert apply_surface_requirements(detail, {'限制': None, '是否去重': '是'}) == []
+    assert detail['projection_mode'] == 'ROWS'
+
+    ambiguous = {'metrics': [], 'dimensions': [{'name': '医院名称'}], 'limit': None,
+                 'ambiguity': [{'type': 'filter_slot'}]}
+    assert apply_surface_requirements(ambiguous, {'限制': 1000}) == []
+    assert ambiguous.get('limit') is None
+
+    # 非法限制（越界/非整数/布尔）不回填也不改写
+    for bad in (0, 10001, '1000', True, 10.5):
+        candidate = {'metrics': [], 'dimensions': [], 'limit': None, 'ambiguity': []}
+        assert apply_surface_requirements(candidate, {'限制': bad}) == []
+        assert candidate['limit'] is None

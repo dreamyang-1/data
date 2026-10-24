@@ -11,9 +11,9 @@ from app.adapters.base import AdapterError
 from app.adapters.http import HttpDataRetrievalAdapter
 from app.config import Settings
 from app.domain.models import (
-    AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest,
-    DependencyConstraint, EvidenceItem, PlannerExtraction, PrimaryIntent,
-    ReliabilityReport, TaskPlan, TrustedIdentity,
+    AgentResponse, AnalysisOperator, AtomicTask, CanonicalAnalysisRequest,
+    ChatRequest, DependencyConstraint, EvidenceItem, PlannerExtraction,
+    PrimaryIntent, ReliabilityReport, TaskPlan, TrustedIdentity,
 )
 from app.planning import CompoundQuestionRouter
 from app.planning.dependency_contract import (
@@ -130,6 +130,60 @@ def test_ordering_dependency_is_not_a_business_object_filter():
     assert not DataAnalysisOrchestrator._dag_references_dependency_result("查询上海地区的区域全部医院总数")
 
 
+def test_unresolved_entity_mentions_are_tolerated_not_fatal():
+    # 2026-10-21 用户明确要求：结构校验宽松放行，未绑定提及只记录不拦停。
+    request = CanonicalAnalysisRequest(
+        conversation_id="test", tenant_id="t", user_id="u",
+        original_question="查产品", primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=130,
+        semantic_entity_mentions=["该医院近12个月按业务日期（月）分组"])
+    repairs: list = []
+    HttpDataRetrievalAdapter._validate_semantic_entity_mentions(
+        {"filters": []}, request, repairs)
+    assert repairs == [{
+        "type": "UNRESOLVED_ENTITY_MENTION_SKIPPED",
+        "mentions": ["该医院近12个月按业务日期（月）分组"],
+    }]
+
+
+class _SortDataset:
+    def __init__(self, columns, rows):
+        self.columns = columns
+        self.rows = rows
+
+
+class _SortMetric:
+    def __init__(self, canonical_name, input_name):
+        self.canonical_name = canonical_name
+        self.input = input_name
+
+
+class _SortRequest:
+    def __init__(self, metrics):
+        self.metrics = metrics
+
+
+def test_dimension_sort_field_falls_back_to_numeric_metric_column():
+    # 2026-10-21 用户要求恢复默认：规划器把排序字段写成维度名称（如"经销商
+    # 名称"）时，非数值列不能吞掉指标排序，回退到指标数值列按方向排序。
+    dataset = _SortDataset(
+        ["经销商名称", "去重医院数"],
+        [{"经销商名称": "乙", "去重医院数": 3}, {"经销商名称": "甲", "去重医院数": 9}])
+    request = _SortRequest([_SortMetric("去重医院数", "有效订单去重医院数")])
+    structured = {"排序": [{"field": "经销商名称", "order": "desc"}]}
+    assert DataAnalysisOrchestrator._metric_sort_column(
+        structured, request, dataset) == "去重医院数"
+
+
+def test_numeric_structured_sort_field_still_honored():
+    dataset = _SortDataset(
+        ["经销商名称", "销售额"],
+        [{"经销商名称": "甲", "销售额": 1}, {"经销商名称": "乙", "销售额": 2}])
+    structured = {"排序": [{"field": "销售额", "order": "asc"}]}
+    assert DataAnalysisOrchestrator._metric_sort_column(
+        structured, _SortRequest([]), dataset) == "销售额"
+
+
 @pytest.mark.parametrize("owner,field", [("商品", "商品名称"), ("医院", "医院名称"),
                                         ("经销商", "经销商名称"), ("销售公司", "公司名称")])
 def test_bound_child_shape_does_not_inherit_parent_ranking(owner, field):
@@ -153,6 +207,49 @@ def test_bound_child_shape_does_not_inherit_parent_ranking(owner, field):
     assert request.entity == owner and request.fields == [field]
     assert not request.metrics and not request.dimensions and request.ranking_limit is None
     assert request.filters == [{"entity": "医院", "field": "医院名称", "operator": "=", "value": "测试医院"}]
+
+
+def test_bound_child_row_cap_is_not_a_ranking_intent():
+    """裸行数上限（限制=1000、无排序）不得进入 ranking_limit 触发契约排序要求。
+
+    回归：依赖明细子任务的契约曾把「限制: 1000」当排名意图，要求 canonical
+    sorting，模型草稿漏写排序时被 ASL_SORT_INVALID 拦成 SAFE_FALLBACK。
+    行数上限仍应经抽取「限制」通道进入可执行 ASL，不受本修复影响。
+    """
+    request = CanonicalAnalysisRequest(conversation_id="test", tenant_id="t", user_id="u",
+        original_question="依赖查询", primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="经销商")
+    extraction = PlannerExtraction(intent=PrimaryIntent.DETAIL_QUERY, structured={
+        "实体": ["销售订单", "商品", "经销商"],
+        "指标": [{"name": "含税销售总额"}, {"name": "销售总数量"}],
+        "维度": ["经销商", "商品"],
+        "展示字段": [{"entity": "经销商", "field": "经销商名称"},
+                    {"entity": "商品", "field": "商品名称"}],
+        "过滤条件": [], "排序": [], "限制": 1000})
+    token = _INTERNAL_ASSUMPTIONS.set(("DAG_BOUND_STRUCTURED_QUERY",))
+    try:
+        DataAnalysisOrchestrator._apply_dag_structured_query_shape(request, extraction)
+    finally:
+        _INTERNAL_ASSUMPTIONS.reset(token)
+    assert request.ranking_limit is None
+    assert not request.operators
+
+
+def test_bound_child_ranked_task_keeps_topn_limit():
+    request = CanonicalAnalysisRequest(conversation_id="test", tenant_id="t", user_id="u",
+        original_question="依赖查询", primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="经销商")
+    extraction = PlannerExtraction(intent=PrimaryIntent.METRIC_QUERY, structured={
+        "实体": ["销售订单", "经销商"], "指标": [{"name": "含税销售总额"}],
+        "维度": ["经销商"], "展示字段": [{"entity": "经销商", "field": "经销商名称"}],
+        "过滤条件": [], "排序": [{"field": "含税销售总额", "order": "desc"}], "限制": 3})
+    token = _INTERNAL_ASSUMPTIONS.set(("DAG_BOUND_STRUCTURED_QUERY",))
+    try:
+        DataAnalysisOrchestrator._apply_dag_structured_query_shape(request, extraction)
+    finally:
+        _INTERNAL_ASSUMPTIONS.reset(token)
+    assert request.ranking_limit == 3
+    assert AnalysisOperator.SORT in request.operators
 
 
 @pytest.mark.asyncio

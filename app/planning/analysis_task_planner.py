@@ -14,9 +14,7 @@ from datetime import date
 from typing import Any
 
 from app.analysis.chain_tools.temporal_window import (
-    align_structured_time_window,
     disjunctive_periods_to_range,
-    extend_window_for_pop_baseline,
     has_yoy_signal,
     parse_absolute_range,
 )
@@ -27,6 +25,7 @@ from app.domain.models import (
     TaskPlan,
 )
 from app.planning.task_dag import extraction_to_parameters
+from app.analysis.requirements import analysis_intent, build_requirements, trend_comparison_modes
 
 # 分析意图 -> 执行模板：分析类型键、对外工具名、引擎 facts 键对应的子工具名。
 # 子工具行只在引擎 facts 实际产出对应键时发射，展示与真实计算一致。
@@ -87,6 +86,21 @@ _RELATIVE_RANK = {
 }
 
 
+# 时间类维度不是业务分组：拼进任务文本会被下游误绑成业务值
+# （实测"查询2025年10月各业务日期的X"被绑成商品名称过滤值）
+_TIME_DIMENSION_WORDS = {
+    "业务日期", "日期", "时间", "月份", "月", "年份", "年", "季度", "周",
+    "星期", "日", "半年", "period", "date", "time", "month", "year", "quarter", "week",
+}
+
+
+def _is_time_dimension(name: str) -> bool:
+    lowered = name.strip().casefold()
+    return lowered in _TIME_DIMENSION_WORDS or any(
+        lowered.endswith(word) for word in ("日期", "时间", "月份")
+    )
+
+
 def _dimension_names(structured: dict[str, Any]) -> list[str]:
     names: list[str] = []
     for item in structured.get("维度") or []:
@@ -94,6 +108,10 @@ def _dimension_names(structured: dict[str, Any]) -> list[str]:
         if isinstance(name, str) and name.strip():
             names.append(name.strip())
     return names
+
+
+def _grouping_dimensions(structured: dict[str, Any]) -> list[str]:
+    return [name for name in _dimension_names(structured) if not _is_time_dimension(name)]
 
 
 def _metric_text(structured: dict[str, Any]) -> str:
@@ -177,22 +195,17 @@ def _retrieval_extraction(structured: dict[str, Any], **overrides: Any) -> dict[
 
 
 def _trend_retrieval_window(question: str, structured: dict[str, Any]) -> dict[str, Any] | None:
-    """趋势取数窗口的方法派生扩展：环比基期前推一个粒度桶。
-
-    用户展示窗口保持不变，取数窗口按方法需要扩展并在
-    window_alignment 里披露扩展原因；滚动式先复用链路已有的
-    桶对齐（含同比基期扩展），解析不出绝对区间时不扩展。
-    """
+    """兼容入口：主查询窗口可含相邻基期，同比基期不混入该窗口。"""
     granularity = structured.get("时间粒度")
     if not isinstance(granularity, dict):
         return None
     if not str(granularity.get("time_range") or "").strip():
         return None
-    aligned = align_structured_time_window(
-        question, granularity, intent="TREND_ANALYSIS", today=date.today(),
-    )
-    extended = extend_window_for_pop_baseline(aligned or granularity)
-    return extended or aligned
+    requirements = build_requirements(PrimaryIntent.TREND_ANALYSIS, question, structured, today=date.today())
+    windows = requirements.get("windows") or []
+    if not windows:
+        return None
+    return {**granularity, "time_range": f"{windows[0]['start']}至{windows[0]['end']}"}
 
 
 def _absolute_window_bounds(time_range: str) -> tuple[str, str] | None:
@@ -221,12 +234,40 @@ def _query_clause(time_text: str, grouping: str, metric_text: str) -> str:
     return f"查询{middle}{metric_text}"
 
 
+# 分组 TopN：“各事业部中销售额最高的产品线前三名”。这是每组各取前N，
+# 与全局排序LIMIT不同；全局LIMIT会只留下整体最高的N行。
+_CN_NUMBER = {
+    "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+    "六": 6, "七": 7, "八": 8, "九": 9, "十": 10, "两": 2,
+}
+_GROUPED_TOP_N = re.compile(
+    r"各[^，。；]{1,12}?(?:中|里)[^，。；]{0,30}?前\s*([一二三四五六七八九十两\d]+)\s*(?:名|位)"
+)
+
+
+def _grouped_top_n(
+    question: str, dimensions: list[str],
+) -> tuple[int, str, str] | None:
+    """识别“各分组中取前N”的问法，返回 (N, 分组维度, 排名对象维度)。"""
+    if len(dimensions) < 2:
+        return None
+    match = _GROUPED_TOP_N.search(re.sub(r"\s+", "", str(question or "")))
+    if match is None:
+        return None
+    text = match.group(1)
+    limit = int(text) if text.isdigit() else _CN_NUMBER.get(text)
+    if not limit or not 1 <= limit <= 10:
+        return None
+    return limit, dimensions[0], dimensions[1]
+
+
 def build_analysis_task_plan(
     question: str,
     extraction: PlannerExtraction,
     *,
     task_question: str | None = None,
     task_name: str | None = None,
+    today: date | None = None,
 ) -> TaskPlan | None:
     """把分析类单任务展开成取数任务+分析任务的 DAG；不满足模板时返回 None。
 
@@ -234,7 +275,8 @@ def build_analysis_task_plan(
     保证分析链路在任务表与调度执行中都是独立可见的节点。
     """
     structured = extraction.structured
-    playbook = ANALYSIS_PLAYBOOKS.get(extraction.intent) if extraction.intent else None
+    intent = analysis_intent(extraction.intent, question) if extraction.intent else None
+    playbook = ANALYSIS_PLAYBOOKS.get(intent)
     if playbook is None or not isinstance(structured, dict):
         return None
     # 快照复用、参数复用、纯计算的单任务维持原路由，不展开
@@ -246,10 +288,72 @@ def build_analysis_task_plan(
     metric_text = _metric_text(structured)
     if not metric_text:
         return None
-    intent = extraction.intent
+    if today is None:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
+    requirements = build_requirements(intent, question, structured, today=today)
+    if requirements.get('grain') and not (structured.get('时间粒度') or {}).get('unit'):
+        structured = copy.deepcopy(structured)
+        structured['时间粒度'] = {**(structured.get('时间粒度') or {}), 'unit': requirements['grain']}
     time_text = _time_text(structured)
-    dimensions = _dimension_names(structured)
+    dimensions = _grouping_dimensions(structured)
     analysis_type = playbook["analysis_type"]
+
+    grouped = _grouped_top_n(question, dimensions)
+    if grouped is not None:
+        limit, group_dimension, item_dimension = grouped
+        retrieval_structured = _retrieval_extraction(structured)
+        # 分组TopN需要每个分组的全部候选；保留全局LIMIT会截断其他分组。
+        retrieval_structured["限制"] = None
+        # 分析任务的输出要求（前三名、商品名称升序等）不是取数契约，
+        # 带着它会让“产品线”维度绑定被误判为商品名称，这里清空。
+        retrieval_structured["输出要求"] = None
+        # “各A、B”会让绑定只认出 A；写成“各A中B”才能把第二个维度也绑上。
+        grouping_text = "各" + group_dimension + "中" + "、".join(dimensions[1:])
+        retrieval_question = _query_clause(time_text, grouping_text, metric_text)
+        analysis_structured = copy.deepcopy(structured)
+        analysis_structured["是否查询数据库"] = "否"
+        analysis_structured[_ANALYSIS_BINDING_KEY] = {
+            "analysis_type": "group_top_n",
+            "intent": PrimaryIntent.COMPARISON_ANALYSIS.value,
+            "tool": "分组TopN工具",
+            "sub_tools": {},
+            "merge": "concat",
+            "periods": [],
+            "source_question": str(question or "").strip(),
+            "display_window_start": None,
+            "group_top_n": {
+                "limit": limit,
+                "group_dimension": group_dimension,
+                "item_dimension": item_dimension,
+            },
+        }
+        analysis_question = (
+            f"按{group_dimension}分组，取每组{metric_text}最高的前{limit}个{item_dimension}"
+        )
+        grouped_tasks = [
+            AtomicTask(
+                task_id="task-1",
+                question=retrieval_question,
+                name=(task_name or f"获取各{group_dimension}的{item_dimension}{metric_text}")[:60],
+                extraction=retrieval_structured,
+                parameters=tuple(extraction_to_parameters(retrieval_structured)),
+                primary_intent=PrimaryIntent.METRIC_QUERY,
+                expected_output=f"各{group_dimension}全部{item_dimension}的{metric_text}",
+            ),
+            AtomicTask(
+                task_id="task-2",
+                question=f"根据上述任务的查询结果，{analysis_question}，{_NO_DATABASE_MARK}",
+                name=analysis_question[:60],
+                depends_on=["task-1"],
+                extraction=analysis_structured,
+                parameters=tuple(extraction_to_parameters(analysis_structured)),
+                primary_intent=PrimaryIntent.COMPARISON_ANALYSIS,
+                expected_output="分组TopN工具输出的每组前N名结果",
+            ),
+        ]
+        return TaskPlan(tasks=grouped_tasks, planner="DETERMINISTIC_RULE")
 
     retrieval_specs: list[dict[str, Any]] = []
     merge_mode = "concat"
@@ -284,7 +388,20 @@ def build_analysis_task_plan(
                 binding_periods.append({"task": task_id, "label": label, "role": role})
 
     if intent is PrimaryIntent.ROOT_CAUSE_ANALYSIS and dimensions:
+        # Keep both periods even if the extractor has retained only November.
+        periods = _comparison_periods(question)
+        if periods:
+            normalized = [f"{key[0]}年{key[1]}月" if key[0] > 1900 and key[1] else label
+                          for label, key in periods]
+            bounds = _absolute_window_bounds('和'.join(normalized))
+            time_text = f"{bounds[0]}至{bounds[1]}" if bounds else '和'.join(normalized)
+            structured = copy.deepcopy(structured)
+            structured['时间粒度'] = {**(structured.get('时间粒度') or {}), 'time_range': time_text,
+                                      'unit': '月' if any('月' in label for label in normalized) else '年'}
+        # Independent marginal dimensions must never be added together.
         drill_dimensions = dimensions[:3]
+        requirements = build_requirements(intent, question, structured, today=today)
+        requirements['unexecuted_dimensions'] = dimensions[3:]
         total_structured = _retrieval_extraction(structured, 维度=[])
         retrieval_specs.append({
             "task_id": "task-1",
@@ -310,26 +427,66 @@ def build_analysis_task_plan(
         retrieval_question = source_text or _query_clause(time_text, "", metric_text)
         display_start_label: str | None = None
         if intent is PrimaryIntent.TREND_ANALYSIS:
-            extended_window = _trend_retrieval_window(question, structured)
-            if extended_window is not None:
-                retrieval_structured["时间粒度"] = extended_window
-                extended_range = str(extended_window.get("time_range") or "")
-                bounds = _absolute_window_bounds(extended_range)
-                if bounds is not None:
-                    retrieval_question = _query_clause(
-                        f"{bounds[0]}至{bounds[1]}", "分月", metric_text,
+            windows = requirements.get("windows") or []
+            if windows:
+                window = windows[0]
+                granularity = copy.deepcopy(structured.get("时间粒度") or {})
+                granularity["time_range"] = f"{window['start']}至{window['end']}"
+                granularity["window_alignment"] = {
+                    "derived_from": time_text,
+                    "reasons": ["环比基期单独参与比较，目标范围保持不变"]
+                    if window["start"] != requirements["target_window"]["start"] else ["保留目标日期；同比基期单独查询"],
+                }
+                retrieval_structured["时间粒度"] = granularity
+                retrieval_question = _window_query(granularity, requirements["grain"], metric_text, dimensions, structured)
+                display_start_label = requirements["target_window"]["start"][:7]
+            if not retrieval_structured.get("排序"):
+                # 时序取数必须有序返回：引擎拒绝在未知顺序上计算趋势，
+                # 折线图也会按返回顺序连线。整年窗口被改写成“2025年”后
+                # 取数文本不再按时间分组，此时再带时间维度排序会变成
+                # 未选中维度的排序，ASL 会判定无效（实测“2025年各业务员…”）。
+                anchor = (retrieval_structured.get("时间粒度") or {}).get("anchor")
+                declared_time = next(
+                    (name for name in _dimension_names(structured)
+                     if _is_time_dimension(name)),
+                    None,
+                )
+                grouped_by_time = any(
+                    marker in retrieval_question
+                    for marker in ("分日", "分周", "分月", "分季度", "分半年", "分年")
+                )
+                if anchor or declared_time or grouped_by_time:
+                    time_dimension = (
+                        str(anchor).strip() if anchor else (declared_time or "业务日期")
                     )
-                display_start_label = _display_window_start_label(time_text)
+                    if not declared_time:
+                        retrieval_structured["维度"] = [
+                            *(retrieval_structured.get("维度") or []), time_dimension,
+                        ]
+                    retrieval_structured["排序"] = [{"field": time_dimension, "order": "asc"}]
         retrieval_specs.append({
             "task_id": "task-1",
             "question": retrieval_question,
             "name": (task_name or source_text or _query_clause(time_text, "", metric_text))[:60],
             "structured": retrieval_structured,
         })
+        if intent is PrimaryIntent.TREND_ANALYSIS:
+            for window in (requirements.get("windows") or [])[1:]:
+                baseline = _retrieval_extraction(structured)
+                granularity = copy.deepcopy(baseline.get("时间粒度") or {})
+                granularity["time_range"] = f"{window['start']}至{window['end']}"
+                baseline["时间粒度"] = granularity
+                baseline["排序"] = copy.deepcopy(retrieval_structured.get("排序") or [])
+                text = _window_query(granularity, requirements["grain"], metric_text, dimensions, structured)
+                retrieval_specs.append({"task_id": f"task-{len(retrieval_specs) + 1}",
+                    "question": text, "name": "同比基期：" + text[:54], "structured": baseline})
     else:
         display_start_label = None
 
     analysis_structured = copy.deepcopy(structured)
+    if intent != extraction.intent:
+        from app.analysis.intents import LABELS
+        analysis_structured["意图"] = LABELS[intent]
     analysis_structured["是否查询数据库"] = "否"
     analysis_structured[_ANALYSIS_BINDING_KEY] = {
         "analysis_type": analysis_type,
@@ -340,12 +497,22 @@ def build_analysis_task_plan(
         "periods": binding_periods,
         "source_question": str(question or "").strip(),
         "display_window_start": display_start_label,
+        "requirements": requirements,
+        "optional_dependencies": [spec["task_id"] for spec in retrieval_specs if spec["name"].startswith("同比基期：")],
     }
+    selection = requirements.get('tool_selection') or {}
+    if selection.get('mode') == 'SELECTED':
+        from app.analysis.tool_selection import TOOL_NAMES
+        names = [TOOL_NAMES.get(key, key) for key in selection['capabilities']]
+        analysis_structured[_ANALYSIS_BINDING_KEY]['tool'] = '、'.join(names)
+        analysis_structured[_ANALYSIS_BINDING_KEY]['sub_tools'] = {}
     retrieval_ids = [spec["task_id"] for spec in retrieval_specs]
     analysis_question = _analysis_question(
         intent, metric_text, time_text, dimensions, binding_periods,
         source_question=str(question or ""),
     )
+    if selection.get('mode') == 'SELECTED':
+        analysis_question = f"对{time_text}{metric_text}执行" + '、'.join(names)
     tasks = [
         AtomicTask(
             task_id=spec["task_id"],
@@ -381,8 +548,8 @@ def _analysis_question(
     source_question: str = "",
 ) -> str:
     if intent is PrimaryIntent.TREND_ANALYSIS:
-        yoy_clause = "、同比" if has_yoy_signal(source_question) else ""
-        return f"对{time_text}{metric_text}进行趋势分析（含环比{yoy_clause}），识别涨跌与拐点"
+        modes = trend_comparison_modes(source_question)
+        return f"对{time_text}{metric_text}进行趋势分析（含{'、'.join(modes)}），识别拐点和连续涨跌区间"
     if intent is PrimaryIntent.COMPARISON_ANALYSIS:
         if periods:
             pair = "与".join(item["label"] for item in periods)
@@ -402,3 +569,86 @@ def _analysis_question(
     if intent is PrimaryIntent.FORECAST_ANALYSIS:
         return f"基于{time_text}历史数据预测{metric_text}的未来走势"
     return f"分析{metric_text}"
+
+
+def _window_query(granularity, grain, metric_text, dimensions, structured):
+    grouping = {"day": "分日", "week": "分周", "month": "分月", "quarter": "分季度", "half_year": "分半年", "year": "分年"}.get(grain, "")
+    time_text = str(granularity.get("time_range") or "")
+    # 整年区间写成“2025年”，不叠加“分年”和日期区间：粘连长句会被规则解析
+    # 误当成商品筛选值（实测“2025-01-01至2025-12-31分年各业务员”）。
+    single_year = re.fullmatch(r"(\d{4})\s*-\s*01\s*-\s*01\s*[至~]\s*\1\s*-\s*12\s*-\s*31", time_text)
+    if single_year is not None:
+        time_text = single_year.group(1) + "年"
+        if grain == "year":
+            grouping = ""
+    if dimensions:
+        grouping += "各" + "、".join(dimensions)
+    text = _query_clause(time_text, grouping, metric_text)
+    if granularity.get("anchor"):
+        text += "；统计日期口径：" + str(granularity["anchor"])
+    conditions = []
+    for item in structured.get("过滤条件") or []:
+        if not isinstance(item, dict):
+            continue
+        field = str(item.get("field") or "")
+        if item.get("entity"):
+            field = str(item["entity"]) + "的" + field
+        conditions.append(f"{field}{item.get('op') or '='}{item.get('value')}")
+    if conditions:
+        text += "；筛选条件：" + "、".join(conditions)
+    return text
+
+
+def standardize_period_analysis_plan(question, decomposition):
+    """Canonicalize same-scope period queries without losing any input window.
+
+    Models sometimes preplan target + last year + an unbound local formula.
+    This is still one analysis goal. Only interchangeable retrieval shapes
+    whose entire windows are covered by the full playbook may be replaced.
+    Registered arithmetic and distinct business scopes retain their own DAG.
+    """
+    import json
+    tasks = decomposition.tasks
+    if re.search(r'平方|立方|开根|方差|标准差|中位数|分位数|协方差|相关系数|对数|取余|阶乘|绝对值', question):
+        return None
+    if any((task.structured or {}).get('分析绑定') or (task.structured or {}).get('计算绑定') for task in tasks):
+        return None
+    queries = [task for task in tasks if str((task.structured or {}).get('是否查询数据库') or '').startswith('是')
+               and '不再查询数据库' not in task.question]
+    if len(queries) < 2 or any(task.depends_on for task in queries):
+        return None
+    for task in tasks:
+        if task in queries:
+            continue
+        operation = ((task.structured or {}).get('结果操作') or {}).get('operation') or {}
+        steps = operation.get('operations') or operation.get('steps') or [operation]
+        if any(not isinstance(step, dict) or step.get('type') not in {None, 'derive', 'aggregate'}
+               or step.get('type') == 'derive' and step.get('operator') not in {'add', 'subtract', 'multiply', 'divide'} for step in steps):
+            return None
+    def shape(task):
+        value = task.structured or {}
+        return json.dumps({key: value.get(key) for key in ('业务域', '实体', '指标', '维度', '展示字段', '过滤条件', '限制')},
+                          ensure_ascii=False, sort_keys=True) + json.dumps({key: (value.get('时间粒度') or {}).get(key)
+                          for key in ('unit', 'anchor')}, ensure_ascii=False, sort_keys=True)
+    if len({shape(task) for task in queries}) != 1:
+        return None
+    windows = [_absolute_window_bounds(_time_text(task.structured or {})) for task in queries]
+    if any(window is None for window in windows):
+        return None
+    seed = queries[max(range(len(queries)), key=lambda index: windows[index][0])]
+    intent = analysis_intent(decomposition.intent or seed.intent, question)
+    if intent not in ANALYSIS_PLAYBOOKS:
+        return None
+    structured = copy.deepcopy(seed.structured)
+    source_bounds = _absolute_window_bounds(question) if intent == PrimaryIntent.TREND_ANALYSIS else None
+    if source_bounds:
+        structured['时间粒度']['time_range'] = f'{source_bounds[0]}至{source_bounds[1]}'
+    plan = build_analysis_task_plan(question, PlannerExtraction(intent=intent,
+        parameters=list(seed.parameters), structured=structured))
+    if plan is None:
+        return None
+    planned_windows = [_absolute_window_bounds(_time_text(task.extraction or {})) for task in plan.tasks[:-1]]
+    if any(not any(target and target[0] <= source[0] and target[1] >= source[1]
+                   for target in planned_windows) for source in windows):
+        return None
+    return plan

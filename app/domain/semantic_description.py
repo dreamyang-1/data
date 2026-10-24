@@ -8,12 +8,39 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+
+def without_embedded_semantic_spec(agent_prompt: str) -> str:
+    """Keep role/style and general rules, excluding pasted model snapshots.
+
+    Semantic documents come from the current model's platform registration.
+    A configured prompt may predate a model switch; its explicit semantic
+    section must not compete with that document, even when storage is down.
+    """
+    from app.services.general_rules import rule_section, without_rule_section
+
+    rules = rule_section(agent_prompt)
+    text = without_rule_section(agent_prompt)
+    headings = list(re.finditer(r"(?m)^[ \t]*(#{1,6})[ \t]+([^\r\n]+)", text))
+    ranges = []
+    for index, heading in enumerate(headings):
+        if heading.group(2).strip().strip("# ") != "业务语义规范":
+            continue
+        if ranges and heading.start() < ranges[-1][1]:
+            continue
+        end = next((other.start() for other in headings[index + 1:]
+                    if len(other.group(1)) <= len(heading.group(1))), len(text))
+        ranges.append((heading.start(), end))
+    for start, end in reversed(ranges):
+        text = text[:start] + text[end:]
+    return text.rstrip() + rules if ranges else agent_prompt
 
 
 def _description_url(settings: Any, model_id: int) -> str:

@@ -18,6 +18,12 @@ from uuid import uuid4
 from redis.asyncio import Redis
 
 from app.config import Settings
+from app.gate import GateDecision, SchemaCoverage, check_question_coverage, run_gate
+from app.observability.langfuse_client import (
+    ensure_structural_span,
+    structural_child,
+    text_metadata,
+)
 from app.domain.models import (
     AgentPromptConfig,
     AgentResponse,
@@ -528,6 +534,8 @@ class V2ContextV1ExecutionBridge:
         agent_prompt_store: Any | None = None,
         compound_judge: Callable[..., Awaitable[Any]] | None = None,
         sessions_store: Any | None = None,
+        jev_relation_enabled: bool = False,
+        jev_settings: Any | None = None,
     ):
         self.store = store
         # 会话级 store（与 v2 桥接自身的 live state store 不是一回事），
@@ -550,6 +558,8 @@ class V2ContextV1ExecutionBridge:
         self.surface_asl_execution_enabled = surface_asl_execution_enabled
         self.agent_prompt_store = agent_prompt_store
         self.compound_judge = compound_judge
+        self.jev_relation_enabled = jev_relation_enabled
+        self.jev_settings = jev_settings
         self._locks: dict[str, asyncio.Lock] = {}
 
     async def _open_external_lifecycle(
@@ -705,6 +715,160 @@ class V2ContextV1ExecutionBridge:
                 gates={"context_resolved": False, "safe_termination": True},
                 warnings=[answer],
             ),
+        )
+
+    async def _gate_short_circuit(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        snapshot,
+        fingerprint: str,
+        decision: GateDecision,
+        turn_started: float,
+    ) -> AgentResponse:
+        """门控命中后的短路回复：emit 判定思考句 + 固定话术，流程与危险词拦截一致。
+
+        闲聊/非业务沿用原链路聊天话术，危险沿用安全拦截话术，待定反问用户
+        补充说明。只有短路场景才 emit，放行场景门控对用户不可见。
+        """
+        question = chat.question.strip()
+        action = decision.action
+        chat_answer = (
+            "你好！我是您的专属数据智能体，随时准备为您进行业务数据的查询与分析。"
+        )
+        if action == "danger":
+            thinking = (
+                "判定思考：用户原始问题为「" + question + "」。"
+                "经意图识别，该问题包含数据破坏性动作。根据系统安全与权限管控策略，"
+                "当前对话环境仅支持数据的查询、统计与分析，严禁执行任何增删改（CUD）操作。"
+                "因此，系统需触发安全拦截机制。"
+            )
+            answer = (
+                "您当前的问题涉及数据的危险操作。为了保障数据安全，"
+                "当前系统仅支持数据的查询、统计与分析，"
+                "无法执行任何修改或删除指令。"
+            )
+            intent = PrimaryIntent.OUT_OF_SCOPE
+        elif action == "chat":
+            thinking = (
+                "判定思考：用户输入「" + question + "」属于日常问候语，"
+                "未包含具体的业务指标、实体或分析意图。系统应直接响应问候。"
+            )
+            answer = chat_answer
+            intent = PrimaryIntent.CHAT
+        elif action == "clarify":
+            thinking = (
+                "判定思考：用户输入「" + question + "」信息不足，"
+                "无法确定具体的业务指标、实体或分析意图。系统需向用户澄清。"
+            )
+            detail = f"（{decision.reason}）" if decision.reason else ""
+            answer = (
+                "您的问题描述不够完整，我暂时无法确定您的具体需求"
+                f"{detail}。请补充说明后重新提问。"
+            )
+            intent = PrimaryIntent.OUT_OF_SCOPE
+        else:  # off_topic
+            thinking = (
+                "判定思考：用户输入「" + question + "」与业务数据查询与分析场景无关，"
+                "未包含具体的业务指标、实体或分析意图。系统直接回复。"
+            )
+            answer = chat_answer
+            intent = PrimaryIntent.OUT_OF_SCOPE
+        logger.info(
+            "gate short-circuit: action=%s class=%s judge=%s confidence=%.2f "
+            "conversation_id=%s",
+            action,
+            decision.gate_class,
+            decision.judge,
+            decision.confidence,
+            chat.conversation_id,
+        )
+        await emit_progress(
+            "INTENT_RECOGNITION",
+            "RUNNING",
+            thinking,
+            progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+            off_topic=True,
+        )
+        response = self._response(
+            chat,
+            status="COMPLETED",
+            answer=answer,
+        ).model_copy(update={
+            "intent": intent,
+            "intent_source": "GATE_DECIDER",
+        })
+        return await self._finalize_turn(
+            chat,
+            identity,
+            await self._save_without_v1(
+                snapshot,
+                chat=chat,
+                identity=identity,
+                fingerprint=fingerprint,
+                resolved=ResolvedContextTurn(None, None, None),
+                response=response,
+                provenance=None,
+            ),
+            turn_started,
+        )
+
+    async def _coverage_short_circuit(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        snapshot,
+        fingerprint: str,
+        resolved,
+        provenance,
+        coverage: SchemaCoverage,
+        turn_started: float,
+    ) -> AgentResponse:
+        """覆盖度未命中的中断回复：报出具体未覆盖字段，不进任务拆分与规划。"""
+        fields = "、".join(coverage.unsupported_fields)
+        target = f"「{fields}」" if fields else ""
+        thinking = (
+            "判定思考：用户问题涉及字段" + target + "未在语义规范中定义，"
+            "无法按规范口径查询。系统中断本次查询并提示。"
+        )
+        answer = (
+            f"您的问题涉及的字段{target}未在语义规范中定义，"
+            "无法按规范口径查询。如需支持该字段，请联系管理员补充语义定义。"
+        )
+        logger.info(
+            "coverage short-circuit: fields=%s reason=%s conversation_id=%s",
+            coverage.unsupported_fields,
+            coverage.reason,
+            chat.conversation_id,
+        )
+        await emit_progress(
+            "INTENT_RECOGNITION",
+            "RUNNING",
+            thinking,
+            progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+            off_topic=True,
+        )
+        response = self._response(
+            chat,
+            status="COMPLETED",
+            answer=answer,
+        ).model_copy(update={
+            "intent": PrimaryIntent.OUT_OF_SCOPE,
+            "intent_source": "SCHEMA_COVERAGE_GUARD",
+        })
+        return await self._finalize_turn(
+            chat,
+            identity,
+            await self._save_without_v1(
+                snapshot,
+                chat=chat,
+                identity=identity,
+                fingerprint=fingerprint,
+                resolved=resolved,
+                response=response,
+                provenance=provenance,
+            ),
+            turn_started,
         )
 
     async def readiness(self) -> dict[str, bool]:
@@ -870,6 +1034,7 @@ class V2ContextV1ExecutionBridge:
         engine = RawTurnPlanner(
             self.model, self.catalog if catalog is None else catalog, clock=self.clock,
             defer_new_task_binding=self.surface_asl_execution_enabled,
+            jev_relation_enabled=self.jev_relation_enabled, jev_settings=self.jev_settings,
         )
         try:
             result = await engine.run(
@@ -1257,7 +1422,7 @@ class V2ContextV1ExecutionBridge:
                         await emit_progress(
                             "INTENT_RECOGNITION",
                             "RUNNING",
-                            "对话状态识别：澄清问题。",
+                            "对话状态识别：问题追问。",
                             progress_phase="V1_PENDING_TRIAGE",
                         )
                         # 分诊模型给的判定思考句：说明这轮回复接的是哪个挂起问题
@@ -1348,6 +1513,69 @@ class V2ContextV1ExecutionBridge:
                     chat, identity, response, turn_started
                 )
 
+            # 前置门控：进理解节点前的六分类判定。闲聊/危险/非业务/待定
+            # 短路回复，业务类放行且不 emit 进度消息。判定失败返回 None
+            # 表示门控不参与，按原链路继续。位置放在挂起分诊之后：挂起轮
+            # 的回答由挂起路由处理，不经过门控；上传文件轮已在上方直接
+            # 交 V1，也不经过这里。开关关闭时不建 Langfuse 步骤，树结构
+            # 与无门控版本一致。
+            # 问题理解与补全节点在这里提前登记：前置门控、追问问题补全、
+            # 意图判断都挂在它下面；节点统一在请求结束时关闭
+            ensure_structural_span(
+                "comprehension",
+                name="问题理解与补全",
+                input={"question": text_metadata(chat.question)},
+            )
+            gate_decision = None
+            if self.jev_settings is not None and getattr(
+                self.jev_settings, "gate_enabled", False
+            ):
+                # 门控上下文与 relation 判定同源，取会话状态里的问题链；
+                # chat.history 平台不传，依赖它会让追问轮上下文为空
+                gate_question_log = None
+                if self.sessions_store is not None:
+                    try:
+                        gate_question_log = await self.sessions_store.get_question_log(
+                            identity.tenant_id, identity.user_id,
+                            chat.application_id, chat.conversation_id,
+                        )
+                    except Exception as exc:
+                        logger.warning("gate failed to load question log: %s", exc)
+                with structural_child(
+                    "comprehension",
+                    as_type="span",
+                    name="前置门控",
+                    input={"question": text_metadata(chat.question)},
+                ) as gate_span:
+                    gate_decision = await run_gate(
+                        self.jev_settings,
+                        question=chat.question,
+                        question_log=gate_question_log,
+                        semantic_model_id=chat.semantic_model_id,
+                    )
+                    if gate_decision is not None:
+                        # 步骤层只归拢展示，jev/qwen 判定各自以子节点呈现
+                        try:
+                            gate_span.update(output={
+                                "action": gate_decision.action,
+                                "class": gate_decision.gate_class,
+                                "judge": gate_decision.judge,
+                                "confidence": gate_decision.confidence,
+                            })
+                        except Exception:
+                            logger.debug("Langfuse span update failed", exc_info=True)
+            if gate_decision is not None and gate_decision.action != "pass":
+                # 短路用不到目录，停掉预取任务
+                catalog_task.cancel()
+                return await self._gate_short_circuit(
+                    chat,
+                    identity,
+                    snapshot,
+                    fingerprint,
+                    gate_decision,
+                    turn_started,
+                )
+
             context_chat = chat.model_copy(deep=True, update={"history": []})
             if self.sessions_store is not None:
                 try:
@@ -1361,6 +1589,18 @@ class V2ContextV1ExecutionBridge:
                         context_chat._prior_task_table = prior_table
                 except Exception as exc:
                     logger.warning("failed to load prior task table: %s", exc)
+                try:
+                    # 会话问题链（多轮用户问题+系统反问+回答摘要）随识别
+                    # 上下文给模型：澄清回复轮补全问题时结合前面关联几轮
+                    # 的问题与本轮补全的参数，不丢历史有效条件
+                    question_log = await self.sessions_store.get_question_log(
+                        identity.tenant_id, identity.user_id,
+                        chat.application_id, chat.conversation_id,
+                    )
+                    if question_log:
+                        context_chat._question_log = question_log
+                except Exception as exc:
+                    logger.warning("failed to load question log: %s", exc)
             await emit_progress(
                 "INTENT_RECOGNITION",
                 "RUNNING",
@@ -1646,19 +1886,38 @@ class V2ContextV1ExecutionBridge:
                         progress_phase="V2_COMPOUND_JUDGE_START",
                     )
                     judgment_section = ""
-                    try:
-                        judgment = await self.compound_judge(
-                            resolved.completed_question,
-                            semantic_context=judge_semantic_context,
-                            semantic_model_id=chat.semantic_model_id,
-                        )
-                    except Exception:
-                        logger.warning(
-                            "compound judgment failed in bridge", exc_info=True
-                        )
-                    else:
-                        chat._compound_judgment = judgment
-                        judgment_section = judgment_display_section(judgment)
+                    definition_direct_turn = False
+                    # 意图判断节点收拢三类判定：复合问题判断、业务域判断
+                    # （拆分判断器内部按子问题并行判定）、问题意图判断（执行层
+                    # 分类时挂载）；节点统一在请求结束时关闭
+                    ensure_structural_span(
+                        "intent_judge",
+                        name="意图判断",
+                        parent_key="comprehension",
+                    )
+                    with structural_child("intent_judge", as_type="span", name="复合问题判断"):
+                        try:
+                            judgment = await self.compound_judge(
+                                resolved.completed_question,
+                                semantic_context=judge_semantic_context,
+                                semantic_model_id=chat.semantic_model_id,
+                            )
+                        except Exception:
+                            logger.warning(
+                                "compound judgment failed in bridge", exc_info=True
+                            )
+                        else:
+                            chat._compound_judgment = judgment
+                            judgment_section = judgment_display_section(judgment)
+                            # 单一问题的解释口径：编排器将跳过任务拆分与规划
+                            # 直接依据语义文件作答（判定逻辑与编排器门控一致）。
+                            # 给意图收尾事件打标，前端不再点亮规划节点。
+                            if (
+                                not getattr(judgment, "is_compound", False)
+                                and getattr(judgment, "intent", None)
+                                in ("解释口径", "METRIC_DEFINITION")
+                            ):
+                                definition_direct_turn = True
                     await emit_progress(
                         "INTENT_RECOGNITION",
                         "RUNNING",
@@ -1670,6 +1929,7 @@ class V2ContextV1ExecutionBridge:
                         progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
                         display_model="IntentRecognitionContextProgressV2",
                         display_version="V2",
+                        definition_direct=definition_direct_turn,
                     )
                 else:
                     await emit_progress(
@@ -1680,6 +1940,35 @@ class V2ContextV1ExecutionBridge:
                         display_model="IntentRecognitionContextProgressV2",
                         display_version="V2",
                     )
+                # 字段覆盖度检查：所有进规划的业务轮统一执行（不只拆分
+                # 判断分支），命中未覆盖直接中断返回，不进任务拆分与规划；
+                # 检查失败按覆盖处理，不误中断。与门控共用开关。追问轮的
+                # 字段常只出现在原始问题里，原始与补全问题一起送检。
+                if (
+                    step is not None
+                    and self.jev_settings is not None
+                    and getattr(self.jev_settings, "gate_enabled", False)
+                ):
+                    coverage = await check_question_coverage(
+                        self.jev_settings,
+                        question=chat.question,
+                        completed_question=resolved.completed_question,
+                        semantic_model_id=chat.semantic_model_id,
+                    )
+                    if (
+                        coverage is not None
+                        and coverage.schema_coverage == "not_covered"
+                    ):
+                        return await self._coverage_short_circuit(
+                            chat,
+                            identity,
+                            snapshot,
+                            fingerprint,
+                            resolved,
+                            provenance,
+                            coverage,
+                            turn_started,
+                        )
             running = await self.store.reserve(
                 snapshot,
                 chat=chat,
@@ -1951,6 +2240,10 @@ def build_context_v1_execution_handler(
         surface_asl_execution_enabled=getattr(
             settings, "surface_asl_execution_enabled", False
         ),
+        jev_relation_enabled=(
+            settings.jev_enabled and settings.jev_relation_enabled
+        ),
+        jev_settings=settings,
         agent_prompt_store=agent_prompt_store,
         sessions_store=sessions_store,
         # 拆分判断提前到补全问题展示前执行，仅在编排器会走拆分器时注入；

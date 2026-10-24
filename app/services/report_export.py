@@ -55,10 +55,7 @@ class DatasetReportExporter:
 
         # Write-only mode keeps XLSX export memory bounded for medium datasets.
         workbook = Workbook(write_only=True)
-        summary = workbook.create_sheet("说明")
-        summary.append(["报表标题", self._xlsx_text(title)])
-        summary.append(["生成时间", datetime.now(timezone.utc).isoformat()])
-        summary.append(["数据行数", len(rows)])
+        # 只导出查询结果数据页；“说明”页与回答正文重复，不再生成。
         sheet = workbook.create_sheet("数据")
         sheet.append([self._xlsx_text(column) for column in columns])
         for row in rows:
@@ -128,16 +125,7 @@ class DatasetReportExporter:
         from openpyxl import Workbook
 
         workbook = Workbook(write_only=True)
-        summary = workbook.create_sheet("报告说明")
-        summary.append(["报表标题", self._xlsx_text(title)])
-        summary.append(["生成时间", datetime.now(timezone.utc).isoformat()])
-        summary.append(["章节数", len(sections)])
-        summary.append(["章节", "数据集ID", "数据行数", "数据截至时间", "快照ID"])
         for index, (section_title, _columns, rows, reference) in enumerate(sections, 1):
-            summary.append([
-                self._xlsx_text(section_title), reference.dataset_id, len(rows),
-                reference.data_as_of, reference.snapshot_id,
-            ])
             sheet = workbook.create_sheet(f"章节{index}")
             sheet.append(["章节", self._xlsx_text(section_title)])
             sheet.append(["数据集ID", reference.dataset_id])

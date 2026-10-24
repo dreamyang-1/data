@@ -26,8 +26,10 @@ from app.domain.models import (
 from app.stores import MessageIdReuseConflictError
 from app.observability.langfuse_client import (
     StageSpanTracker,
+    end_structural_spans,
     hash_identifier,
     observe_span,
+    register_structural_span,
     summarize_value,
     text_metadata,
     trace_attributes,
@@ -66,14 +68,11 @@ async def _forward_traced_progress(
     downstream,
     event: dict[str, Any],
 ) -> None:
-    """Deliver visible progress before recording optional telemetry.
+    """Queue telemetry without waiting for SDK/export work on the SSE loop."""
 
-    Langfuse's synchronous span lifecycle may perform network or exporter work.
-    Running it during an SSE request delayed both the queued milestone and all
-    heartbeats. Streaming already has a request/root span, so its public stage
-    events go straight to the transport and never wait for optional per-stage
-    telemetry. Non-streaming calls retain their stage spans off the ASGI loop.
-    """
+    enqueue = getattr(stage_tracker, "enqueue", None)
+    if callable(enqueue):
+        enqueue(event)
 
     if downstream is not None:
         result = downstream(event)
@@ -84,7 +83,6 @@ async def _forward_traced_progress(
         # continues into its next synchronous catalog/validation section.
         await asyncio.sleep(0)
         return
-    await asyncio.to_thread(stage_tracker.handle, event)
 
 
 class SpreadsheetImportRequest(StrictModel):
@@ -256,6 +254,8 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                     "regenerate": bool(chat.regenerate),
                 },
             ) as root_span:
+                register_structural_span("request", root_span)
+                trace_response = None
                 try:
                     with timing_scope(performance_tracker):
                         with progress_scope(trace_progress):
@@ -278,6 +278,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                         if isolated_handler is not None
                         else result["response"]
                     )
+                    trace_response = response
                     timing_terminal_status = response.status
                     if performance_tracker is not None:
                         performance_trace = performance_tracker.finish(
@@ -321,6 +322,16 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                         status_message=type(exc).__name__,
                     )
                     raise
+                finally:
+                    def finish_trace() -> None:
+                        try:
+                            stage_tracker.finish(trace_response, status=timing_terminal_status)
+                        except Exception:
+                            logger.debug("Langfuse request finalization failed", exc_info=True)
+                        finally:
+                            end_structural_spans()
+
+                    await asyncio.to_thread(finish_trace)
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail="analysis request deadline exceeded") from exc
     except MessageIdReuseConflictError as exc:
@@ -985,6 +996,10 @@ async def chat_stream(
             if bool(event.get("off_topic")):
                 # 语义识别判成业务无关的问题，规划节点对这轮不再点亮
                 off_topic_flag = True
+            if stage == 'METADATA_RETRIEVAL' and bool(event.get('is_child_task')):
+                # Cross the ordering barriers without displaying a data-query
+                # node for a definition task. Mixed siblings keep their stages.
+                return composite_child_orderer.push(dict(event, stage='DATA_RETRIEVAL', metadata_only=True))
             if bool(event.get("is_child_task")):
                 try:
                     composite_mode = composite_mode or int(
@@ -1027,6 +1042,11 @@ async def chat_stream(
                 latest_progress_stage = "TASK_PLANNING"
                 if off_topic_flag:
                     # 业务无关的问题由聊天模型直接回答，不亮任务规划节点
+                    return [dict(event, status="COMPLETED")]
+                if bool(event.get("definition_direct")):
+                    # 单一问题的解释口径：意图识别后跳过任务拆分与规划，
+                    # 直接依据语义文件作答，规划节点对这轮不再点亮
+                    latest_progress_stage = "INTENT_RECOGNITION"
                     return [dict(event, status="COMPLETED")]
                 return [
                     dict(event, status="COMPLETED"),
@@ -1215,6 +1235,10 @@ async def chat_stream(
                         and event.get("stage") == "INTENT_RECOGNITION"
                         and event.get("progress_phase") != "V2_RESOLVED_INTENT_CONTEXT_READY"
                     ):
+                        if not str(event.get("message") or "").strip():
+                            # 空的意图完结事件不转挂规划节点：解释口径等
+                            # 直答轮不再出现空的“任务拆分与规划”标题
+                            continue
                         if _thinking_section(latest_progress_stage) not in {"intent", "planning"}:
                             continue
                         # Keep useful parameter/child-question summaries, under
@@ -1299,7 +1323,11 @@ async def chat_stream(
                         yield rendered_event
             deferred_planning.clear()
             response_scenario = (
-                "ANALYTIC"
+                "METADATA"
+                if response.intent == PrimaryIntent.METRIC_DEFINITION and (
+                    response.execution_shape != 'COMPOSITE' or all(
+                        task.intent == PrimaryIntent.METRIC_DEFINITION for task in response.task_results))
+                else "ANALYTIC"
                 if response.execution_shape == "COMPOSITE"
                 else "CHAT"
                 if response.intent == PrimaryIntent.CHAT
@@ -1310,7 +1338,7 @@ async def chat_stream(
                 else presentation_scenario
             )
             presentation_scenario = response_scenario
-            if response_scenario in {"CHAT", "CLARIFICATION"} or response.execution_shape == "COMPOSITE":
+            if response_scenario in {"CHAT", "CLARIFICATION", "METADATA"} or response.execution_shape == "COMPOSITE":
                 async for rendered_event in stream_thinking({
                     "stage": "FINAL_OUTPUT",
                     "status": "COMPLETED",
@@ -1682,6 +1710,48 @@ class _CompositeChildProgressOrderer:
         self.parsing_stopped: set[str] = set()
         self.parsing_barrier_open = False
         self.deferred_execution: list[dict[str, Any]] = []
+        # 并发子任务的解析校验块按任务序号发布：各任务ASL完成顺序不稳定，
+        # 到达即发布会让“任务2”先于“任务1”出现（2026-10-22 用户反馈）。
+        self.parsing_pending: dict[int, list[dict[str, Any]]] = {}
+        self.parsing_finished_indices: set[int] = set()
+        self.next_parsing_index = 0
+
+    @staticmethod
+    def _parsing_task_index(event: dict[str, Any]) -> int:
+        try:
+            return max(0, int(event.get("task_index") or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _is_parsing_terminal(self, event: dict[str, Any]) -> bool:
+        return str(event.get("status") or "").upper() in (
+            self._TERMINAL_STATUSES | {"NEEDS_INPUT"}
+        )
+
+    def _advance_parsing(self) -> list[dict[str, Any]]:
+        """Release buffered parsing blocks in task order as earlier ones end."""
+        released: list[dict[str, Any]] = []
+        while True:
+            index = self.next_parsing_index
+            buffered = self.parsing_pending.pop(index, None)
+            if buffered:
+                released.extend(self._label(buffered))
+                if not any(self._is_parsing_terminal(item) for item in buffered):
+                    # 该任务的解析流还没结束，后续事件到齐前保持当前序号
+                    break
+            elif index not in self.parsing_finished_indices:
+                break
+            self.next_parsing_index = index + 1
+        return released
+
+    def _mark_parsing_crossed(self, index: int) -> list[dict[str, Any]]:
+        """Execution milestones imply the task's parsing (if any) has finished."""
+        if index < self.next_parsing_index:
+            return []
+        self.parsing_finished_indices.add(index)
+        if index == self.next_parsing_index:
+            return self._advance_parsing()
+        return []
 
     @staticmethod
     def _task_key(event: dict[str, Any]) -> str:
@@ -1709,7 +1779,7 @@ class _CompositeChildProgressOrderer:
 
     def _label(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return _ordered_composite_child_progress_events(
-            events, labelled_tasks=self.labelled_tasks
+            [event for event in events if not event.get('metadata_only')], labelled_tasks=self.labelled_tasks
         )
 
     def _open_validation_if_ready(self) -> list[dict[str, Any]]:
@@ -1743,20 +1813,36 @@ class _CompositeChildProgressOrderer:
         task_key = self._task_key(event)
         visible: list[dict[str, Any]] = []
         if section == "parsing":
-            visible.extend(self._label([event]))
-            if str(event.get("status") or "").upper() in {"NEEDS_INPUT", "FAILED"}:
+            status = str(event.get("status") or "").upper()
+            task_index = self._parsing_task_index(event)
+            if task_index < self.next_parsing_index:
+                # 已按序发布过的任务的补充里程碑，按到达顺序直通
+                visible.extend(self._label([event]))
+            elif task_index == self.next_parsing_index:
+                visible.extend(self._label([event]))
+                if self._is_parsing_terminal(event):
+                    self.parsing_finished_indices.add(task_index)
+                    visible.extend(self._advance_parsing())
+            else:
+                self.parsing_pending.setdefault(task_index, []).append(event)
+                if self._is_parsing_terminal(event):
+                    self.parsing_finished_indices.add(task_index)
+            if status in {"NEEDS_INPUT", "FAILED"}:
                 self.parsing_stopped.add(task_key)
-            if str(event.get("status") or "").upper() in self._TERMINAL_STATUSES | {"NEEDS_INPUT"}:
+            if status in self._TERMINAL_STATUSES | {"NEEDS_INPUT"}:
                 self.parsing_completed.add(task_key)
         else:
             if section == "execution":
                 # Tasks with no ASL (files, skipped tasks) also cross the
                 # parsing barrier; don't invent a successful ASL for them.
                 self.parsing_completed.add(task_key)
+                visible.extend(self._mark_parsing_crossed(
+                    self._parsing_task_index(event)
+                ))
             if not self.parsing_barrier_open:
                 self.deferred_execution.append(event)
             else:
-                return self._push_after_parsing(event)
+                return [*visible, *self._push_after_parsing(event)]
         if not self.parsing_barrier_open and self._all_tasks_completed(self.parsing_completed):
             self.parsing_barrier_open = True
             for pending in self.deferred_execution:
@@ -1826,6 +1912,9 @@ class _CompositeChildProgressOrderer:
 
     def flush(self) -> list[dict[str, Any]]:
         released = []
+        for index in sorted(self.parsing_pending):
+            released.extend(self._label(self.parsing_pending.pop(index)))
+        self.parsing_pending.clear()
         for event in self.deferred_execution:
             released.extend(self._push_after_parsing(event))
         self.deferred_execution.clear()
@@ -2023,6 +2112,7 @@ def _stream_error_payload(exc: HTTPException) -> dict[str, Any]:
 # 路径、参数与 Resp 包装和 youoagent-api 的 Java 版保持一致：
 #   GET /semanticModelEntityType/recommendTables
 #   GET /semanticModelEntityType/recommendFields
+#   GET /semanticModelEntityType/relationSuggestions
 #   GET /semanticModelRelationConfig/detectRelations
 #   GET /semanticModelRelationConfig/recommendRelations
 
@@ -2067,6 +2157,21 @@ async def recommend_fields_endpoint(
 ) -> dict[str, Any]:
     return await _recommend_call(
         semantic_recommend.get_service().recommend_fields, table_id
+    )
+
+
+@recommend_router.get(
+    "/semanticModelEntityType/relationSuggestions",
+    summary="实体保存时的关联建议（兼容接口，已停用中间表推荐）",
+)
+async def relation_suggestions_endpoint(
+    semantic_model_id: int = Query(alias="semanticModelId", gt=0),
+    entity_type_id: str = Query(alias="entityTypeId", min_length=1, max_length=64),
+    business_domain_id: int | None = Query(alias="businessDomainId", default=None, gt=0),
+) -> dict[str, Any]:
+    return await _recommend_call(
+        semantic_recommend.get_service().check_relation_suggestions,
+        semantic_model_id, entity_type_id, business_domain_id,
     )
 
 

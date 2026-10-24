@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field, StrictInt, field_validator, model_validat
 from asl_contract import ASLValidationError, IntentASLContract
 from surface_evidence import StructuredReference, SurfaceEvidence
 from scope_contract import CONTRACT_VERSION, normalize_domains, require_candidate_scope, semantic_record_types
+from metric_definition_lookup import MetricDefinitionLookupRequest, lookup_metric_definitions
 
 from capacity_control import (
     AslCapacityController,
@@ -46,7 +47,8 @@ from logger import logger
 from binding_errors import BindingServiceError
 from mysql_tool import consistent_catalog_read, mysql_advisory_lock, normalize_catalog_text
 from physical_catalog_sync import prepare_physical_catalog, publish_physical_catalog
-from publication_vectors import PublicationVectors, publication_stage
+from publication_errors import publication_failure_message
+from publication_vectors import PublicationVectors, consume_failed_stage, publication_stage
 from vector_store import (
     rebuild_index_by_scope,
     replace_daily_table_index,
@@ -77,10 +79,20 @@ app = FastAPI(title="Oagnet API", version="1.6.0")
 async def http_exception_with_success_flag(
     _request: Request, exc: HTTPException
 ) -> JSONResponse:
-    """Keep FastAPI's existing detail contract and add a stable failure flag."""
+    """Keep FastAPI's existing detail contract and add a stable failure flag.
+
+    ``detail`` 为对象时，把其中的 code/message 提升到顶层，调用方（如 Java
+    发布流程）无需解析嵌套结构即可展示详细失败原因。
+    """
+    content: dict = {"success": False, "detail": exc.detail}
+    if isinstance(exc.detail, dict):
+        for key in ("code", "message"):
+            value = exc.detail.get(key)
+            if value:
+                content[key] = value
     return JSONResponse(
         status_code=exc.status_code,
-        content=jsonable_encoder({"success": False, "detail": exc.detail}),
+        content=jsonable_encoder(content),
         headers=exc.headers,
     )
 
@@ -151,9 +163,16 @@ class RebuildResponse(BaseModel):
     by_type: dict[str, int] = Field(default_factory=dict)
 
 
+def _failure_detail(exc: BaseException, stage: str | None = None) -> str:
+    """对外返回中文原因，原始阶段、异常类型和信息保留在服务日志中。"""
+    logger.warning("publication failure stage=%s type=%s detail=%s", stage, type(exc).__name__, exc)
+    return publication_failure_message(exc, stage)
+
+
 @app.post("/vector/rebuild", response_model=RebuildResponse)
 def vector_rebuild(req: RebuildRequest):
     """按作用域重建向量索引（只清并写入指定 sm/bd 的数据，不影响其他作用域）"""
+    consume_failed_stage()  # 清理线程复用时上一请求的残留阶段
     try:
         # Model-wide and per-domain rebuilds touch shared dimension records.
         # Use one model-level lock so these two forms cannot race each other.
@@ -191,18 +210,27 @@ def vector_rebuild(req: RebuildRequest):
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
-            detail={"code": "VECTOR_SOURCE_INVALID", "message": str(exc)},
+            detail={
+                "code": "VECTOR_SOURCE_INVALID",
+                "message": "向量重建失败：" + _failure_detail(exc, consume_failed_stage()),
+            },
         ) from exc
     except RuntimeError as exc:
         raise HTTPException(
             status_code=409,
-            detail={"code": "VECTOR_REBUILD_BUSY", "message": str(exc)},
+            detail={
+                "code": "VECTOR_REBUILD_BUSY",
+                "message": "向量重建失败：" + _failure_detail(exc, consume_failed_stage()),
+            },
         ) from exc
     except Exception as exc:
         logger.exception("vector rebuild failed")
         raise HTTPException(
             status_code=500,
-            detail={"code": "VECTOR_REBUILD_FAILED", "message": "vector rebuild failed"},
+            detail={
+                "code": "VECTOR_REBUILD_FAILED",
+                "message": "向量重建失败：" + _failure_detail(exc, consume_failed_stage()),
+            },
         ) from exc
 
 
@@ -447,6 +475,15 @@ _SEMANTIC_DISPLAY_SPECS = {
 }
 
 
+@app.post('/vector/metric-definitions/lookup')
+def metric_definition_lookup(req: MetricDefinitionLookupRequest):
+    try:
+        return lookup_metric_definitions(req, _store, embed_query)
+    except ValueError as exc:
+        raise HTTPException(502, detail={'code': 'SEMANTIC_SCOPE_MISMATCH',
+                                       'message': 'Metric definition scope could not be verified'}) from exc
+
+
 @app.post(
     "/vector/semantic-elements/resolve",
     response_model=SemanticDisplayResolveResponse,
@@ -629,6 +666,7 @@ def _entity_aliases(value) -> list[str]:
 )
 def entity_attribute_vector_rebuild(req: EntityAttributeVectorRequest):
     """覆盖指定语义模型/业务域的实体属性值向量，并供问题改写检索。"""
+    consume_failed_stage()
     try:
         lock_name = f"oagnet:entity-att:{req.semantic_model_id}:{req.business_domain_id}"
         with mysql_advisory_lock(lock_name[:64]):
@@ -669,18 +707,27 @@ def entity_attribute_vector_rebuild(req: EntityAttributeVectorRequest):
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
-            detail={"code": "ENTITY_ATTRIBUTE_SOURCE_INVALID", "message": str(exc)},
+            detail={
+                "code": "ENTITY_ATTRIBUTE_SOURCE_INVALID",
+                "message": "实体属性值向量重建失败：" + _failure_detail(exc),
+            },
         ) from exc
     except RuntimeError as exc:
         raise HTTPException(
             status_code=409,
-            detail={"code": "ENTITY_ATTRIBUTE_REBUILD_BUSY", "message": str(exc)},
+            detail={
+                "code": "ENTITY_ATTRIBUTE_REBUILD_BUSY",
+                "message": "实体属性值向量重建失败：" + _failure_detail(exc),
+            },
         ) from exc
     except Exception as exc:
         logger.exception("实体属性值向量重建失败")
         raise HTTPException(
             status_code=500,
-            detail={"code": "ENTITY_ATTRIBUTE_REBUILD_FAILED", "message": "实体属性值向量重建失败"},
+            detail={
+                "code": "ENTITY_ATTRIBUTE_REBUILD_FAILED",
+                "message": "实体属性值向量重建失败：" + _failure_detail(exc),
+            },
         ) from exc
 
 
@@ -778,6 +825,7 @@ def entity_attribute_vector_search(req: EntityAttributeSearchRequest):
 )
 def entity_attribute_vector_sync(req: EntityAttributeSyncRequest):
     """同步读取实体属性表、生成向量并覆盖索引，完成后才返回。"""
+    consume_failed_stage()
     scope = (req.semantic_model_id, req.business_domain_id)
     event_key = (*scope, req.event_id)
     with _entity_state_lock:
@@ -853,12 +901,18 @@ def entity_attribute_vector_sync(req: EntityAttributeSyncRequest):
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
-            detail={"code": "ENTITY_ATTRIBUTE_SOURCE_INVALID", "message": str(exc)},
+            detail={
+                "code": "ENTITY_ATTRIBUTE_SOURCE_INVALID",
+                "message": "实体属性值同步失败：" + _failure_detail(exc),
+            },
         ) from exc
     except RuntimeError as exc:
         raise HTTPException(
             status_code=409,
-            detail={"code": "ENTITY_ATTRIBUTE_SYNC_BUSY", "message": str(exc)},
+            detail={
+                "code": "ENTITY_ATTRIBUTE_SYNC_BUSY",
+                "message": "实体属性值同步失败：" + _failure_detail(exc),
+            },
         ) from exc
     except Exception as exc:
         logger.exception("实体属性值同步失败，旧索引已保留")
@@ -866,7 +920,8 @@ def entity_attribute_vector_sync(req: EntityAttributeSyncRequest):
             status_code=500,
             detail={
                 "code": "ENTITY_ATTRIBUTE_SYNC_FAILED",
-                "message": "数据读取、校验或向量化失败，旧索引已保留",
+                "message": "实体属性值同步失败，旧索引已保留："
+                           + _failure_detail(exc, consume_failed_stage()),
             },
         ) from exc
     finally:

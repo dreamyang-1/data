@@ -1,0 +1,8 @@
+[
+  {
+    "component": "agent_server_patch",
+    "file": "app/services/semantic_recommend.py",
+    "before_sha256": "c183f6f7e6c2351336e6a473ca5e5891fddd54282e215ed478a050a4c2d8ffde",
+    "after_sha256": "68bb983c673bab141f8d5659cf921d197642f8c29438fdf33a48f8a7931d65ba"
+  }
+]

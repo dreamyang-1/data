@@ -24,10 +24,11 @@ def setup_case():
 @pytest.mark.parametrize('target', ['dimensions', 'sort', 'filters'])
 @pytest.mark.parametrize('label', ['医院等级', '医院级别'])
 @pytest.mark.parametrize('qualified', [False, True])
-def test_same_attribute_identity_collapses_across_slot_roles(target, label, qualified):
+def test_dimension_slots_keep_dimension_identity_and_other_roles_use_fields(target, label, qualified):
     _, knowledge, _ = setup_case()
     original = {'entity': '医院', 'field': label} if qualified else label
-    assert _exact_choice_keys(target, original, catalog_candidates(knowledge)) == ['hospital.level']
+    expected = 'hospital_level' if target == 'dimensions' else 'hospital.level'
+    assert _exact_choice_keys(target, original, catalog_candidates(knowledge)) == [expected]
 
 
 @pytest.mark.parametrize('model_mode', ['wrong', 'missing', 'error'])
@@ -41,12 +42,13 @@ def test_original_group_query_corrects_model_choice_without_changing_extraction(
     before = deepcopy(extraction)
     ast, _ = run(extraction, knowledge, plan)
     assert not ast['ambiguity']
-    assert [item['name'] for item in ast['dimensions']] == ['hospital.level']
+    assert [item['name'] for item in ast['dimensions']] == ['hospital_level']
+    assert ast['dimensions'][0]['attr'] == 'grade-uuid'
     assert extraction == before
 
 
 @pytest.mark.parametrize('conflict', ['column', 'owner', 'attribute_id', 'hierarchy', 'rule', 'grain'])
-def test_conflicting_or_derived_dimensions_stay_ambiguous(conflict):
+def test_dimension_name_does_not_compete_with_attributes_or_lose_its_definition(conflict):
     _, knowledge, _ = setup_case()
     meta = knowledge['dimensions'][0].metadata
     mapping = meta['bind_entities'][0]
@@ -56,13 +58,13 @@ def test_conflicting_or_derived_dimensions_stay_ambiguous(conflict):
     if conflict == 'hierarchy': meta['dim_hierarchy'] = [{'level': 1}]
     if conflict == 'rule': meta['special_rules'] = ['自定义分组']
     if conflict == 'grain': meta['granularity_support'] = ['month']
-    assert len(_exact_choice_keys('dimensions', '医院等级', catalog_candidates(knowledge))) == 2
+    assert _exact_choice_keys('dimensions', '医院等级', catalog_candidates(knowledge)) == ['hospital_level']
 
 
-def test_same_name_on_other_entity_is_not_merged_with_hospital_dimension():
+def test_same_named_attribute_on_other_entity_does_not_conflict_with_dimension():
     _, knowledge, _ = setup_case()
     knowledge['entities'][0].metadata['attributes'][1]['attr_name'] = '医院等级'
-    assert len(_exact_choice_keys('dimensions', '医院等级', catalog_candidates(knowledge))) == 2
+    assert _exact_choice_keys('dimensions', '医院等级', catalog_candidates(knowledge)) == ['hospital_level']
 
 
 def test_exact_canonical_dimension_code_remains_authoritative():

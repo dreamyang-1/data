@@ -221,6 +221,15 @@ def normalize_result_operation(operation):
             if 'count' in step and step['count'] != count:
                 raise ValueError('结果人数限制存在冲突')
             step['count'] = count
+        if step.get('type') in {'limit', 'sort_limit'}:
+            # 2026-10-21 用户裁决：行数限制写成 '2'/2.0/'前2名' 等可安全
+            # 归一化的字面量时直接换算成整数，不因字面类型差异拦停整个
+            # 计划；无法解释的值仍交由 validate_result_operation 拒绝。
+            count = step.get('count')
+            if isinstance(count, str) and re.search(r'\d+', count):
+                step['count'] = int(re.search(r'\d+', count).group())
+            elif isinstance(count, float) and count.is_integer():
+                step['count'] = int(count)
     # An aggregate consumed alongside its original sample must retain those
     # rows; ordinary aggregate-only statistics continue to reduce the data.
     for index,step in enumerate(steps[:-1]):

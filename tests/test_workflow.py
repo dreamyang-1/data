@@ -87,8 +87,13 @@ async def test_workflow_detail_runs_while_platform_permission_module_is_deferred
 
 @pytest.mark.asyncio
 async def test_workflow_routes_metric_definition_skip_execute():
-    """指标口径查询跳过 execute 节点，直接到 compose_answer。"""
+    """解释口径通过模型直答，跳过取数和指标元数据检索。"""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
     orchestrator = make_orchestrator()
+    answer = AsyncMock(return_value="销售额按当前语义文件登记口径计算。")
+    orchestrator.analysis_synthesizer = SimpleNamespace(synthesize_definition=answer)
+    orchestrator.adapters.semantic.resolve_metrics = AsyncMock(side_effect=AssertionError("must not resolve metrics"))
     workflow = build_workflow(orchestrator)
     result = await workflow.ainvoke({
         "chat": ChatRequest(semantic_model_id=81, application_id="test-app", conversation_id="c5", message_id="m1", question="销售额的口径是什么"),
@@ -96,8 +101,9 @@ async def test_workflow_routes_metric_definition_skip_execute():
     })
     assert result["response"].status == "COMPLETED"
     assert result["response"].intent == PrimaryIntent.METRIC_DEFINITION
-    # 走完整 semantic+policy 但不经过 execute，evidence 应包含 definition
-    assert any(e.kind == "METRIC_DEFINITION" for e in result["response"].evidence)
+    assert result["response"].answer == answer.return_value
+    answer.assert_awaited_once()
+    orchestrator.adapters.semantic.resolve_metrics.assert_not_awaited()
 
 
 # 8 种高级分析意图的端到端覆盖

@@ -84,6 +84,116 @@ async def test_two_scalar_calculation_is_independent_of_task_number(task_id):
 
 
 @pytest.mark.asyncio
+async def test_one_row_total_with_own_dimension_code_broadcasts_as_scalar():
+    """覆盖率类计算：1行分母只带自身维度身份列（省份编码），对多行分子是标量。"""
+    agent=service();chat,_=context()
+    rows=[{'经销商名称':f'经销商{i}','经销商（编码）':f'C{i}','有效订单去重医院数':i+1} for i in range(3)]
+    await persist(agent,chat,list(rows[0]),rows,conversation='dealers',
+        column_bindings={'经销商名称':'dealer.dealer_name','经销商（编码）':'dealer.dealer_code'})
+    await persist(agent,chat,['省份名称','省份（编码）','区域全部医院总数'],
+        [{'省份名称':'上海市','省份（编码）':'310000','区域全部医院总数':122}],conversation='province',
+        column_bindings={'省份名称':'province.province_name','省份（编码）':'province.province_code'})
+    task=AtomicTask(task_id='task-3',question='计算上海地区各经销商的区域医院覆盖率',depends_on=['a','b'],extraction={
+        '是否查询数据库':'否','计算绑定':{'operation':'divide',
+        'numerator':{'source_task_id':'a','column':'有效订单去重医院数'},
+        'denominator':{'source_task_id':'b','column':'区域全部医院总数'},
+        'result_field':'区域医院覆盖率','format':'percent'}})
+    result=await agent._respond_pure_computation(chat,IDENTITY,task,{'a':'dealers','b':'province'})
+    assert result.status=='COMPLETED'
+    preview=result.evidence[0].payload['preview']
+    assert [row['区域医院覆盖率'] for row in preview]==['0.82%','1.64%','2.46%']
+    assert [row['经销商（编码）'] for row in preview]==['C0','C1','C2']
+
+
+@pytest.mark.asyncio
+async def test_single_denominator_broadcasts_even_with_shared_identity():
+    """用户明确要求：单行分母按所有分子行广播，不再拦截对象范围不一致。"""
+    agent=service();chat,_=context()
+    rows=[{'经销商（编码）':'C1','金额':100},{'经销商（编码）':'C2','金额':200}]
+    await persist(agent,chat,list(rows[0]),rows,conversation='dealers',
+        column_bindings={'经销商（编码）':'dealer.dealer_code'})
+    await persist(agent,chat,['经销商（编码）','单数'],[{'经销商（编码）':'C1','单数':2}],conversation='orders',
+        column_bindings={'经销商（编码）':'dealer.dealer_code'})
+    task=AtomicTask(task_id='task-3',question='计算各经销商均额',depends_on=['a','b'],extraction={
+        '是否查询数据库':'否','计算绑定':{'operation':'divide',
+        'numerator':{'source_task_id':'a','column':'金额'},
+        'denominator':{'source_task_id':'b','column':'单数'},
+        'result_field':'均额','format':'number'}})
+    result=await agent._respond_pure_computation(chat,IDENTITY,task,{'a':'dealers','b':'orders'})
+    assert result.status=='COMPLETED'
+    assert sorted(float(row['均额']) for row in result.evidence[0].payload['preview']) == [50, 100]
+
+
+@pytest.mark.asyncio
+async def test_percent_output_column_supports_downstream_computation():
+    """率类结果以'34.43%'字符串落库后，下游排序按数值、算术按比率，不再按字符串。"""
+    agent=service();chat,_=context()
+    rows=[{'经销商名称':f'经销商{i}','覆盖率':value} for i,value in
+        enumerate(['34.43%','9.84%','21.30%'])]
+    await persist(agent,chat,list(rows[0]),rows,conversation='coverage')
+    sort_task=AtomicTask(task_id='task-2',question='按覆盖率排序',depends_on=['q'],extraction={
+        '是否查询数据库':'否','结果操作':{'source_task_id':'q',
+        'operation':{'type':'sort','field':'覆盖率','descending':True}}})
+    sort_result=await agent._respond_pure_computation(chat,IDENTITY,sort_task,{'q':'coverage'})
+    assert sort_result.status=='COMPLETED'
+    assert [row['覆盖率'] for row in sort_result.evidence[0].payload['preview']]==['34.43%','21.30%','9.84%']
+    derive_task=AtomicTask(task_id='task-2',question='计算两倍覆盖率',depends_on=['q'],extraction={
+        '是否查询数据库':'否','计算绑定':{'operation':'multiply',
+        'left':{'source_task_id':'q','column':'覆盖率'},'right':{'value':2},
+        'result_field':'两倍覆盖率','format':'number'}})
+    derive_result=await agent._respond_pure_computation(chat,IDENTITY,derive_task,{'q':'coverage'})
+    assert derive_result.status=='COMPLETED'
+    assert [row['两倍覆盖率'] for row in derive_result.evidence[0].payload['preview']]==[0.6886,0.1968,0.426]
+
+
+@pytest.mark.asyncio
+async def test_divide_period_check_requires_both_declared_ranges():
+    """分母全量口径未声明时间范围时不得拒绝比率计算；双方声明且冲突仍 Fail Closed。"""
+    agent=service();chat,_=context()
+    rows=[{'经销商（编码）':f'C{i}','医院数':i+1} for i in range(2)]
+    task=lambda:AtomicTask(task_id='task-3',question='计算覆盖率',depends_on=['a','b'],extraction={
+        '是否查询数据库':'否','计算绑定':{'operation':'divide',
+        'numerator':{'source_task_id':'a','column':'医院数'},
+        'denominator':{'source_task_id':'b','column':'医院总数'},
+        'result_field':'覆盖率','format':'percent'}})
+    await persist(agent,chat,list(rows[0]),rows,conversation='dealers',
+        column_bindings={'经销商（编码）':'dealer.dealer_code'},
+        fingerprint_components={'time_range':'最近12个月','metrics':[{'unit':'家'}]})
+    scalar={'医院总数':122}
+    await persist(agent,chat,list(scalar),[scalar],conversation='province',
+        fingerprint_components={'time_range':None,'metrics':[{'unit':'家'}]})
+    result=await agent._respond_pure_computation(chat,IDENTITY,task(),{'a':'dealers','b':'province'})
+    assert result.status=='COMPLETED'
+    assert [row['覆盖率'] for row in result.evidence[0].payload['preview']]==['0.82%','1.64%']
+    await persist(agent,chat,list(scalar),[scalar],conversation='province_2025',
+        fingerprint_components={'time_range':'2025年','metrics':[{'unit':'家'}]})
+    conflict=await agent._respond_pure_computation(chat,IDENTITY,task(),{'a':'dealers','b':'province_2025'})
+    assert conflict.status=='FAILED'
+
+
+@pytest.mark.asyncio
+async def test_cross_task_prose_result_operation_falls_back_to_wording():
+    """规划器把跨任务算术写成未绑定来源的结果操作时，按题面措辞确定性兜底；措辞不符仍拒绝。"""
+    agent=service();chat,_=context()
+    rows=[{'经销商（编码）':f'C{i}','医院数':i+1} for i in range(2)]
+    await persist(agent,chat,list(rows[0]),rows,conversation='dealers',
+        column_bindings={'经销商（编码）':'dealer.dealer_code'})
+    scalar={'医院总数':122}
+    await persist(agent,chat,list(scalar),[scalar],conversation='province')
+    task=AtomicTask(task_id='task-3',question='计算上海地区各经销商的区域医院覆盖率',depends_on=['a','b'],extraction={
+        '是否查询数据库':'否','结果操作':{'operation':{'type':'derive','operator':'divide',
+        'left_field':'医院数','right_field':'医院总数','result_field':'区域医院覆盖率'}}})
+    result=await agent._respond_pure_computation(chat,IDENTITY,task,{'a':'dealers','b':'province'})
+    assert result.status=='COMPLETED'
+    assert [row['区域医院覆盖率'] for row in result.evidence[0].payload['preview']]==['0.82%','1.64%']
+    ungrounded=AtomicTask(task_id='task-3',question='计算业务指标',depends_on=['a','b'],extraction={
+        '是否查询数据库':'否','结果操作':{'operation':{'type':'derive','operator':'divide',
+        'left_field':'医院数','right_field':'医院总数','result_field':'业务指标'}}})
+    failed=await agent._respond_pure_computation(chat,IDENTITY,ungrounded,{'a':'dealers','b':'province'})
+    assert failed.status=='FAILED'
+
+
+@pytest.mark.asyncio
 async def test_growth_pipeline_executes_in_order_without_asking_model_to_calculate():
     agent=service();chat,_=context()
     await persist(agent,chat,['上期金额','本期金额'],[{'上期金额':100,'本期金额':120}],conversation='source')

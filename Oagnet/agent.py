@@ -24,7 +24,7 @@ from config import (
     LLM_TIMEOUT_SECONDS,
     require_runtime_secret,
 )
-from prompt_build import PromptBuilder
+from prompt_build import PromptBuilder, canonicalize_structured_mentions
 from mysql_tool import (
     get_registered_entity_attributes,
     get_metric_evidence,
@@ -7582,9 +7582,89 @@ def _apply_intent_asl_contract(
         dimensions = []
         ast["dimensions"] = dimensions
 
-    if intent == "DETAIL_QUERY" and ast.get("metrics"):
-        ast["metrics"] = []
-        repairs.append({"type": "REMOVE_UNREQUESTED_METRICS", "source": "INTENT_CONTRACT"})
+    if intent == "DETAIL_QUERY":
+        # DETAIL 契约并非天然无指标：调用方契约可携带 required_metrics
+        # （例如明细里按商品分组的含税销售总额）。SQL 翻译器按已发布公式
+        # 校验这些字段必须出现在 SQL 中，无条件清空 metrics 会制造
+        # METRIC_FORMULA_STALE。只保留/补齐契约请求且确实存在于召回目录
+        # 的指标，其余照旧清空；目录里找不到的请求指标交给既有校验拒绝。
+        requested_names = {
+            str(item).strip() for item in contract.get("required_metrics") or []
+            if str(item).strip()
+        }
+        requested_codes = {
+            str(item).strip() for item in contract.get("required_metric_codes") or []
+            if str(item).strip()
+        }
+        code_by_name: dict[str, str] = {}
+        name_by_code: dict[str, str] = {}
+        for item in knowledge.get("metrics") or []:
+            meta = getattr(item, "metadata", None)
+            if not isinstance(meta, dict) and isinstance(item, dict):
+                meta = item
+            if not isinstance(meta, dict):
+                continue
+            code = str(meta.get("metric_code") or "").strip()
+            if not code:
+                continue
+            catalog_name = str(meta.get("metric_name") or "").strip()
+            code_by_name.setdefault(catalog_name, code)
+            name_by_code.setdefault(code, catalog_name)
+        catalog_codes = set(name_by_code)
+        original_metrics = [
+            item for item in (ast.get("metrics") or [])
+            if isinstance(item, dict)
+        ]
+        kept: list[dict] = []
+        seen_codes: set[str] = set()
+        for item in original_metrics:
+            name = str(item.get("name") or "").strip()
+            alias = str(item.get("alias") or "").strip()
+            code = name if name in catalog_codes else code_by_name.get(alias or name, "")
+            label = alias or name
+            if not code or code in seen_codes:
+                continue
+            if code in requested_codes or label in requested_names:
+                seen_codes.add(code)
+                display = (
+                    label
+                    if label and label not in catalog_codes
+                    and label not in requested_codes
+                    else name_by_code.get(code, code)
+                )
+                kept.append({
+                    "name": code,
+                    "alias": display,
+                    "time_anchor": item.get("time_anchor"),
+                })
+        for code, catalog_name in name_by_code.items():
+            if code in seen_codes:
+                continue
+            if code in requested_codes or (catalog_name and catalog_name in requested_names):
+                seen_codes.add(code)
+                kept.append({
+                    "name": code,
+                    "alias": catalog_name or code,
+                    "time_anchor": None,
+                })
+                repairs.append({
+                    "type": "ADD_REQUIRED_METRIC",
+                    "semantic_label": catalog_name or code,
+                    "resolved_metric": code,
+                    "source": "INTENT_CONTRACT",
+                })
+        if kept != original_metrics:
+            ast["metrics"] = kept
+            logger.info(
+                'detail contract metric repair: requested=%r catalog_codes=%r original=%r kept=%r',
+                sorted(requested_names | requested_codes), sorted(catalog_codes),
+                original_metrics, kept,
+            )
+            if len(kept) < len(original_metrics):
+                repairs.append({
+                    "type": "REMOVE_UNREQUESTED_METRICS",
+                    "source": "INTENT_CONTRACT",
+                })
 
     selected_names = {
         str(item.get("name") or "") for item in dimensions if isinstance(item, dict)
@@ -8237,6 +8317,141 @@ def _apply_intent_asl_contract(
     return json.dumps(ast, ensure_ascii=False), repairs
 
 
+def _ensure_sort_metric_projection(ast: dict, knowledge: dict) -> bool:
+    """按指标排序时保证该指标同时被投影。
+
+    ASL 可能只写 ``sort.field_type='metric'`` 而没有把指标放进 metrics
+    （例如问题式生成按"降序排列"补了排序却漏了度量），SQL 会生成
+    ORDER BY 指标编码却没有任何聚合投影，与已发布公式对不上
+    （METRIC_FORMULA_STALE）。只在该指标确实存在于当前召回目录时补齐，
+    目录里找不到就保持原状交给既有校验。
+    """
+    sort = ast.get("sort")
+    if not isinstance(sort, dict) or str(sort.get("field_type") or "") != "metric":
+        return False
+    field = str(sort.get("field") or "").strip()
+    if not field:
+        return False
+    metrics = ast.get("metrics")
+    if not isinstance(metrics, list):
+        metrics = []
+        ast["metrics"] = metrics
+    if any(isinstance(item, dict) and str(item.get("name") or "") == field
+           for item in metrics):
+        return False
+    metadata: dict = {}
+    for item in knowledge.get("metrics") or []:
+        candidate = getattr(item, "metadata", None)
+        if not isinstance(candidate, dict) and isinstance(item, dict):
+            candidate = item
+        if isinstance(candidate, dict) and str(candidate.get("metric_code") or "") == field:
+            metadata = candidate
+            break
+    if not metadata:
+        codes = []
+        for item in knowledge.get("metrics") or []:
+            meta = getattr(item, "metadata", None)
+            if not isinstance(meta, dict) and isinstance(item, dict):
+                meta = item
+            if isinstance(meta, dict):
+                codes.append(meta.get("metric_code"))
+        logger.info('sort metric projection missing catalog metric: field=%r catalog=%r', field, codes)
+        return False
+    metrics.append({
+        "name": field,
+        "alias": str(metadata.get("metric_name") or field),
+        "time_anchor": None,
+    })
+    return True
+
+
+def _ensure_structured_display_projection(ast: dict, extraction, knowledge: dict) -> list[str]:
+    """结构化「展示字段」声明后 ASL 必须能投影这些列。
+
+    结构化参数是 ASL 的唯一业务要求来源（2026-10-21 用户要求）：任务规划
+    声明的展示字段（Q60 实测：展示字段=[{产品线,产品线一级分类},{商品,商品名称}]
+    而 ASL 只投影了 product.product_name）被生成漏写时，结果校验必然报
+    "未返回本子任务要求的展示字段"并整体降级（SAFE_FALLBACK）。解析只认
+    当前召回目录里属性标签/别名的词形精确命中（不做子串与实体别名推广，
+    否则「产品」⊂「产品线一级分类」会把商品列误配成候选）；全部命中唯一
+    物理字段且 ASL 未携带时追加为分组维度，零命中或多义时不动，交由既有
+    校验照常失败，绝不猜字段。
+    """
+    if not isinstance(extraction, dict) or ast.get('ambiguity'):
+        return []
+    projected = {
+        str(item.get('name') or '')
+        for slot in ('dimensions', 'display_fields')
+        for item in ast.get(slot) or [] if isinstance(item, dict)
+    }
+    _entities, attributes_by_entity = _scoped_entity_attributes(knowledge)
+    authorized = _known_physical_fields(knowledge)
+
+    def exact_label_fields(label: str) -> list[str]:
+        target = _contract_label(label)
+        if len(target) < 2:
+            return []
+        hits = []
+        for attributes in attributes_by_entity.values():
+            for field, attribute in attributes.items():
+                if field not in authorized or _is_relationship_key_field(field, attributes_by_entity):
+                    continue
+                terms = {_contract_label(value)
+                         for key in ('attr_name', 'synonyms')
+                         for value in _metadata_term_values(attribute.get(key))}
+                terms.add(_contract_label(field.rsplit('.', 1)[-1]))
+                if target in terms:
+                    hits.append(field)
+        return sorted(set(hits))
+
+    added: list[str] = []
+    for item in extraction.get('展示字段') or []:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get('field') or '').strip()
+        if not label:
+            continue
+        candidates = exact_label_fields(label)
+        if len(candidates) != 1 or candidates[0] in projected:
+            continue
+        dimensions = ast.setdefault('dimensions', [])
+        if not isinstance(dimensions, list):
+            ast['dimensions'] = dimensions = []
+        dimensions.append({'name': candidates[0]})
+        projected.add(candidates[0])
+        added.append(candidates[0])
+    return added
+
+
+def _ensure_contract_sort(ast: dict, contract: dict | None) -> bool:
+    """排名契约要求排序而 ASL 缺失时，用唯一已投影指标补齐。
+
+    结构化抽取偶尔保留排名意图（TOP_N/SORT）却漏写排序字段。此时契约
+    已固定方向，指标也唯一，排序对象不存在第二种解释；只有单指标且
+    ASL 尚未给出排序时才补，多指标或零指标仍交给原有校验拦截。
+    """
+    sorting = (contract or {}).get("sorting")
+    if not isinstance(sorting, dict) or sorting.get("required") is not True:
+        return False
+    if isinstance(ast.get("sort"), dict):
+        return False
+    metrics = [
+        item for item in ast.get("metrics") or []
+        if isinstance(item, dict) and str(item.get("name") or "").strip()
+    ]
+    if len(metrics) != 1:
+        return False
+    direction = str(sorting.get("direction") or "DESC").upper()
+    if direction not in {"ASC", "DESC"}:
+        return False
+    ast["sort"] = {
+        "field": str(metrics[0]["name"]),
+        "direction": direction,
+        "field_type": "metric",
+    }
+    return True
+
+
 def _validate_intent_asl_contract(
     content: str,
     contract: dict | None,
@@ -8571,6 +8786,122 @@ def _detail_projection_subject_candidate(ast: dict, knowledge: dict) -> str | No
     if len(best) > 1 and best[0][0] == best[1][0]:
         return None
     return best[0][1]
+
+
+def _declared_detail_hub_subject(ast: dict, knowledge: dict, extraction) -> str | None:
+    """Prefer an explicitly declared hub entity for multi-entity detail rows.
+
+    When a detail task projects fields from two business entities that only
+    meet through a shared dimension (for example hospital and dealer both
+    joining city), the translator's shortest path produces a cartesian
+    dimension join.  If the extraction already names a fact entity that joins
+    every projected table in one hop, use it as the subject so the rows come
+    from that business fact instead.
+    """
+    if ast.get("metrics"):
+        return None
+    declared = [
+        str(value).strip()
+        for value in ((extraction or {}).get("实体") or [])
+        if str(value).strip()
+    ]
+    if len(declared) < 2:
+        return None
+    entities, attributes_by_entity = _scoped_entity_attributes(knowledge)
+    # The extraction carries business labels (医院/经销商/销售订单) while the
+    # recalled catalog is keyed by entity code (hospital/dealer/sales_order).
+    # Resolve labels through the same registry the contract uses; ambiguous
+    # labels are skipped instead of guessed.
+    declared_codes: list[str] = []
+    for label in declared:
+        if label in entities:
+            declared_codes.append(label)
+            continue
+        candidates = _contract_entity_candidates(label, knowledge)
+        if len(candidates) == 1:
+            declared_codes.append(candidates[0])
+    referenced = _ast_referenced_tables(ast, knowledge)
+    if len(referenced) < 2:
+        return None
+    graph = _recalled_relation_table_graph(knowledge)
+    for entity_code in declared_codes:
+        if entity_code not in entities:
+            continue
+        tables = {
+            field.split(".", 1)[0]
+            for field in attributes_by_entity.get(entity_code, {})
+            if _PHYSICAL_FIELD.fullmatch(field)
+        }
+        if len(tables) != 1:
+            continue
+        table = next(iter(tables))
+        neighbors = graph.get(table, set())
+        if all(referenced_table == table or referenced_table in neighbors
+               for referenced_table in referenced):
+            return entity_code
+    # The extraction does not always name the fact entity (for example a
+    # follow-up task may only list 医院和经销商).  When every shortest path
+    # between the projected tables runs through a shared dimension table, look
+    # for the one business entity that joins all of them in a single hop.
+    # Only dimension-table join paths are overridden, so relation-rich pairs
+    # (dealer-product via dealer_product_relation) keep their existing path.
+    current_subject = str((ast.get("subject") or {}).get("entity") or "")
+    subject_tables = {
+        field.split(".", 1)[0]
+        for field in attributes_by_entity.get(current_subject, {})
+        if _PHYSICAL_FIELD.fullmatch(field)
+    }
+    if len(subject_tables) != 1:
+        return None
+    start = next(iter(subject_tables))
+    for target in referenced:
+        if target == start:
+            continue
+        path = _shortest_table_path(graph, start, target)
+        if path is None:
+            return None
+        if len(path) <= 2 or not all(step.startswith("dim_") for step in path[1:-1]):
+            return None
+    entity_tables = {}
+    for entity_code, entity_attributes in attributes_by_entity.items():
+        tables = {
+            field.split(".", 1)[0]
+            for field in entity_attributes
+            if _PHYSICAL_FIELD.fullmatch(field)
+        }
+        if len(tables) == 1:
+            entity_tables[entity_code] = next(iter(tables))
+    hubs = [
+        entity_code
+        for entity_code, table in entity_tables.items()
+        if not table.startswith("dim_")
+        and table not in referenced
+        and all(target == table or table in graph.get(target, set()) for target in referenced)
+    ]
+    if len(hubs) == 1:
+        return hubs[0]
+    declared_hubs = [code for code in hubs if code in declared_codes]
+    if len(declared_hubs) == 1:
+        return declared_hubs[0]
+    return None
+
+
+def _shortest_table_path(graph: dict[str, set[str]], start: str, goal: str) -> list[str] | None:
+    if start == goal:
+        return [start]
+    from collections import deque
+    queue = deque([[start]])
+    visited = {start}
+    while queue:
+        path = queue.popleft()
+        for neighbor in graph.get(path[-1], set()):
+            if neighbor in visited:
+                continue
+            if neighbor == goal:
+                return path + [neighbor]
+            visited.add(neighbor)
+            queue.append(path + [neighbor])
+    return None
 
 
 def _normalize_dynamic_subject(
@@ -9113,8 +9444,7 @@ def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
         )
         if any(field not in vector_fields for field in fields):
             raise ValueError("ASL having field was not validated by vector semantic scope")
-    from vector_filter_grounding import ground_filter_values
-    ground_filter_values(ast, knowledge, validate_only=True)
+    # 2026-10-23 用户明确要求：删除筛选值复检环节。
 
 
 def _verify_missing_asl_fields_in_vector_store(
@@ -9249,7 +9579,17 @@ def _recover_question_asl(
         )
         ast = json.loads(result)
         if ast.get('ambiguity'):
+            # 静默回退会让下游只能看到兜底绑定的槽位歧义（Q60 实测 2026-10-22：
+            # "维度[1] 产品线 未匹配到可执行的标准字段"），无法判断问题式生成
+            # 为何放弃。记录歧义内容供根因定位。
+            logger.warning('Question ASL generation ambiguous: model_id=%s ambiguity=%s',
+                           semantic_model_id,
+                           json.dumps(ast['ambiguity'], ensure_ascii=False)[:1200])
             return None
+        # 问题式生成可能只补了排序却漏了被排序的度量，SQL 会引用未投影
+        # 的指标编码；在契约校验前按已召回目录补齐指标投影。
+        _ensure_sort_metric_projection(ast, knowledge)
+        _ensure_contract_sort(ast, intent_asl_contract)
         for projection in (intent_asl_contract or {}).get('required_projections') or []:
             _repair_contract_grouping(ast,str(projection),knowledge,
                 query_object=intent_asl_contract.get('query_object'),prefer_display=True)
@@ -9262,8 +9602,8 @@ def _recover_question_asl(
         _validate_intent_asl_contract(result, intent_asl_contract, knowledge)
         return result, knowledge
     except Exception as exc:
-        logger.warning('Question ASL recovery unavailable: model_id=%s error=%s',
-                       semantic_model_id, type(exc).__name__)
+        logger.warning('Question ASL recovery unavailable: model_id=%s error=%s: %s',
+                       semantic_model_id, type(exc).__name__, str(exc)[:500])
         return None
 
 
@@ -9312,12 +9652,34 @@ def main(
     )
     if store is None:
         store = globals()["store"]
-    # Restore the original question/catalog generator. Planner slots remain
-    # advisory; a failed generation can still use the existing finite binder.
-    from structured_binding import bind, issue, retrieval_terms, filter_value_queries
+    # 行级明细口径以调用方意图契约为准：契约说 DETAIL_QUERY 时，指标公式
+    # 覆盖的展示字段必须作为行级返回列，而不是按结构化抽取的“意图”建议值
+    # 省略（抽取常常不写该槽位）。
+    row_level_detail = (
+        str((intent_asl_contract or {}).get("intent") or "").upper() == "DETAIL_QUERY"
+        if isinstance(intent_asl_contract, dict) else None
+    )
+    # 进入 ASL 前把结构化参数槽位名统一经向量库转成标准值（2026-10-21）：
+    # 上游模型可能写出目录别名之外的口语叫法（如"含税金额"），不经标准化
+    # 会在绑定阶段报语义歧义拦停整条任务链。唯一命中才改写，多义/未命中
+    # 保持原样；物理字段路径（表.字段）不重写。
+    canonical_repairs: list[dict] = []
+    if isinstance(structured_extraction, dict):
+        try:
+            canonical_repairs = canonicalize_structured_mentions(
+                structured_extraction, store, embed_query,
+                semantic_model_id, domain_ids)
+        except Exception:  # 标准化失败不阻断既有绑定链路
+            canonical_repairs = []
+    # Structured declarations are the execution contract when supplied.
+    # Natural-language generation remains available for callers without slots.
+    # 结构化分发是冻结契约（test_structured_dispatch_never_reextracts_lossy_
+    # question）：带结构化参数时禁止从可能有损的 completed_question 重抽取。
+    from structured_binding import (bind, issue, retrieval_terms, filter_value_queries,
+                                    apply_surface_requirements)
     from query_binding_review import review_bindings
     from mysql_tool import resolve_scoped_dictionary_keys
-    generated = _recover_question_asl(
+    generated = None if isinstance(structured_extraction, dict) else _recover_question_asl(
         completed_question or query, store=store,
         semantic_model_id=semantic_model_id, business_domain_id=business_domain_id,
         domain_ids=domain_ids, metric_codes=metric_codes,
@@ -9331,7 +9693,8 @@ def main(
         result, knowledge = generated
         repairs = [{'type': 'RESTORE_QUESTION_ASL_GENERATION',
                     'source': 'SCOPED_QUESTION_AND_CATALOG'},
-                   *knowledge.get('_vector_filter_repairs', [])]
+                   *knowledge.get('_vector_filter_repairs', []),
+                   *canonical_repairs]
     elif not isinstance(structured_extraction, dict):
         result = _ambiguity_asl([issue(
             "结构化提取", None,
@@ -9354,7 +9717,9 @@ def main(
         knowledge["_vector_authorized_fields"] = sorted(_known_physical_fields(knowledge))
         model = _get_chat_model()
         ast, repairs = bind(structured_extraction, knowledge, model,
-                            detail_subject_resolver=_detail_projection_subject_candidate)
+                            detail_subject_resolver=_detail_projection_subject_candidate,
+                            row_level_detail=row_level_detail)
+        repairs = [*canonical_repairs, *repairs]
         if not ast.get("ambiguity"):
             relationship_required = any(r.get("relationship_required") for r in repairs)
             # Owner/time/relationship resolution sees only the same structured
@@ -9371,7 +9736,7 @@ def main(
             repairs.extend(binding_repairs)
             if not (structured_extraction.get("时间粒度") or {}).get("time_range"):
                 ast["time_context"] = None
-            if relationship_required and not ast.get("related_filters"):
+            if relationship_required and ast.get("metrics") and not ast.get("related_filters"):
                 ast["ambiguity"].append(issue("输出要求", structured_extraction.get("输出要求"),
                     "关联范围未能绑定到可执行目录关系，请数据部门核对关联实体与连接字段"))
             if not relationship_required and ast.get("related_filters"):
@@ -9388,7 +9753,46 @@ def main(
                     mode = "DISTINCT" if dedup in {"是", "true", "1", "yes", "y", "distinct"} else ""
                 if mode == "DISTINCT":
                     ast["projection_mode"] = "DISTINCT"
+            if not ast.get("ambiguity") and _ensure_sort_metric_projection(ast, knowledge):
+                repairs.append({'type': 'METRIC_FROM_SORT_FIELD',
+                                'source': 'RECALLED_SEMANTIC_METADATA'})
+            if not ast.get("ambiguity"):
+                hub_subject = _declared_detail_hub_subject(ast, knowledge, structured_extraction)
+                current_subject = (ast.get("subject") or {}).get("entity")
+                if hub_subject and hub_subject != current_subject:
+                    # 明细跨实体只经共享维度相连时，改用结构化声明中的事实枢纽，
+                    # 避免医院×经销商这类维度笛卡尔积冒充业务关系。
+                    ast["subject"] = {"entity": hub_subject}
+                    repairs.append({'type': 'DETAIL_HUB_SUBJECT',
+                                    'source': 'STRUCTURED_EXTRACTION',
+                                    'entity': hub_subject,
+                                    'previous_subject': current_subject})
         result = json.dumps(ast, ensure_ascii=False)
+        # 契约时间口径归一（Q27 task-2 根因修复）：明细契约 time_policy=FORBIDDEN
+        # 禁止的是系统隐式默认时间，但校验前没有任何环节真正移除它，导致
+        # ASL_TIME_SCOPE_INVALID 转歧义 → SYSTEM_FAILURE → SAFE_FALLBACK 拦停。
+        # 结构化参数是唯一业务要求来源：上游已在「时间粒度.time_range」声明时间
+        # 时按声明保留并降级该校验；未声明时间时清除隐式默认时间范围与时间
+        # 粒度投影（与 _apply_intent_asl_contract 的 REMOVE_DEFAULT_TIME_SCOPE
+        # 同语义），两条路都让任务继续执行而不是停在内部口径冲突上。
+        if isinstance(intent_asl_contract, dict) and str(
+                intent_asl_contract.get("time_policy") or "").upper() == "FORBIDDEN":
+            declared_time = bool((structured_extraction.get("时间粒度") or {}).get("time_range"))
+            if declared_time:
+                intent_asl_contract = dict(intent_asl_contract, time_policy="OPTIONAL")
+                repairs.append({'type': 'DETAIL_CONTRACT_TIME_FROM_EXTRACTION',
+                                'source': 'STRUCTURED_EXTRACTION'})
+            else:
+                time_removed = ast.get("time_context") is not None
+                ast["time_context"] = None
+                for dim in ast.get("dimensions") or []:
+                    if isinstance(dim, dict) and dim.get("granularity"):
+                        dim["granularity"] = None
+                        time_removed = True
+                if time_removed:
+                    repairs.append({'type': 'REMOVE_DEFAULT_TIME_SCOPE',
+                                    'source': 'INTENT_CONTRACT'})
+                result = json.dumps(ast, ensure_ascii=False)
         if not ast.get("ambiguity"):
             try:
                 result = _validate_asl_output(result, knowledge, "", metric_codes or None)
@@ -9458,6 +9862,9 @@ def main(
                     grounded_ast, knowledge, intent_asl_contract, store=store,
                     semantic_model_id=semantic_model_id, domain_ids=domain_ids,
                 ))
+                if _ensure_contract_sort(grounded_ast, intent_asl_contract):
+                    repairs.append({'type': 'ADD_REQUIRED_SORT',
+                                    'source': 'INTENT_CONTRACT'})
                 result = json.dumps(grounded_ast, ensure_ascii=False)
                 _validate_vector_grounded_asl(result, knowledge)
                 _validate_intent_asl_contract(result, intent_asl_contract, knowledge)
@@ -9474,6 +9881,33 @@ def main(
     # Keep existing analysis envelopes, but never invent missing measures or
     # dimensions to satisfy them. The structured planner owns those slots.
     final_ast = json.loads(result)
+    if not final_ast.get('ambiguity'):
+        # 结构化参数是 ASL 的唯一业务要求来源（2026-10-21 用户要求）：
+        # 问题式生成或绑定修复都不得丢失结构化声明过的行数限制与去重口径。
+        repairs.extend(apply_surface_requirements(final_ast, structured_extraction
+                                                  if isinstance(structured_extraction, dict) else {}))
+        # 展示字段同理：结构化声明了展示列而生成漏投影时，按当前召回目录
+        # 唯一解析回填分组维度（Q60 实测根因）；解析不唯一时不动。
+        for display_field in _ensure_structured_display_projection(
+                final_ast, structured_extraction, knowledge):
+            repairs.append({'type': 'ADD_STRUCTURED_DISPLAY_PROJECTION',
+                            'resolved_field': display_field,
+                            'source': 'STRUCTURED_EXTRACTION'})
+        if repairs and any(r.get('type') == 'ADD_STRUCTURED_DISPLAY_PROJECTION'
+                           for r in repairs):
+            result = json.dumps(final_ast, ensure_ascii=False)
+    logger.info(
+        'ASL summary: metrics=%r sort=%r dimensions=%r display=%r filters=%r '
+        'extraction_display=%r ambiguity=%s',
+        [item.get('name') for item in final_ast.get('metrics') or [] if isinstance(item, dict)],
+        final_ast.get('sort'),
+        [item.get('name') for item in final_ast.get('dimensions') or [] if isinstance(item, dict)],
+        [item.get('name') for item in final_ast.get('display_fields') or [] if isinstance(item, dict)],
+        [item.get('field') for item in final_ast.get('filters') or [] if isinstance(item, dict)],
+        (structured_extraction or {}).get('展示字段')
+        if isinstance(structured_extraction, dict) else None,
+        json.dumps(final_ast.get('ambiguity') or [], ensure_ascii=False)[:1500],
+    )
     if not final_ast.get('ambiguity'):
         if analysis_operator is not None and result_contract is not None:
             final_ast['analysis_contract'] = {'contract_version':'1.0', 'producer':'OAGNET',

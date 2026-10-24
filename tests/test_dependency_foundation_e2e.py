@@ -169,8 +169,12 @@ async def test_invalid_local_operation_is_replanned_once_before_execution(monkey
     assert result==valid and mocked.await_count==2
     assert '未知或嵌套结果操作' in mocked.await_args_list[1].kwargs['retry_feedback']
     mocked.side_effect=[invalid,invalid]
-    with pytest.raises(TaskInputBindingError):
-        await planner.plan_question('查询经销商订单笔数并取前2名')
+    # 2026-10-21 用户裁决：重试耗尽的无效结果操作不再拦停整个计划，
+    # 降级为丢弃结果操作后按原样继续执行（拆错了就拆错了）。
+    degraded=await planner.plan_question('查询经销商订单笔数并取前2名')
+    assert mocked.await_count==4
+    assert degraded.tasks[1].structured.get('结果操作') is None
+    assert degraded.tasks[0].structured.get('指标')==[{'name':'订单笔数'}]
 
 
 @pytest.mark.asyncio

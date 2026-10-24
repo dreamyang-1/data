@@ -5,10 +5,12 @@ import asyncio
 import hashlib
 import json
 import logging
+import math
 import re
 import time
 from contextlib import suppress
 from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import httpx
@@ -106,6 +108,23 @@ class PlatformHttpClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
+    @staticmethod
+    def _retry_after(response: httpx.Response) -> float:
+        value = response.headers.get("Retry-After")
+        if value is None:
+            return 0.0
+        try:
+            delay = float(value)
+        except ValueError:
+            try:
+                moment = parsedate_to_datetime(value)
+                if moment.tzinfo is None:
+                    moment = moment.replace(tzinfo=timezone.utc)
+                delay = (moment - datetime.now(timezone.utc)).total_seconds()
+            except (ValueError, TypeError, OverflowError):
+                return 0.0
+        return max(0.0, delay) if math.isfinite(delay) else 0.0
+
     def _headers(
         self,
         identity: TrustedIdentity | None = None,
@@ -138,11 +157,16 @@ class PlatformHttpClient:
         timeout: float | None = None,
         bearer_token: str | None = None,
     ) -> Any:
-        return await self._request(
-            "POST", base_url, path, payload, identity=identity,
-            application_id=application_id, idempotency_key=idempotency_key,
-            retryable=retryable, timeout=timeout, bearer_token=bearer_token
-        )
+        from app.observability.langfuse_client import trace_http_call, record_http_result
+
+        with trace_http_call("POST", path, payload) as span:
+            result = await self._request(
+                "POST", base_url, path, payload, identity=identity,
+                application_id=application_id, idempotency_key=idempotency_key,
+                retryable=retryable, timeout=timeout, bearer_token=bearer_token
+            )
+            record_http_result(span, result)
+            return result
 
     async def get(
         self,
@@ -154,11 +178,16 @@ class PlatformHttpClient:
         timeout: float | None = None,
         bearer_token: str | None = None,
     ) -> Any:
-        return await self._request(
-            "GET", base_url, path, None, identity=identity,
-            application_id=application_id, retryable=True, timeout=timeout,
-            bearer_token=bearer_token
-        )
+        from app.observability.langfuse_client import trace_http_call, record_http_result
+
+        with trace_http_call("GET", path, None) as span:
+            result = await self._request(
+                "GET", base_url, path, None, identity=identity,
+                application_id=application_id, retryable=True, timeout=timeout,
+                bearer_token=bearer_token
+            )
+            record_http_result(span, result)
+            return result
 
     async def health(self, base_url: str) -> bool:
         try:
@@ -219,15 +248,19 @@ class PlatformHttpClient:
         last_error: Exception | None = None
         last_adapter_error: AdapterError | None = None
         request_started = time.perf_counter()
+        deadline = request_started + (timeout or self.settings.request_timeout_seconds)
         # 不打印 payload：请求体可能含业务问题文本与凭证相关字段
         logger.debug("upstream request method=%s base_url=%s path=%s attempts=%s", method, base_url, path, attempts)
         for attempt in range(attempts):
+            remaining = deadline - time.perf_counter()
+            if remaining <= 0:
+                break
             try:
                 async with httpx.AsyncClient(
                     base_url=base_url.rstrip("/"),
-                    timeout=timeout or self.settings.request_timeout_seconds,
+                    timeout=remaining,
                 ) as client:
-                    response = await client.request(
+                    response = await asyncio.wait_for(client.request(
                         method,
                         path,
                         json=payload if method != "GET" else None,
@@ -237,7 +270,7 @@ class PlatformHttpClient:
                             idempotency_key=idempotency_key,
                             bearer_token=bearer_token,
                         ),
-                    )
+                    ), timeout=remaining)
                 if response.status_code in {401, 403}:
                     raise AdapterError(
                         "DEPENDENCY_FORBIDDEN",
@@ -277,9 +310,11 @@ class PlatformHttpClient:
                             path, attempt + 1, attempts, response.status_code,
                             upstream_code, time.perf_counter() - request_started,
                         )
-                        await asyncio.sleep(
-                            self.settings.http_retry_backoff_seconds * (2**attempt)
-                        )
+                        delay = max(self.settings.http_retry_backoff_seconds * (2**attempt),
+                                    self._retry_after(response))
+                        if delay >= deadline - time.perf_counter():
+                            break
+                        await asyncio.sleep(delay)
                         continue
                     logger.error(
                         "upstream failed path=%s status=%s upstream_code=%s elapsed=%.2fs",
@@ -302,7 +337,7 @@ class PlatformHttpClient:
                 return response.json()
             except AdapterError:
                 raise
-            except (httpx.HTTPError, ValueError) as exc:
+            except (httpx.HTTPError, ValueError, TimeoutError) as exc:
                 last_error = exc
                 if attempt + 1 < attempts:
                     logger.warning(
@@ -310,7 +345,10 @@ class PlatformHttpClient:
                         path, attempt + 1, attempts, type(exc).__name__,
                         time.perf_counter() - request_started,
                     )
-                    await asyncio.sleep(self.settings.http_retry_backoff_seconds * (2**attempt))
+                    delay = self.settings.http_retry_backoff_seconds * (2**attempt)
+                    if delay >= deadline - time.perf_counter():
+                        break
+                    await asyncio.sleep(delay)
                 else:
                     logger.error(
                         "upstream unreachable path=%s attempts=%s error=%s elapsed=%.2fs",
@@ -462,42 +500,20 @@ class HttpSemanticAdapter:
         return metrics
 
     async def scoped_metadata(self, request, metric, identity):
-        """Keep the current request grant through definition/lineage retrieval."""
-        from urllib.parse import urlencode
+        """Keep the current request grant through lineage retrieval."""
         scope = request.authorized_semantic_scope
         if scope is None or not scope.business_domain_ids:
-            return await (self.definition(metric) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.lineage(metric, identity))
+            return await self.lineage(metric, identity)
         if not metric.metric_id or not metric.metric_id.startswith(f'{scope.semantic_model_id}:'):
             raise AdapterError('SEMANTIC_SCOPE_MISMATCH', 'Metric belongs to another model')
         payload = scope.model_dump(mode='json')
-        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
-            path = self.settings.semantic_definition_path.format(metric_id=metric.metric_id, version=metric.version)
-            path += '?' + urlencode({'scope': json.dumps(payload, separators=(',', ':'))})
-            data = await self.client.get(self.settings.semantic_base_url, path, identity=identity, application_id=request.application_id)
-            kind = 'METRIC_DEFINITION'
-        else:
-            path = self.settings.semantic_lineage_path.format(metric_id=metric.metric_id)
-            data = await self.client.post(self.settings.semantic_base_url, path,
-                {'version': metric.version, 'semantic_model_id': scope.semantic_model_id,
-                 'authorized_semantic_scope': payload}, identity=identity, application_id=request.application_id)
-            kind = 'DATA_LINEAGE'
+        path = self.settings.semantic_lineage_path.format(metric_id=metric.metric_id)
+        data = await self.client.post(self.settings.semantic_base_url, path,
+            {'version': metric.version, 'semantic_model_id': scope.semantic_model_id,
+             'authorized_semantic_scope': payload}, identity=identity, application_id=request.application_id)
         HttpDataRetrievalAdapter._confirm_translator_scope(request, data)
-        return EvidenceItem(evidence_id=f'{kind}:{metric.metric_id}:{metric.version}', kind=kind, source_ref=path, payload=data)
-
-    async def definition(self, metric: MetricRef) -> EvidenceItem:
-        path = self.settings.semantic_definition_path.format(
-            metric_id=metric.metric_id, version=metric.version
-        )
-        data = await self.client.get(
-            self.settings.semantic_base_url,
-            path,
-        )
-        return EvidenceItem(
-            evidence_id=f"definition:{metric.metric_id}:{metric.version}",
-            kind="METRIC_DEFINITION",
-            source_ref=path,
-            payload=data,
-        )
+        return EvidenceItem(evidence_id=f'DATA_LINEAGE:{metric.metric_id}:{metric.version}',
+            kind='DATA_LINEAGE', source_ref=path, payload=data)
 
     async def lineage(self, metric: MetricRef, identity: TrustedIdentity) -> EvidenceItem:
         path = self.settings.semantic_lineage_path.format(metric_id=metric.metric_id)
@@ -1353,8 +1369,6 @@ class HttpDataRetrievalAdapter:
     @classmethod
     def _merge_dependency_filters(cls, request: CanonicalAnalysisRequest) -> None:
         """Put immutable upstream values in structured input, not just prose."""
-        if not request.dependency_constraints:
-            return
         extraction = request._planner_extraction
         structured = extraction.structured if extraction is not None else None
         families = {cls._constraint_field_family(item.source_column)
@@ -1363,17 +1377,34 @@ class HttpDataRetrievalAdapter:
 
         def resolve_reference(item):
             # A planner may express an unresolved predecessor reference as a
-            # name value. The complete, scoped key set below owns that binding.
-            # Preserve real literals, exclusions and filters on other objects.
-            if (cls._constraint_field_family(str(item.get('field') or '')) not in families
+            # name value. With constraints, the complete, scoped key set below
+            # owns that binding; without them the placeholder can never bind
+            # to a real standard value anyway. Preserve real literals,
+            # exclusions and filters on other objects.
+            family_ok = (
+                not families
+                or cls._constraint_field_family(str(item.get('field') or '')) in families
+            )
+            if (not family_ok
                     or str(item.get('operator') or item.get('op') or '=').upper() not in {'=', 'EQ', 'IN'}):
                 return item
             value = item.get('value')
             values = value if isinstance(value, list) else [value]
             retained = [v for v in values if not (
                 isinstance(v, str) and v not in request.original_question
-                and re.match(r'^(?:复用|根据|基于)?(?:上述|上一轮|上一步|前序|前一)(?:任务)?'
-                             r'(?:的)?(?:查询)?(?:返回)?(?:的)?(?:结果|名单)(?:[：:]|中(?:的)?|$)', v.strip()))]
+                and (re.match(r'^(?:复用|根据|基于)?(?:上述|上一轮|上一步|前序|前一)(?:任务)?'
+                              r'(?:的)?(?:查询)?(?:返回)?(?:的)?(?:结果|名单)(?:[：:]|中(?:的)?|$)', v.strip())
+                     # 计划器有时把前序任务的值写成模板占位符（如
+                     # ${task_0.销售员姓名}）。该值由下方依赖约束按标准键注入，
+                     # 占位符本身不是可绑定字面量。
+                     or re.match(r'^\$\{\s*task[_-]?\d+(?:\.[^}]*)?\s*\}$', v.strip(), re.IGNORECASE)
+                     # 计划器也会把引用写成“依赖任务1输出的经销商名称列表”
+                     # 这类自然语言占位（2026-10-21 端到端实测）。同样由依赖
+                     # 约束的标准键接管，否则占位文本会被当筛选值去做向量值
+                     # 绑定，必然失败并触发澄清拦停。
+                     or re.match(r'^(?:依赖)?(?:前序|上述|之前)?任务\d*(?:的)?(?:查询|返回|执行)?'
+                                 r'(?:输出)?(?:的)?.{0,24}?(?:结果|名单|列表|输出|名称|编码|值)$',
+                                 v.strip())))]
             if len(retained) == len(values):
                 return item
             resolved_references.update(v for v in values if isinstance(v, str) and v not in retained)
@@ -1502,19 +1533,22 @@ class HttpDataRetrievalAdapter:
             for definition in metric_definitions
         ]
         intent_asl_contract: dict[str, Any] | None = build_intent_asl_contract(request)
+        contract_notices: list[dict[str, Any]] = []
         contract_definition_errors = validate_intent_asl_contract_definition(
             intent_asl_contract
         )
         if contract_definition_errors:
-            if request.turn_admission is not None:
-                raise AdapterError(
-                    "INTENT_ASL_CONTRACT_INVALID",
-                    "canonical request produced an invalid Intent-ASL contract",
-                    details={"errors": contract_definition_errors},
-                )
-            # Direct adapter callers and older internal tests may intentionally
-            # provide a partial request.  They retain the legacy path; admitted
-            # user turns always have to satisfy the full contract above.
+            # 2026-10-21 用户明确要求：结构校验尽可能宽松，让任务正常往下执行，
+            # 结构性缺口只记录不拦停。契约定义不完整时退回旧路径（contract=None），
+            # 数据正确性由下游既有校验（向量绑定、依赖范围、任务输出校验）兜底。
+            logger.warning(
+                "Intent-ASL contract definition errors tolerated: %s",
+                contract_definition_errors,
+            )
+            contract_notices.append({
+                "type": "INTENT_ASL_CONTRACT_TOLERATED",
+                "warnings": contract_definition_errors,
+            })
             intent_asl_contract = None
         contract_completeness_errors = (
             validate_intent_asl_contract_completeness(
@@ -1525,11 +1559,15 @@ class HttpDataRetrievalAdapter:
             else []
         )
         if contract_completeness_errors:
-            raise AdapterError(
-                "INTENT_ASL_CONTRACT_INCOMPLETE",
-                "Intent-ASL contract lost one or more explicit current-turn requirements",
-                details={"errors": contract_completeness_errors},
+            # 同上：显式槽位丢失只记录不拦停，由下游校验兜底数据正确性。
+            logger.warning(
+                "Intent-ASL contract completeness errors tolerated: %s",
+                contract_completeness_errors,
             )
+            contract_notices.append({
+                "type": "INTENT_ASL_CONTRACT_TOLERATED",
+                "warnings": contract_completeness_errors,
+            })
 
         semantic_query = request.rewritten_question or request.original_question
         # Keep equivalent temporal grouping word orders away from the semantic
@@ -2189,6 +2227,9 @@ class HttpDataRetrievalAdapter:
                         "type": "ANALYSIS_RESULT_CONTRACT_WARNING",
                         "warnings": ["解析结果未确认扩展报告的数据条件；继续执行已绑定的查询，并说明分析范围。"],
                     })
+        if contract_notices:
+            # 宽松放行的结构性缺口随修复回执透出，便于排查但不拦停任务。
+            asl_repairs.extend(contract_notices)
         self._remove_unrequested_metric_window_time(asl, request)
         self._repair_model81_trend_time(asl, request, semantic_model_id)
         self._bind_canonical_time_range(
@@ -2298,8 +2339,43 @@ class HttpDataRetrievalAdapter:
             # additionally emit a generic metric such as “订单明细”, which turns
             # the query into GROUP BY aggregation and can introduce an unsafe
             # cross-table join. The intent selected by the orchestrator is the
-            # authoritative execution shape, so aggregate metrics are removed.
-            asl["metrics"] = []
+            # authoritative execution shape, so aggregate metrics outside the
+            # caller contract are removed. Contract-required metrics (明细里按
+            # 商品分组的含税销售总额) must survive: the SQL translator validates
+            # the published metric formula against the generated SQL, and
+            # stripping them here fails the request with METRIC_FORMULA_STALE.
+            requested_metric_labels = {
+                str(item).strip()
+                for item in ((intent_asl_contract or {}).get("required_metrics") or [])
+                if str(item).strip()
+            }
+            requested_metric_labels.update(
+                str(item).strip()
+                for item in ((intent_asl_contract or {}).get("required_metric_codes") or [])
+                if str(item).strip()
+            )
+            if requested_metric_labels:
+                kept_metrics = []
+                for metric in asl.get("metrics") or []:
+                    if not isinstance(metric, dict):
+                        continue
+                    name = str(metric.get("name") or "").strip()
+                    alias = str(metric.get("alias") or "").strip()
+                    if name in requested_metric_labels or alias in requested_metric_labels:
+                        kept_metrics.append(metric)
+                asl["metrics"] = kept_metrics
+            else:
+                asl["metrics"] = []
+            # A row-level detail projects no aggregate, so an ORDER BY on a
+            # metric code would reference a column that never reaches SELECT
+            # (MySQL 1054). Drop that sort instead of emitting invalid SQL;
+            # detail ordering must use a projected field.
+            sort = asl.get("sort")
+            if (
+                isinstance(sort, dict)
+                and str(sort.get("field_type") or "").lower() == "metric"
+            ):
+                asl.pop("sort", None)
             # Relationship lists are set-shaped even though the physical joins
             # may contain several paths to the same projected combination.  The
             # translator applies this before LIMIT; ordinary order/event detail
@@ -2579,7 +2655,9 @@ class HttpDataRetrievalAdapter:
         applied_metric_filters = [
             item for item in applied_metric_filters if isinstance(item, dict)
         ]
-        sql = self._apply_current_metric_formulas(sql, metric_definitions)
+        sql = self._apply_current_metric_formulas(
+            sql, self._active_metric_definitions(asl, metric_definitions)
+        )
         sql = self._apply_shared_region_hospital_coverage_policy(
             sql,
             asl=asl,
@@ -2891,6 +2969,28 @@ class HttpDataRetrievalAdapter:
         if any(not isinstance(m, dict) or m.get('semantic_model_id') != scope.semantic_model_id or not scope.contains_domain(m.get('business_domain_id')) for m in evidence['selected_metrics']):
             raise AdapterError('ASL_SCOPE_INVALID', 'Selected metric exceeds backend authorization')
 
+    @staticmethod
+    def _active_metric_definitions(
+        asl: dict[str, Any], metric_definitions: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Only metrics the ASL actually projects are subject to formula checks.
+
+        Row-level detail clears ``asl["metrics"]`` while the request still
+        carries the extracted metric list, so validating every requested
+        metric would report METRIC_FORMULA_STALE for a column the SQL never
+        had to produce.
+        """
+        projected = {
+            str(item.get("name"))
+            for item in asl.get("metrics") or []
+            if isinstance(item, dict) and item.get("name")
+        }
+        return [
+            definition
+            for definition in metric_definitions
+            if str(definition.get("metric_id") or "").rsplit(":", 1)[-1] in projected
+        ]
+
     @classmethod
     def _apply_current_metric_formulas(
         cls,
@@ -2919,11 +3019,16 @@ class HttpDataRetrievalAdapter:
                     formula,
                 ))
                 normalized_sql = current.replace("`", "").lower()
-                if any(field.lower() not in normalized_sql for field in expected_fields):
+                missing = [field for field in sorted(expected_fields)
+                           if field.lower() not in normalized_sql]
+                if missing:
                     raise AdapterError(
                         "METRIC_FORMULA_STALE",
                         "SQL translation does not match the current published metric formula",
-                        details={"metric_id": definition["metric_id"]},
+                        details={"metric_id": definition["metric_id"],
+                                 "expected_fields": sorted(expected_fields),
+                                 "missing_fields": missing,
+                                 "sql_preview": current[:1200]},
                     )
                 continue
 
@@ -3423,11 +3528,15 @@ class HttpDataRetrievalAdapter:
             if not direct and not resolved:
                 unresolved.append(mention)
         if unresolved:
-            raise AdapterError(
-                "ASL_ENTITY_MENTION_UNRESOLVED",
-                "ASL did not provide source-backed bindings for semantic entity mentions",
-                details={"unresolved_mentions": unresolved},
+            # 2026-10-21 用户明确要求：结构校验尽可能宽松，未绑定的语义提及
+            # 只记录不拦停（提及不会进入 ASL 过滤，不触碰向量标准化底线）。
+            logger.warning(
+                "Unresolved semantic entity mentions tolerated: %s", unresolved
             )
+            repairs.append({
+                "type": "UNRESOLVED_ENTITY_MENTION_SKIPPED",
+                "mentions": unresolved,
+            })
 
     @classmethod
     def _validate_no_synthetic_product_filter(
