@@ -12,7 +12,7 @@ Resp 包装、VO 字段）与 Java 版保持一致，后端可直接调用或整
 - 大模型增强经 49 网关 /chat/workflow_chat（与 Java ChatModelBaseApi
   .translateWords 同一入口），失败或空答案静默降级为纯规则结果（留 WARNING 日志）。
   覆盖：实体表推荐（重排 + 实体名）、属性推荐（属性名提炼，不含字母数字）、
-  关系推荐（关系名 + 语义描述）。
+  关系推荐（模型判断关系基数与关系名，描述按最终基数生成）。
   模型名必须是网关 LLM_MODELS 支持的名称（当前为 qwen3.7-max；
   qwen3-max 不在列表，网关会静默返回空答案）。
 - 全部为只读接口，不落库、不改数据。
@@ -22,7 +22,7 @@ Resp 包装、VO 字段）与 Java 版保持一致，后端可直接调用或整
   中间表的间接关联。实体保存时的旧建议接口保留响应结构，返回空建议。
 - 语义描述只有多对多保留双向两句，其余基数为单句。已有实体子表字段
   映射及关系方向归一行为保持不变。
-- 直接字段证据命中后必须返回；模型只补充复核意见与排序，不删除候选。
+- 直接字段证据命中后必须返回；模型判断候选基数和关系名，不删除候选。
 """
 from __future__ import annotations
 
@@ -319,6 +319,35 @@ def _is_foreign_key_to(
     if _matches_table_key(lower, other_table_name):
         return True
     return bool(other_pk_name) and lower == other_pk_name.lower()
+
+
+# 关联检测与关系推荐共用的基数判断提示词。
+_RELATION_CARDINALITY_PROMPT = """关系基数判断：
+优先根据两个实体名称所代表的业务含义、对象粒度和它们之间的业务关系判断，
+结合已给出的字段对、字段注释和表结构理解关联方式。不要只按字段名或主键名字决定基数。
+分别判断：一个源实体最多对应多少个目标实体？一个目标实体最多对应多少个源实体？
+- 两个方向都最多一个：1:1（一对一）。
+- 一个源实体可对应多个目标实体，每个目标实体最多对应一个源实体：1:N（一对多）。
+- 一个源实体最多对应一个目标实体，一个目标实体可对应多个源实体：N:1（多对一）。
+- 两个方向都可以对应多个：N:N（多对多）。
+始终以本次给定的源实体→目标实体为方向，不要自行交换实体。
+示例：省份→城市通常为1:N，城市→省份为N:1；若一人只有一份当前档案且档案只属于一人，
+人员→当前档案为1:1；若学生可选多门课程、课程可被多名学生选择，学生→课程为N:N。
+这些示例说明判断方法，实际选择应服从本次实体的业务含义与提供的字段证据。
+同名字段只能证明已有候选连接，不能证明1:1；两张表各有id也不能证明1:1。
+业务实体与可被不同主体复用的分类字典可能有不同基数，不要仅因名称相近就套用同一种关系。
+不要凭空假定唯一索引、实际数据分布或未提供的业务约束；仍无法判断时cardinality输出null，保留该候选。
+"""
+
+
+def _model_cardinality(value: Any) -> str | None:
+    """兼容模型的常见基数写法；无法识别时沿用规则结果。"""
+    if not isinstance(value, str):
+        return None
+    value = re.sub(r"\s+", "", value).replace("：", ":").upper()
+    value = {"一对一": "1:1", "一对多": "1:N", "多对一": "N:1", "多对多": "N:N",
+             "1:M": "1:N", "M:1": "N:1", "M:N": "N:N", "N:M": "N:N", "M:M": "N:N"}.get(value, value)
+    return value if value in ("1:1", "1:N", "N:1", "N:N") else None
 
 
 def _build_semantic_description(
@@ -1199,7 +1228,7 @@ class SemanticRecommendService:
             for vo in result:
                 other_info = info_map.get(vo["otherEntityTypeId"])
                 other_name = vo.get("otherEntityName") or vo["otherEntityTypeId"]
-                block = schema_block(other_name, other_info)
+                block = f"候选实体ID：{vo['otherEntityTypeId']}\n" + schema_block(other_name, other_info)
                 if vo["related"]:
                     block += f"\n  （已有 {vo['relationCount']} 条人工配置的关联关系）"
                 candidates = evidence.get(vo["otherEntityTypeId"]) or []
@@ -1220,6 +1249,7 @@ class SemanticRecommendService:
                 + "\n\n候选关联实体（共 " + str(len(result)) + " 个）：\n"
                 + "\n\n".join(blocks)
                 + "\n\n任务：对每个候选实体判断它与当前实体是否存在业务关联：\n"
+                + _RELATION_CARDINALITY_PROMPT
                 + "1. 核对规则推导出的字段对是否有真实业务对应意义，可修正或补充字段对。\n"
                 + "2. cardinality 取值：1:1、1:N、N:1、N:N（以当前实体为源）。\n"
                 + "3. confidence 取值：high/medium/low。\n"
@@ -1259,10 +1289,7 @@ class SemanticRecommendService:
                 vo["llmReason"] = (
                     reason.strip() if isinstance(reason, str) and reason.strip() else None
                 )
-                cardinality = item.get("cardinality")
-                vo["llmCardinality"] = (
-                    cardinality if cardinality in ("1:1", "1:N", "N:1", "N:N") else None
-                )
+                vo["llmCardinality"] = _model_cardinality(item.get("cardinality"))
                 vo["llmFieldPairs"] = pairs
             # 直接关系以已配置关系和字段证据为准，模型意见不影响是否返回。
             # 排序：已配置 > 规则命中，模型置信度只影响同组顺序。
@@ -1477,17 +1504,17 @@ class SemanticRecommendService:
         self, source_name: str, target_name: str,
         candidates: list[dict[str, Any]],
     ) -> None:
-        """为物理推导候选生成语义化关系名；描述始终由模板确定性生成。
+        """根据实体业务含义判断候选基数与关系名，字段证据保持不变。
 
-        模型只负责重命名（2-6 字动词），不再采用模型生成的语义描述，
-        避免描述里混入第三个实体；失败或关系名不合法时保留模板结果。
+        模型基数有效时采用模型判断，否则保留规则结果；关系名独立处理。
+        描述始终按最终基数由模板生成，不采用模型自由生成的描述。
         """
         if not self._llm_enabled or not candidates:
             return
         try:
             listing_parts: list[str] = []
             for index, candidate in enumerate(candidates):
-                listing_parts.append(f"候选{index + 1}（基数 {candidate['cardinality']}）字段对：")
+                listing_parts.append(f"候选{index + 1}字段对：")
                 for pair in candidate["fieldPairs"]:
                     listing_parts.append(
                         f"  {pair['sourceTableName']}.{pair['sourceColumnName']}"
@@ -1500,10 +1527,12 @@ class SemanticRecommendService:
                 "你在为数据语义建模平台做实体关系推荐。两个实体：源实体【" + source_name
                 + "】、目标实体【" + target_name + "】。物理层推导出以下候选关联：\n"
                 + listing + "\n\n"
-                + "任务：为每个候选生成一个简洁贴切的中文动词关系名（如：开设、隶属、供货、包含，2-6 个字，不要泛泛的\"关联\"）。"
+                + _RELATION_CARDINALITY_PROMPT
+                + "任务：为每个候选独立判断cardinality，并生成简洁贴切的中文动词关系名（如：开设、隶属、供货、包含，2-6 个字）。"
                 + "关系名只能描述这两个实体之间的动作，禁止提到任何第三个实体。\n"
+                + "候选及其字段对已经确定，不要新增、删除候选或修改字段对；理由只用于说明基数判断依据。\n"
                 + "只输出 JSON 数组，不要任何解释或 markdown 代码块，格式："
-                + "[{\"candidate\":1,\"relationName\":\"关系名\"}]，"
+                + "[{\"candidate\":1,\"cardinality\":\"1:N\",\"relationName\":\"关系名\",\"reason\":\"基数判断依据\"}]，"
                 + "candidate 对应候选序号，必须覆盖每一个候选。\n"
             )
             array = _parse_llm_json_array(self._gateway.complete("实体关系推荐语义生成", prompt))
@@ -1516,14 +1545,15 @@ class SemanticRecommendService:
                 if not isinstance(candidate_no, int) or not 1 <= candidate_no <= len(candidates):
                     continue
                 candidate = candidates[candidate_no - 1]
+                cardinality = _model_cardinality(item.get("cardinality"))
+                if cardinality:
+                    candidate["cardinality"] = cardinality
                 relation_name = item.get("relationName")
                 if _relation_name_is_clean(relation_name):
-                    name = relation_name.strip()
-                    old_name = candidate.get("relationName") or "关联"
-                    description = candidate.get("semanticDescription")
-                    candidate["relationName"] = name
-                    if isinstance(description, str) and description:
-                        candidate["semanticDescription"] = description.replace(old_name, name)
+                    candidate["relationName"] = relation_name.strip()
+                candidate["semanticDescription"] = _build_semantic_description(
+                    source_name, target_name, candidate["cardinality"], candidate["relationName"],
+                )
         except Exception as exc:
             logger.warning("大模型增强关系推荐失败，降级为模板描述: %s", exc)
 
