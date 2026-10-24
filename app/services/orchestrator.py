@@ -6102,6 +6102,8 @@ class DataAnalysisOrchestrator:
             # surface 直通没走通时主链路会按同样输入再分类一次，留一份
             # 未被本函数改动的分类结果供主链路复用，避免重复意图终审
             chat._surface_prefetched_request = request.model_copy(deep=True)
+        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
+            return await self._answer_recognized_definition(chat, identity, request)
         if request.primary_intent not in {
             PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
             PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
@@ -6363,6 +6365,13 @@ class DataAnalysisOrchestrator:
             chat.message_id, chat.conversation_id,
             getattr(chat, "_dag_independent_task", False), chat.question[:80],
         )
+        extraction = chat._planner_extraction
+        if (self._judgment_definition_direct(chat._compound_judgment)
+                or getattr(chat, "_dag_definition_direct", False)
+                or (extraction is not None and extraction.intent == PrimaryIntent.METRIC_DEFINITION)):
+            # The recognized explanation intent is terminal routing evidence.
+            # Query rewriting/admission must not reclassify it as a metric query.
+            return await self._answer_recognized_definition(chat, identity)
         if (
             getattr(self.settings, "surface_asl_execution_enabled", False)
             and chat._completed_question_execution
@@ -15131,16 +15140,30 @@ class DataAnalysisOrchestrator:
         intent = getattr(judgment, "intent", None)
         return intent in ("解释口径", PrimaryIntent.METRIC_DEFINITION.value)
 
+    async def _answer_recognized_definition(
+        self, chat: ChatRequest, identity: TrustedIdentity,
+        request: CanonicalAnalysisRequest | None = None,
+    ) -> AgentResponse:
+        if request is None:
+            request = CanonicalAnalysisRequest(
+                conversation_id=chat.conversation_id, application_id=chat.application_id,
+                tenant_id=identity.tenant_id, user_id=identity.user_id,
+                original_question=chat.question, rewritten_question=chat.question,
+                primary_intent=PrimaryIntent.METRIC_DEFINITION,
+                intent_source="INTENT_RECOGNITION",
+            )
+        request.application_id = chat.application_id
+        request.rewritten_question = chat.question
+        bind_authorized_scope(request, chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=chat._demo_execution_resolved_business_domain_ids)
+        response = await self._metadata_answer(request, identity, chat.semantic_model_id)
+        return await self._finish_terminal(request, response)
+
     async def _definition_llm_answer(
         self, request: CanonicalAnalysisRequest,
         resolved_items: list[dict],
     ) -> str:
-        """解释口径直答：把问题与语义文件交给模型生成解释文本。
-
-        resolved_items 是向量库命中的 RESOLVED 指标登记记录（源自语义
-        文件）；整份语义文件由 synthesize_definition 自行加载。失败时
-        抛错由调用方回退模板，模型未配置时返回空串同样回退。
-        """
+        """把已确认的意图、补全问题和可选定义交给模型；模型加载当前语义文件。"""
         synthesizer = self.analysis_synthesizer
         method = getattr(synthesizer, 'synthesize_definition', None)
         if not callable(method):
@@ -15152,6 +15175,7 @@ class DataAnalysisOrchestrator:
         question = request.rewritten_question or request.original_question
         return str(await method(
             question,
+            intent=request.primary_intent.value,
             definitions=definitions,
             semantic_model_id=request.semantic_model_id,
         ))
@@ -15159,6 +15183,23 @@ class DataAnalysisOrchestrator:
     async def _metadata_answer(self, request: CanonicalAnalysisRequest, identity: TrustedIdentity, semantic_model_id: int | None) -> AgentResponse:
         if request.primary_intent == PrimaryIntent.SEMANTIC_CATALOG_QUERY:
             return await self._catalog_overview_answer(request, semantic_model_id)
+        if (request.primary_intent == PrimaryIntent.METRIC_DEFINITION
+                and callable(getattr(self.analysis_synthesizer, 'synthesize_definition', None))):
+            # Entity/field/relationship questions need the semantic document,
+            # not a successful metric lookup or executable query parameters.
+            try:
+                explanation = await self._definition_llm_answer(request, [])
+            except Exception:
+                logger.warning("definition document answer failed", exc_info=True)
+                explanation = ""
+            if explanation:
+                return AgentResponse(
+                    request_id=request.request_id, conversation_id=request.conversation_id,
+                    status="COMPLETED", intent=request.primary_intent,
+                    intent_source=request.intent_source, intent_confidence=request.intent_confidence,
+                    answer=explanation,
+                )
+            return self._fallback(request, "口径解释暂时无法生成，请稍后重试。")
         lookup = getattr(self.adapters.semantic, 'lookup_definitions', None)
         if request.primary_intent == PrimaryIntent.METRIC_DEFINITION and callable(lookup):
             from app.services.metric_definition_answer import definition_response
@@ -15166,31 +15207,7 @@ class DataAnalysisOrchestrator:
                 results = await lookup(request, identity)
             except AdapterError as exc:
                 return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
-            response = definition_response(request, results)
-            # 口径解释正文改为“问题+语义文件”交给模型生成；模板结果仅在
-            # 模型不可用或未命中指标时保留（澄清与能力说明分支不变）。
-            resolved_items = [
-                item for item in (results or [])
-                if isinstance(item, dict) and item.get('status') == 'RESOLVED'
-            ]
-            # 未命中指标登记时同样把问题+整份语义文件交给模型：语义文件
-            # 登记了该指标就解释，未登记则按提示词说明未登记、不猜测；
-            # 模型失败或未配置时保留模板（澄清/能力说明兜底不变）。
-            try:
-                explanation = await self._definition_llm_answer(
-                    request, resolved_items
-                )
-            except Exception:
-                logger.warning(
-                    "definition llm answer failed; keep template",
-                    exc_info=True,
-                )
-            else:
-                if explanation:
-                    response.answer = explanation
-                    if not resolved_items:
-                        response.status = 'COMPLETED'
-            return response
+            return definition_response(request, results)
         if request.primary_intent == PrimaryIntent.DATA_LINEAGE and not request.metrics:
             # Legacy's downstream protocol supports metric lineage only. Do not
             # disguise this external contract gap as missing user information.
