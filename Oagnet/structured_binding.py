@@ -4,7 +4,7 @@ import logging
 import re
 from datetime import date, datetime, timedelta
 from query_binding_review import _metadata, _object, _field
-from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields, normalize_unit
+from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields, normalize_unit, time_anchor
 
 logger = logging.getLogger(__name__)
 from binding_ownership import (entity_label_candidates, field_owners, matching_fields,
@@ -923,6 +923,20 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
             choice = found[0] if len(found) == 1 else {}
             key = choice.get('key')
             exact_keys = _exact_choice_keys(target, original, slot_catalog)
+            if target in {'dimensions', 'sort'} and not exact_keys and _grain_slot_unit(label):
+                # Month/quarter/year denote a grain of the governed date field,
+                # not a separate database attribute. Use the same key in SELECT
+                # and ORDER BY; keep the existing unresolved path if no anchor.
+                try:
+                    anchor = time_anchor(extraction.get('时间粒度') or {}, ast,
+                                         catalog, knowledge, plan.get('time') or {})
+                except (ValueError, TypeError, KeyError):
+                    anchor = None
+                if anchor:
+                    selected = [dim['name'] for dim in ast['dimensions']
+                                if dim['name'] == anchor or anchor in dimension_fields(
+                                    catalog['dimensions'].get(dim['name'], {}))]
+                    exact_keys = [selected[0] if len(selected) == 1 else anchor]
             if target == 'filters' and all(
                 value in slot_catalog['fields'] or value in catalog['dimensions']
                 for value in exact_keys

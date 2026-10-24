@@ -962,6 +962,15 @@ def _collapse_analysis_computation_tasks(decomposition):
     )
     if intent not in _ANALYSIS_QUESTION_INTENTS:
         return decomposition
+    # A registered formula remains a calculator deliverable even when the
+    # root intent is comparison/trend. Do not replace an average with a diff.
+    from app.planning.task_plan_stages import targets_in_text
+    registered, aliases = decomposition.metric_catalog or (frozenset(), {})
+    compounds = decomposition.metric_dependencies or {}
+    for task in tasks:
+        if task.depends_on and any(name in compounds for name in targets_in_text(
+                task.question + ' ' + (task.expected_output or ''), registered, aliases)):
+            return decomposition
     def local_calculation(task):
         return ("不再查询数据库" in task.question
                 or database_query_choice(task.structured) is False)

@@ -6,8 +6,7 @@ from app.adapters.base import AdapterError
 from app.services.asl_surface_handoff import build_surface_asl_input
 from app.observability.call_timing import track_operation
 
-# 规划器有时把地理谓词挂在不含省市属性的实体上（如“上海市”挂在销售订单下），
-# 目录无法给出可执行字段。这里按字段名把谓词归属改到维度实体，值仍由目录绑定。
+# 共享地理字典只为未声明归属的条件提供兼容回退；显式业务归属保持不变。
 _REGION_FIELD_OWNERS = (
     ("省份", "省份"),
     ("province", "省份"),
@@ -32,13 +31,17 @@ def _region_owner_extraction(extraction):
             continue
         field = str(item.get("field") or "").casefold()
         owner = next((name for word, name in _REGION_FIELD_OWNERS if word in field), None)
-        if owner is None or item.get("entity") == owner:
+        if owner is None:
             filters.append(item)
             continue
+        # Preserve an explicitly declared business owner; the ASL catalog
+        # resolves its field. A dictionary is only a fallback for an unowned slot.
+        owner = item.get("entity") or owner
         filters.append(dict(item, entity=owner))
-        changed = True
+        changed = changed or item.get("entity") != owner
         if owner not in entities:
             entities.append(owner)
+            changed = True
     if not changed:
         return None
     return {**extraction, "实体": entities, "过滤条件": filters}
@@ -114,9 +117,7 @@ async def generate_surface_asl(
             generated, asl, ambiguities = fallback_generated, fallback_asl, []
             used_fallback = True
     if ambiguities:
-        # 谓词归属修正：规划器把城市/省份谓词挂在销售订单等实体下时，
-        # 目录绑定必然失败（实测“2025年上海市”）。只改谓词归属与实体清单，
-        # 值仍由目录校验，不猜测业务值。
+        # 补齐已声明的实体上下文，不把医院/经销商归属改成共享地区字典。
         owner_extraction = _region_owner_extraction(structured_extraction)
         if owner_extraction is not None:
             owner_payload = {**payload, "structured_extraction": owner_extraction}
@@ -125,8 +126,7 @@ async def generate_surface_asl(
             owner_generated, owner_asl, owner_ambiguities = await _generate(
                 owner_payload, ":owner"
             )
-            if not owner_ambiguities:
-                generated, asl, ambiguities = owner_generated, owner_asl, []
+            generated, asl, ambiguities = owner_generated, owner_asl, owner_ambiguities
     # Reuse the existing scope checks, including metric provenance. Do not make
     # authorization depend on model-extracted mentions or returned business text.
     from app.adapters.http import HttpDataRetrievalAdapter

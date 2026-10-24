@@ -13645,6 +13645,10 @@ class DataAnalysisOrchestrator:
                     "请确认这个值的写法或所属分类是否正确。"
                 )
             return f"筛选条件暂时没有在{target}的可选范围里找到对应项，请确认条件写法是否正确。"
+        if "无法确认该筛选作用于哪个业务实体" in reason:
+            return f"请确认“{value_text or field_label}”限定的是哪个业务对象的所在地，例如医院所在地或经销商所在地。"
+        if "sort field must be a selected dimension" in reason:
+            return "时间排序与结果分组未正确衔接，请重试本次查询。"
         if field_label or value_text:
             condition = "：".join(part for part in (field_label, value_text) if part)
             return f"查询条件“{condition}”没有能准确对应到系统里的数据口径，请确认写法或换个说法描述。"

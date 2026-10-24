@@ -459,6 +459,10 @@ def build_analysis_task_plan(
                     time_dimension = (
                         str(anchor).strip() if anchor else (declared_time or "业务日期")
                     )
+                    if not declared_time:
+                        retrieval_structured["维度"] = [
+                            *(retrieval_structured.get("维度") or []), time_dimension,
+                        ]
                     retrieval_structured["排序"] = [{"field": time_dimension, "order": "asc"}]
         retrieval_specs.append({
             "task_id": "task-1",

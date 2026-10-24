@@ -125,7 +125,7 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     # A table's consumers do not make every ordinary attribute shared.
     from structured_binding import (catalog_candidates, _exact_choice_keys,
                                     _dimension_filter_field, _dim_bound_field)
-    from binding_ownership import matching_fields, field_owners, resolve_entities
+    from binding_ownership import matching_fields, field_owners, resolve_entities, parameter_catalog
     attribute_catalog = catalog_candidates(knowledge)
     for option in options:
         index = option['filter_index']
@@ -133,22 +133,21 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         if type(source_index) is not int or not 0 <= source_index < len(declared_filters):
             continue
         original = declared_filters[source_index]
-        overreached = set()
-        if isinstance(original, dict) and original.get('entity'):
-            declared_owners = resolve_entities(
-                ((extraction or {}).get('实体') if isinstance(extraction, dict) else None) or [],
-                entity_catalog)
-            claimed_owners = resolve_entities([original.get('entity')], entity_catalog)
-            # 过滤条件声明的实体不在本任务实体集合内属于越界声明（实测
-            # 2026-10-22：任务实体只有销售订单/经销商，条件却声明为医院，
-            # 绑定后得到 hospital.province_id，返回全国经销商 1713 行）。
-            # 越界声明没有任务范围证据，不参与归属；改由任务实体提示裁决，
-            # 仍不唯一则保留歧义走澄清，不猜归属。
-            if claimed_owners and declared_owners and not (claimed_owners & declared_owners):
-                original = {**original, 'entity': None}
-                overreached = declared_owners
         source_filters[index] = original
-        required = overreached or parameter_owners(original, {'entities': entity_catalog})
+        required = parameter_owners(original, {'entities': entity_catalog})
+        # A slot's explicit owner is more specific than the optional entity list.
+        # Reuse the field binder's catalog-backed correction for a source entity
+        # that has no such attribute/edge (e.g. order + province dictionary).
+        if required and not any(c['owner_entity'] in required for c in option['choices']):
+            scoped = parameter_catalog(attribute_catalog, original, extraction or {}, 'filters')
+            corrected = scoped.get('_parameter_owners') or set()
+            label_owners = entity_label_candidates(original.get('field') or original.get('name'), entity_catalog)
+            if (required == {(ast.get('subject') or {}).get('entity')}
+                    and len(label_owners) == 1
+                    and label_owners & fields.get(option['predicate']['field'], set())):
+                corrected = label_owners
+            if corrected & fields.get(option['predicate']['field'], set()):
+                required = corrected
         if isinstance(original, dict) and not original.get('entity'):
             aliases = entity_label_candidates(original.get('field') or original.get('name'), entity_catalog)
             # A bare geography/dictionary label identifies the value catalog,
