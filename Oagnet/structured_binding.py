@@ -7,7 +7,7 @@ from query_binding_review import _metadata, _object, _field
 from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields, normalize_unit, time_anchor
 
 logger = logging.getLogger(__name__)
-from binding_ownership import (entity_label_candidates, field_owners, matching_fields,
+from binding_ownership import (entity_label_candidates, field_owners, matching_dimensions, matching_fields,
                                normalized, parameter_catalog, registered_terms, resolve_entities, value_allowed)
 from binding_errors import invoke_binding_object
 
@@ -504,6 +504,12 @@ def _exact_choice_keys(target, original, catalog):
         label = original
     if not isinstance(label, str) or not label.strip():
         return []
+    if target == 'dimensions':
+        # A typed dimension slot must not compete with entity aliases or
+        # attributes. Only fall back when this category has no registered hit.
+        dimensions = matching_dimensions(original, catalog)
+        if dimensions:
+            return dimensions
     if target == 'metrics':
         pool = catalog.get('metrics', {})
     elif target == 'dimensions':
@@ -982,6 +988,12 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     choice = dict(choice, attr=bindings[0]['attr'])
                 elif key not in required_owners and (not bindings or choice.get('attr') not in {b.get('attr') for b in bindings}):
                     choice = dict(choice, error='该维度未唯一绑定到参数指定的实体属性')
+            elif target == 'dimensions' and isinstance(key, str) and key in catalog['dimensions'] and len(exact_keys) == 1:
+                bindings = _object(catalog['dimensions'][key].get('bind_entities')) or []
+                if len(bindings) == 1 and isinstance(bindings[0], dict) and bindings[0].get('attr') is not None:
+                    # The selected dimension's published mapping owns its
+                    # attribute; a model's discarded entity match does not.
+                    choice = dict(choice, attr=bindings[0]['attr'])
             # 过滤/展示只认物理字段；模型绑了维度编码时先换绑到该维度的物理字段
             if target in {'filters', 'display_fields'} and isinstance(key, str) and key not in catalog['fields']:
                 resolved = _dim_bound_field(key, slot_catalog)
