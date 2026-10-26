@@ -2228,7 +2228,7 @@ async def test_model_plan_injects_semantic_context_into_system_prompt() -> None:
     assert outcome.single_intent == PrimaryIntent.METRIC_QUERY
     structured = outcome.single_structured
     assert structured is not None
-    assert structured["意图"] == "统计查询"
+    assert structured["意图"] == "指标查询"
     assert structured["时间粒度"] == {"unit": "年", "time_range": "今年"}
     # parameters由结构化提取JSON派生，兼容mentions通道。
     assert list(outcome.single_parameters) == [
@@ -2754,3 +2754,108 @@ def test_task_name_aligned_with_equality_filter():
     assert aligned.tasks[1].question == '统计上海地区的区域全部医院总数'
     assert aligned.tasks[1].structured['过滤条件'][0]['value'] == '上海'
     assert aligned.tasks[2].structured['过滤条件'][0]['value'] == ['上海']
+
+
+@pytest.mark.asyncio
+async def test_root_intent_replaces_model_intent_in_planning(monkeypatch):
+    """根意图下沉：任务拆分与规划不再做意图判断。
+
+    意图识别节点的根意图直接作为问题意图与全部任务意图；
+    提取模型输出的意图（含每任务中文意图键）不再采信，
+    中文意图键与根意图保持一致。未传根意图时保持既有行为。
+    """
+    from unittest.mock import AsyncMock
+
+    from app.domain import semantic_description
+    from app.planning.task_dag import SingleQuestionPlanner
+
+    monkeypatch.setattr(semantic_description, 'load_semantic_description', AsyncMock(return_value={
+        'source': 'semantic_model_81.md', 'available': True, 'content': ''}))
+    plan_payload = json.dumps(
+        {'tasks': [{'question': '查询各经销商的订单数量'}]}, ensure_ascii=False)
+    extraction_payload = json.dumps({
+        'intent': 'TREND_ANALYSIS',
+        'extraction': {'意图': '趋势分析', '指标': [], '维度': [], '展示字段': [],
+                       '过滤条件': [], '时间粒度': None, '排序': [], '限制': None,
+                       '输出要求': None, '是否去重': None, '是否查询数据库': '是'},
+    }, ensure_ascii=False)
+
+    async def model(request):
+        payload = json.loads(request.content.decode())
+        content = plan_payload if '你是任务规划器' in payload['messages'][0]['content'] else extraction_payload
+        return httpx.Response(200, json={'choices': [{'message': {'content': content}}]})
+
+    settings = Settings(
+        _env_file=None, env='test',
+        intent_model_api_key=SecretStr('test-key'),
+        multi_question_model_enabled=True,
+    )
+    planner = SingleQuestionPlanner(settings, transport=httpx.MockTransport(model))
+
+    # 未传根意图：保持既有行为，意图取提取模型输出
+    legacy = await planner.plan_question('查询各经销商的订单数量', semantic_model_id=81)
+    assert legacy.intent is PrimaryIntent.TREND_ANALYSIS
+    assert legacy.tasks[0].intent is PrimaryIntent.TREND_ANALYSIS
+    assert legacy.tasks[0].structured['意图'] == '趋势分析'
+
+    # 传入根意图：意图判断被跳过，模型意图输出被忽略
+    root = await planner.plan_question(
+        '查询各经销商的订单数量', semantic_model_id=81,
+        root_intent=PrimaryIntent.METRIC_QUERY)
+    assert root.intent is PrimaryIntent.METRIC_QUERY
+    assert root.tasks[0].intent is PrimaryIntent.METRIC_QUERY
+    assert root.tasks[0].structured['意图'] == '指标查询'
+
+
+@pytest.mark.asyncio
+async def test_root_intent_also_governs_computation_tasks(monkeypatch):
+    """计算路由使用查库标记，意图必须沿用识别节点。"""
+    from unittest.mock import AsyncMock
+
+    from app.domain import semantic_description
+    from app.planning.task_dag import SingleQuestionPlanner
+
+    monkeypatch.setattr(semantic_description, 'load_semantic_description', AsyncMock(return_value={
+        'source': 'semantic_model_81.md', 'available': True,
+        'content': '| 指标 | 同义词 | 业务口径 | 单位 | 指标层级 | 依赖指标 |\n'
+                   '| --- | --- | --- | --- | --- | --- |\n'
+                   '| 订单数量 | 订单数 | 订单号去重数 | 笔 | 原子指标 | 无 |\n'}))
+    plan_payload = json.dumps({'tasks': [
+        {'question': '查询各经销商的订单数量', 'metric_targets': ['订单数量']},
+        {'question': '计算订单数量的平均值，不再查询数据库', 'depends_on': [0],
+         'metric_targets': ['订单数量'],
+         'postprocess': {'operation': {'type': 'aggregate', 'group_by': [],
+             'aggregations': [{'field': '订单数量', 'function': 'avg', 'alias': '平均值'}]}}},
+    ]}, ensure_ascii=False)
+    extraction_payload = json.dumps({'tasks': [
+        {'task_index': 0, 'extraction': {'意图': '明细查询', '指标': [], '维度': [],
+            '展示字段': [], '过滤条件': [], '时间粒度': None, '排序': [], '限制': None,
+            '输出要求': None, '是否去重': None, '是否查询数据库': '是'}},
+        {'task_index': 1, 'extraction': {'意图': '明细查询', '指标': [], '维度': [],
+            '展示字段': [], '过滤条件': [], '时间粒度': None, '排序': [], '限制': None,
+            '输出要求': None, '是否去重': None, '是否查询数据库': '否',
+            '结果操作': {'source_task_index': 0, 'operation': {'type': 'aggregate', 'group_by': [],
+                'aggregations': [{'field': '订单数量', 'function': 'avg', 'alias': '平均值'}]}}}},
+    ]}, ensure_ascii=False)
+
+    async def model(request):
+        payload = json.loads(request.content.decode())
+        content = plan_payload if '你是任务规划器' in payload['messages'][0]['content'] else extraction_payload
+        return httpx.Response(200, json={'choices': [{'message': {'content': content}}]})
+
+    settings = Settings(
+        _env_file=None, env='test',
+        intent_model_api_key=SecretStr('test-key'),
+        multi_question_model_enabled=True,
+    )
+    planner = SingleQuestionPlanner(settings, transport=httpx.MockTransport(model))
+    root = await planner.plan_question(
+        '查询各经销商的订单数量并计算平均值', semantic_model_id=81,
+        root_intent=PrimaryIntent.DETAIL_QUERY)
+    assert root.intent is PrimaryIntent.DETAIL_QUERY
+    assert root.tasks[0].intent is PrimaryIntent.DETAIL_QUERY
+    assert root.tasks[0].structured['意图'] == '明细查询'
+    assert root.tasks[1].intent is PrimaryIntent.DETAIL_QUERY
+    assert root.tasks[1].structured['意图'] == '明细查询'
+    assert root.tasks[1].structured['是否查询数据库'] == '否'
+    assert root.tasks[1].structured['结果操作']['operation']['type'] == 'aggregate'

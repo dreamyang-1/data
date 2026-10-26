@@ -1346,12 +1346,13 @@ class CompoundTaskPlanner:
         # 结构节点必须先于并行分支登记：子任务各自拷贝上下文，节点在
         # 并行前登记，各子问题规划才能挂到同一个任务拆分与规划节点下
         ensure_structural_span("task_planning", name="任务拆分与规划")
+        from app.planning.compat import recognized_planning_intent, inherit_recognized_intent
         decompositions = await asyncio.gather(*(
             self._single.plan_question(
                 entry.question,
                 semantic_context=semantic_context,
                 semantic_model_id=semantic_model_id,
-                root_intent=root_intent,
+                root_intent=recognized_planning_intent(entry, root_intent),
             )
             for entry in judgment.entries
         ))
@@ -1375,6 +1376,7 @@ class CompoundTaskPlanner:
                     parameters=list(original.parameters), structured=original.structured),
                     task_question=original.question, task_name=original.name)
             if expanded is not None:
+                inherit_recognized_intent(recognized_planning_intent(entry, root_intent), plan=expanded)
                 indexes = {task.task_id: index for index, task in enumerate(expanded.tasks)}
                 entry_tasks = tuple(DecomposedTask(question=task.question, name=task.name,
                     depends_on=tuple(indexes[dep] for dep in task.depends_on),
@@ -1606,6 +1608,8 @@ class CompoundQuestionRouter:
         root_intent 是意图识别节点的根意图，透传给全部任务拆解，
         规划阶段不再做意图判断。
         """
+        from app.planning.compat import recognized_planning_intent
+        root_intent = recognized_planning_intent(judgment, root_intent)
         if judgment.is_compound:
             try:
                 plan = await self._planner.plan(

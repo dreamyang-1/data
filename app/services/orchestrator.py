@@ -1537,6 +1537,9 @@ class DataAnalysisOrchestrator:
             # 同一轮 _handle 内部还会对（可能归一化过的）同一问题再算一次，
             # 文本一致时直接复用这份确定性结果
             chat._rules_classification_cache = (chat.question, raw_request)
+            from app.planning.compat import recognized_planning_intent
+            raw_request.primary_intent = recognized_planning_intent(
+                chat._compound_judgment, raw_request.primary_intent)
             planning_question = chat.question
             confirmed_pending_choice = None
             confirmed_extraction = None
@@ -1558,6 +1561,9 @@ class DataAnalysisOrchestrator:
                         planning_pending.request, chat.question
                     )
                     if confirmed_pending_choice is not None:
+                        # 候选确认延续原任务，不能把“4”等回复的规则意图传给规划。
+                        raw_request.primary_intent = planning_pending.request.primary_intent
+                        raw_request.intent_source = planning_pending.request.intent_source
                         planning_question = self._completed_question_with_choice(
                             planning_pending.request, confirmed_pending_choice
                         )
@@ -1604,8 +1610,10 @@ class DataAnalysisOrchestrator:
                         chat.conversation_id,
                     )
             elif literal_structured is not None:
-                chat._planner_extraction=PlannerExtraction(intent=PrimaryIntent.COMPARISON_ANALYSIS,
+                chat._planner_extraction=PlannerExtraction(intent=raw_request.primary_intent,
                     structured=literal_structured)
+                from app.planning.compat import inherit_recognized_intent
+                inherit_recognized_intent(raw_request.primary_intent, extraction=chat._planner_extraction)
                 chat._task_table=[{'任务':'task-1','名称':'计算明确数值','是否查询数据库':'否','依赖':[],'执行状态':'待执行'}]
                 chat._task_table_message_id=chat.message_id
                 await emit_progress('INTENT_RECOGNITION','COMPLETED','已识别为明确数值的计算任务。')
@@ -1818,8 +1826,6 @@ class DataAnalysisOrchestrator:
                             from app.services.calculation_execution import literal_computation
                             is_literal = bool(plan is None and outcome.single_extraction is not None
                                 and literal_computation(outcome.single_extraction.structured))
-                            if is_literal:
-                                outcome.single_extraction.intent=PrimaryIntent.COMPARISON_ANALYSIS
                             if plan is None and outcome.single_extraction is not None and not is_literal:
                                 # 分析类单任务展开为取数+分析多任务DAG：
                                 # 取数、分析都是独立任务节点，随任务表下发；
@@ -1842,6 +1848,11 @@ class DataAnalysisOrchestrator:
                                 "multi" if plan is not None else "single",
                                 len(plan.tasks) if plan is not None else 1,
                             )
+                            from app.planning.compat import inherit_recognized_intent
+                            raw_request.primary_intent = recognized_planning_intent(
+                                outcome.judgment, raw_request.primary_intent)
+                            inherit_recognized_intent(raw_request.primary_intent, plan=plan,
+                                extraction=outcome.single_extraction, judgment=outcome.judgment)
                             # 查不查库由确定性信号推导后写进提取参数，展示与
                             # 下游 ASL 生成读同一份：纯计算任务带"不再查询
                             # 数据库"标记，依赖任务要发新查询，其余照常查库。
@@ -1893,7 +1904,7 @@ class DataAnalysisOrchestrator:
                             await emit_progress("FINAL_OUTPUT", "COMPLETED", "本次任务未完成，未将部分查询作为完整答案。")
                             return AgentResponse(
                                 request_id=uuid4(), conversation_id=chat.conversation_id,
-                                status="SAFE_FALLBACK", intent=PrimaryIntent.DETAIL_QUERY,
+                                status="SAFE_FALLBACK", intent=raw_request.primary_intent,
                                 intent_source="TASK_PLANNING_ERROR", intent_confidence=1.0,
                                 answer="本次任务规划未能生成完整的可执行计划，尚未执行查询。"
                                     "未将多个任务降为单次查询；无需重复补充已明确的条件。",
@@ -1906,7 +1917,9 @@ class DataAnalysisOrchestrator:
                     nondata_direct = (
                         plan is None
                         and chat._planner_extraction is not None
-                        and chat._planner_extraction.intent in NO_DATA_INTENTS
+                        and chat._planner_extraction.intent in {
+                            PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE,
+                        }
                     )
                     if plan is None and chat._planner_extraction is not None:
                         from app.services.calculation_execution import literal_computation
@@ -3546,7 +3559,7 @@ class DataAnalysisOrchestrator:
     async def _respond_literal_computation(self, chat, identity):
         """The single-task route must not rewrite a calculator into a SQL query."""
         task=AtomicTask(task_id='task-1',question=chat.question,depends_on=[],
-            extraction=chat._planner_extraction.structured,primary_intent=PrimaryIntent.COMPARISON_ANALYSIS)
+            extraction=chat._planner_extraction.structured,primary_intent=chat._planner_extraction.intent)
         response=await self._respond_pure_computation(chat,identity,task,{})
         success=response.status=='COMPLETED'
         if success:
@@ -3562,7 +3575,7 @@ class DataAnalysisOrchestrator:
                 response.answer = self._markdown_result_table(
                     list(preview[0]), display, units=computation_units
                 )
-            response.intent=PrimaryIntent.COMPARISON_ANALYSIS
+            response.intent=chat._planner_extraction.intent
             chat._last_result_dataset_id=response.dataset_id
         if chat._task_table:
             chat._task_table[0]['执行状态']='已完成' if success else '执行失败'
@@ -3582,7 +3595,8 @@ class DataAnalysisOrchestrator:
             request_id=uuid4(),
             conversation_id=chat.conversation_id,
             status="FAILED",
-            intent=PrimaryIntent.CHAT,
+            intent=(chat._planner_extraction.intent if chat._planner_extraction is not None
+                    and chat._planner_extraction.intent is not None else PrimaryIntent.CHAT),
             intent_source="TASK_PLANNER",
             answer="计算未完成，暂未获得可用的计算结果。",
             reliability=ReliabilityReport(
@@ -4015,9 +4029,9 @@ class DataAnalysisOrchestrator:
         而不是分析任务文本（任务文本里的方法描述会误触信号）；趋势
         分析使用绑定中的能力选择与取数窗口；兼容旧绑定时才补环比信号。
         """
-        intent = PrimaryIntent(str(binding.get("intent"))) if binding.get("intent") else (
-            task.primary_intent or PrimaryIntent.COMPARISON_ANALYSIS
-        )
+        intent = task.primary_intent or (
+            PrimaryIntent(str(binding.get("intent"))) if binding.get("intent")
+            else PrimaryIntent.COMPARISON_ANALYSIS)
         metrics = []
         for item in (task.extraction or {}).get("指标") or []:
             name = item.get("name") if isinstance(item, dict) else item
@@ -4280,7 +4294,7 @@ class DataAnalysisOrchestrator:
                 word in task.question for word in ('覆盖率', '占比', '比例')):
                 evidence_operation = str(operation['left_field']) + ' / ' + str(operation['right_field'])
             return AgentResponse(request_id=uuid4(), conversation_id=chat.conversation_id,
-                status='COMPLETED', intent=PrimaryIntent.CHAT, intent_source='TASK_DAG_COMPUTATION',
+                status='COMPLETED', intent=task.primary_intent or PrimaryIntent.CHAT, intent_source='TASK_DAG_COMPUTATION',
                 answer=chat._dag_deferred_insight['summary'], dataset_id=reference.dataset_id,
                 reliability=ReliabilityReport(level='HIGH' if quality == 'PASS' else 'LIMITED', score=1,
                     gates={'deterministic_computation': True, 'full_result': True},
@@ -12293,9 +12307,10 @@ class DataAnalysisOrchestrator:
             timing_started = time.perf_counter()
             # jev 意图边车与分类/规划链路并行，对所有意图来源做终审；
             # 失败或低置信时保持原判定，原链路即兜底，主链路不受隧道波动影响
-            jev_task = start_intent_sidecar(
+            inherited_intent = planner_extraction.intent if use_extraction else None
+            jev_task = (start_intent_sidecar(
                 self.settings, question, parent=intent_verdict_span
-            )
+            ) if inherited_intent is None else None)
             classify = self.classifier.classify
             signature = inspect.signature(classify).parameters
             supports_pre_resolved = "pre_resolved" in signature
@@ -12324,7 +12339,7 @@ class DataAnalysisOrchestrator:
                 result._planner_extraction = planner_extraction
                 if planner_extraction.intent is not None:
                     result.primary_intent = planner_extraction.intent
-                    result.intent_source = "TASK_PLANNER"
+                    result.intent_source = "INTENT_RECOGNITION"
                 if (
                     planner_extraction.intent in METADATA_INTENTS
                     and not result.metrics
@@ -12340,9 +12355,10 @@ class DataAnalysisOrchestrator:
                 self._apply_explicit_projection_mode(result, planner_extraction)
                 self._apply_dag_structured_query_shape(result, planner_extraction)
                 self._apply_planned_temporal_shape(result, planner_extraction)
-            await finish_intent_sidecar(
-                jev_task, result, self.settings, conversation_id
-            )
+            if inherited_intent is None:
+                await finish_intent_sidecar(
+                    jev_task, result, self.settings, conversation_id
+                )
             self._apply_platform_metric_vocabulary(result, agent_prompt)
             # 步骤层只归拢展示，qwen 分类与 jev 终审各自以子节点呈现
             try:
@@ -12509,6 +12525,11 @@ class DataAnalysisOrchestrator:
             if planner_extraction is not None
             else None
         )
+        # Fast paths also consume the recognition verdict carried by the plan.
+        if (planner_extraction is not None and planner_extraction.intent is not None
+                and request.primary_intent != planner_extraction.intent):
+            request.primary_intent = planner_extraction.intent
+            request.intent_source = "INTENT_RECOGNITION"
         # Keep the planner's predicate owner at every existing execution entry
         # point (including the fast path). This is not another NL extraction.
         # Names/values are still grounded later by the authorized catalog.

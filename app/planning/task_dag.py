@@ -1209,7 +1209,7 @@ aggregate按group_by分组、aggregations逐项计算。每项field/function/ali
 方差、标准差等样本统计必须先取得完整所需粒度的样本（例如逐订单金额），再aggregate；不能先查询总金额再把单个总数当样本。多步按依赖或最多5步pipeline组合，例如平方→分组平均→开根得到均方根，禁止把表达式写在字段名里。
 排序操作格式为{"type":"sort","field":"实际结果列名","descending":true}；取前N格式为{"type":"limit","count":N}；合并排序取前N格式为{"type":"sort_limit","field":"实际结果列名","descending":true,"count":N}。最终按计算结果排名时，成分取数任务不得先按其他指标取前N；只在用户明确先选定对象范围时保留该范围限制。
 排名必须保留最终计算字段的排序方向和限制人数；按人或组织计算时，所有相应取数任务都保留对象分组及必要展示字段，不能变成全局总计；共用分母按规范保留原有范围。公式或字段依据不明时不要编造计算绑定。
-同比、环比、趋势、占比、异常、归因、预测等分析类计算不属于“结果操作”，也不是“计算绑定”：这类问题只输出取数任务与正确意图（如趋势分析），不得为分析计算输出任何结果操作类型（包括自造的“同比”“环比”“增长率”等），分析由系统专门的分析工具完成。
+同比、环比、趋势、占比、异常、归因、预测等分析类计算不属于“结果操作”，也不是“计算绑定”：这类问题按已识别意图提取取数参数，不输出或改判意图，不得为分析计算输出任何结果操作类型（包括自造的“同比”“环比”“增长率”等），分析由系统专门的分析工具完成。
 """
 
 # Compatibility name for consumers of the extraction specification. It no
@@ -1220,7 +1220,7 @@ _SINGLE_SYSTEM_PROMPT = (_PARAMETER_PROMPT + '\n结构化提取规范：\n'
 
 
 class SingleQuestionPlanner:
-    """先规划任务与依赖，再批量提取任务参数；意图随提取返回。"""
+    """先规划任务与依赖，再批量提取参数；意图由识别节点提供。"""
 
     def __init__(
         self,
@@ -1238,13 +1238,21 @@ class SingleQuestionPlanner:
         semantic_model_id: int | None = None,
         root_intent: PrimaryIntent | None = None,
     ) -> QuestionDecomposition:
-        """问题级入口：任务拆解 + 逐任务意图识别与参数提取，带一次纠错重试。
+        """问题级入口：任务拆解与参数提取，沿用已识别意图，带一次纠错重试。
 
         root_intent 是意图识别节点判定的根意图：提供时整轮规划不再做
         意图判断，问题意图与全部任务意图直接取根意图。
         """
+        def inherit_intent(result):
+            if root_intent is None:
+                return result
+            tasks = tuple(replace(task, intent=root_intent, structured=(
+                dict(task.structured, 意图=_PRIMARY_INTENT_LABELS.get(root_intent, root_intent.value))
+                if task.structured is not None else None)) for task in result.tasks)
+            return replace(result, intent=root_intent, tasks=tasks)
+
         retry_feedback: str | None = None
-        last_result = QuestionDecomposition()
+        last_result = QuestionDecomposition(intent=root_intent)
         if not (
             self.settings.intent_model_enabled
             and self.settings.multi_question_model_enabled
@@ -1354,13 +1362,13 @@ class SingleQuestionPlanner:
                                 degraded.name or degraded.question[:60],
                                 degraded.question[:120], task_exc,
                             )
-                    return _align_task_names_with_scope(
-                        _respect_shared_region_denominator(last_result, question))
+                    return inherit_intent(_align_task_names_with_scope(
+                        _respect_shared_region_denominator(last_result, question)))
                 retry_feedback = '计算操作不完整或无效，请修正后重新输出完整计划：' + str(exc)
                 continue
-            return _align_task_names_with_scope(
-                _respect_shared_region_denominator(last_result, question))
-        return last_result
+            return inherit_intent(_align_task_names_with_scope(
+                _respect_shared_region_denominator(last_result, question)))
+        return inherit_intent(last_result)
 
     @staticmethod
     def _unsplit_compound_metrics(
@@ -1745,7 +1753,7 @@ class SingleQuestionPlanner:
                 'tasks': [dict(task_index=index, **task.model_dump(exclude_none=True))
                           for index, task in enumerate(boundaries)],
             }, ensure_ascii=False)
-            # Intent is returned with extraction; no separate intent model call.
+            # Parameters only; recognized intent is supplied by the upstream node.
             extracted = await self._task_model_json(
                 "single-question-task-parameters",
                 _SINGLE_SYSTEM_PROMPT + system_content + '\n已规划任务JSON：\n' + parameter_request,
@@ -1821,13 +1829,16 @@ class SingleQuestionPlanner:
                 # 计算/筛选任务的意图键固定为指标计算，模型漏填时补上
                 structured[_EXTRACTION_INTENT_KEY] = "指标计算"
             if "不再查询数据库" in task_question:
-                # 计算/筛选任务基于前序任务结果，意图固定为对比分析
-                task_intent = PrimaryIntent.COMPARISON_ANALYSIS
+                # 查库标记决定计算路由；不能覆盖意图识别结果。
+                if root_intent is None:
+                    task_intent = PrimaryIntent.COMPARISON_ANALYSIS
                 if structured is not None:
-                    structured[_EXTRACTION_INTENT_KEY] = '指标计算'
+                    if root_intent is None:
+                        structured[_EXTRACTION_INTENT_KEY] = '指标计算'
                     structured['是否查询数据库'] = '否'
             elif (
-                task_intent is PrimaryIntent.COMPARISON_ANALYSIS
+                root_intent is None
+                and task_intent is PrimaryIntent.COMPARISON_ANALYSIS
                 and _period_change_series_question(task_question)
             ):
                 # 环比/同比落在多期时间序列上时属于趋势链路的逐期计算，
@@ -2021,11 +2032,9 @@ class SingleQuestionPlanner:
             return None
         structured: dict[str, Any] = {}
         intent_label = _clean_extraction_text(value.get(_EXTRACTION_INTENT_KEY) or "")
-        if intent == PrimaryIntent.METRIC_DEFINITION:
-            # 口径解释不在六类查询枚举里，意图键固定与任务意图显示一致
-            structured[_EXTRACTION_INTENT_KEY] = "解释口径"
-        elif intent == PrimaryIntent.DATA_LINEAGE:
-            structured[_EXTRACTION_INTENT_KEY] = "数据血缘"
+        if intent in _PRIMARY_INTENT_LABELS:
+            # 兼容下游JSON字段，但值来自识别节点，不采信提取模型。
+            structured[_EXTRACTION_INTENT_KEY] = _PRIMARY_INTENT_LABELS[intent]
         else:
             structured[_EXTRACTION_INTENT_KEY] = (
                 intent_label if intent_label in _CHINESE_INTENT_LABELS else None
