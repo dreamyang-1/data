@@ -24,6 +24,7 @@ from app.analysis.contracts import (
 )
 from app.domain.models import ExplorationQueryRequirements
 from app.config import Settings
+from app.services.error_explanations import failure_kind, reported_reason
 from app.domain.models import (
     AnalysisOperator,
     CanonicalAnalysisRequest,
@@ -342,6 +343,7 @@ class PlatformHttpClient:
                 raise
             except (httpx.HTTPError, ValueError, TimeoutError) as exc:
                 last_error = exc
+                last_adapter_error = None
                 if attempt + 1 < attempts:
                     logger.warning(
                         "upstream retrying path=%s attempt=%s/%s error=%s elapsed=%.2fs",
@@ -361,7 +363,8 @@ class PlatformHttpClient:
         if last_adapter_error is not None:
             raise last_adapter_error
         raise AdapterError(
-            "DEPENDENCY_UNAVAILABLE", "platform dependency unavailable", retryable=True
+            "DEPENDENCY_UNAVAILABLE", "platform dependency unavailable", retryable=True,
+            details={"path": path, "failure_kind": failure_kind(last_error) if last_error is not None else "timeout"},
         ) from last_error
 
     @staticmethod
@@ -404,6 +407,10 @@ class PlatformHttpClient:
 
         raw: dict[str, Any] = {}
         for source in sources:
+            reason = reported_reason({'reason': source.get('error') or source.get('message') or
+                                      (source.get('detail') if isinstance(source.get('detail'), str) else '')})
+            if reason:
+                raw.setdefault('reason', reason)
             nested = source.get("details")
             if isinstance(nested, dict):
                 raw.update(nested)
@@ -2638,6 +2645,8 @@ class HttpDataRetrievalAdapter:
                 ),
                 retryable=bool(translated.get("retryable")),
                 upstream_code=upstream_code,
+                details={"path": self.settings.sql_translate_path,
+                         "reason": reported_reason({"reason": translated.get("error")})},
             )
 
         self._confirm_translator_scope(request, translated)
@@ -2792,6 +2801,8 @@ class HttpDataRetrievalAdapter:
                 str(raw.get("error") or "query execution failed"),
                 retryable=bool(raw.get("retryable")),
                 upstream_code=str(raw.get("error_code") or raw.get("code") or "") or None,
+                details={"path": self.settings.sql_execute_path,
+                         "reason": reported_reason({"reason": raw.get("error")})},
             )
         analysis_notices = []
         if analysis_contract is not None:

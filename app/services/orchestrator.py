@@ -103,6 +103,7 @@ from app.services.clarification_policy import (
     semantic_ambiguity_has_safe_time_default,
 )
 from app.services.dependency_error_messages import render_dependency_error
+from app.services.error_explanations import explain_binding_reason, explain_dependency_failure
 from app.services.query_output_bindings import calculation_columns
 from app.planning.dependency_contract import (
     key_kind, projection, structured_query_changed, sql_column_bindings, missing_display_fields,
@@ -13647,47 +13648,7 @@ class DataAnalysisOrchestrator:
 
     @classmethod
     def _plain_structured_param_question(cls, raw: str) -> str:
-        """把结构化参数绑定的追问原文改写成业务化提问。
-
-        Oagnet issue() 的问题原文带槽位名、过滤条件 JSON、物理字段路径和
-        “向量标准值”等内部校验术语，用户可见的追问里不能复述这些内容。
-        """
-        match = re.search(
-            r"结构化参数【[^】]*】(?P<label>\{.*?\})：(?P<reason>.*)", raw, re.S
-        )
-        field_label = value_text = ""
-        reason = raw
-        if match:
-            reason = match.group("reason")
-            try:
-                param = json.loads(match.group("label"))
-            except ValueError:
-                param = None
-            if isinstance(param, dict):
-                field_label = str(param.get("field") or param.get("name") or "").strip()
-                values = param.get("value")
-                if isinstance(values, list):
-                    value_text = "、".join(
-                        str(v).strip() for v in values if str(v).strip()
-                    )
-                else:
-                    value_text = str(values or "").strip()
-        if "向量标准值" in reason or "值目录" in reason:
-            target = f"“{field_label}”" if field_label else "对应字段"
-            if value_text:
-                return (
-                    f"筛选值“{value_text}”暂时没有在{target}的可选范围里找到对应项，"
-                    "请确认这个值的写法或所属分类是否正确。"
-                )
-            return f"筛选条件暂时没有在{target}的可选范围里找到对应项，请确认条件写法是否正确。"
-        if "无法确认该筛选作用于哪个业务实体" in reason:
-            return f"请确认“{value_text or field_label}”限定的是哪个业务对象的所在地，例如医院所在地或经销商所在地。"
-        if "sort field must be a selected dimension" in reason:
-            return "时间排序与结果分组未正确衔接，请重试本次查询。"
-        if field_label or value_text:
-            condition = "：".join(part for part in (field_label, value_text) if part)
-            return f"查询条件“{condition}”没有能准确对应到系统里的数据口径，请确认写法或换个说法描述。"
-        return "部分查询条件没有能准确对应到系统里的数据口径，请确认后换个说法描述。"
+        return explain_binding_reason(raw)
 
     @classmethod
     def _sanitize_clarification_text(cls, text: str) -> str:
@@ -13706,7 +13667,7 @@ class DataAnalysisOrchestrator:
             compact,
             re.I,
         ):
-            return "当前业务口径未能唯一匹配，请确认要查询的业务对象或筛选范围。"
+            return explain_binding_reason(raw)
         sanitized = cls._sanitize_user_visible_answer(raw)
         sanitized = re.sub(
             r"(?:根据|按照)?(?:内部)?约束[^。；;]*[。；;]?",
@@ -14595,60 +14556,15 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _plain_binding_failure_reasons(request: CanonicalAnalysisRequest) -> list[str]:
-        """把 ASL 绑定失败的内部歧义归类成口语化原因，不复述校验原文。
-
-        最终输出不给用户看内部槽位名、英文校验信息或字段路径；这里只按
-        歧义类型概括业务影响，完整细节仍保留在 semantic_ambiguities 与
-        决策轨迹中供排查。
-        """
-
-        def usable_phrase(value: object) -> str:
-            text = " ".join(str(value or "").split())
-            if not text or text.casefold() in {"null", "none", "unknown"}:
-                return ""
-            # 内部槽位名/字段路径（纯英文、下划线、点号）不展示给用户
-            if re.fullmatch(r"[A-Za-z0-9_.:\-\s]+", text):
-                return ""
-            return text
-
-        reasons: list[str] = []
-        for item in request.semantic_ambiguities or []:
-            target = usable_phrase(getattr(item, "phrase", None))
-            kind = str(getattr(item, "type", "") or "")
-            question = str(getattr(item, "question", "") or "")
-            if kind == "context" or "上游未提供结构化参数" in question:
-                reason = "系统内部没有取得生成查询所需的结构化条件，属于系统处理问题，不是您的问题描述有误"
-            elif kind in {"filter", "filter_slot", "entity_value"}:
-                reason = (
-                    f"筛选条件“{target}”没有能准确对应到数据里的字段"
-                    if target else "部分筛选条件没有能准确对应到数据里的字段"
-                )
-            elif kind in {"dimension", "subject", "schema_relation"}:
-                reason = (
-                    f"“{target}”的分组或展示方式没有能准确对应到数据里的字段"
-                    if target else "部分分组或展示字段没有能准确对应到数据里的字段"
-                )
-            elif kind == "metric":
-                reason = (
-                    f"指标“{target}”的统计口径没有能对应到系统里的指标定义"
-                    if target else "指标的统计口径没有能对应到系统里的指标定义"
-                )
-            elif kind == "time_anchor":
-                reason = "查询的时间范围没有能确定按哪种业务时间计算"
-            else:
-                reason = "部分查询条件没有能通过系统内部的一致性校验"
-            if reason not in reasons:
-                reasons.append(reason)
-        return reasons or ["查询条件在系统内部校验时没有通过"]
+        reasons = [explain_binding_reason(item.question, subject=item.phrase or "", kind=item.type)
+                   for item in request.semantic_ambiguities or []]
+        if not reasons:
+            reasons = [explain_binding_reason(raw) for raw in request.ambiguities or []]
+        return list(dict.fromkeys(reasons)) or ["查询条件处理失败，但服务未返回具体失败项，需要维护人员查看本次记录。"]
 
     @classmethod
     def _plain_binding_failure_answer(cls, request: CanonicalAnalysisRequest) -> str:
-        reasons = "；".join(cls._plain_binding_failure_reasons(request))
-        return (
-            f"本次查询没有执行，原因是：{reasons}。\n"
-            "为了避免查错数据，系统在生成查询这一步主动停了下来，没有执行任何数据查询。\n"
-            "您可以换个说法再问一次；之前已经说明过的条件不用重复提供。"
-        )
+        return "本次停在整理查询条件这一步，尚未读取数据。\n" + "\n".join(cls._plain_binding_failure_reasons(request))
 
     async def _request_clarification(
         self,
@@ -17090,36 +17006,7 @@ class DataAnalysisOrchestrator:
         diagnostic_code = exc.upstream_code or exc.code
         if diagnostic_code in known:
             return known[diagnostic_code]
-        if exc.status_code in {401, 403}:
-            return (
-                f"上游数据服务拒绝了当前可信身份（错误码：{diagnostic_code}，"
-                f"HTTP {exc.status_code}），本次不返回数据。"
-                "用户无需修改查询内容；系统维护人员需检查服务身份、授权头和应用绑定。"
-            )
-        if exc.status_code == 404:
-            return (
-                f"上游数据服务没有找到本次调用的资源或接口（错误码：{diagnostic_code}，HTTP 404）。"
-                "用户无需改写业务问题；系统维护人员需检查服务版本、接口路径和语义资源是否已发布。"
-            )
-        if exc.status_code == 409:
-            return (
-                f"上游数据状态发生冲突（错误码：{diagnostic_code}，HTTP 409）。"
-                "请刷新当前会话后重试；若仍出现，系统维护人员需检查目录版本或会话状态冲突。"
-            )
-        if exc.status_code == 422:
-            return (
-                f"上游服务拒绝了当前查询合同（错误码：{diagnostic_code}，HTTP 422），"
-                "但响应没有提供可安全展示的具体字段或取值。"
-                "用户无需盲目改写问题；系统维护人员需根据该错误码补全结构化 details，"
-                "再明确判断应由用户补充条件还是由语义层修复配置。"
-            )
-        safe_code = diagnostic_code
-        status = f"，HTTP {exc.status_code}" if exc.status_code is not None else ""
-        return (
-            f"上游调用失败（错误码：{safe_code}{status}），当前响应未提供更具体的可公开诊断信息。"
-            "用户无需重复输入同一问题；若错误可重试，请稍后重试，"
-            "否则由系统维护人员检查对应调用阶段并补充结构化错误详情。"
-        )
+        return explain_dependency_failure(exc)
 
     @staticmethod
     def _analysis_contract_requirements(

@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from app.adapters.base import AdapterError
+from app.services.error_explanations import explain_dependency_failure, reported_reason
 
 
 def _clean_text(value: object, *, limit: int = 240) -> str:
@@ -126,20 +127,22 @@ def render_dependency_error(exc: AdapterError) -> str | None:
     code = exc.upstream_code or exc.code
     details = _details(exc)
 
+    if details.get('failure_kind') or reported_reason(details):
+        return explain_dependency_failure(exc)
+
     binding_failures = {
-        'ASL_BINDING_TIMEOUT': 'ASL 绑定服务调用超时，请稍后重试。',
-        'ASL_BINDING_UNAVAILABLE': 'ASL 绑定依赖服务暂时无法访问，请稍后重试。',
-        'ASL_BINDING_RATE_LIMITED': 'ASL 绑定模型暂时限流，请稍后重试。',
-        'ASL_UPSTREAM_RATE_LIMITED': 'ASL 绑定模型暂时限流，请稍后重试。',
-        'ASL_CAPACITY_EXHAUSTED': 'ASL 绑定服务繁忙，请稍后重试。',
-        'ASL_GENERATION_DEADLINE_EXCEEDED': 'ASL 绑定处理超时，请稍后重试。',
-        'ASL_BINDING_RESPONSE_INVALID': 'ASL 绑定模型返回的内容格式不符合要求，请服务维护人员检查模型输出。',
-        'ASL_BINDING_AUTH_FAILED': 'ASL 绑定依赖服务认证失败，请服务维护人员检查服务凭据和访问配置。',
-        'ASL_BINDING_FAILED': 'ASL 绑定服务内部处理异常，请服务维护人员检查本次错误记录。',
+        'ASL_BINDING_TIMEOUT': '整理查询条件时，等待处理服务回复超时。',
+        'ASL_BINDING_UNAVAILABLE': '整理查询条件时，所需服务无法访问。',
+        'ASL_BINDING_RATE_LIMITED': '整理查询条件时，模型调用次数达到服务限制。',
+        'ASL_UPSTREAM_RATE_LIMITED': '整理查询条件时，模型调用次数达到服务限制。',
+        'ASL_CAPACITY_EXHAUSTED': '整理查询条件时，服务的并发处理容量已满，本次请求未能继续处理。',
+        'ASL_GENERATION_DEADLINE_EXCEEDED': '整理查询条件时，处理服务报告超时。',
+        'ASL_BINDING_RESPONSE_INVALID': '整理查询条件时，模型返回的内容格式不符合要求，无法继续生成查询。',
+        'ASL_BINDING_AUTH_FAILED': '整理查询条件时，连接服务的身份验证未通过，需要维护人员检查连接配置。',
+        'ASL_BINDING_FAILED': '整理查询条件的服务内部处理失败，但现有错误信息未说明更具体的原因，需要维护人员检查本次记录。',
     }
     if code in binding_failures:
-        return (binding_failures[code] + ' 本次尚未生成或执行 SQL；'
-                '这是系统处理失败，不是用户参数缺失，已明确的查询条件无需补充或改写。')
+        return binding_failures[code] + ' 本次尚未执行数据查询，已提供的查询条件无需重复填写。'
 
     if code == "ASL_ENTITY_MENTION_UNRESOLVED":
         mentions = _diagnostic_subject(details, "unresolved_mentions", "mention")

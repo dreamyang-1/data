@@ -49,6 +49,7 @@ from app.services.upload_file_resolver import (
     UploadReferenceResolutionError,
 )
 from app.services.orchestrator import DataAnalysisOrchestrator
+from app.services.error_explanations import explain_unexpected_failure
 from app.services import semantic_recommend
 from app.services.progress import _progress_callback, progress_scope
 from app.logging_config import set_log_trace_id, reset_log_trace_id
@@ -330,12 +331,19 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
 
                     await asyncio.to_thread(finish_trace)
     except TimeoutError as exc:
-        raise HTTPException(status_code=504, detail="upstream operation timed out") from exc
+        raise HTTPException(status_code=504, detail={"code": "DEPENDENCY_TIMEOUT", "message": explain_unexpected_failure(exc)}) from exc
     except MessageIdReuseConflictError as exc:
         raise HTTPException(
             status_code=409,
             detail={"code": exc.code, "message": str(exc)},
         ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("unhandled data-analysis execution failure")
+        raise HTTPException(status_code=500, detail={
+            "code": "INTERNAL_ERROR", "message": explain_unexpected_failure(exc),
+        }) from exc
     finally:
         reset_log_trace_id(trace_token)
         if performance_tracker is not None and not performance_trace_logged:
@@ -1400,13 +1408,13 @@ async def chat_stream(
             raise
         except HTTPException as exc:
             yield _event("error", _stream_error_payload(exc))
-        except Exception:
+        except Exception as exc:
             logger.exception("unhandled data-analysis SSE execution failure")
             yield _event(
                 "error",
                 {
                     "code": "INTERNAL_ERROR",
-                    "message": "数据分析服务执行异常，请稍后重试。",
+                    "message": explain_unexpected_failure(exc),
                     "retryable": True,
                 },
             )

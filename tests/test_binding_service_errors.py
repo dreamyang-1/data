@@ -25,7 +25,7 @@ def test_binding_failure_explains_system_reason_without_user_candidates(code,sta
         upstream_code=code,details={'binding_stage':'catalog_binding','error_type':'TimeoutError',
                                   'password':'private password','candidates':['unverified']})
     message=DataAnalysisOrchestrator._dependency_message(error)
-    assert '不是用户参数缺失' in message and '尚未生成或执行 SQL' in message
+    assert '已提供的查询条件无需重复填写' in message and '尚未执行数据查询' in message
     assert '请补充' not in message and '请选择' not in message and '序号' not in message
     assert 'private' not in message and 'unverified' not in message
 
@@ -69,7 +69,7 @@ async def test_service_failure_has_no_pending_no_empty_template_and_preserves_st
             TrustedIdentity(tenant_id='test',user_id='test'))
     assert response.status == 'SAFE_FALLBACK'
     assert not response.clarification_questions and not response.missing_slots
-    assert '不是用户参数缺失' in response.answer
+    assert '已提供的查询条件无需重复填写' in response.answer
     assert all(word not in response.answer for word in ['概况总结','关键发现','业务提示'])
     # TASK_PLANNING is derived by the SSE presentation layer, not emitted by
     # the raw orchestrator. Verify that public boundary separately below.
@@ -103,5 +103,5 @@ def test_public_binding_failure_keeps_planning_before_parsing_and_final_output()
     final=next(i for i,e in enumerate(events) if e.get('step')=='output')
     assert position('INTENT_RECOGNITION') < position('TASK_PLANNING') < position('ASL_GENERATION') < final
     answer=''.join(e.get('content','') for e in events if e.get('step')=='output')
-    assert '不是用户参数缺失' in answer and '请补充' not in answer
+    assert '已提供的查询条件无需重复填写' in answer and '请补充' not in answer
     assert all(word not in answer for word in ['概况总结','关键发现','业务提示'])
