@@ -14,7 +14,9 @@ class TaskOutline(BaseModel):
     question: str = Field(min_length=2, max_length=1000)
     name: str | None = Field(default=None, max_length=60)
     depends_on: list[int] = Field(default_factory=list)
-    expected_output: str | None = Field(default=None, max_length=300)
+    expected_output: str | None = Field(default=None, max_length=300, description=(
+        '本任务需要新查询或计算的交付内容；依赖任务引用的前序入选条件放在question中，'
+        '不要当成本任务的新计算目标。若本步仍需按指标计算、排名或筛选，必须写明该指标。'))
     definition_only: bool = False
 
 
@@ -57,6 +59,7 @@ PLANNING_PROMPT = '''你是任务规划器。先确定完成原问题所需的�
 3. 按订单/客户等逐对象计算的指标必须保留规范规定的对象粒度及唯一业务键。分布分析需要逐样本数据，不能用整批数据的一个加权均值代替；时间范围不等于时间分组，价格分布不等于时间趋势。
 4. 每个任务的question完整保留对它有效的时间、筛选、分组和交付要求。复合指标成分按各自登记口径分配条件；共用区域分母不按经销商分组。不得凭字段名称猜业务口径。
 5. 先排名或筛选对象、再查询这些对象的其他关系或明细时，拆为前置查询和依赖查询。不得把后续返回对象加入前置排名的分组，否则会改变排名粒度。后续任务不继承前置Top N限制。同一对象的唯一关联展示属性可在原查询返回，不为展示字段强制拆任务。
+   每个任务都填写expected_output，区分“本步交付目标”和“前序入选背景”：依赖任务的指标展开以expected_output为准，question仍完整保留入选条件和引用来源。例：先选出2025年平均每单销售金额最高的五名业务员，再查所属公司；前置expected_output写“2025年平均每单销售金额最高的五名业务员及编码”，后续question写“根据前序任务选出的五名业务员查询所属销售公司”，expected_output只写“入选业务员姓名、编码及所属公司名称”，不要再次写平均金额排名或拆一次公式。若后续确实要求这些人2024年的平均每单销售金额，则expected_output必须写明“入选业务员2024年的平均每单销售金额”，保留新的计算。若本步需要新算指标才能筛选或排名，即使最终只返回名单，也必须在expected_output写明指标及筛选、排名要求，不能只写“名单”。不得丢掉原有时间、地域、筛选条件，或凭空生成尚未查询出的人员编码。
 6. 不关联的独立任务不消费彼此结果。有依赖时保留原问题明确的共享时间和筛选范围；用户明确指定不同范围时按各自要求。depends_on从0开始且只引用排在前面的任务。
 7. 根据已有结果直接计算、筛选或投影且无须新数据时，作为依赖任务，question写明“不再查询数据库”。需要前序数据集中没有的新字段或新关系时应查询数据库，不得用前序表代替新结果。
 8. 不把ASL、SQL、取数、校验、洞察等内部技术步骤拆成业务任务；不重复或遗漏用户要求交付的结果。分析可以由最后的计算任务交付，不为流程名称增加空任务。
@@ -171,10 +174,18 @@ def boundary_targets(task, catalog) -> list[str]:
     if 'metric_targets' in task.model_fields_set:
         names = task.metric_targets
     else:
-        # A delivery label may abbreviate the metric stated in the question.
+        # A dependent query's question also describes how its input cohort was
+        # selected. Only its own deliverable requests new metrics; otherwise
+        # "companies of the top five by average amount" expands that average
+        # a second time. Local calculations, definitions and older outlines
+        # without a deliverable retain the existing wording-based behavior.
+        texts = (task.question, task.expected_output or '')
+        if (task.depends_on and task.expected_output and task.expected_output.strip()
+                and not task.definition_only and '不再查询数据库' not in task.question):
+            texts = (task.expected_output,)
         # Purpose clauses describe a downstream result, not this task's inputs.
         wording = '；'.join(re.split(r'用于|供后续|以便|用来', text, maxsplit=1)[0]
-                           for text in (task.question, task.expected_output or ''))
+                           for text in texts)
         names = targets_in_text(wording, registered, aliases)
     return list(dict.fromkeys(aliases.get(name, name) for name in names))
 
