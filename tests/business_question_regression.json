@@ -12,6 +12,8 @@
     {"id":"dealer_duration_exact","question":"查询筛选合作时长超3个月的经销商","expected":"同表行级合作时长公式与名称编码正常返回，超过3个月条件完整执行，不误报展示字段无唯一关联"}
   ],
   "unresolved_context": [
+    {"id":"shipped_not_invoiced","request":"统计已发货未开票金额","semantic_model_id":133,"missing":"截图对应应用ID及原请求授权业务域未提供；不能用模型130的测试应用替代真实入口验收"},
+    {"id":"supplier_first_order_ten_months","request":"哪些供应商第一笔订单发生时间超过10个月了？","missing":"仅截图输入框文字，未提供该问题实际发送的应用、模型和授权范围"},
     {"id":"department_hospital_relation","request":"医院与科室多对多判断","missing":"原文实体ID已省略，缺少完整实体ID及模型范围"},
     {"id":"relation_model122","request":"实体关系推荐返回空数组","semantic_model_id":122,"business_domain_id":307,"entity_type_id":"45eae41b-82d6-4bf7-b608-8e341b77d0f8","expected":"直接同名字段关系推荐，不推荐中间表"},
     {"id":"city_province_relation","request":"城市跟省份为什么没有推荐关系","missing":"原请求模型、业务域和实体ID"},
