@@ -1488,7 +1488,7 @@ class DataAnalysisOrchestrator:
             claimed = await claim(
                 identity.tenant_id, identity.user_id, chat.application_id,
                 chat.conversation_id, chat.message_id, request_fingerprint,
-                owner_token, ttl_seconds=max(1, int(self.settings.request_timeout_seconds) + 5),
+                owner_token, ttl_seconds=self.settings.message_execution_lease_seconds,
             )
             if not claimed:
                 claimed = await self._wait_for_cached_response_or_claim(
@@ -2782,7 +2782,7 @@ class DataAnalysisOrchestrator:
         owner_token: str,
     ) -> bool:
         """Wait for the winning request, taking over only if its lease vanishes."""
-        deadline = time.monotonic() + max(1.0, self.settings.request_timeout_seconds)
+        deadline = time.monotonic() + self.settings.duplicate_request_wait_seconds
         claim = getattr(self.sessions, "claim_message_execution")
         while time.monotonic() < deadline:
             await asyncio.sleep(0.05)
@@ -2795,7 +2795,7 @@ class DataAnalysisOrchestrator:
             if await claim(
                 identity.tenant_id, identity.user_id, chat.application_id,
                 chat.conversation_id, chat.message_id, request_fingerprint,
-                owner_token, ttl_seconds=max(1, int(self.settings.request_timeout_seconds) + 5),
+                owner_token, ttl_seconds=self.settings.message_execution_lease_seconds,
             ):
                 return True
         return False
@@ -2975,7 +2975,7 @@ class DataAnalysisOrchestrator:
             identity.tenant_id, identity.user_id, chat.application_id,
             chat.conversation_id, lease_message_id, str(state_version),
             lease_owner,
-            ttl_seconds=max(1, int(self.settings.request_timeout_seconds) + 5),
+            ttl_seconds=self.settings.message_execution_lease_seconds,
         )
         if not claimed:
             return self._dag_resume_error(

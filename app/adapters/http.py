@@ -24,7 +24,6 @@ from app.analysis.contracts import (
 )
 from app.domain.models import ExplorationQueryRequirements
 from app.config import Settings
-from app.services.request_budget import exclude_unlimited_wait
 from app.domain.models import (
     AnalysisOperator,
     CanonicalAnalysisRequest,
@@ -231,7 +230,6 @@ class PlatformHttpClient:
         except Exception:
             return False
 
-    @exclude_unlimited_wait
     async def _request(
         self,
         method: str,
@@ -251,9 +249,9 @@ class PlatformHttpClient:
         last_adapter_error: AdapterError | None = None
         request_started = time.perf_counter()
         # Explicit zero disables this dependency's deadline (ASL generation).
-        # None still means the normal request budget for all other callers.
+        # None still means the normal per-dependency budget for all other callers.
         deadline = None if timeout == 0 else request_started + (
-            timeout if timeout is not None else self.settings.request_timeout_seconds)
+            timeout if timeout is not None else self.settings.http_dependency_timeout_seconds)
         # 不打印 payload：请求体可能含业务问题文本与凭证相关字段
         logger.debug("upstream request method=%s base_url=%s path=%s attempts=%s", method, base_url, path, attempts)
         for attempt in range(attempts):

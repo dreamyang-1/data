@@ -38,14 +38,13 @@ HEADERS = {
 }
 
 
-def _settings(*, timeout: float = 5) -> Settings:
+def _settings() -> Settings:
     return Settings(
         env="test",
         adapter_mode="mock",
         intent_model_enabled=False,
         business_question_collection_enabled=True,
         trusted_backend_token="test-token",
-        request_timeout_seconds=timeout,
     )
 
 
@@ -407,7 +406,7 @@ def test_original_json_sse_and_replay_share_one_completed_question_without_reexe
 
 
 @pytest.mark.parametrize("path", ["/agent_chat", "/agent_chat/stream"])
-def test_outer_api_timeout_after_submission_records_unknown_and_replay_never_resubmits(provider, path):
+def test_dependency_timeout_after_submission_records_unknown_and_replay_never_resubmits(provider, path):
     redis = DeploymentRedis()
     entered = Event()
     release = Event()
@@ -418,21 +417,19 @@ def test_outer_api_timeout_after_submission_records_unknown_and_replay_never_res
         nonlocal calls
         calls += 1
         entered.set()
-        await asyncio.to_thread(release.wait, 2)
-        return await valid_transport(prepared, [])(execution_request)
+        await asyncio.sleep(0.05)
+        raise TimeoutError('dependency timed out')
 
     handler, prepared, _display = _handler(provider, redis, blocked_transport)
-    app = create_app(_settings(timeout=0.05), isolated_chat_handler=handler)
+    app = create_app(_settings(), isolated_chat_handler=handler)
     payload = request().model_dump(mode="json")
     try:
         with TestClient(app, headers=HEADERS, raise_server_exceptions=False) as client:
             response = client.post(path, json=payload)
             assert entered.wait(1)
-            if path.endswith("stream"):
-                assert response.status_code == 200
-                assert any(item["type"] == "error" for item in _parse_sse(response.text))
-            else:
-                assert response.status_code == 504
+            # Transport timeout is handled by the execution ledger; there is
+            # no outer API deadline to turn the response into HTTP 504.
+            assert response.status_code == 200
             state_key = next(key for key in redis.values if ":conversation:" in key)
             record = json.loads(redis.values[state_key])["messages"]["message"]
             assert record["status"] == "UNKNOWN"
@@ -445,14 +442,14 @@ def test_outer_api_timeout_after_submission_records_unknown_and_replay_never_res
         release.set()
 
 
-def test_outer_timeout_before_reservation_leaves_no_execution_record(provider):
+def test_planner_timeout_before_reservation_leaves_no_execution_record(provider):
     redis = DeploymentRedis()
     release = Event()
     prepared = prepared_for(provider)
 
     async def blocked_planner(chat, identity, restored, plans):
-        await asyncio.to_thread(release.wait, 2)
-        raise AssertionError("cancelled planner must not reach execution")
+        await asyncio.sleep(0.05)
+        raise TimeoutError('planner dependency timed out')
 
     async def forbidden_transport(_request):
         raise AssertionError("pre-reservation cancellation must not execute")
@@ -460,7 +457,7 @@ def test_outer_timeout_before_reservation_leaves_no_execution_record(provider):
     handler, _prepared, _display = _handler(
         provider, redis, forbidden_transport, planner_override=blocked_planner
     )
-    app = create_app(_settings(timeout=0.05), isolated_chat_handler=handler)
+    app = create_app(_settings(), isolated_chat_handler=handler)
     try:
         with TestClient(app, headers=HEADERS, raise_server_exceptions=False) as client:
             response = client.post(

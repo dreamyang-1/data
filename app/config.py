@@ -115,11 +115,10 @@ class Settings(BaseSettings):
     allow_missing_trusted_identity_headers: bool = False
     require_trusted_application_header: bool = False
     max_clarification_rounds: int = Field(default=3, ge=1, le=10)
-    # End-to-end budget. Oagnet performs one constrained LLM generation and can
-    # legitimately take longer than an ordinary HTTP dependency. Keep its own
-    # budget below this value so orchestration still has time to terminate and
-    # persist an idempotent response.
-    request_timeout_seconds: float = Field(default=120, gt=0, le=300)
+    # Individual dependency and duplicate-request coordination only; no answer deadline.
+    http_dependency_timeout_seconds: float = Field(default=300, gt=0)
+    message_execution_lease_seconds: int = Field(default=305, gt=0)
+    duplicate_request_wait_seconds: float = Field(default=300, gt=0)
     # 集中日志配置（app/logging_config.setup_logging 消费）。log_file 为空时
     # 只写 stdout（systemd/journald 抓取）；非空时启用按大小轮转的文件输出。
     log_level: str = Field(default="INFO")

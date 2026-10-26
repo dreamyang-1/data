@@ -1,0 +1,151 @@
+{
+  "date": "2026-10-26",
+  "change": "删除整体回答截止时间及ASL等待暂停预算的旧实现，不保留配置开关或回退分支。",
+  "scope": "普通与流式入口、workflow与isolated handler均直接等待操作完成。单次HTTP依赖、重复请求锁及等待使用独立配置；主动取消和异常处理保留。",
+  "removed": [
+    "app/services/request_budget.py",
+    "tests/test_request_budget.py",
+    "request_timeout_seconds",
+    "DATA_AGENT_REQUEST_TIMEOUT_SECONDS"
+  ],
+  "tests": {
+    "source_focused_passed": 93,
+    "version_repo_core_passed": 7,
+    "version_repo_extended_collection_errors": 3,
+    "version_repo_limit": "版本仓原有缺失模块使扩大检查无法收集，未宣称版本仓全量通过。",
+    "server_candidate_passed": 33,
+    "server_live_passed": 33,
+    "full_suite": {
+      "counts": {
+        "passed": 6245,
+        "failed": 277,
+        "error": 7,
+        "skipped": 0
+      },
+      "old_pass_new_fail": [],
+      "new_failures": [],
+      "removed": [
+        "tests.test_report_evidence_budget::test_answer_budget_is_five_minutes_without_separate_asl_deadline",
+        "tests.test_request_budget::test_real_http_asl_boundary_suspends_outer_request_budget",
+        "tests.test_request_budget::test_asl_wait_can_exceed_outer_budget",
+        "tests.test_request_budget::test_parallel_asl_waits_resume_only_after_last_finishes",
+        "tests.test_request_budget::test_ordinary_dependency_still_times_out",
+        "tests.test_request_budget::test_remaining_work_cannot_reset_its_budget_each_asl_call",
+        "tests.test_request_budget::test_user_cancel_is_not_suspended",
+        "tests.test_request_budget::test_unlimited_request_does_not_pause_another_request",
+        "tests.test_request_budget::test_failed_asl_resumes_remaining_budget",
+        "tests.test_v2_context_completed_question_trial::test_outer_api_timeout_after_submission_records_unknown_and_replay_never_resubmits[/agent_chat]",
+        "tests.test_v2_context_completed_question_trial::test_outer_api_timeout_after_submission_records_unknown_and_replay_never_resubmits[/agent_chat/stream]",
+        "tests.test_v2_context_completed_question_trial::test_outer_timeout_before_reservation_leaves_no_execution_record"
+      ]
+    }
+  },
+  "original_question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+  "original_question_validation": {
+    "status": "COMPLETED",
+    "tasks": [
+      [
+        "task-1",
+        "COMPLETED"
+      ],
+      [
+        "task-2",
+        "COMPLETED"
+      ],
+      [
+        "task-3",
+        "COMPLETED"
+      ],
+      [
+        "task-4",
+        "COMPLETED"
+      ]
+    ],
+    "attachment_sheets": [
+      "章节1",
+      "章节2"
+    ],
+    "five_rows_each": true,
+    "cohort_matches": true,
+    "companies_present": true,
+    "descending": true,
+    "headers": [
+      "| 业务员 | 销售员姓名 | 含税销售总额（元） | 订单笔数（笔） | 平均每单销售金额（元） |",
+      "| --- | --- | --- | --- | --- |"
+    ]
+  },
+  "business_regression": {
+    "entry": "正常agent_chat入口；原问题原文；模型130；原应用；独立会话；并发2；最终部署版本。",
+    "results": [
+      {
+        "id": "company_top5",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 232.3,
+        "error": null,
+        "acceptance": "OUTPUT_CHECKED"
+      },
+      {
+        "id": "shanghai_coverage",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 89.5,
+        "error": null,
+        "acceptance": "OUTPUT_TEXT_INCONSISTENCY"
+      },
+      {
+        "id": "hospital_sales_products",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 207.6,
+        "error": null,
+        "acceptance": "OUTPUT_CHECKED"
+      },
+      {
+        "id": "semantic_entities",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 16.0,
+        "error": null,
+        "acceptance": "OUTPUT_CHECKED"
+      },
+      {
+        "id": "orthopedics",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 68.0,
+        "error": null,
+        "acceptance": "OUTPUT_CHECKED"
+      },
+      {
+        "id": "longest_cooperation",
+        "status": "NEEDS_CLARIFICATION",
+        "missing_slots": [
+          "semantic_ambiguity"
+        ],
+        "elapsed": 79.3,
+        "error": null,
+        "acceptance": "FAILED_EXISTING_AMBIGUITY"
+      },
+      {
+        "id": "cooperation_over_three_months",
+        "status": "NEEDS_CLARIFICATION",
+        "missing_slots": [
+          "semantic_ambiguity"
+        ],
+        "elapsed": 83.0,
+        "error": null,
+        "acceptance": "FAILED_EXISTING_AMBIGUITY"
+      }
+    ],
+    "all_passed": false,
+    "limitations": [
+      "两条合作时长问题仍有经销商名称绑定歧义。",
+      "上海覆盖率本次返回一条100%结果，但说明文字称缺少有限数值，并有单位表述不一致；业务答案未完全验收。",
+      "医院问题仍有既有数据水位不覆盖12月31日的限制。",
+      "未对所有返回业务数值另做数据库独立重算。",
+      "实体推荐原参数仍返回实体类型不存在。其他历史案例缺少完整模型、实体或原问题上下文，未验证。"
+    ]
+  },
+  "deployment": "49服务器按精确差异合并，删除旧模块；仅删除.env中旧总时限配置项，其他配置保留；已有备份，服务重启后UP/READY，回归结束再次核验健康与文件哈希。"
+}

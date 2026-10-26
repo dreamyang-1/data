@@ -19,7 +19,7 @@ async def test_zero_timeout_waits_for_asl_past_normal_dependency_budget(monkeypa
             await asyncio.sleep(.03)
             return httpx.Response(200,json={'success':True})
     monkeypatch.setattr('app.adapters.http.httpx.AsyncClient',Client)
-    result=await asyncio.wait_for(PlatformHttpClient(Settings(request_timeout_seconds=.01)).post(
+    result=await asyncio.wait_for(PlatformHttpClient(Settings(http_dependency_timeout_seconds=.01)).post(
         'http://test','/agent/query',{},timeout=0),timeout=.5)
     assert result=={'success':True} and timeouts==[None]
 

@@ -49,7 +49,6 @@ from app.services.upload_file_resolver import (
     UploadReferenceResolutionError,
 )
 from app.services.orchestrator import DataAnalysisOrchestrator
-from app.services.request_budget import run_with_request_budget
 from app.services import semantic_recommend
 from app.services.progress import _progress_callback, progress_scope
 from app.logging_config import set_log_trace_id, reset_log_trace_id
@@ -180,10 +179,10 @@ CHAT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
         },
     },
     504: {
-        "description": "智能体总处理时间超过服务端截止时间",
+        "description": "下游服务处理超时",
         "content": {
             "application/json": {
-                "example": {"detail": "analysis request deadline exceeded"}
+                "example": {"detail": "upstream operation timed out"}
             }
         },
     },
@@ -270,10 +269,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                                     {"chat": chat, "identity": identity}
                                 )
                             )
-                            result = await run_with_request_budget(
-                                operation,
-                                timeout=settings.request_timeout_seconds,
-                            )
+                            result = await operation
                     response = (
                         result
                         if isolated_handler is not None
@@ -304,7 +300,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                     root_span.update(
                         output={"status": "TIMEOUT"},
                         level="ERROR",
-                        status_message="analysis request deadline exceeded",
+                        status_message="upstream operation timed out",
                     )
                     raise
                 except MessageIdReuseConflictError:
@@ -334,7 +330,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
 
                     await asyncio.to_thread(finish_trace)
     except TimeoutError as exc:
-        raise HTTPException(status_code=504, detail="analysis request deadline exceeded") from exc
+        raise HTTPException(status_code=504, detail="upstream operation timed out") from exc
     except MessageIdReuseConflictError as exc:
         raise HTTPException(
             status_code=409,

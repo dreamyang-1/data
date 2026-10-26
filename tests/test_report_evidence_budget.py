@@ -178,9 +178,9 @@ async def test_synthesis_total_deadline_degrades_report_not_query(monkeypatch):
         await QwenAnalysisSynthesizer(settings, httpx.MockTransport(handler)).synthesize_combined('问题', [material()])
 
 
-def test_answer_budget_is_five_minutes_without_separate_asl_deadline():
+def test_answer_has_no_total_or_asl_deadline():
     settings = Settings(_env_file=None)
-    assert settings.request_timeout_seconds == 300
+    assert not hasattr(settings, 'request_timeout_seconds')
     assert not hasattr(settings, 'asl_generation_timeout_seconds')
 
 
