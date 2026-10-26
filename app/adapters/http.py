@@ -24,6 +24,7 @@ from app.analysis.contracts import (
 )
 from app.domain.models import ExplorationQueryRequirements
 from app.config import Settings
+from app.services.request_budget import exclude_unlimited_wait
 from app.domain.models import (
     AnalysisOperator,
     CanonicalAnalysisRequest,
@@ -230,6 +231,7 @@ class PlatformHttpClient:
         except Exception:
             return False
 
+    @exclude_unlimited_wait
     async def _request(
         self,
         method: str,

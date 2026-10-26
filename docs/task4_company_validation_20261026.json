@@ -1,0 +1,183 @@
+{
+  "date": "2026-10-26",
+  "target": "修复前五位销售人员所属公司查询",
+  "target_status": "VERIFIED",
+  "all_historical_questions_passed": false,
+  "root_causes": [
+    {
+      "confidence": "PROVEN",
+      "cause": "显式无时间的公司查询仍因原文含销售被完整性检查误报缺少time_range。",
+      "evidence": "正常入口原问题返回task-4:time_range，前三个任务完成。"
+    },
+    {
+      "confidence": "PROVEN",
+      "cause": "ASL取消独立超时后，外层300秒整轮预算仍包含ASL等待，导致并行请求504。",
+      "evidence": "仅修复时间误判后，原问题单独执行完成；并行回归公司与新华医院请求均在300秒返回504。"
+    }
+  ],
+  "changes": [
+    "完整性检查尊重结构化提取的显式空时间；实际指标和显式时间条件保留原校验。",
+    "ASL无限等待期间暂停整轮预算，结束后恢复剩余时间；并行等待共享请求级计数；其他请求不共享预算；主动取消和有限重试保持有效。"
+  ],
+  "validation": {
+    "entry": "正常agent_chat接口，原文问题，模型130，原应用，独立会话；未手工构造任务4或上游结果。",
+    "parallelism": 2,
+    "target_task_statuses": [
+      [
+        "task-1",
+        "COMPLETED"
+      ],
+      [
+        "task-2",
+        "COMPLETED"
+      ],
+      [
+        "task-3",
+        "COMPLETED"
+      ],
+      [
+        "task-4",
+        "COMPLETED"
+      ]
+    ],
+    "ranked_people": 5,
+    "company_rows": 5,
+    "cohort_matches": true,
+    "companies_present": true,
+    "ranking_descending": true,
+    "table_units": "金额列元，订单笔数笔，按当前语义文件表头展示。",
+    "attachment_sheets": [
+      "章节1",
+      "章节2"
+    ],
+    "automated": {
+      "baseline": {
+        "failure": 277,
+        "pass": 6231,
+        "error": 7
+      },
+      "final": {
+        "failure": 277,
+        "pass": 6249,
+        "error": 7
+      },
+      "regressions": [],
+      "new_passes": 18
+    },
+    "server_focused_tests": 37,
+    "server_health": "UP / READY"
+  },
+  "historical_results": [
+    {
+      "id": "company_top5",
+      "question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+      "status": "COMPLETED",
+      "elapsed_seconds": 470.8,
+      "error": null,
+      "baseline_status": "NEEDS_CLARIFICATION",
+      "acceptance": "VERIFIED"
+    },
+    {
+      "id": "shanghai_coverage",
+      "question": "统计上海市区域医院覆盖率",
+      "status": "COMPLETED",
+      "elapsed_seconds": 121.0,
+      "error": null,
+      "baseline_status": "COMPLETED",
+      "acceptance": "EXECUTION_VERIFIED_GRAIN_REVIEW_PENDING",
+      "note": "修改前后均返回781条经销商粒度的覆盖率；执行结果一致，但不能据此确认符合市级汇总预期。"
+    },
+    {
+      "id": "hospital_sales_products",
+      "question": "2025年9月到12月期间针对上海交通大学医学院附属新华医院销售订单金额最多的销售员是谁?销售了哪些产品?",
+      "status": "COMPLETED",
+      "elapsed_seconds": 405.6,
+      "error": null,
+      "baseline_status": "COMPLETED",
+      "acceptance": "VERIFIED"
+    },
+    {
+      "id": "semantic_entities",
+      "question": "当前语义模型中建立了哪些实体",
+      "status": "COMPLETED",
+      "elapsed_seconds": 14.1,
+      "error": null,
+      "baseline_status": "COMPLETED",
+      "acceptance": "VERIFIED"
+    },
+    {
+      "id": "orthopedics",
+      "question": "看看骨科那边卖得怎么样",
+      "status": "COMPLETED",
+      "elapsed_seconds": 114.1,
+      "error": null,
+      "baseline_status": "COMPLETED",
+      "acceptance": "VERIFIED"
+    },
+    {
+      "id": "longest_cooperation",
+      "question": "合作时间最长的销售商是哪家?",
+      "status": "NEEDS_CLARIFICATION",
+      "elapsed_seconds": 132.9,
+      "error": null,
+      "baseline_status": "COMPLETED",
+      "acceptance": "FAILED",
+      "note": "经销商名称字段绑定歧义，未执行SQL。本次未修复这条独立调用链。"
+    },
+    {
+      "id": "cooperation_over_three_months",
+      "question": "合作时长大于3个月的经销商有哪些",
+      "status": "NEEDS_CLARIFICATION",
+      "elapsed_seconds": 166.2,
+      "error": null,
+      "baseline_status": "NEEDS_CLARIFICATION",
+      "acceptance": "FAILED",
+      "note": "经销商名称字段绑定歧义，未执行SQL。本次未修复这条独立调用链。"
+    }
+  ],
+  "unverified_context": [
+    {
+      "id": "department_hospital_relation",
+      "request": "医院与科室多对多判断",
+      "missing": "原文实体ID已省略，缺少完整实体ID及模型范围"
+    },
+    {
+      "id": "relation_model122",
+      "request": "实体关系推荐返回空数组",
+      "semantic_model_id": 122,
+      "business_domain_id": 307,
+      "entity_type_id": "45eae41b-82d6-4bf7-b608-8e341b77d0f8",
+      "expected": "直接同名字段关系推荐，不推荐中间表"
+    },
+    {
+      "id": "city_province_relation",
+      "request": "城市跟省份为什么没有推荐关系",
+      "missing": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "company_salesperson_relation",
+      "request": "国药公司和销售员这两个表有相同字段，为什么没有推荐",
+      "missing": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "huashan_attachment",
+      "request": "2025华山医院Top1及产品的附件",
+      "missing": "截图未包含完整原问题，不能重构原文代替验收"
+    },
+    {
+      "id": "publication_error",
+      "request": "发布失败报错中文化",
+      "missing": "发布操作的完整原始参数；不在本轮只读查询回归范围内"
+    }
+  ],
+  "remaining_issues": [
+    "最终并行回归公司问题耗时470.8秒、新华医院405.6秒，等待仍长；本次未优化容量或模型速度。",
+    "合作时间最长问题基线曾完成，但后两轮出现字段绑定歧义，业务回归未全部保持通过；原因不以代码无改动为由排除，待独立定位。",
+    "合作时长大于3个月问题修改前后均有字段绑定歧义。",
+    "原实体推荐参数重放返回实体类型不存在，无法据此验收推荐关系。",
+    "覆盖率返回经销商粒度，保留结果粒度待核对项。",
+    "XLSX正文数据与页面一致且无说明页；附件原有列名未附加单位，本次未改附件单位链路。"
+  ],
+  "deployment": "按差异合并相关源码，备份并校验配置未变；重启受影响服务；原问题和历史回归在最终部署版本执行。",
+  "data_boundary": "仅业务只读查询；未修改语义库、索引、业务数据或权限。原始答案、附件、带签名链接仅存私有诊断目录，未提交。"
+}

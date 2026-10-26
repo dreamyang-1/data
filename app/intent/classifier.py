@@ -5020,6 +5020,23 @@ class RuleBasedIntentClassifier:
                     "合作经销商数据", "合作供应商数据",
                 )
             )
+            extraction = request._planner_extraction
+            structured = extraction.structured if extraction is not None else None
+            if (
+                isinstance(structured, dict)
+                and "时间粒度" in structured
+                and not request.metrics
+                and not structured.get("指标")
+                and (
+                    structured["时间粒度"] is None
+                    or isinstance(structured["时间粒度"], dict)
+                    and not any(structured["时间粒度"].values())
+                )
+            ):
+                # Extraction explicitly defines a period-free projection.
+                # Names such as 销售公司 and the predecessor's ranking context
+                # must not create a second, keyword-based time requirement.
+                time_dependent_detail = False
             if (
                 time_dependent_detail
                 and not request.time_range
