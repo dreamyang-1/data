@@ -36,8 +36,6 @@ from config import (
     DAILY_JOB_LEASE_SECONDS,
     ENTITY_SYNC_WAIT_SECONDS,
     LLM_MAX_CONCURRENCY,
-    LLM_QUEUE_TIMEOUT_SECONDS,
-    LLM_TIMEOUT_SECONDS,
     OAGNET_HOST,
     OAGNET_PORT,
     VECTOR_STORE_BACKEND,
@@ -60,12 +58,12 @@ _entity_state_lock = threading.Lock()
 _entity_sync_results: dict[tuple[int, int, str], dict] = {}
 _last_entity_sync: dict[tuple[int, int], dict] = {}
 _entity_sync_inflight: dict[tuple[int, int, str], threading.Event] = {}
-_ASL_REQUEST_DEADLINE_SECONDS = 85
+_ASL_REQUEST_DEADLINE_SECONDS = None
 _asl_capacity = AslCapacityController(
     build_asl_capacity_policy(
         max_concurrency=LLM_MAX_CONCURRENCY,
-        queue_timeout_seconds=LLM_QUEUE_TIMEOUT_SECONDS,
-        llm_timeout_seconds=LLM_TIMEOUT_SECONDS,
+        queue_timeout_seconds=None,
+        llm_timeout_seconds=None,
         request_deadline_seconds=_ASL_REQUEST_DEADLINE_SECONDS,
     )
 )

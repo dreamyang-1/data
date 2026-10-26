@@ -180,7 +180,6 @@ class Settings(BaseSettings):
     # it is sent to the data source.
     asl_generator_base_url: str = "http://192.168.1.27:8021"
     asl_generator_path: str = "/agent/query"
-    asl_generation_timeout_seconds: float = Field(default=90, gt=0, le=180)
     asl_plan_cache_ttl_seconds: int = Field(default=300, ge=0, le=3600)
     asl_plan_cache_max_items: int = Field(default=256, ge=0, le=2048)
     question_rewrite_enabled: bool = True

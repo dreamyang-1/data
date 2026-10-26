@@ -53,12 +53,9 @@ BASE_URL = _env(
     "BASE_URL",
     default="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
-LLM_TIMEOUT_SECONDS = _positive_int("OAGNET_LLM_TIMEOUT_SECONDS", 45)
 LLM_MAX_RETRIES = _nonnegative_int("OAGNET_LLM_MAX_RETRIES", 0)
 LLM_MAX_CONCURRENCY = _positive_int("OAGNET_LLM_MAX_CONCURRENCY", 1)
-# One report commonly fans out into three ASL requests. This is the queue ceiling;
-# the API also shortens it when necessary to preserve its 85-second total budget.
-LLM_QUEUE_TIMEOUT_SECONDS = _positive_int("OAGNET_LLM_QUEUE_TIMEOUT_SECONDS", 90)
+# ASL generation waits for completion; concurrency and retry counts remain bounded.
 
 EMBEDDING_MODEL = _env(
     "OAGNET_EMBEDDING_MODEL", "EMBEDDING_MODEL", default="text-embedding-v4"

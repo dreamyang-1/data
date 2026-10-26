@@ -39,9 +39,9 @@ class AslGenerationDeadlineExceeded(RuntimeError):
 @dataclass(frozen=True)
 class AslCapacityPolicy:
     max_concurrency: int
-    queue_timeout_seconds: float
-    operation_timeout_seconds: float
-    request_deadline_seconds: float = 140.0
+    queue_timeout_seconds: float | None
+    operation_timeout_seconds: float | None
+    request_deadline_seconds: float | None = 140.0
     max_waiters: int = 8
     max_rate_limit_retries: int = 1
     retry_base_seconds: float = 1.0
@@ -53,11 +53,12 @@ class AslCapacityPolicy:
             raise ValueError("max_concurrency must be positive")
         if self.max_waiters < 0:
             raise ValueError("max_waiters must not be negative")
-        if self.queue_timeout_seconds <= 0:
+        if self.queue_timeout_seconds is not None and self.queue_timeout_seconds <= 0:
             raise ValueError("queue_timeout_seconds must be positive")
-        if self.operation_timeout_seconds <= 0:
+        if self.operation_timeout_seconds is not None and self.operation_timeout_seconds <= 0:
             raise ValueError("operation_timeout_seconds must be positive")
-        if self.request_deadline_seconds <= self.operation_timeout_seconds:
+        if (self.request_deadline_seconds is not None
+                and self.request_deadline_seconds <= (self.operation_timeout_seconds or 0)):
             raise ValueError("request deadline must reserve one operation timeout")
         if self.max_rate_limit_retries < 0:
             raise ValueError("max_rate_limit_retries must not be negative")
@@ -68,11 +69,15 @@ class AslCapacityPolicy:
 def build_asl_capacity_policy(
     *,
     max_concurrency: int,
-    queue_timeout_seconds: float,
-    llm_timeout_seconds: float,
-    request_deadline_seconds: float = 85.0,
+    queue_timeout_seconds: float | None,
+    llm_timeout_seconds: float | None,
+    request_deadline_seconds: float | None = 85.0,
 ) -> AslCapacityPolicy:
     """Build a startup-safe policy while reserving time for common fanout."""
+    if request_deadline_seconds is None:
+        return AslCapacityPolicy(max_concurrency=max_concurrency,
+            queue_timeout_seconds=queue_timeout_seconds, operation_timeout_seconds=None,
+            request_deadline_seconds=None)
     # ASL main may invoke the model twice for transport-format correction. Very
     # large operator-configured SDK timeouts must not make the API fail at import
     # or consume the caller's whole deadline, so the caller-facing worker budget
@@ -84,7 +89,7 @@ def build_asl_capacity_policy(
     operation_cap = request_deadline_seconds - queue_reserve
     operation_budget = min(
         operation_cap,
-        max(request_deadline_seconds / 3.0, llm_timeout_seconds * 2.0),
+        max(request_deadline_seconds / 3.0, (llm_timeout_seconds or 0) * 2.0),
     )
     return AslCapacityPolicy(
         max_concurrency=max_concurrency,
@@ -216,18 +221,17 @@ class AslCapacityController:
 
         try:
             # Always reserve enough deadline for the admitted request's own LLM call.
-            queue_budget = min(
-                self.policy.queue_timeout_seconds,
-                self.policy.request_deadline_seconds
-                - self.policy.operation_timeout_seconds,
-            )
-            slot_acquired = self._slots.acquire(timeout=max(0.0, queue_budget))
+            queue_budget = self.policy.queue_timeout_seconds
+            if self.policy.request_deadline_seconds is not None:
+                reserved = self.policy.request_deadline_seconds - (self.policy.operation_timeout_seconds or 0)
+                queue_budget = min(queue_budget, reserved) if queue_budget is not None else reserved
+            slot_acquired = self._slots.acquire(timeout=None if queue_budget is None else max(0.0, queue_budget))
             if not slot_acquired:
                 raise AslCapacityExhausted(self.policy.local_retry_after_seconds)
             future = self._executor.submit(
                 self._run_with_rate_limit_retry, operation, started
             )
-            remaining = max(
+            remaining = None if self.policy.request_deadline_seconds is None else max(
                 0.0,
                 self.policy.request_deadline_seconds - (self._clock() - started),
             )
@@ -276,14 +280,13 @@ class AslCapacityController:
                     else self._jitter(fallback_delay * 0.8, fallback_delay * 1.2)
                 )
                 response_retry_after = max(1, math.ceil(retry_after or fallback_delay))
-                remaining = self.policy.request_deadline_seconds - (
-                    self._clock() - started
-                )
+                remaining = (float('inf') if self.policy.request_deadline_seconds is None
+                    else self.policy.request_deadline_seconds - (self._clock() - started))
                 can_retry = (
                     retries_used < self.policy.max_rate_limit_retries
                     and delay <= self.policy.retry_max_delay_seconds
                     and remaining
-                    > delay + self.policy.operation_timeout_seconds
+                    > delay + (self.policy.operation_timeout_seconds or 0)
                 )
                 if not can_retry:
                     raise AslUpstreamRateLimited(response_retry_after) from exc

@@ -21,7 +21,6 @@ from config import (
     BASE_URL,
     LLM_MAX_RETRIES,
     LLM_MODEL,
-    LLM_TIMEOUT_SECONDS,
     require_runtime_secret,
 )
 from prompt_build import PromptBuilder, canonicalize_structured_mentions
@@ -8723,7 +8722,7 @@ def _get_chat_model():
         model_provider="openai",
         api_key=require_runtime_secret(API_KEY, "OAGNET_API_KEY/DASHSCOPE_API_KEY"),
         base_url=BASE_URL,
-        timeout=LLM_TIMEOUT_SECONDS,
+        timeout=None,
         max_retries=LLM_MAX_RETRIES,
         temperature=0,
         extra_body={"enable_thinking": False},

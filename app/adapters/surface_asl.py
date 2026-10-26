@@ -82,7 +82,7 @@ async def generate_surface_asl(
                 settings.asl_generator_base_url, settings.asl_generator_path, payload_to_send,
                 identity=identity, application_id=application_id,
                 idempotency_key=f"{request_id}:surface-asl{suffix}", retryable=True,
-                timeout=settings.asl_generation_timeout_seconds,
+                timeout=0,
             )
             timing.mark_first_result()
         if not isinstance(response, dict) or response.get("success") is not True:

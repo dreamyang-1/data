@@ -12504,6 +12504,12 @@ class DataAnalysisOrchestrator:
                 request.time_range = parsed_period
                 request.assumptions = [item for item in request.assumptions
                     if item not in {"TIME_SCOPE=ALL_TIME", "TIME_SCOPE=ALL_AVAILABLE_HISTORY"}]
+        elif "时间粒度" in structured and isinstance(time_spec, dict):
+            # An explicit empty child period overrides dates mentioned only to
+            # identify its upstream cohort (e.g. the 2025 top five -> companies).
+            # Leaving the rule-parsed year here incorrectly makes ASL demand a
+            # date anchor from a time-independent attribute lookup.
+            request.time_range = None
         request.asl_template = None
         request.source_dataset_id = None
         # Ensure semantic/ASL receives this child's shape, not parent wording.

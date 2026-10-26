@@ -248,12 +248,15 @@ class PlatformHttpClient:
         last_error: Exception | None = None
         last_adapter_error: AdapterError | None = None
         request_started = time.perf_counter()
-        deadline = request_started + (timeout or self.settings.request_timeout_seconds)
+        # Explicit zero disables this dependency's deadline (ASL generation).
+        # None still means the normal request budget for all other callers.
+        deadline = None if timeout == 0 else request_started + (
+            timeout if timeout is not None else self.settings.request_timeout_seconds)
         # 不打印 payload：请求体可能含业务问题文本与凭证相关字段
         logger.debug("upstream request method=%s base_url=%s path=%s attempts=%s", method, base_url, path, attempts)
         for attempt in range(attempts):
-            remaining = deadline - time.perf_counter()
-            if remaining <= 0:
+            remaining = None if deadline is None else deadline - time.perf_counter()
+            if remaining is not None and remaining <= 0:
                 break
             try:
                 async with httpx.AsyncClient(
@@ -312,7 +315,7 @@ class PlatformHttpClient:
                         )
                         delay = max(self.settings.http_retry_backoff_seconds * (2**attempt),
                                     self._retry_after(response))
-                        if delay >= deadline - time.perf_counter():
+                        if deadline is not None and delay >= deadline - time.perf_counter():
                             break
                         await asyncio.sleep(delay)
                         continue
@@ -346,7 +349,7 @@ class PlatformHttpClient:
                         time.perf_counter() - request_started,
                     )
                     delay = self.settings.http_retry_backoff_seconds * (2**attempt)
-                    if delay >= deadline - time.perf_counter():
+                    if deadline is not None and delay >= deadline - time.perf_counter():
                         break
                     await asyncio.sleep(delay)
                 else:
@@ -1035,7 +1038,7 @@ class HttpDataRetrievalAdapter:
             application_id=request.application_id,
             idempotency_key=f"{request.request_id}:metric-discovery",
             retryable=True,
-            timeout=self.settings.asl_generation_timeout_seconds,
+            timeout=0,
         )
         if generated.get("success") is not True:
             return MetricDiscovery(metrics=[])
@@ -1181,7 +1184,7 @@ class HttpDataRetrievalAdapter:
             application_id=request.application_id,
             idempotency_key=f"{request.request_id}:attribute-detail-discovery",
             retryable=True,
-            timeout=self.settings.asl_generation_timeout_seconds,
+            timeout=0,
         )
         if generated.get("success") is not True:
             return MetricDiscovery(metrics=[])
@@ -2155,7 +2158,7 @@ class HttpDataRetrievalAdapter:
                     # safe to retry; disabling retries made a single upstream TCP
                     # reset surface directly as a failed user turn.
                     retryable=True,
-                    timeout=self.settings.asl_generation_timeout_seconds,
+                    timeout=0,
                 )
                 timing.mark_first_result()
             if generated.get("success") is not True:
