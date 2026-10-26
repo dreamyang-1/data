@@ -20,43 +20,20 @@ class PlanningResult:
 
 
 def render_prior_task_table_context(prior_task_table: Any, budget: int = 3500) -> str:
-    """提供历史任务及已有完整性证据，不把预览或文本截断后的名单当成完整结果。"""
+    """把上一轮任务表渲染成拆分判断/任务规划的上下文块。
+
+    上轮没有任务表时返回空串，调用方把原 semantic_context 原样透传。
+    规划模型必须先看到上一轮有什么，否则会把上轮已查过的口径再拆一个任务。
+    """
     if not isinstance(prior_task_table, dict):
         return ""
     tasks = prior_task_table.get("tasks") or []
     if not tasks:
         return ""
-    rules = (
-        "追问轮上下文使用规则（不覆盖条件、粒度及完整性规则）：\n"
-        "1. 已完成且足以满足本轮需要的结果不重复查询，不为重述上轮结论单独生成任务。\n"
-        "2. 仅当本块明确标记该任务的全部结果已完整提供、所需字段逐项可见时，才可复用其中的具体参数。"
-        "追问只有一个新增查询目标时可只规划该查询，把完整名单中的具体名称或编码写入question，"
-        "不要仅写这几家、上述对象；保留本轮时间和筛选条件，新查询照常提取参数。\n"
-        "3. 以下仅为采样，不能作为完整对象名单：未标记完整、行数不符或已省略的历史结果。"
-        "所需名单应由完整数据集及依赖绑定取得对象范围；当前上下文不能提供完整范围时，按原口径重新查询，"
-        "不得仅使用预览行，不得编造未展示值或沿用其他模型、业务域的结果。"
-    )
-    omission = "[部分历史上下文因长度限制已省略；省略内容不能作为完整名单。]"
-    if budget <= 0:
-        return ""
-    if budget < len(rules) + len(omission) + len("[上一轮任务表]\n\n"):
-        warning = "[上一轮任务表]\n上下文预算不足，未提供历史结果；不得据此复用具体名单。"
-        return warning if len(warning) <= budget else ""
-    table_budget = budget - len(rules) - len(omission) - 2
     lines = ["[上一轮任务表]"]
-    omitted = False
-
-    def append_block(block: str) -> None:
-        nonlocal omitted
-        # 不从完整名单中间截断，否则完整标记与实际送达的内容不符。
-        if len("\n".join([*lines, block])) <= table_budget:
-            lines.append(block)
-        else:
-            omitted = True
-
     question = str(prior_task_table.get("question") or "").strip()
     if question:
-        append_block(f"上一轮问题：{question}")
+        lines.append(f"上一轮问题：{question}")
     for row in tasks:
         if not isinstance(row, dict):
             continue
@@ -67,35 +44,41 @@ def render_prior_task_table_context(prior_task_table: Any, budget: int = 3500) -
         if isinstance(summary, dict):
             detail = []
             columns = summary.get("columns")
-            if isinstance(columns, list) and columns:
+            if columns:
                 detail.append("结果列：" + "、".join(str(c) for c in columns[:6]))
             if summary.get("row_count") is not None:
-                detail.append(f"摘要记录{summary['row_count']}行")
-            sample = summary.get("sample") or []
-            valid_sample = isinstance(sample, list) and all(isinstance(item, dict) for item in sample)
-            complete = (
-                summary.get("sample_is_complete") is True
-                and type(summary.get("row_count")) is int
-                and valid_sample
-                and summary["row_count"] == len(sample) <= 10
-            )
-            detail.append("全部结果已完整提供" if complete else "以下仅为采样，不能作为完整对象名单")
-            if valid_sample:
+                detail.append(f"共{summary['row_count']}行")
+            # 采样整段给出：追问要引用的参数值（实体名单）分布在各行，
+            # 只给首行会让模型拿不全参数，进而退回"先查名单再查明细"的拆分
+            sample = summary.get("sample")
+            if sample and isinstance(sample[0], dict):
                 for sample_row in sample[:10]:
-                    # 已证明完整的小结果保留所有字段，避免关联键在第五列以后被丢掉。
-                    items = list(sample_row.items())
-                    if not complete:
-                        items = items[:4]
                     pairs = "；".join(
-                        f"{k}={v}" for k, v in items
+                        f"{k}={v}" for k, v in list(sample_row.items())[:4]
                     )
                     detail.append(pairs)
             if detail:
                 line += "（" + "，".join(detail) + "）"
-        append_block(line)
-    if omitted:
-        lines.append(omission)
-    return "\n".join([*lines, rules])
+        lines.append(line)
+    rules = (
+        "追问轮拆分规则（优先于通用拆分规则）：\n"
+        "1. 上一轮已经查到的结果（如\"排名前三的是哪几家\"）不再生成任何任务，"
+        "尤其不要生成以\"复用上一轮查询结果\"开头、用来重述上轮结论的任务。\n"
+        "2. 追问只有1个新增查询目标、且所需参数（实体名单等）已出现在上一轮任务表"
+        "的采样里时，整轮判定为单一问题，只输出1个任务：把采样里的参数值逐个写进"
+        "任务问题文本（如\"复用上一轮查询结果：查询A公司、B公司、C公司2025年10月"
+        "主要销售的产品明细\"），不得用\"这三家\"\"上述对象\"之类的指代替换参数值——"
+        "后续环节只认问题文本里的具体值；该任务照常发起新查询并完整提取参数。\n"
+        "3. 只有追问包含多个相互独立的新增查询目标、或所需参数无法从上一轮任务表"
+        "取得时，才按通用规则拆分。"
+    )
+    # 规则必须完整送达拆分模型，长度超限时压缩采样区而不是截掉规则
+    table_budget = budget - len(rules)
+    table_text = "\n".join(lines)
+    if len(table_text) > table_budget:
+        table_text = table_text[:table_budget]
+    text = table_text + "\n" + rules
+    return text if len(text) <= budget else text[:budget]
 
 
 def recognized_planning_intent(judgment, fallback=None):

@@ -1692,13 +1692,6 @@ class SingleQuestionPlanner:
         # 不把智能体配置中可能属于另一模型的旧规范当作替代文件。
         reference = await load_semantic_description(self.settings, semantic_model_id)
         remote_spec = reference["content"] if reference.get("available") else ""
-        if semantic_model_id is not None:
-            system_content += (
-                f"\n[当前语义文件]\n语义模型ID：{semantic_model_id}；"
-                f"来源标识：{reference.get('source') or f'semantic_model_{semantic_model_id}.md'}；"
-                + ("状态：正文已提供。\n" if remote_spec else
-                   "状态：正文未取得，不得借用其他模型口径或编造定义。\n")
-            )
         if remote_spec:
             system_content += _semantic_context_section(
                 remote_spec, origin="语义模型描述文件"
