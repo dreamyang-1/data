@@ -5250,8 +5250,7 @@ class DataAnalysisOrchestrator:
         if root_units:
             for item in materials:
                 facts = item.setdefault("facts", {})
-                if not facts.get("metric_units"):
-                    facts["metric_units"] = root_units
+                facts["metric_units"] = {**(facts.get("metric_units") or {}), **root_units}
         resolved_answers = dict(root_context.get("resolved_task_questions") or {})
         for item in materials:
             if item["task_id"] in task_answers and item["status"] in {"COMPLETED", "PARTIAL_SUCCESS"}:
@@ -15403,9 +15402,7 @@ class DataAnalysisOrchestrator:
         if type(semantic_model_id) is not int or semantic_model_id <= 0:
             return {}
         try:
-            return await asyncio.to_thread(
-                load_metric_units, self.settings, semantic_model_id
-            )
+            return await load_metric_units(self.settings, semantic_model_id)
         except Exception as exc:
             logger.warning("metric units unavailable: %s", type(exc).__name__)
             return {}

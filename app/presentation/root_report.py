@@ -7,6 +7,7 @@ from app.analysis.interpretation import AnswerPlan
 from app.domain.models import AgentResponse, TaskExecutionResult, TaskPlan
 from app.analysis.visualization import requested_chart_specs, suggested_chart_specs
 from app.presentation.summary import brief_summary
+from app.analysis.units import table_with_units
 
 
 def preview_result_tables(text: str) -> str:
@@ -168,7 +169,10 @@ def render_root_report(
                 notes.append(f"“{item['question']}”仅提供{query.get('returned_row_count', '部分')}条预览，不能作为全量统计。")
     for item in selected:
         presentation = item.get("presentation") or {}
-        table = preview_result_tables(str(presentation.get("table") or "").strip())
+        table = table_with_units(
+            preview_result_tables(str(presentation.get("table") or "").strip()),
+            (item.get("facts") or {}).get("metric_units"),
+        )
         if table:
             tables.append((f"**{result_table_title(item, final.get('result_titles'))}**\n\n" if len(selected) > 1 else "") + table)
         elif item.get("summary"):
