@@ -56,7 +56,8 @@ async def test_original_and_similar_questions_execute_complete_three_task_dag(qu
         values=range(1,9) if metric=='含税销售总额' else range(8,0,-1)
         rows=[{'业务员（编码）':f'P{i}','姓名':'同名销售员','所属公司':f'公司{i%2}',
             metric:i*i*100 if metric=='含税销售总额' else i} for i in values]
-        ref=await persist(agent,child,list(rows[0]),rows,conversation=child.conversation_id)
+        ref=await persist(agent,child,list(rows[0]),rows,conversation=child.conversation_id,
+            column_bindings={'业务员（编码）':'salesperson.salesperson_code'})
         return AgentResponse(request_id=uuid4(),conversation_id=child.conversation_id,
             status='COMPLETED',intent=PrimaryIntent.METRIC_QUERY,answer='源统计已完成',dataset_id=ref.dataset_id)
     agent._handle=query

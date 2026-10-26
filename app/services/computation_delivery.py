@@ -23,7 +23,12 @@ def numeric_value(value):
 
 
 def identifier_field(field):
-    return isinstance(field, str) and field.lower().endswith(('_code', '_id', '_no', '_number', '_key'))
+    if not isinstance(field, str):
+        return False
+    # Executed-query bindings may use either salesperson_code or a bare id.
+    # Alignment still compares the complete binding, including its table.
+    column = field.strip().rsplit('.', 1)[-1].strip('`"[]').lower()
+    return column == 'id' or column.endswith(('_code', '_id', '_no', '_number', '_key'))
 
 
 def has_group_identity(reference):
@@ -71,9 +76,9 @@ def aligned_input(references):
             field = left_bindings.get(name)
             return (isinstance(field, str) and field == right_bindings.get(name)
                     and identifier_field(field))
-        keys = [name for name in columns if name in common and any(
-            tag in str(name).lower() for tag in ('编码', '编号', '_code', '_id', '（id）', '(id)'))
-            or name in common and proven_identity(name)]
+        keys = [name for name in columns if name in common and proven_identity(name)]
+        if not keys and (has_group_identity(source) or has_group_identity(reference)):
+            raise ValueError('多份统计数据缺少共同的唯一编号，不能按姓名或行顺序对齐')
         if not keys:
             raise ValueError('多份统计数据缺少共同的唯一编号，不能按姓名或行顺序对齐')
         def index(data):

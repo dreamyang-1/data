@@ -9,7 +9,9 @@
     {"id":"orthopedics","question":"看看骨科那边卖得怎么样","expected":"骨科业务值绑定正确，能够查询并输出结果"},
     {"id":"longest_cooperation","question":"合作时间最长的销售商是哪家?","expected":"按合作时间降序返回销售商，字段角色绑定正确"},
     {"id":"cooperation_over_three_months","question":"合作时长大于3个月的经销商有哪些","expected":"大于3个月的条件保留并正确换算，返回经销商名称"},
-    {"id":"dealer_duration_exact","question":"查询筛选合作时长超3个月的经销商","expected":"同表行级合作时长公式与名称编码正常返回，超过3个月条件完整执行，不误报展示字段无唯一关联"}
+    {"id":"dealer_duration_exact","question":"查询筛选合作时长超3个月的经销商","expected":"同表行级合作时长公式与名称编码正常返回，超过3个月条件完整执行，不误报展示字段无唯一关联"},
+    {"id":"dealer_duration_recent","question":"查询合作时间长大与3个月的经销商","expected":"保留用户实际措辞；正确识别超过3个月，返回经销商及合作时长"},
+    {"id":"supplier_first_cooperation","question":"合作时长最长的供应商有哪些?第一次合作是什么时间?","expected":"选出合作时长最长的对象，并返回这些对象首次合作日期；不遗漏后续交付"}
   ],
   "unresolved_context": [
     {"id":"department_hospital_relation","request":"医院与科室多对多判断","missing":"原文实体ID已省略，缺少完整实体ID及模型范围"},
