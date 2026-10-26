@@ -6229,15 +6229,16 @@ def _contract_metric_having(expected: dict, knowledge: dict, *, negative: bool =
     import math
     if not math.isfinite(values[0]):
         return None
-    metadata = matches[0]
-    rule = _object(metadata.get("calculation_rule"))
-    formula = str(rule.get("calc_formula") or metadata.get("calc_formula") or "")
-    aggregate = re.fullmatch(r"\s*(?:[^=]+\s*=\s*)?(SUM|COUNT|AVG|MIN|MAX)\s*\(\s*"
-                             r"(DISTINCT\s+)?([A-Za-z_]\w*\.[A-Za-z_]\w*)\s*\)\s*", formula, re.I)
-    if not aggregate or aggregate[3] not in set(knowledge.get("_vector_authorized_fields") or _known_physical_fields(knowledge)):
-        return None
-    distinct = "DISTINCT " if aggregate[2] else ""
-    return f"{aggregate[1].upper()}({distinct}{aggregate[3]}) {operator} {values[0]}"
+    from structured_binding import _metric_having_expression
+    fields = knowledge.get("_vector_authorized_fields") or _known_physical_fields(knowledge)
+    expression = _metric_having_expression(
+        matches[0].get("metric_code"),
+        {"op": operator, "value": values},
+        {"metrics": {matches[0].get("metric_code"): matches[0]},
+         "fields": dict.fromkeys(fields)})
+    if expression and set(re.findall(r'\b[A-Za-z_]\w*\.[A-Za-z_]\w*\b', expression)) <= set(fields):
+        return expression
+    return None
 
 
 def _contract_metric_having_present(ast: dict, expression: str) -> bool:

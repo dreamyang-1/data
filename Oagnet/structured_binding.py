@@ -755,8 +755,29 @@ def _declared_field_locate(declared, vals, catalog):
     return field, values
 
 
+def _metric_formula(metric_code, catalog):
+    meta = catalog['metrics'].get(metric_code) or {}
+    rule = _object(meta.get('calculation_rule')) or {}
+    formula = str(rule.get('calc_formula') or meta.get('calc_formula') or '')
+    return re.sub(r'^\s*[^\W\d]\w*\s*=\s*', '', formula).strip()
+
+
+def _scalar_metric_fields(metrics, catalog):
+    """Only declared, authorized row expressions qualify as scalar metrics."""
+    fields = set()
+    for metric in metrics:
+        formula = _metric_formula(metric['name'], catalog)
+        if not formula or re.search(r'\b(?:COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT|STDDEV\w*|VARIANCE)\s*\(|\bOVER\s*\(', formula, re.I):
+            return set()
+        referenced = set(re.findall(r'\b[A-Za-z_]\w*\.[A-Za-z_]\w*\b', formula))
+        if not referenced or not referenced <= catalog['fields'].keys():
+            return set()
+        fields.update(referenced)
+    return fields
+
+
 def _metric_having_expression(metric_code, original, catalog):
-    """指标阈值转 having 表达式；聚合口径取指标目录公式，非安全聚合形态返回 None。"""
+    """Use the complete registered formula, including scalar/date expressions."""
     if not isinstance(original, dict):
         return None
     operator = str(original.get('op') or original.get('operator') or '').strip()
@@ -765,15 +786,24 @@ def _metric_having_expression(metric_code, original, catalog):
     if (operator not in {'=', '!=', '>', '>=', '<', '<='} or len(vals) != 1
             or isinstance(vals[0], bool) or not isinstance(vals[0], (int, float))):
         return None
-    meta = catalog['metrics'].get(metric_code) or {}
-    formula = str((meta.get('calculation_rule') or {}).get('calc_formula')
-                  or meta.get('calc_formula') or '')
-    m = re.search(r'=\s*(COUNT|SUM|AVG|MIN|MAX)\s*\(\s*(DISTINCT\s+)?'
-                  r'([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\s*\)', formula, re.IGNORECASE)
-    if not m:
+    import math
+    formula = _metric_formula(metric_code, catalog)
+    fields = set(re.findall(r'\b[A-Za-z_]\w*\.[A-Za-z_]\w*\b', formula))
+    if not math.isfinite(vals[0]) or not formula:
         return None
-    distinct = 'DISTINCT ' if m.group(2) else ''
-    return f"{m.group(1).upper()}({distinct}{m.group(3)}) {operator} {vals[0]}"
+    aggregate = re.fullmatch(r'(COUNT|SUM|AVG|MIN|MAX)\s*\(\s*(DISTINCT\s+)?([A-Za-z_]\w*\.[A-Za-z_]\w*)\s*\)', formula, re.I)
+    if aggregate:
+        distinct = 'DISTINCT ' if aggregate[2] else ''
+        return f'{aggregate[1].upper()}({distinct}{aggregate[3]}) {operator} {vals[0]}'
+    if not fields or not fields <= catalog['fields'].keys():
+        return None
+    # 行级日期差采用目录完整公式；不能截取复合公式中的第一个聚合。
+    date_arg = r'(?:[A-Za-z_]\w*\.[A-Za-z_]\w*|CURRENT_DATE(?:\s*\(\s*\))?|CURDATE\s*\(\s*\)|NOW\s*\(\s*\))'
+    if not re.fullmatch(r'(?:DATEDIFF\s*\(\s*' + date_arg + r'\s*,\s*' + date_arg
+                       + r'\s*\)|TIMESTAMPDIFF\s*\(\s*(?:DAY|MONTH|YEAR|HOUR|MINUTE|SECOND|WEEK|QUARTER)\s*,\s*'
+                       + date_arg + r'\s*,\s*' + date_arg + r'\s*\))', formula, re.I):
+        return None
+    return f"{formula} {operator} {vals[0]}"
 
 
 def _temporal_bounds(value):
@@ -999,14 +1029,14 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 resolved = _dim_bound_field(key, slot_catalog)
                 if resolved:
                     key = resolved
-            # 指标阈值过滤分流：聚合查询转 having（口径取指标目录），明细场景要求上游拆计算任务
+            # 已选指标的阈值按完整目录公式处理，不能把日期差等行级指标误判成不支持。
             if target == 'filters' and isinstance(key, str) and key in catalog['metrics']:
                 having_expr = _metric_having_expression(key, original, catalog) if extraction['指标'] else None
                 if having_expr:
                     ast['having'].append(having_expr)
                     continue
                 ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
-                    '指标阈值筛选只能作用在汇总结果上，请调整问法为统计类查询，或由上游将该条件拆分为统计任务加纯计算任务'))
+                    '该指标的筛选公式或数值阈值未能绑定到当前授权目录，请核对指标定义和条件值'))
                 continue
             allowed = (catalog['metrics'] if target == 'metrics' else
                        {**catalog['dimensions'], **slot_catalog['fields']} if target == 'dimensions' else
@@ -1110,6 +1140,13 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 ast['metrics'].append({'name': key, 'alias': allowed[key].get('metric_name') or key, 'time_anchor': None})
             elif target in {'dimensions', 'display_fields'}:
                 if target == 'display_fields' and extraction['指标']:
+                    scalar_fields = _scalar_metric_fields(ast['metrics'], catalog)
+                    if (not extraction['维度'] and scalar_fields
+                            and {f.split('.')[0] for f in scalar_fields} == {key.split('.')[0]}):
+                        # 同表行级公式没有聚合粒度；已绑定的展示字段直接随行投影。
+                        if key not in {d['name'] for d in ast['dimensions']}:
+                            ast['dimensions'].append(dict(name=key, attr=None, level=None, granularity=None))
+                        continue
                     if not any(_group_exposes_field(d, key, catalog) for d in ast['dimensions']):
                         if _related_display_field(ast['dimensions'], key, catalog):
                             fields = ast.setdefault('display_fields', [])

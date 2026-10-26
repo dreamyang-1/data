@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-26",
+  "root_cause_confidence": "PROVEN",
+  "question": "查询筛选合作时长超3个月的经销商",
+  "root_causes": [
+    "同表行级日期差指标被当成聚合指标，空维度时错误阻止展示名称和编码",
+    "指标筛选仅支持简单聚合，目录中DATEDIFF公式无法转为筛选条件，意图契约也不能识别该条件"
+  ],
+  "changes": [
+    "同表行级公式允许绑定后的展示字段随行投影；显式分组和跨表展示保留既有逻辑",
+    "目录DATEDIFF/TIMESTAMPDIFF公式阈值与意图契约共用实现，单位与数值不在绑定阶段改写",
+    "移除旧的仅聚合阈值处理实现；未调整前置门控、问题补全、意图或授权范围"
+  ],
+  "offline": {
+    "oagnet_full_passed": 2021,
+    "existing_failures": 40,
+    "collection_errors": 0,
+    "new_failures": [],
+    "candidate_targeted_passed": 99,
+    "version_repository_targeted_passed": 99,
+    "agent_critical_passed": 108
+  },
+  "deployment": {
+    "merged_hunks_only": true,
+    "backup_and_hash_check": true,
+    "configuration_preserved": true,
+    "oagnet_health": "healthy"
+  },
+  "original_e2e": {
+    "before": "NEEDS_CLARIFICATION",
+    "after_repetitions": 2,
+    "after": "COMPLETED",
+    "rows": 1000,
+    "attachment_name_code_duration_present": true,
+    "all_returned_durations_gt_90": true,
+    "descending": true,
+    "display_unit": "天",
+    "full_answer_accepted": false
+  },
+  "history": [
+    {
+      "id": "company_top5",
+      "execution_status": "COMPLETED"
+    },
+    {
+      "id": "shanghai_coverage",
+      "execution_status": "PARTIAL_SUCCESS"
+    },
+    {
+      "id": "hospital_sales_products",
+      "execution_status": "COMPLETED"
+    },
+    {
+      "id": "semantic_entities",
+      "execution_status": "COMPLETED"
+    },
+    {
+      "id": "orthopedics",
+      "execution_status": "COMPLETED"
+    },
+    {
+      "id": "longest_cooperation",
+      "execution_status": "COMPLETED"
+    },
+    {
+      "id": "cooperation_over_three_months",
+      "execution_status": "COMPLETED"
+    },
+    {
+      "id": "dealer_duration_exact",
+      "execution_status": "COMPLETED"
+    }
+  ],
+  "known_unresolved": [
+    "原问题自然语言洞察仍出现无证据分布结论，以及1000条查询上限与“完整结果”描述不一致；执行完成不等于整份答案验收通过",
+    "上海医院覆盖率此次PARTIAL_SUCCESS，且仍有经销商粒度不符合市级请求的问题；不能宣称所有历史问题通过",
+    "实体关系及发布类历史请求未在本轮重跑；缺失范围和原始参数的项目保留在回归清单中"
+  ]
+}
