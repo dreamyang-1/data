@@ -170,7 +170,7 @@ def combined_transport(
 async def test_session_reuses_mcp_session_id_across_calls():
     calls: list = []
     client = McpSessionClient(
-        MCP_URL, None, tool_timeout=5, discovery_timeout=5,
+        MCP_URL, None,
         transport=combined_transport(llm_script=[], mcp_calls=calls),
     )
     await client.open()
@@ -188,7 +188,7 @@ async def test_session_reuses_mcp_session_id_across_calls():
 @pytest.mark.asyncio
 async def test_sse_framed_tool_result_is_parsed():
     client = McpSessionClient(
-        MCP_URL, None, tool_timeout=5, discovery_timeout=5,
+        MCP_URL, None,
         transport=combined_transport(llm_script=[], sse_tool_result=True),
     )
     await client.open()

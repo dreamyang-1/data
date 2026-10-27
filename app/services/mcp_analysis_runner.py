@@ -128,17 +128,13 @@ class McpSessionClient:
         url: str,
         headers: dict[str, str] | None,
         *,
-        tool_timeout: float,
-        discovery_timeout: float,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.url = url
-        self._tool_timeout = tool_timeout
-        self._discovery_timeout = discovery_timeout
         self._headers = {
             "Accept": "application/json, text/event-stream", **(headers or {})
         }
-        self._client = httpx.AsyncClient(timeout=tool_timeout, transport=transport)
+        self._client = httpx.AsyncClient(timeout=None, transport=transport)
         self._session_id: str | None = None
 
     def _request_headers(self) -> dict[str, str]:
@@ -151,7 +147,7 @@ class McpSessionClient:
         response = await self._client.post(
             self.url,
             headers=self._headers,
-            timeout=self._discovery_timeout,
+            timeout=None,
             json={
                 "jsonrpc": "2.0", "id": str(uuid4()), "method": "initialize",
                 "params": {
@@ -169,7 +165,7 @@ class McpSessionClient:
         await self._client.post(
             self.url,
             headers=self._request_headers(),
-            timeout=self._discovery_timeout,
+            timeout=None,
             json={"jsonrpc": "2.0", "method": "notifications/initialized"},
         )
 
@@ -177,7 +173,7 @@ class McpSessionClient:
         response = await self._client.post(
             self.url,
             headers=self._request_headers(),
-            timeout=self._discovery_timeout,
+            timeout=None,
             json={
                 "jsonrpc": "2.0", "id": str(uuid4()),
                 "method": "tools/list", "params": {},
@@ -253,8 +249,6 @@ class McpAnalysisRunner:
                 client = McpSessionClient(
                     server.mcp_server_url,
                     server.headers,
-                    tool_timeout=self.settings.mcp_file_analysis_tool_timeout_seconds,
-                    discovery_timeout=self.settings.mcp_file_analysis_discovery_timeout_seconds,
                     transport=self.transport,
                 )
                 try:
@@ -328,13 +322,8 @@ class McpAnalysisRunner:
         artifact_urls: list[str] = []
         answer = ""
         turns = 0
-        budget_exhausted = False
-        deadline = time.monotonic() + self.settings.mcp_file_analysis_total_budget_seconds
         while turns < self.settings.mcp_file_analysis_max_turns:
             turns += 1
-            if time.monotonic() >= deadline:
-                budget_exhausted = True
-                break
             message = await self._chat(messages, openai_tools)
             tool_calls = message.get("tool_calls") or []
             if not tool_calls:
@@ -388,9 +377,7 @@ class McpAnalysisRunner:
                     "content": content,
                 })
         if not answer:
-            reason = (
-                "时间预算已用尽" if budget_exhausted else "工具调用轮数已达上限"
-            )
+            reason = "工具调用轮数已达上限"
             warnings.append(f"MCP 分析{reason}，回答基于已获得的工具结果")
             messages.append({
                 "role": "user",
@@ -522,7 +509,7 @@ class McpAnalysisRunner:
         ) as gen:
             async with httpx.AsyncClient(
                 base_url=self.settings.intent_model_base_url.rstrip("/"),
-                timeout=self.settings.mcp_file_analysis_model_timeout_seconds,
+                timeout=None,
                 transport=self.transport,
             ) as client:
                 for attempt in range(3):

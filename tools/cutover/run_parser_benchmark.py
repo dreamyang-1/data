@@ -110,7 +110,7 @@ async def run(args):
         'observed_at':datetime.now(timezone.utc).isoformat(),'prompt_version':PROMPT_VERSION,
         'prompt_hash':digest(PARSE_PROMPT),'schema_hash':digest(current_turn_schema()),
         'gold_hash':digest(rows),'requests':requests,'request_count':len(requests),'response_usage':usage,
-        'temperature':0,'retries':0,'timeout_seconds':settings.intent_model_timeout_seconds,
+        'temperature':0,'retries':0,'timeout_seconds':None,
         'production_default_model_changed':False,'catalog_usage':'FROZEN_LABEL_EVIDENCE_ONLY_NO_RETRIEVAL_IN_CURRENT_TURN_STAGE',
         'history_usage':'CURRENT_TURN_STAGE_DOES_NOT_RECEIVE_HISTORY','sql_executions':0,'production_state_writes':0,
         'latency_seconds':{'mean':sum(p['latency_seconds'] for p in predictions)/len(predictions),

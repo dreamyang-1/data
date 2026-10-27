@@ -185,9 +185,9 @@ async def test_adopt_guard_rejection_keeps_qwen_relation():
 
 
 @pytest.mark.asyncio
-async def test_adopt_cancels_slow_task_and_falls_back():
+async def test_adopt_waits_for_slow_task():
     async def slow():
-        await asyncio.sleep(5)
+        await asyncio.sleep(.03)
         return result("NEW_TASK")
 
     task = asyncio.create_task(slow())
@@ -196,9 +196,8 @@ async def test_adopt_cancels_slow_task_and_falls_back():
     adopted = await adopt_relation_verdict(task, proposal, _State(), trace, "m4")
     assert adopted is False
     assert proposal.relation == "NEW_TASK"
-    # 超时任务被取消，不悬挂
-    with pytest.raises(asyncio.CancelledError):
-        await asyncio.wait_for(asyncio.shield(task), timeout=1)
+    assert task.done() and not task.cancelled()
+    assert (await task).choice == "NEW_TASK"
 
 
 @pytest.mark.asyncio

@@ -73,7 +73,7 @@ class ExtensionDispatcher:
                     "summary": {"type": "boolean"},
                 },
             },
-            timeout=settings.bocha_search_timeout_seconds,
+            timeout=None,
         )
 
     @staticmethod
@@ -465,23 +465,7 @@ class ExtensionDispatcher:
         ]
         if not coroutines:
             return []
-        if timeout_seconds is None:
-            discovered = await asyncio.gather(*coroutines)
-        else:
-            tasks = [asyncio.create_task(item) for item in coroutines]
-            done, pending = await asyncio.wait(tasks, timeout=timeout_seconds)
-            for task in pending:
-                task.cancel()
-            if pending:
-                await asyncio.gather(*pending, return_exceptions=True)
-                logger.warning(
-                    "MCP tool discovery timed out for %s of %s configured servers",
-                    len(pending),
-                    len(tasks),
-                )
-            # Keep configuration order deterministic while retaining every
-            # server that completed within the shared discovery budget.
-            discovered = [task.result() for task in tasks if task in done]
+        discovered = await asyncio.gather(*coroutines)
         unique: dict[str, ToolConfig] = {}
         for tools in discovered:
             for tool in tools:
@@ -550,7 +534,7 @@ class ExtensionDispatcher:
     ) -> httpx.AsyncClient:
         return httpx.AsyncClient(
             headers=headers,
-            timeout=timeout,
+            timeout=None,
             auth=auth,
             transport=self.transport,
             follow_redirects=True,
@@ -566,8 +550,8 @@ class ExtensionDispatcher:
             async with sse_client(
                 url,
                 headers=headers or {},
-                timeout=10,
-                sse_read_timeout=30,
+                timeout=None,
+                sse_read_timeout=None,
                 httpx_client_factory=self._mcp_http_client_factory,
             ) as streams:
                 async with ClientSession(*streams) as session:
@@ -597,7 +581,7 @@ class ExtensionDispatcher:
             "Accept": "application/json, text/event-stream", **(headers or {})
         }
         try:
-            async with httpx.AsyncClient(timeout=15, transport=self.transport) as client:
+            async with httpx.AsyncClient(timeout=None, transport=self.transport) as client:
                 initialized = await client.post(
                     url,
                     headers=request_headers,
@@ -694,7 +678,7 @@ class ExtensionDispatcher:
         is_web_search = self._is_web_search_capability(config, skill)
         try:
             async with httpx.AsyncClient(
-                timeout=config.timeout, transport=self.transport
+                timeout=None, transport=self.transport
             ) as client:
                 if config.http_method == "get":
                     response = await client.get(config.url, params=payload, headers=config.headers)
@@ -902,8 +886,8 @@ class ExtensionDispatcher:
         async with sse_client(
             url,
             headers=headers or {},
-            timeout=10,
-            sse_read_timeout=30,
+            timeout=None,
+            sse_read_timeout=None,
             httpx_client_factory=self._mcp_http_client_factory,
         ) as streams:
             async with ClientSession(*streams) as session:
@@ -952,7 +936,7 @@ class ExtensionDispatcher:
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         request_headers = {"Accept": "application/json, text/event-stream", **(headers or {})}
-        async with httpx.AsyncClient(timeout=30, transport=self.transport) as client:
+        async with httpx.AsyncClient(timeout=None, transport=self.transport) as client:
             initialized = await client.post(
                 url,
                 headers=request_headers,

@@ -131,7 +131,7 @@ async def resolve_compound_formulas(settings, transport, spec_text, dependencies
         {'role': 'user', 'content': json_text({'required': required, 'components': {name: dependencies[name] for name in required},
                                             'registered_rows': rows})}]}
     async with httpx.AsyncClient(base_url=settings.intent_model_base_url.rstrip('/'),
-        timeout=settings.multi_question_model_timeout_seconds, transport=transport) as client:
+        timeout=None, transport=transport) as client:
         response = await client.post('/chat/completions', json=body,
             headers={'Authorization': 'Bearer ' + settings.intent_model_api_key.get_secret_value()})
         response.raise_for_status()

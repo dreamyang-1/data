@@ -1,0 +1,47 @@
+{
+  "request": "删除数据智能体所有阶段执行时限",
+  "scope": [
+    "门控/问题补全/意图/规划/参数提取",
+    "ASL客户端/SQL调用/检索",
+    "依赖执行/工具/MCP/文件分析",
+    "洞察生成/修正/核验/异常解释"
+  ],
+  "preserved": [
+    "用户取消",
+    "真实上游错误",
+    "有限次数重试",
+    "依赖顺序与并发上限",
+    "授权与向量标准化",
+    "心跳/缓存/协调租约/健康探测/连接建立超时"
+  ],
+  "offline": {
+    "main_suite_passed_after_targeted_retest": 6204,
+    "existing_failures": 567,
+    "existing_collection_errors": 7,
+    "new_failures_after_retest": 0,
+    "exception_explainer_additional_passed": 23,
+    "renamed_existing_failures": 3
+  },
+  "server_candidate": {
+    "passed": 268,
+    "existing_failures_confirmed_before_change": 4,
+    "http_and_sse_deadline_regressions_passed": 4
+  },
+  "deployment": {
+    "status": "STOPPED_BEFORE_WRITE",
+    "reason": "服务器 app/config.py 在检查期间被其他操作加入整体300秒及ASL180秒时限；等待并发修改完成确认",
+    "files_written": 0,
+    "service_restarted": false
+  },
+  "business_acceptance": {
+    "status": "NOT_VERIFIED_ON_NEW_DEPLOYMENT",
+    "question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+    "history_groups": 12,
+    "history_turns": 13,
+    "reason": "发布因并发修改停止，未用旧生产版本冒充新版本验收"
+  },
+  "limitations": [
+    "上游服务和网关主动返回的错误不受本项目客户端取消时限的控制",
+    "原有业务及测试失败未在本次时限变更中修复"
+  ]
+}

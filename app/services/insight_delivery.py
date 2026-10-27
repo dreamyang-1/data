@@ -1,7 +1,6 @@
 """Deliver only executed facts when optional root interpretation is unavailable."""
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -22,13 +21,10 @@ def factual_fallback(materials: list[dict[str, Any]]) -> str:
 
 
 async def deliver_root_insight(
-    materials: list[dict[str, Any]], generate: Callable[[], Awaitable], *, timeout: float,
+    materials: list[dict[str, Any]], generate: Callable[[], Awaitable],
 ) -> tuple[str, Any | None]:
     # A failed tool must not be replaced with model arithmetic, even if that
     # arithmetic happens to produce the right number on a particular request.
     if incomplete_calculation(materials):
         return factual_fallback(materials), None
-    try:
-        return await asyncio.wait_for(generate(), timeout=timeout)
-    except TimeoutError:
-        return factual_fallback(materials), None
+    return await generate()
