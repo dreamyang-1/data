@@ -238,133 +238,6 @@ def catalog_candidates(knowledge):
                 _dictionary_choices=dictionary_choices, _value_owners=value_owners)
 
 
-def _related_display_field(groups, field, catalog):
-    """A display attribute may follow a declared to-one path, never a fanout."""
-    target_table = field.split('.')[0]
-    starts = set()
-    for group in groups:
-        if group.get('granularity'):
-            continue
-        code = group['name']
-        definition = catalog['dimensions'].get(code) or {}
-        entity = catalog['entities'].get(code)
-        if '.' in code:
-            owner = catalog['fields'].get(code, {}).get('owner')
-            entity = catalog['entities'].get(owner) or {}
-            attributes = _object(entity.get('attributes')) or []
-            if any(_field(attr.get('field_mapping')) == code and (
-                    str(attr.get('is_primary_key')).lower() in {'true', '1'}
-                    or str(attr.get('is_unique')).lower() in {'true', '1'}
-                    or attr.get('attr_code') == str(owner)+'_code') for attr in attributes):
-                starts.add(code.split('.')[0])
-            continue
-        if not entity or definition.get('enum_list'):
-            continue
-        physical = _dim_bound_field(code, catalog)
-        if physical:
-            starts.add(physical.split('.')[0])
-    edges = {}
-    for relation in catalog['relations']:
-        join = _object(relation.get('join_key'))
-        if not isinstance(join, dict):
-            continue
-        a, b = (_field(join.get(k)) for k in ('source_field', 'target_field'))
-        if not a or not b:
-            continue
-        card = str(relation.get('cardinality') or relation.get('relation_type') or relation.get('type') or '').upper()
-        left, right = a.split('.')[0], b.split('.')[0]
-        if card in {'N:1', 'M:1', 'MANY_TO_ONE', '1:1', 'ONE_TO_ONE'}:
-            edges.setdefault(left, set()).add(right)
-        if card in {'1:N', '1:M', 'ONE_TO_MANY', '1:1', 'ONE_TO_ONE'}:
-            edges.setdefault(right, set()).add(left)
-    seen, pending = set(starts), list(starts)
-    while pending:
-        current = pending.pop()
-        for neighbor in edges.get(current, set()) - seen:
-            seen.add(neighbor)
-            pending.append(neighbor)
-    return target_table not in starts and target_table in seen
-
-
-def _metric_covers_display_field(metrics, field, catalog):
-    """已投影指标的公式是否引用该展示字段的物理列。
-
-    明细查询常把同一度量同时写进指标与展示字段（如“含税销售总额”与
-    “含税金额”）。指标已经按标准口径聚合投影，展示位的原始列若因分组
-    粒度无法附加，不应再作为独立字段返回。
-    """
-    target = str(field or '').replace('`', '').strip().lower()
-    if not target:
-        return False
-    for item in metrics or []:
-        code = item.get('name') if isinstance(item, dict) else item
-        meta = catalog['metrics'].get(code) or {}
-        # 公式在目录中可能位于 calculation_rule.calc_formula（元数据发布结构）
-        # 或顶层 calculation_formula，统一序列化后比对物理列名。
-        text = json.dumps(meta, ensure_ascii=False, default=str).replace('`', '').lower()
-        if target in text:
-            return True
-    return False
-
-
-def _group_exposes_field(group, field, catalog):
-    """Recognize the identity/label pair already projected by SQL Translator."""
-    code = group['name']
-    if code == field:
-        return True
-    definition = catalog['dimensions'].get(code)
-    entity = catalog['entities'].get(code)
-    if definition is None and entity is None and '.' in code and not group.get('granularity'):
-        # 字段式分组维度（如 product.product_code）没有逻辑维度定义。
-        # 它与展示字段同属一个实体时，分组字段与该实体的主名称属性是
-        # 同一行的 1:1 身份/标签对，沿用与逻辑维度一致的判定，
-        # 不改变统计粒度。
-        owner = catalog['fields'].get(code, {}).get('owner')
-        entity = catalog['entities'].get(owner) or {}
-        if not entity:
-            return False
-        definition = {'field_mapping': code}
-        code = owner
-    if not definition or not entity or group.get('granularity') or definition.get('enum_list'):
-        return False
-    mappings = _object(definition.get('bind_entities')) or []
-    if not isinstance(mappings, list):
-        return False
-    fields = set()
-    direct = _field(definition.get('field_mapping'))
-    if direct:
-        fields.add(direct)
-    for mapping in mappings:
-        if not isinstance(mapping, dict):
-            continue
-        if group.get('attr') and mapping.get('attr') != group['attr']:
-            continue
-        table, column = mapping.get('mappingTable'), mapping.get('mappingColumn')
-        if table and column:
-            fields.add(f'{table}.{column}')
-    if field in fields:
-        return True
-    attrs = _object(entity.get('attributes')) or []
-    flag = lambda value: str(value).lower() in {'true', '1', 'yes'}
-    def _identity(attr):
-        # 行标识证据：主键/唯一标记、实体自有编码命名，或代理主键列 id。
-        # 2026-10-23 回归：模型130「业务员ID」发布为 is_primary_key=0 且
-        # attr_code='id'，分组落成 salesperson.id 时身份证据为空，同表
-        # 主名称展示被误报无唯一关联。列名/编码为 id 只会出现在行标识
-        # 上，业务编码列（如 department_code）不会误判，粒度保护不变。
-        column = str(attr.get('field_mapping') or '').split('.')[-1]
-        return (flag(attr.get('is_primary_key')) or flag(attr.get('is_unique'))
-                or attr.get('attr_code') in {code+'_id', code+'_code'}
-                or attr.get('attr_code') == 'id' or column == 'id')
-    identities = {a.get('field_mapping') for a in attrs
-                  if a.get('field_mapping') in fields and _identity(a)}
-    labels = {a.get('field_mapping') for a in attrs
-              if (flag(a.get('is_main_attribute')) or a.get('attr_code') == code+'_name')
-              and any(str(a.get('field_mapping', '')).split('.')[0] == identity.split('.')[0]
-                      for identity in identities)}
-    return len(labels) == 1 and field in labels
-
-
 def _dim_bound_field(code, catalog):
     """把维度编码翻译成目录授权的物理字段；映射不唯一或未授权时返回 None。"""
     meta = catalog['dimensions'].get(code)
@@ -762,20 +635,6 @@ def _metric_formula(metric_code, catalog):
     return re.sub(r'^\s*[^\W\d]\w*\s*=\s*', '', formula).strip()
 
 
-def _scalar_metric_fields(metrics, catalog):
-    """Only declared, authorized row expressions qualify as scalar metrics."""
-    fields = set()
-    for metric in metrics:
-        formula = _metric_formula(metric['name'], catalog)
-        if not formula or re.search(r'\b(?:COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT|STDDEV\w*|VARIANCE)\s*\(|\bOVER\s*\(', formula, re.I):
-            return set()
-        referenced = set(re.findall(r'\b[A-Za-z_]\w*\.[A-Za-z_]\w*\b', formula))
-        if not referenced or not referenced <= catalog['fields'].keys():
-            return set()
-        fields.update(referenced)
-    return fields
-
-
 def _metric_having_expression(metric_code, original, catalog):
     """Use the complete registered formula, including scalar/date expressions."""
     if not isinstance(original, dict):
@@ -836,7 +695,7 @@ def _temporal_bounds(value):
 def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=None,
          row_level_detail=None):
     """Model chooses bindings; deterministic assembly owns shape/operators/literals."""
-    ast = dict(version='2.0', intent='query', subject={}, metrics=[], dimensions=[], filters=[],
+    ast = dict(version='2.0', intent='query', subject={}, metrics=[], dimensions=[], display_fields=[], filters=[],
                time_context=None, sort=None, limit=None, having=[], ambiguity=[])
     repairs = []
     projection_bindings = []
@@ -1148,46 +1007,8 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                                     'entity': original.get('entity', '') if isinstance(original, dict) else '',
                                     'field': (original.get('field') or original.get('name')) if isinstance(original, dict) else original,
                                     'resolved_field': key})
-                if target == 'display_fields' and extraction['指标']:
-                    scalar_fields = _scalar_metric_fields(ast['metrics'], catalog)
-                    if (not extraction['维度'] and scalar_fields
-                            and {f.split('.')[0] for f in scalar_fields} == {key.split('.')[0]}):
-                        # 同表行级公式没有聚合粒度；已绑定的展示字段直接随行投影。
-                        if key not in {d['name'] for d in ast['dimensions']}:
-                            ast['dimensions'].append(dict(name=key, attr=None, level=None, granularity=None))
-                        continue
-                    if not any(_group_exposes_field(d, key, catalog) for d in ast['dimensions']):
-                        if _related_display_field(ast['dimensions'], key, catalog):
-                            fields = ast.setdefault('display_fields', [])
-                            if not any(d['name'] == key for d in fields):
-                                fields.append({'name': key, 'alias': allowed[key].get('attr_name') or key})
-                        elif _metric_covers_display_field(ast['metrics'], key, catalog):
-                            # 明细口径由调用方意图契约决定；结构化抽取的“意图”
-                            # 只是建议值，缺失时不能据此把明细字段当成汇总省略。
-                            is_row_level = (
-                                row_level_detail
-                                if row_level_detail is not None
-                                else '明细' in str(extraction.get('意图') or '')
-                            )
-                            if is_row_level:
-                                # 明细返回行级原始列，指标会被行级口径清空；
-                                # 该列与分组字段同处事实行，直接作为返回列投影。
-                                if key not in {d['name'] for d in ast['dimensions']}:
-                                    ast['dimensions'].append(dict(
-                                        name=key, attr=None, level=None, granularity=None))
-                                repairs.append({'type': 'DISPLAY_FIELD_AS_ROW_PROJECTION',
-                                                'source': 'STRUCTURED_EXTRACTION',
-                                                'field': key})
-                            else:
-                                # 汇总场景下该度量已由标准指标按聚合口径投影，
-                                # 不再作为额外的行级列附加。
-                                repairs.append({'type': 'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC',
-                                                'source': 'STRUCTURED_EXTRACTION',
-                                                'field': key,
-                                                'metrics': [m['name'] for m in ast['metrics']
-                                                            if isinstance(m, dict)]})
-                        else:
-                            ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '该展示属性与分组对象之间没有可确认的唯一关联，无法在不改变统计粒度的情况下返回'))
+                if target == 'display_fields':
+                    ast['display_fields'].append({'name': key, 'alias': allowed[key].get('attr_name') or key})
                 elif key not in {d['name'] for d in ast['dimensions']}:
                     temporal = extraction.get('时间粒度') or {}
                     try:
