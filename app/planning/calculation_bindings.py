@@ -277,16 +277,6 @@ def materialize_computation_binding(extraction, *, task_index, task_offset=0, de
             source['source_task_id'] = dependencies[0]
         if source.get('source_task_id') not in dependencies:
             raise TaskInputBindingError('计算输入必须属于声明的依赖任务')
-    query_bindings = result.get('依赖绑定')
-    if query_bindings is not None:
-        if not isinstance(query_bindings, list):
-            raise TaskInputBindingError('依赖绑定必须是数组')
-        for source in query_bindings:
-            if (not isinstance(source, dict)
-                    or not isinstance(source.get('source_column'), str)
-                    or not source['source_column'].strip()):
-                raise TaskInputBindingError('依赖查询缺少前序输出列')
-            bind(source)
     binding = result.get('计算绑定')
     if binding is not None:
         try:
@@ -403,7 +393,7 @@ def validate_computation_column_lineage(decomposition):
     for index,task in enumerate(decomposition.tasks):
         # Query sources can belong to an outer question whose terminal task
         # is attached later. This pass validates only computation columns.
-        computation = ({key:value for key,value in task.structured.items() if key!='依赖绑定'}
+        computation = ({key:value for key,value in task.structured.items()}
                        if isinstance(task.structured,dict) else task.structured)
         structured=materialize_computation_binding(computation,task_index=index,
             dependencies=[f'task-{dep+1}' for dep in task.depends_on]) or {}

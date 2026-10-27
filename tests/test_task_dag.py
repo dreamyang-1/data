@@ -502,7 +502,7 @@ async def test_dependent_new_entity_does_not_reuse_predecessor_dataset() -> None
             # values; exact dependency-result filtering is covered separately.
             task_id="task-2", question="另外查询供应商名单",
             depends_on=["task-1"],
-            extraction={"依赖绑定": []},
+            dependency_bindings=[], extraction={},
         ),
     ])
     await service._handle_task_plan(
@@ -1664,7 +1664,7 @@ async def test_dependent_new_entity_query_inherits_bounded_upstream_dimension_va
             task_id="task-2",
             question="根据适用科室筛选出经销商",
             depends_on=["task-1"],
-            extraction={"依赖绑定": [{"source_task_id": "task-1", "source_column": "department.dept_code"}]},
+            dependency_bindings=[{"source_task_id": "task-1", "source_column": "department.dept_code"}], extraction={},
         ),
     ])
 

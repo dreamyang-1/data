@@ -3137,7 +3137,7 @@ class DataAnalysisOrchestrator:
         source_extractions: dict[str, dict | None] | None = None,
     ) -> list[DependencyConstraint]:
         from app.planning.query_dependency_bindings import select_dependency_column
-        declared = (task.extraction or {}).get('依赖绑定')
+        declared = task.dependency_bindings
         if not isinstance(declared, list):
             raise DependencyConstraintError("DEPENDENCY_BINDING_MISSING")
         if not declared:

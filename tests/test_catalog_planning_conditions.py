@@ -262,7 +262,7 @@ async def test_whole_order_dependency_uses_all_order_keys_not_product_codes_or_p
     response=AgentResponse(request_id=uuid4(),conversation_id='orders',status='COMPLETED',
         intent=PrimaryIntent.DETAIL_QUERY,answer='仅展示前10条预览',dataset_id=ref.dataset_id)
     task=AtomicTask(task_id='totals',question='根据上述任务返回的订单号完整名单，按订单号汇总该订单下全部商品的含税销售总额',
-        depends_on=['task-1'],extraction={'依赖绑定':[{'source_task_id':'task-1','source_column':'订单号'}]})
+        depends_on=['task-1'],dependency_bindings=[{'source_task_id':'task-1','source_column':'订单号'}], extraction={})
     constraints=await agent._compile_dependency_constraints(task,chat,IDENTITY,
         {'task-1':response},{'task-1':'orders'})
     assert constraints[0].source_column=='sales_order.order_key'

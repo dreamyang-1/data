@@ -562,13 +562,15 @@ def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
     unique: list[AtomicTask] = []
     resolved: dict[str, str] = {}
     for task in plan.tasks:
+        task_inputs = copy.deepcopy(task.dependency_bindings)
+        for source in task_inputs or []:
+            source["source_task_id"] = resolved.get(source.get("source_task_id"), source.get("source_task_id"))
         dependencies = tuple(dict.fromkeys(resolved.get(dep, dep) for dep in task.depends_on))
         extraction = copy.deepcopy(task.extraction)
         if extraction:
             binding = extraction.get('计算绑定') or {}
             operands = [binding.get(role) for role in ('numerator', 'denominator', 'left', 'right', 'input')]
             operands.append(extraction.get('结果操作'))
-            operands.extend(extraction.get('依赖绑定') or [])
             for operand in operands:
                 if isinstance(operand, dict) and operand.get('source_task_id') in resolved:
                     operand['source_task_id'] = resolved[operand['source_task_id']]
@@ -577,9 +579,10 @@ def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
             for period in analysis_binding.get('periods') or []:
                 period['task'] = resolved.get(period['task'], period['task'])
             analysis_binding['optional_dependencies'] = [resolved.get(dep, dep) for dep in analysis_binding.get('optional_dependencies') or []]
-        calculation = {key: extraction[key] for key in ('计算绑定', '结果操作', '分析绑定', '依赖绑定') if extraction and key in extraction}
+        calculation = {key: extraction[key] for key in ('计算绑定', '结果操作', '分析绑定') if extraction and key in extraction}
         key = (query_fingerprint(task.question), dependencies, database_query_choice(extraction),
-               json.dumps(calculation, ensure_ascii=False, sort_keys=True) if calculation else '')
+               json.dumps(calculation, ensure_ascii=False, sort_keys=True) if calculation else '',
+               json.dumps(task_inputs, ensure_ascii=False, sort_keys=True))
         existing = canonical_by_key.get(key)
         if existing is not None:
             aliases[task.task_id] = existing
@@ -587,7 +590,7 @@ def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
             continue
         canonical_by_key[key] = task.task_id
         resolved[task.task_id] = task.task_id
-        unique.append(task.model_copy(update={"depends_on": list(dependencies), 'extraction': extraction}))
+        unique.append(task.model_copy(update={"depends_on": list(dependencies), 'extraction': extraction, 'dependency_bindings': task_inputs}))
     # TaskPlan 公开契约要求至少两个节点；全部重复的计划由编排器按单任务执行，
     # 不为这种情况放松公开契约。
     if len(unique) == len(plan.tasks):
@@ -1509,7 +1512,9 @@ class CompoundTaskPlanner:
                 entry_tasks = tuple(DecomposedTask(question=task.question, name=task.name,
                     depends_on=tuple(indexes[dep] for dep in task.depends_on),
                     expected_output=task.expected_output, intent=task.primary_intent,
-                    parameters=tuple(task.parameters), structured=task.extraction)
+                    parameters=tuple(task.parameters), structured=task.extraction,
+                    dependency_bindings=[{'source_task_index': indexes[b['source_task_id']], 'source_column': b['source_column']}
+                                         for b in task.dependency_bindings] if task.dependency_bindings is not None else None)
                     for task in expanded.tasks)
             for local_index, task in enumerate(entry_tasks):
                 task_question = task.question or entry.question
@@ -1535,7 +1540,10 @@ class CompoundTaskPlanner:
                     for period in analysis_binding.get('periods') or []:
                         period['task'] = rebase(period['task'])
                     analysis_binding['optional_dependencies'] = [rebase(dep) for dep in analysis_binding.get('optional_dependencies') or []]
+                from app.planning.query_dependency_bindings import materialize_dependency_inputs
                 tasks.append(AtomicTask(
+                    dependency_bindings=materialize_dependency_inputs(task.dependency_bindings,
+                        task_index=local_index, task_offset=offset, dependencies=depends_on),
                     task_id=f"task-{offset + local_index + 1}",
                     question=task_question.strip(),
                     name=task.name,
@@ -1841,10 +1849,13 @@ class CompoundQuestionRouter:
         if canonical_analysis is not None:
             validate_plan(canonical_analysis, source_question=question)
             return CompoundRouteResult(judgment=judgment, plan=canonical_analysis)
+        from app.planning.query_dependency_bindings import materialize_dependency_inputs
         # 单一问题拆解出多个任务：与复合计划同样按任务DAG执行
         tasks = [
             AtomicTask(
                 task_id=f"task-{index + 1}",
+                dependency_bindings=materialize_dependency_inputs(task.dependency_bindings,
+                    task_index=index, dependencies=[f"task-{dep + 1}" for dep in task.depends_on]),
                 question=task.question.strip(),
                 name=task.name,
                 depends_on=[f"task-{dep + 1}" for dep in task.depends_on],

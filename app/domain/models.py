@@ -1380,6 +1380,8 @@ class AtomicTask(StrictModel):
     depends_on: list[str] = Field(default_factory=list, max_length=11)
     expected_output: str | None = Field(default=None, max_length=300)
     parameters: list[str] = Field(default_factory=list, max_length=10)
+    # Planning-owned predecessor inputs; extraction cannot create/overwrite them.
+    dependency_bindings: list[dict[str, Any]] | None = None
     # 拆分模型产出的结构化提取JSON（国药语义解析规范格式）。
     extraction: dict[str, Any] | None = None
     primary_intent: PrimaryIntent | None = None

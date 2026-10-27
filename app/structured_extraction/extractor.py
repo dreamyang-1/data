@@ -370,8 +370,6 @@ def sanitize_extraction(
     for key in ('计算绑定', '结果操作', '计算待确认'):
         if isinstance(value.get(key), dict) and value[key]:
             structured[key] = copy.deepcopy(value[key])
-    if isinstance(value.get('依赖绑定'), list):
-        structured['依赖绑定'] = copy.deepcopy(value['依赖绑定'])
     from app.planning.metric_thresholds import normalize_metric_units
     normalize_metric_units(structured, metric_units)
     return structured

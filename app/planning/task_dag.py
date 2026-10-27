@@ -250,6 +250,7 @@ class DecomposedTask:
     intent: PrimaryIntent | None = None
     parameters: tuple[str, ...] = ()
     structured: dict[str, Any] | None = None
+    dependency_bindings: list[dict[str, Any]] | None = None
     name: str | None = None
 
 
@@ -950,6 +951,7 @@ class _PlannedTask(BaseModel):
         max_length=300,
         description="该任务可独立验收的交付物说明",
     )
+    dependency_bindings: list[dict[str, Any]] | None = None
     extraction: dict[str, Any] | None = Field(
         default=None,
         description=_EXTRACTION_SCHEMA_DESCRIPTION,
@@ -1711,6 +1713,7 @@ class SingleQuestionPlanner:
                 intent=task_intent,
                 parameters=parameters,
                 structured=structured,
+                dependency_bindings=copy.deepcopy(item.dependency_bindings),
                 name=(
                     item.name.strip()
                     if item.name and item.name.strip()

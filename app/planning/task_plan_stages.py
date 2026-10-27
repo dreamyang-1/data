@@ -18,6 +18,8 @@ class TaskOutline(BaseModel):
         '本任务需要新查询或计算的交付内容；依赖任务引用的前序入选条件放在question中，'
         '不要当成本任务的新计算目标。若本步仍需按指标计算、排名或筛选，必须写明该指标。'))
     definition_only: bool = False
+    dependency_bindings: list[dict[str, Any]] | None = Field(default=None, description=
+        '规划阶段确定的前序名单来源；每项含source_task_index和source_column；无需传入名单写[]')
 
 
 from app.analysis.tools.plans import AnalysisToolPlan
@@ -51,9 +53,11 @@ class TaskBoundaries(BaseModel):
 
 
 PLANNING_PROMPT = '''你是任务规划器。先确定完成原问题所需的业务任务、输入依赖和交付物，只输出JSON任务计划。
-每个任务只输出question、name、depends_on、expected_output、definition_only。不生成任何结构化查询或计算参数，包括extraction、metric_targets、grain、实体、指标、维度、展示字段、过滤条件、时间粒度、排序、限制、计算绑定、postprocess或结果操作；不生成ASL或SQL。具体参数全部由后续提取阶段结合任务问题、已识别意图与语义文件生成。
+每个任务只输出question、name、depends_on、expected_output、definition_only、dependency_bindings。不生成任何结构化查询或计算参数，包括extraction、metric_targets、grain、实体、指标、维度、展示字段、过滤条件、时间粒度、排序、限制、计算绑定、postprocess或结果操作；不生成ASL或SQL。具体参数全部由后续提取阶段结合任务问题、已识别意图与语义文件生成。
 任务question用完整自然语言描述要做什么，保留实际业务条件。交付物是属性、名单或明细（如“主要销售什么产品”“有哪些客户”）时，不得擅自改成指标统计。需要度量、分组或计算时，在question里说明业务目标及依据，不提前选择结构化字段。
 筛选对象不等于分组维度。例如“看看骨科那边卖得怎么样”中骨科是查询范围，未要求按科室比较时，不得改写成“按适用科室分组”；也不能因为有日期范围就增加按日期分组。
+
+依赖数据属于任务计划，不交给参数提取重新判断。每个任务都输出dependency_bindings：无需前序名单（含纯计算、仅等待顺序）的任务写[]；查询前序入选对象的新属性或明细时写[{"source_task_index":0,"source_column":"业务员.销售员编码"}]。下标从0开始，必须属于depends_on；source_column使用语义文件中前序交付对象的唯一键名称，优先“实体.字段”以区分同名字段，不写数据库字段、不编造实际编码值。前序question和expected_output必须要求返回该键，计算/排名任务继续保留它。执行时根据实际结果的字段身份读取名单；不能凭名称相近或值相同合并不同实体的ID/编码。仅引用外层前序子问题且当前任务表没有其下标时省略source_task_index，保留明确的source_column；外层只有一个已声明来源才可自动补来源。后续所属公司查询绑定入选人员的编码，不绑定公司或医院；多个来源分别填写，不重复计算前序排名。
 
 任务边界规则：
 0. 输入问题是本轮补全后的完整问题，结合已识别任务意图与当前语义文件拆分。输出前逐项核对：业务对象及完整名称、日期起止、地域、包含/排除条件、数值阈值、排名指标与方向/名次、前序入选对象、最终交付内容。每项条件必须出现在适用任务的question中，不能只放在name或expected_output里，也不能用“指定时间”“指定医院”等省略实际值。共享条件逐任务保留；仅对某一任务有效的条件不得扩散到其他任务。语义文件用于解释对象关系和登记口径，不得擅改用户明确的条件字面量或补造条件。
@@ -275,6 +279,8 @@ def _attach_result_analysis(boundaries, catalog):
         task = original.model_copy(deep=True)
         if any(type(dep) is not int or dep < 0 or dep >= old_index for dep in task.depends_on):
             raise ValueError('任务依赖必须引用排在其前面的任务')
+        from app.planning.query_dependency_bindings import remap_dependency_inputs
+        task.dependency_bindings = remap_dependency_inputs(task.dependency_bindings, indices)
         task.depends_on = list(dict.fromkeys(indices[dep] for dep in task.depends_on))
         def targets(item):
             return set(boundary_targets(item, catalog))
@@ -415,6 +421,8 @@ def _complete_object_scopes(boundaries, *, spec, catalog, dependencies, source_q
     result, indices = [], {}
     for old_index, original in enumerate(boundaries):
         task = original.model_copy(deep=True)
+        from app.planning.query_dependency_bindings import remap_dependency_inputs
+        task.dependency_bindings = remap_dependency_inputs(task.dependency_bindings, indices)
         task.depends_on = list(dict.fromkeys(indices[dep] for dep in task.depends_on))
         if task.postprocess and 'source_task_index' in task.postprocess:
             old_source = task.postprocess['source_task_index']
@@ -436,6 +444,7 @@ def _complete_object_scopes(boundaries, *, spec, catalog, dependencies, source_q
                     selection = TaskBoundary(
                         question=f'筛选符合下述问题中入选条件的{parent}，仅查询去重{key}完整名单，不计算均价或分析分布：{selection_question}',
                         name=f'筛选入选{parent}完整名单', depends_on=list(task.depends_on),
+                        dependency_bindings=copy.deepcopy(task.dependency_bindings),
                         metric_targets=[], grain=[key],
                         expected_output=f'符合原问题入选条件的完整去重{key}名单；不取预览或前N条')
                     selectors = [len(result)]
@@ -443,6 +452,8 @@ def _complete_object_scopes(boundaries, *, spec, catalog, dependencies, source_q
                 for selector in selectors:
                     result[selector]._cohort_key = key
                 task.depends_on = selectors
+                task.dependency_bindings = [dict(source_task_index=selector, source_column=key)
+                                            for selector in selectors]
                 targets = '、'.join(boundary_targets(task, catalog))
                 task.question = (f'根据上述任务返回的{key}完整名单，按{key}汇总该{parent}下全部{member}的{targets}，'
                                  f'只沿用入选{key}名单，不继承用于入选的{member}筛选条件或另截取部分明细')
@@ -575,6 +586,7 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
                 component_indices[key] = len(result)
             external_edges.append(len(result))
             component = TaskBoundary(question=question, name=f'统计{name}', depends_on=list(task.depends_on),
+                dependency_bindings=copy.deepcopy(task.dependency_bindings),
                 metric_targets=names, grain=grain, sample_requirements=[sample] if sample else [], component_input=True,
                 expected_output='按' + '、'.join(grain) + '返回' + name if grain else name)
             component._whole_object_scope = task._whole_object_scope
@@ -595,6 +607,8 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
             if len(sources) != 1:
                 raise ValueError('结果操作无法唯一绑定前序问题的输出')
             operation['source_task_index'] = sources[0]
+        from app.planning.query_dependency_bindings import remap_dependency_inputs
+        result[index].dependency_bindings = remap_dependency_inputs(result[index].dependency_bindings, terminal_by_old)
         result[index].depends_on = list(dict.fromkeys(new for old in result[index].depends_on for new in terminal_by_old[old]))
     if len(result) > 12:
         raise ValueError('任务展开超过现有12任务上限，请减少本轮业务目标')

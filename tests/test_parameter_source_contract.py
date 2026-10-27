@@ -25,7 +25,7 @@ async def test_planning_schema_has_only_task_description_and_dependencies(monkey
     await planner.plan_question('看看骨科那边卖得怎么样', semantic_model_id=130)
     schema = json.loads(calls[0]['messages'][0]['content'].split('JSON Schema：', 1)[1])
     properties = schema['$defs'][schema['properties']['tasks']['items']['$ref'].split('/')[-1]]['properties']
-    assert set(properties) == {'question', 'name', 'depends_on', 'expected_output', 'definition_only'}
+    assert set(properties) == {'question', 'name', 'depends_on', 'expected_output', 'definition_only', 'dependency_bindings'}
 
 
 @pytest.mark.asyncio
