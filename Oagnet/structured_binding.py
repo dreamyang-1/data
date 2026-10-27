@@ -839,6 +839,7 @@ def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=No
     ast = dict(version='2.0', intent='query', subject={}, metrics=[], dimensions=[], filters=[],
                time_context=None, sort=None, limit=None, having=[], ambiguity=[])
     repairs = []
+    projection_bindings = []
     if not isinstance(extraction, dict):
         ast['ambiguity'] = [issue('结构化提取', extraction, '未收到有效结构化参数，不能根据原问题重新提取')]
         return ast, repairs
@@ -1139,6 +1140,14 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
             if target == 'metrics':
                 ast['metrics'].append({'name': key, 'alias': allowed[key].get('metric_name') or key, 'time_anchor': None})
             elif target in {'dimensions', 'display_fields'}:
+                if target == 'display_fields' and key in catalog['fields']:
+                    # Preserve the already resolved slot identity even when a
+                    # grouping projects this same field under another label.
+                    projection_bindings.append({'type': 'STRUCTURED_PROJECTION_BINDING',
+                                    'source': 'STRUCTURED_EXTRACTION',
+                                    'entity': original.get('entity', '') if isinstance(original, dict) else '',
+                                    'field': (original.get('field') or original.get('name')) if isinstance(original, dict) else original,
+                                    'resolved_field': key})
                 if target == 'display_fields' and extraction['指标']:
                     scalar_fields = _scalar_metric_fields(ast['metrics'], catalog)
                     if (not extraction['维度'] and scalar_fields
@@ -1423,6 +1432,8 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 '请核对实体物理映射与关联关系；不需要重复解释已明确的实体或重新输入原问题。'
             )
             ast['ambiguity'].append(problem)
+    if not ast['ambiguity']:
+        repairs.extend(projection_bindings)
     repairs.append({'type':'STRUCTURED_BINDING_ONLY','source':'STRUCTURED_EXTRACTION',
                     'relationship_required':plan.get('relationship_required') is True})
     return ast, repairs

@@ -106,7 +106,7 @@ from app.services.dependency_error_messages import render_dependency_error
 from app.services.error_explanations import explain_binding_reason, explain_dependency_failure
 from app.services.query_output_bindings import calculation_columns
 from app.planning.dependency_contract import (
-    key_kind, projection, structured_query_changed, sql_column_bindings, missing_display_fields,
+    projection, structured_query_changed, sql_column_bindings, missing_display_fields,
 )
 from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
 from app.services.semantic_decision import (
@@ -3033,226 +3033,6 @@ class DataAnalysisOrchestrator:
         return any(marker not in evidence_text for marker in requested)
 
     @staticmethod
-    def _dag_references_dependency_result(question: str, *, evidence: str | None = None) -> bool:
-        from app.planning.dependency_contract import numbered_dependency_anchor
-        if numbered_dependency_anchor(question):
-            return True
-        compact = re.sub(r"\s+", "", question).lower()
-        referenced = bool(re.search(
-            r"(?:根据|基于|按照|依照|按)(?:上述|上一步|前述|前面|这些|该|其)?"
-            r".{0,24}(?:结果|范围|名单|类别|分类|科室|地区|对象|筛选|过滤|推荐|查找|匹配)",
-            compact,
-        )) or any(marker in compact for marker in (
-            "从上述结果", "从上一步结果", "在这些结果中", "再从其中", "用上一步",
-            "上述任务返回", "上一步返回", "前一任务返回", "前序任务返回", "该销售员", "该业务员",
-            # 裸复指代词：DAG 子任务里“他们/它们/她们”几乎必然指向前序结果
-            # （如 Q26“再看他们10月主要销售的产品明细”，“他们”后紧跟时间短语
-            # 不落在任何动词模式内）。该判定只作用于 DAG 依赖约束编译入口。
-            "他们", "它们", "她们",
-        )) or bool(re.search(
-            r"(?:上述|上一步|前述|前序)(?:任务)?(?:返回|筛选|选出|查询到)?"
-            r"(?:的)?[^，,。；;！？?]{0,24}?(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户|对象|结果)"
-            r"|(?:该|这些|那些|(?:这|那)(?:[一二三四五六七八九十两0-9]+)?[家个位名款]?|其|他|她|它)"
-            r"(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户)"
-            r"|(?:他|她|它)们?(?:的|所|在|销售|合作|负责|涉及|提供|生产)",
-            compact,
-        ))
-        if not referenced and evidence:
-            # 结果集枚举复指（Q60 实测 2026-10-22）：「展开2025年销售额占比
-            # 前3的产品线下的具体产品销量」引用的正是前序任务产出的 Top3
-            # 名单，但不落在任何既有复指模式（上述/该/这些/他们/根据…）内。
-            # 新增两类枚举复指：前N的X 与 每(量词)X。仅当被引用实体名词确实
-            # 出现在前序任务答案文本中才认定为依赖引用（evidence 由依赖约束
-            # 编译入口传入）；无证据的独立前N/每X 诉求不绑前序数据集。
-            evidence_compact = re.sub(r"\s+", "", str(evidence)).lower()
-            return any(
-                (match.group(1) or match.group(2)) in evidence_compact
-                for match in re.finditer(
-                    r"(?:前|top\s*)[一两二三四五六七八九十百两0-9]+[名条款个位家]?"
-                    r"的?[^，,。；;！？?]{0,8}?"
-                    r"(销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户|对象|结果|名单)"
-                    r"|每[一两二三四五六七八九十0-9]*[条个家位名款]?"
-                    r"(销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户|对象|结果|名单)",
-                    compact,
-                )
-            )
-        return referenced
-
-    @staticmethod
-    def _dependency_anchor_text(question: str) -> str:
-        from app.planning.dependency_contract import numbered_dependency_anchor
-        numbered=numbered_dependency_anchor(question)
-        if numbered:
-            return re.sub(r'\s+','',numbered).lower()
-        compact = re.sub(r"\s+", "", question).lower()
-        key_list = re.search(
-            r"(?:根据|基于|按照|依照)(?:上述|上一步|前述|前序)(?:任务)?"
-            r"(?:返回|查询到)?的?([^，,。；;！？?]{1,24}?)(?:完整)?名单", compact)
-        if key_list:
-            return key_list.group(1)
-        match = re.search(
-            r"(?:根据|基于|按照|依照|按)(.+?)(?:筛选|过滤|推荐|查找|查询|匹配|分析|统计)",
-            compact,
-        )
-        if match:
-            return match.group(1)
-        reference = re.search(
-            r"(?:上述|上一步|前述|前序)(?:任务)?[^，,。；;！？?]{0,24}?"
-            r"(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户)"
-            r"|(?:该|这些|那些|(?:这|那)(?:[一二三四五六七八九十两0-9]+)?[家个位名款]?|其)"
-            r"(?:销售员|业务员|销售人员|经销商|供应商|医院|商品|产品|科室|客户)"
-            r"|(?:他|她|它)们?(?=的|所|在|销售|合作|负责|涉及|提供|生产)", compact)
-        if reference:
-            return reference.group(0)
-        return compact
-
-    @staticmethod
-    def _dependency_column_family(text: str) -> str | None:
-        normalized = text.lower()
-        families = {
-            "order": ("订单", "order"),
-            "department": ("科室", "部门", "department", "dept"),
-            "category": ("分类", "类别", "品类", "category", "class"),
-            "region": ("地区", "区域", "省份", "城市", "省", "市", "region", "province", "city"),
-            "product": ("商品", "产品", "货品", "product", "goods", "sku"),
-            "supplier": ("供应商", "经销商", "supplier", "dealer", "vendor"),
-            "hospital": ("医院", "hospital"),
-            "customer": ("客户", "会员", "customer", "member"),
-            "store": ("门店", "店铺", "store", "shop"),
-            "brand": ("品牌", "brand"),
-            "salesperson": ("业务员", "销售员", "销售人员", "salesperson", "sales_person"),
-            "company": ("公司", "company"),
-            "manufacturer": ("厂家", "制造商", "manufacturer"),
-        }
-        matches = [
-            family for family, aliases in families.items()
-            if any(alias in normalized for alias in aliases)
-        ]
-        return matches[0] if len(matches) == 1 else None
-
-    @staticmethod
-    def _is_stable_dependency_key(column: str) -> bool:
-        """Return whether a projected column is suitable for a cross-entity join.
-
-        Display names are useful in the answer but are not stable join keys.  A
-        DAG branch that feeds another entity therefore prefers an explicitly
-        projected ``id``/``code`` column from the same semantic family.
-        """
-        return key_kind(column) != "display"
-
-    @classmethod
-    def _dependency_key_families(
-        cls,
-        source_task_id: str,
-        plan: TaskPlan,
-    ) -> tuple[str, ...]:
-        families: list[str] = []
-        for candidate in plan.tasks:
-            if (
-                source_task_id not in candidate.depends_on
-                or not cls._dag_references_dependency_result(candidate.question)
-                or database_query_choice(candidate.extraction) is False
-                or '不再查询数据库' in candidate.question
-            ):
-                continue
-            family = cls._dependency_column_family(
-                cls._dependency_anchor_text(candidate.question)
-            )
-            if family and family not in families:
-                families.append(family)
-        return tuple(families)
-
-    @classmethod
-    def _with_dependency_join_keys(
-        cls,
-        question: str,
-        source_task_id: str,
-        plan: TaskPlan,
-    ) -> str:
-        """Ask a predecessor query to project stable keys needed downstream.
-
-        The family names are selected from the fixed internal vocabulary above,
-        never copied from an arbitrary user fragment.  This keeps the prompt
-        bounded while making immutable predecessor data usable as an exact,
-        code-based downstream constraint.
-        """
-        families = cls._dependency_key_families(source_task_id, plan)
-        if not families:
-            return question
-        if families == ('order',):
-            return question + '\n后续查询需要订单号作为精确关联键，请按当前授权目录返回订单号，不增加其他分组。'
-        family_list = ", ".join(families)
-        return (
-            f"{question}\n"
-            "Internal DAG join requirement: in addition to requested fields, "
-            "return both the stable unique ID/code field and display-name field "
-            f"for each downstream dependency dimension family: {family_list}. "
-            "The ID/code is required for an exact downstream join. "
-            "Do not infer unrelated metrics."
-        )
-
-    @classmethod
-    def _select_dependency_column(
-        cls,
-        question: str,
-        columns: tuple[str, ...],
-        rows: tuple[dict[str, Any], ...],
-        source_extraction: dict[str, Any] | None = None,
-        column_bindings: dict[str, str] | None = None,
-    ) -> str:
-        anchor = cls._dependency_anchor_text(question)
-        anchor_family = cls._dependency_column_family(anchor)
-        if anchor_family is None and source_extraction:
-            grouped = source_extraction.get("维度") or source_extraction.get("展示字段") or []
-            families = {cls._dependency_column_family(
-                str(item.get("entity") or item.get("field") or item.get("name") or "")
-                if isinstance(item, dict) else str(item)) for item in grouped}
-            families.discard(None)
-            if len(families) == 1:
-                anchor_family = next(iter(families))
-        if anchor_family:
-            bindings=column_bindings or {}
-            family_matches = [
-                column for column in columns
-                if cls._dependency_column_family(bindings.get(column,column)) == anchor_family
-                or cls._dependency_column_family(column) == anchor_family
-            ]
-            stable_matches = [
-                column for column in family_matches
-                if cls._is_stable_dependency_key(bindings.get(column,column))
-            ]
-            if len(stable_matches) == 1:
-                return stable_matches[0]
-            if stable_matches and len({bindings.get(column,column) for column in stable_matches})==1:
-                return stable_matches[0]
-            if len(family_matches) == 1:
-                return family_matches[0]
-
-        direct_matches = [column for column in columns if column.lower() in anchor]
-        if len(direct_matches) == 1:
-            return direct_matches[0]
-
-        stable = [column for column in columns if cls._is_stable_dependency_key(column)]
-        if len(stable) == 1 and source_extraction:
-            return stable[0]
-
-        eligible: list[str] = []
-        for column in columns:
-            lowered = column.lower()
-            if re.search(r"(?:^|[._])(?:id|code)$|(?:编号|编码|_id|_code)$", lowered):
-                continue
-            values = [row.get(column) for row in rows if row.get(column) is not None]
-            if not values or all(
-                isinstance(value, (int, float)) and not isinstance(value, bool)
-                for value in values
-            ):
-                continue
-            eligible.append(column)
-        if len(eligible) == 1:
-            return eligible[0]
-        raise DependencyConstraintError("DEPENDENCY_FILTER_COLUMN_AMBIGUOUS")
-
-    @staticmethod
     def _normalize_dependency_value(value: Any) -> str | int | float | bool:
         if isinstance(value, bool):
             return value
@@ -3279,10 +3059,22 @@ class DataAnalysisOrchestrator:
         conversation_by_task: dict[str, str],
         source_extractions: dict[str, dict | None] | None = None,
     ) -> list[DependencyConstraint]:
+        from app.planning.query_dependency_bindings import select_dependency_column
+        declared = (task.extraction or {}).get('依赖绑定')
+        if not isinstance(declared, list):
+            raise DependencyConstraintError("DEPENDENCY_BINDING_MISSING")
+        if not declared:
+            return []
         if self.dataset_store is None:
             raise DependencyConstraintError("DEPENDENCY_DATASET_STORE_UNAVAILABLE")
         constraints: list[DependencyConstraint] = []
-        for dependency_id in task.depends_on:
+        for binding in declared:
+            if not isinstance(binding, dict) or binding.get('source_task_id') not in task.depends_on:
+                raise DependencyConstraintError("DEPENDENCY_BINDING_SOURCE_INVALID")
+            dependency_id = binding['source_task_id']
+            source_column = binding.get('source_column')
+            if not isinstance(source_column, str) or not source_column:
+                raise DependencyConstraintError("DEPENDENCY_DECLARED_COLUMN_MISSING")
             dependency = responses.get(dependency_id)
             if not isinstance(dependency, AgentResponse) or not dependency.dataset_id:
                 raise DependencyConstraintError("DEPENDENCY_SOURCE_DATASET_MISSING")
@@ -3318,14 +3110,15 @@ class DataAnalysisOrchestrator:
             rows = tuple(dict(row) for row in loaded.rows)
             if not dataset_source_complete(reference, len(rows)) or not rows or len(rows) > 1000:
                 raise DependencyConstraintError("DEPENDENCY_SOURCE_DATASET_INCOMPLETE_OR_TOO_LARGE")
-            bindings = next((item.get("column_bindings", {})
+            provenance = next((item
                              for item in reference.transformation_log
                              if item.get("type") == "query_provenance"), {})
-            column = self._select_dependency_column(
-                task.question, reference.columns, rows,
-                (source_extractions or {}).get(dependency_id),
-                column_bindings=bindings,
-            )
+            bindings = provenance.get('column_bindings', {})
+            try:
+                column = select_dependency_column(source_column, reference.columns, bindings,
+                    provenance.get('projection_bindings', {}))
+            except ValueError as exc:
+                raise DependencyConstraintError(str(exc)) from exc
             bound_field = bindings.get(column, column)
             values: list[str | int | float | bool] = []
             seen: set[str] = set()
@@ -4267,6 +4060,8 @@ class DataAnalysisOrchestrator:
             scope = DatasetScope(identity.tenant_id, identity.user_id, chat.application_id,
                 chat.conversation_id, chat.authorized_semantic_scope.fingerprint())
             first = next(iter(references.values()))[0] if references else None
+            from app.planning.query_dependency_bindings import inherited_projection_bindings
+            column_bindings = output_column_bindings(columns, references)
             reference = await asyncio.to_thread(self.dataset_store.save_dataset,
                 scope=scope, columns=columns, rows=rows, snapshot_id='',
                 data_as_of=datetime.fromisoformat(first.data_as_of) if first else datetime.now(timezone.utc), source_type='DERIVED_COMPUTATION',
@@ -4275,7 +4070,8 @@ class DataAnalysisOrchestrator:
                 parent_dataset_ids=[ref.dataset_id for ref, _ in references.values()],
                 transformation_log=({'type': 'query_provenance', 'source_truncated': False,
                     'source_quality_status': quality, 'source_total_row_count': len(rows),
-                    'column_bindings': output_column_bindings(columns, references),
+                    'column_bindings': column_bindings,
+                    'projection_bindings': inherited_projection_bindings(column_bindings, references),
                     'operation': operation, 'input_binding': input_binding},),
                 ttl_seconds=self.settings.dataset_ttl_seconds)
             await self.sessions.put_dataset_reference(reference.to_dict(),
@@ -4650,19 +4446,7 @@ class DataAnalysisOrchestrator:
                 )
             )
             dependency_constraints: list[DependencyConstraint] = []
-            if (
-                requires_new_entity
-                and task.depends_on
-                and self._dag_references_dependency_result(
-                    task.question,
-                    # 结果集枚举复指（前N的X/每量词X）必须用前序答案文本验证
-                    # 被引用实体确实由依赖任务产出，防止独立枚举诉求误绑。
-                    evidence=" ".join(
-                        item.answer for item in dependency_responses
-                        if isinstance(item, AgentResponse)
-                    ) or None,
-                )
-            ):
+            if requires_new_entity and task.depends_on:
                 try:
                     dependency_constraints = await self._compile_dependency_constraints(
                         task, chat, identity, responses, conversation_by_task,
@@ -4726,9 +4510,7 @@ class DataAnalysisOrchestrator:
                 question=(
                     task_answers[task.task_id]
                     if task.task_id in task_answers
-                    else self._with_dependency_join_keys(
-                        task.question, task.task_id, plan
-                    )
+                    else task.question
                 ),
                 application_id=chat.application_id,
                 semantic_model_id=chat.semantic_model_id,
@@ -12181,6 +11963,8 @@ class DataAnalysisOrchestrator:
                 )
             )
             query_fingerprint = self._query_fingerprint(request)
+            from app.planning.query_dependency_bindings import executed_projection_bindings
+            column_bindings = sql_column_bindings(query_result.sql, query_result.dataset.columns)
             provenance = {
                 "type": "query_provenance",
                 "source_truncated": query_result.dataset.truncated,
@@ -12199,7 +11983,8 @@ class DataAnalysisOrchestrator:
                 "ordered_by": metric_names if ranked else [],
                 "descending": AnalysisOperator.BOTTOM_N not in request.operators,
                 "ranking_limit": request.ranking_limit,
-                "column_bindings": sql_column_bindings(query_result.sql, query_result.dataset.columns),
+                "column_bindings": column_bindings,
+                "projection_bindings": executed_projection_bindings(query_result.execution_transforms, column_bindings),
                 "source_quality_status": query_result.dataset.quality_status,
                 "source_total_row_count": query_result.dataset.total_row_count or query_result.dataset.row_count,
                 "calculation_columns": calculation_columns(request, query_result),

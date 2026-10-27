@@ -111,6 +111,7 @@ async def test_dependent_child_still_uses_existing_context_path():
     agent.task_planner = CompoundQuestionRouter(agent.settings)
     plan = hospital_plan()
     plan.tasks[1].depends_on = ["task-1"]
+    plan.tasks[1].extraction = {**(plan.tasks[1].extraction or {}), "依赖绑定": []}
     flags = []
 
     async def handle_child(child, identity):

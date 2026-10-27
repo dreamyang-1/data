@@ -150,11 +150,12 @@ def test_metric_display_field_is_retained_in_the_outbound_contract_without_weake
 
 
 def test_dependency_uses_verified_physical_code_even_when_display_alias_contains_spaces():
-    from app.services.orchestrator import DataAnalysisOrchestrator
-    selected=DataAnalysisOrchestrator._select_dependency_column('根据上述业务员名单查询销售额',
-        ('业务员 ID','销售员姓名','订单笔数'),({'业务员 ID':'S1','销售员姓名':'同名','订单笔数':10},),
-        {'维度':['业务员']},column_bindings={'业务员 ID':'salesperson.salesperson_code','销售员姓名':'salesperson.salesperson_name'})
+    from app.planning.query_dependency_bindings import select_dependency_column
+    selected=select_dependency_column('salesperson.salesperson_code',
+        ('业务员 ID','销售员姓名','订单笔数'),
+        {'业务员 ID':'salesperson.salesperson_code','销售员姓名':'salesperson.salesperson_name'})
     assert selected=='业务员 ID'
+
 
 
 def test_unproduced_average_is_rejected_during_planning_instead_of_after_sql():
@@ -191,8 +192,6 @@ def test_numbered_reference_is_shared_by_join_key_planning_and_parameter_executi
     from app.planning.dependency_contract import numbered_dependency_anchor
     from app.services.orchestrator import DataAnalysisOrchestrator
     assert numbered_dependency_anchor(question)
-    assert DataAnalysisOrchestrator._dag_references_dependency_result(question)
-    assert DataAnalysisOrchestrator._dependency_anchor_text(question) in re.sub(r'\s+','',question).lower()
 
 
 @pytest.mark.parametrize('question',[
@@ -214,7 +213,8 @@ async def test_numbered_three_question_chain_passes_the_actual_cohort_before_fin
     plan=TaskPlan(planner='STRUCTURED_MODEL',tasks=[
         AtomicTask(task_id='task-1',question='问题一：查询前2位业务员',extraction={**common,'指标':[{'name':'订单笔数'}]}),
         AtomicTask(task_id='task-2',question='仅对问题一选出的业务员，查询2025年含税销售总额',depends_on=['task-1'],
-            extraction={**common,'指标':[{'name':'含税销售总额'}]}),
+            extraction={**common,'指标':[{'name':'含税销售总额'}],
+                '依赖绑定':[{'source_task_id':'task-1','source_column':'业务员'}]}),
         AtomicTask(task_id='task-3',question='对问题二的销售总额求合计，不再查询数据库',depends_on=['task-2'],
             extraction={'是否查询数据库':'否','结果操作':{'source_task_id':'task-2','operation':{
                 'type':'aggregate','group_by':[],'aggregations':[{'field':'含税销售总额','function':'sum','alias':'合计'}]}}})])

@@ -557,6 +557,7 @@ def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
             binding = extraction.get('计算绑定') or {}
             operands = [binding.get(role) for role in ('numerator', 'denominator', 'left', 'right', 'input')]
             operands.append(extraction.get('结果操作'))
+            operands.extend(extraction.get('依赖绑定') or [])
             for operand in operands:
                 if isinstance(operand, dict) and operand.get('source_task_id') in resolved:
                     operand['source_task_id'] = resolved[operand['source_task_id']]
@@ -565,7 +566,7 @@ def deduplicate_plan(plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
             for period in analysis_binding.get('periods') or []:
                 period['task'] = resolved.get(period['task'], period['task'])
             analysis_binding['optional_dependencies'] = [resolved.get(dep, dep) for dep in analysis_binding.get('optional_dependencies') or []]
-        calculation = {key: extraction[key] for key in ('计算绑定', '结果操作', '分析绑定') if extraction and key in extraction}
+        calculation = {key: extraction[key] for key in ('计算绑定', '结果操作', '分析绑定', '依赖绑定') if extraction and key in extraction}
         key = (query_fingerprint(task.question), dependencies, database_query_choice(extraction),
                json.dumps(calculation, ensure_ascii=False, sort_keys=True) if calculation else '')
         existing = canonical_by_key.get(key)

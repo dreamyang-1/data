@@ -59,21 +59,13 @@ def test_column_provenance_uses_executed_projection_not_label_inference():
     assert sql_column_bindings(sql, ["不存在"]) == {}
 
 
-@pytest.mark.parametrize("question", [
-    "根据上述任务返回的销售员，查询销售的产品明细清单。",
-    "由上一步返回的业务员负责销售的产品有哪些？",
-    "查询该销售员的合作医院。",
-    "查询上述销售员的商品名称及规格型号。",
-])
-def test_dependency_reference_aliases(question):
-    assert DataAnalysisOrchestrator._dag_references_dependency_result(question)
 
 
 def test_select_role_key_and_not_numeric_metric():
-    cols = ("销售员姓名", "业务员（编码）", "含税销售总额")
-    rows = ({cols[0]: "测试姓名", cols[1]: "001", cols[2]: 42},)
-    assert DataAnalysisOrchestrator._select_dependency_column(
-        "根据上述任务返回的销售员查询产品", cols, rows) == "业务员（编码）"
+    from app.planning.query_dependency_bindings import select_dependency_column
+    cols = ('销售员姓名', '业务员（编码）', '含税销售总额')
+    assert select_dependency_column('业务员（编码）', cols, {}) == '业务员（编码）'
+
 
 
 def constraint():
@@ -126,8 +118,6 @@ def test_wrong_table_never_finishes_with_high_reliability():
     assert DataAnalysisOrchestrator._task_missing_output(task, response) == ["商品名称"]
 
 
-def test_ordering_dependency_is_not_a_business_object_filter():
-    assert not DataAnalysisOrchestrator._dag_references_dependency_result("查询上海地区的区域全部医院总数")
 
 
 def test_unresolved_entity_mentions_are_tolerated_not_fatal():
@@ -331,6 +321,7 @@ async def test_original_and_three_similar_dependent_queries(target_owner, target
               "过滤条件": [{"field": "医院名称", "value": ["测试医院"]}],
               "时间粒度": {"unit": "年", "time_range": "2025年"}}
     target = {**source, "维度": [], "指标": [],
+              "依赖绑定": [{"source_task_id": "task-1", "source_column": "业务员（编码）"}],
               "展示字段": [{"entity": target_owner, "field": target_field}]}
     plan = TaskPlan(planner="DETERMINISTIC_RULE", tasks=[
         AtomicTask(task_id="task-1", question="查询2025年测试医院销售额最高的销售员", extraction=source),
