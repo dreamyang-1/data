@@ -98,7 +98,8 @@ def test_multiple_declared_entities_bind_unique_catalog_hub_without_question(sub
                         detail_subject_resolver=_detail_projection_subject_candidate)
     assert not ast['ambiguity']
     assert ast['subject'] == {'entity': 'sales_order'}
-    assert ast['dimensions'][0]['name'] == 'dealer.dealer_name'
+    assert ast['display_fields'][0]['name'] == 'dealer.dealer_name'
+    assert ast['dimensions'] == []
     assert ast['filters'] == [{'field': 'product.product_name', 'operator': '=', 'value': '空心纤维血液透析器'}]
     assert ast['metrics'] == [] and ast['time_context'] is None
     assert any(r['source'] == 'SCOPED_RELATION_GRAPH' for r in repairs)
@@ -150,17 +151,14 @@ def test_metric_query_does_not_use_detail_subject_fallback():
     assert ast['ambiguity'] and not ast['subject']
 
 
-def test_empty_in_list_placeholder_filter_is_dropped_not_ambiguous():
-    # 依赖任务的筛选值常被规划器写成占位引用，抽取阶段落成空列表。
-    # 空列表无法生成有效 SQL，剥离后继续执行（执行期依赖接管负责注入真实名单），
-    # 不再报"运算符或条件值缺失"歧义拦停整条任务链。
+def test_empty_in_list_requires_upstream_dependency_values():
     e, k, p = fixture()
     e['过滤条件'] = [{'field': '省份', 'op': 'IN', 'value': []}]
     p['filters'] = []
     ast, repairs = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))))
-    assert not ast['ambiguity']
+    assert ast['ambiguity']
     assert ast['filters'] == []
-    assert any(r['type'] == 'EMPTY_FILTER_VALUE_DROPPED' for r in repairs)
+    assert not any(r['type'] == 'EMPTY_FILTER_VALUE_DROPPED' for r in repairs)
 
 
 def test_main_reconnects_existing_subject_binding_without_reextracting(monkeypatch):
@@ -219,8 +217,8 @@ def test_partial_display_keeps_existing_contract_but_missing_filter_blocks():
     e['展示字段']=[{'entity':'医院','field':'医院名称'},{'entity':'医院','field':'联系方式'}]
     p['display_fields']=[{'index':0,'key':'hospital.name'},{'index':1,'error':'目录无匹配'}]
     ast,repairs=run(e,k,p)
-    assert not ast['ambiguity'] and ast['dimensions'][0]['name']=='hospital.name'
-    assert repairs[0]['type']=='OMIT_UNAVAILABLE_DISPLAY_FIELD'
+    assert ast['ambiguity'] and ast['display_fields'][0]['name']=='hospital.name'
+    assert not any(r['type']=='OMIT_UNAVAILABLE_DISPLAY_FIELD' for r in repairs)
     p['filters']=[]
     k['entity_attribute_values'] = []
     ast,_=run(e,k,p);assert ast['ambiguity']
@@ -234,8 +232,7 @@ def test_explicit_time_without_anchor_is_not_removed():
     ast,_=run(e,k,p);assert '时间' in ast['ambiguity'][0]['question']
 
 
-def test_completed_question_reaches_original_scoped_generator(monkeypatch):
-    # STALE_TEST: user restored question/catalog generation on 2026-10-19.
+def test_completed_question_does_not_reextract_structured_parameters(monkeypatch):
     import agent
     e,k,p=fixture();seen=[]
     class Builder:
@@ -243,20 +240,18 @@ def test_completed_question_reaches_original_scoped_generator(monkeypatch):
             assert kwargs['semantic_model_id']==81 and kwargs['business_domain_ids']==[205]
             self.last_knowledge=deepcopy(k)
         def retrieve(self,text):seen.append(text);return self.last_knowledge
-        def build(self,text):seen.append(text);return 'original scoped prompt'
+        def build(self,text):pytest.fail('question generation was removed')
     def invoke(messages):
         seen.append(json.dumps(messages,ensure_ascii=False))
-        return Obj(content=json.dumps({'version':'2.0','intent':'query','subject':{'entity':'hospital'},
-            'metrics':[{'name':'count_hospital'}],'dimensions':[],
-            'filters':[{'field':'hospital.province','operator':'=','value':'上海市'}],
-            'having':[],'ambiguity':[],'time_context':None,'sort':None,'limit':None}))
+        return Obj(content=json.dumps(p))
     monkeypatch.setattr(agent,'PromptBuilder',Builder)
     monkeypatch.setattr(agent,'_get_chat_model',lambda:Obj(invoke=invoke))
     result=agent.main('SECRET ORIGINAL',completed_question='OTHER SECRET',retrieval_query='WRONG EXTRA',
         semantic_model_id=81,business_domain_ids=[205],structured_extraction=e)
     assert not json.loads(result)['ambiguity']
-    assert seen[0]=='OTHER SECRET' and 'OTHER SECRET' in seen[1]
-    assert all('WRONG EXTRA' not in text and 'SECRET ORIGINAL' not in text for text in seen)
+    assert json.loads(seen[0]) == e
+    assert all('WRONG EXTRA' not in text and 'SECRET ORIGINAL' not in text
+               and 'OTHER SECRET' not in text for text in seen)
 
 
 def test_missing_extraction_and_unavailable_generator_remain_unresolved(monkeypatch):
@@ -268,7 +263,7 @@ def test_missing_extraction_and_unavailable_generator_remain_unresolved(monkeypa
     monkeypatch.setattr(agent,'PromptBuilder',Builder)
     monkeypatch.setattr(agent,'_get_chat_model',lambda:pytest.fail('must not re-extract'))
     result=json.loads(agent.main('医院总数',semantic_model_id=81,business_domain_ids=[205]))
-    assert result['ambiguity'] and '尚未形成可执行查询' in result['ambiguity'][0]['question']
+    assert result['ambiguity'] and '上游未提供结构化参数' in result['ambiguity'][0]['question']
 
 
 def test_bare_source_column_and_full_per_parameter_pool_keep_standard_value():
@@ -308,7 +303,7 @@ def test_bad_model_keys_are_clarified_not_server_errors(bad):
     assert ast['ambiguity']
 
 
-@pytest.mark.parametrize('display,valid', [('hospital.name',True),('hospital.amount',False)])
+@pytest.mark.parametrize('display,valid', [('hospital.name',True),('hospital.amount',True)])
 def test_logical_group_identity_label_does_not_create_an_extra_group(display,valid):
     e,k,p=fixture();e['维度']=['医院'];e['展示字段']=[{'entity':'医院','field':display}]
     attrs=k['entities'][0].metadata['attributes']

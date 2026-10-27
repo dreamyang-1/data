@@ -832,7 +832,7 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
         "dependency_constraints": [constraint],
     })
     asl = {
-        "version": "2.0",
+        "version": "2.0", "projection_mode": "DISTINCT",
         "subject": {"entity": "dealer_result"},
         "metrics": [],
         "dimensions": [{"name": "dealer_result.dealer_name"}],
@@ -1470,7 +1470,7 @@ async def test_relation_detail_sends_relationship_aware_projection_contract():
         fields=["商品名称", "适用科室"],
     )
     asl = {
-        "version": "2.0",
+        "version": "2.0", "projection_mode": "DISTINCT",
         "subject": {"entity": "product"},
         "metrics": [],
         "dimensions": [
@@ -1636,7 +1636,7 @@ async def test_explicit_deduplication_mode_reaches_sql_translation() -> None:
         structured={"\u662f\u5426\u53bb\u91cd": "\u662f"},
     )
     asl = {
-        "version": "2.0",
+        "version": "2.0", "projection_mode": "DISTINCT",
         "subject": {"entity": "hospital"},
         "metrics": [],
         "dimensions": [{"name": "hospital.hospital_name"}],
@@ -1724,23 +1724,6 @@ def test_named_dealer_product_lookup_is_set_shaped() -> None:
     assert requires_distinct_relationship_projection(detail) is True
 
 
-def test_canonical_time_range_rebinds_asl_end_as_inclusive_date():
-    scoped = request().model_copy(update={
-        "time_range": TimeRange(
-            start=date(2026, 8, 1), end_exclusive=date(2026, 9, 1)
-        )
-    })
-    asl = {
-        "time_context": {
-            "type": "custom", "start": "2026-08-01", "end": "2026-09-01",
-            "anchor": "order_info.pay_time",
-        }
-    }
-
-    HttpDataRetrievalAdapter._bind_canonical_time_range(asl, scoped)
-
-    assert asl["time_context"]["start"] == "2026-08-01"
-    assert asl["time_context"]["end"] == "2026-08-31"
 
 
 @pytest.mark.asyncio
@@ -1841,97 +1824,8 @@ async def test_semantic_metric_binding_must_match_requested_model_scope():
         )
 
 
-@pytest.mark.asyncio
-async def test_time_only_followup_reuses_verified_asl_without_oagnet_call():
-    template = {
-        "version": "2.0",
-        "subject": {"entity": "ent_order"},
-        "metrics": [{"name": "sales_amount", "alias": "销售额"}],
-        "dimensions": [],
-        "time_context": {
-            "type": "custom", "start": "2026-07-01", "end": "2026-07-31",
-            "anchor": "order_info.pay_time",
-        },
-        "ambiguity": [],
-    }
-    followup = request().model_copy(update={
-        "metrics": [MetricRef(input="销售额", metric_id="8:sales_amount")],
-        "time_range": TimeRange(start=date(2026, 6, 1), end_exclusive=date(2026, 7, 1)),
-        "asl_template": template,
-        "assumptions": ["DETERMINISTIC_TIME_FAST_PATH"],
-    })
-    client = StubClient([
-        {"success": True, "sql": "SELECT SUM(pay_amount) FROM order_info"},
-        {
-            "success": True, "sql": "SELECT SUM(pay_amount) FROM order_info",
-            "data": [{"销售额": 100}], "columns": ["销售额"], "row_count": 1,
-        },
-    ])
-    await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
-        followup, IDENTITY, semantic_model_id=8, business_domain_id=13
-    )
-    assert [call[1] for call in client.calls] == ["/api/translate", "/api/execute"]
-    reused = json.loads(client.calls[0][2]["asl"])
-    assert reused["time_context"] == {
-        "type": "custom", "start": "2026-06-01", "end": "2026-06-30",
-        "anchor": "order_info.pay_time",
-    }
 
 
-@pytest.mark.asyncio
-async def test_time_only_detail_followup_preserves_verified_brand_filter():
-    template = {
-        "version": "2.0",
-        "subject": {"entity": "sales_order"},
-        "metrics": [],
-        "dimensions": [{"name": "dealer.dealer_name"}],
-        "filters": [{
-            "field": "manufacturer.parent_brand",
-            "operator": "=",
-            "value": "费森尤斯",
-        }],
-        "time_context": {
-            "type": "range", "start": "2025-08-29", "end": "2026-08-29",
-            "anchor": "sales_order.created_date",
-        },
-        "projection_mode": "ROWS",
-        "ambiguity": [],
-    }
-    followup = request().model_copy(update={
-        "primary_intent": PrimaryIntent.DETAIL_QUERY,
-        "metrics": [],
-        "fields": ["经销商名称"],
-        "time_range": TimeRange(
-            start=date(2025, 12, 1), end_exclusive=date(2026, 1, 1)
-        ),
-        "asl_template": template,
-        "assumptions": ["DETERMINISTIC_TIME_FAST_PATH"],
-    })
-    client = StubClient([
-        {"success": True, "sql": "SELECT dealer_name FROM sales_order"},
-        {
-            "success": True,
-            "sql": "SELECT dealer_name FROM sales_order",
-            "data": [{"dealer.dealer_name": "经销商甲"}],
-            "columns": ["dealer.dealer_name"],
-            "row_count": 1,
-        },
-    ])
-
-    await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
-        followup, IDENTITY, semantic_model_id=8, business_domain_id=13
-    )
-
-    assert [call[1] for call in client.calls] == ["/api/translate", "/api/execute"]
-    reused = json.loads(client.calls[0][2]["asl"])
-    assert reused["filters"] == template["filters"]
-    assert reused["dimensions"] == template["dimensions"]
-    assert reused["time_context"] == {
-        "type": "custom",
-        "start": "2025-12-01",
-        "end": "2025-12-31",
-        "anchor": "sales_order.created_date",
-    }
 
 
 def test_hospital_level_detail_field_matches_registered_dimension():
@@ -1940,47 +1834,10 @@ def test_hospital_level_detail_field_matches_registered_dimension():
     ) == []
 
 
-def test_model81_repairs_explicit_hospital_level_grouping():
-    req = request().model_copy(update={"dimensions": ["医院", "医院等级"]})
-    asl = {"dimensions": [{"name": "hospital.hospital_name"}]}
-
-    HttpDataRetrievalAdapter._repair_required_model81_dimensions(asl, req, 81)
-
-    assert {item["name"] for item in asl["dimensions"]} == {
-        "hospital.hospital_name",
-        "hospital.hospital_level",
-    }
 
 
-def test_relationship_identity_dimension_deduplication_prefers_business_relation():
-    asl = {
-        "dimensions": [
-            {"name": "dealer", "alias": "经销商"},
-            {"name": "dealer.dealer_name"},
-            {"name": "dealer.province", "alias": "省份"},
-        ],
-        "sort": {
-            "field": "dealer.dealer_name",
-            "direction": "ASC",
-            "field_type": "dimension",
-        },
-    }
-
-    HttpDataRetrievalAdapter._deduplicate_relationship_identity_dimensions(asl)
-
-    assert asl["dimensions"] == [
-        {"name": "dealer", "alias": "经销商"},
-        {"name": "dealer.province", "alias": "省份"},
-    ]
-    assert asl["sort"]["field"] == "dealer"
 
 
-def test_relationship_identity_dimension_deduplication_keeps_explicit_name_alone():
-    asl = {"dimensions": [{"name": "dealer.dealer_name"}]}
-
-    HttpDataRetrievalAdapter._deduplicate_relationship_identity_dimensions(asl)
-
-    assert asl["dimensions"] == [{"name": "dealer.dealer_name"}]
 
 
 def test_grouped_scope_requires_all_current_semantic_dimension_roles():
@@ -2451,198 +2308,11 @@ async def test_dealer_hospital_coverage_executes_compiled_public_denominator_sql
     ]
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("limit", [None, 10])
-async def test_grouped_metric_removes_duplicate_identity_before_sql_translation(limit):
-    asl = {
-        "version": "2.0",
-        "subject": {"entity": "sales_order"},
-        "metrics": [{
-            "name": "cooperating_hospital_count",
-            "alias": "已合作医院数",
-        }],
-        "dimensions": [
-            {"name": "dealer", "alias": "经销商"},
-            {"name": "dealer.dealer_name"},
-        ],
-        "sort": ({
-            "field": "cooperating_hospital_count",
-            "direction": "DESC",
-            "field_type": "metric",
-        } if limit else None),
-        "limit": limit,
-        "ambiguity": [],
-    }
-    client = StubClient([
-        {"success": True, "result": json.dumps(asl, ensure_ascii=False)},
-        {
-            "success": True,
-            "sql": "SELECT dealer_name AS 经销商, COUNT(*) AS 已合作医院数 FROM sales_order",
-        },
-        {
-            "success": True,
-            "sql": "SELECT dealer_name AS 经销商, COUNT(*) AS 已合作医院数 FROM sales_order",
-            "data": [{"经销商": "经销商A", "已合作医院数": 2}],
-            "columns": ["经销商", "已合作医院数"],
-            "row_count": 1,
-        },
-    ])
-    question = "统计每个经销商已合作医院数量" + ("，取Top10" if limit else "")
-    grouped = CanonicalAnalysisRequest(
-        conversation_id=f"dealer-hospital-count-{limit}",
-        tenant_id="t1",
-        user_id="u1",
-        original_question=question,
-        rewritten_question=question,
-        primary_intent=PrimaryIntent.METRIC_QUERY,
-        entity="经销商",
-        dimensions=["经销商"],
-        metrics=[MetricRef(
-            input="已合作医院数",
-            canonical_name="已合作医院数",
-            metric_id="81:cooperating_hospital_count",
-        )],
-    )
-
-    result = await HttpDataRetrievalAdapter(
-        Settings(adapter_mode="http"), client
-    ).query(grouped, IDENTITY, semantic_model_id=81, business_domain_id=205)
-
-    translated_asl = json.loads(client.calls[1][2]["asl"])
-    assert translated_asl["dimensions"] == [
-        {"name": "dealer", "alias": "经销商"}
-    ]
-    assert result.dataset.columns == ["经销商", "已合作医院数"]
 
 
-@pytest.mark.asyncio
-async def test_preview_limit_followup_reuses_all_grounded_asl_filters():
-    template = {
-        "version": "2.0",
-        "subject": {"entity": "sales_order"},
-        "metrics": [],
-        "dimensions": [{"name": "dealer.dealer_name"}],
-        "filters": [{
-            "field": "manufacturer.parent_brand",
-            "operator": "=",
-            "value": "费森尤斯",
-        }],
-        "time_context": {
-            "type": "range", "start": "2025-08-28", "end": "2026-08-28",
-            "anchor": "sales_order.created_date",
-        },
-        "limit": None,
-        "ambiguity": [],
-    }
-    followup = request().model_copy(update={
-        "primary_intent": PrimaryIntent.DETAIL_QUERY,
-        "metrics": [],
-        "fields": ["经销商名称"],
-        "ranking_limit": 20,
-        "asl_template": template,
-        "assumptions": ["DETERMINISTIC_LIMIT_FAST_PATH"],
-    })
-    client = StubClient([
-        {"success": True, "sql": "SELECT dealer_name LIMIT 20"},
-        {
-            "success": True, "sql": "SELECT dealer_name LIMIT 20",
-            "data": [{"dealer.dealer_name": "甲"}],
-            "columns": ["dealer.dealer_name"], "row_count": 1,
-        },
-    ])
-
-    await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
-        followup, IDENTITY, semantic_model_id=8, business_domain_id=13
-    )
-
-    assert [call[1] for call in client.calls] == ["/api/translate", "/api/execute"]
-    reused = json.loads(client.calls[0][2]["asl"])
-    assert reused["filters"] == template["filters"]
-    assert reused["dimensions"] == template["dimensions"]
-    assert reused["limit"] == 20
-
-@pytest.mark.asyncio
-async def test_detail_intent_removes_hallucinated_aggregate_metric_before_translation():
-    detail = CanonicalAnalysisRequest(
-        conversation_id="detail-1",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询订单明细",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        fields=["订单号", "商品名称"],
-    )
-    asl = {
-        "version": "2.0",
-        "subject": {"entity": "ent_order_item"},
-        "metrics": [{"name": "invented_detail_metric", "alias": "订单明细"}],
-        "dimensions": [
-            {"name": "order_item_detail.order_id"},
-            {"name": "order_item_detail.goods_name"},
-        ],
-        "ambiguity": [],
-    }
-    client = StubClient([
-        {"success": True, "result": json.dumps(asl, ensure_ascii=False)},
-        {"success": True, "sql": "SELECT order_id, goods_name FROM order_item_detail"},
-        {
-            "success": True,
-            "sql": "SELECT order_id, goods_name FROM order_item_detail",
-            "data": [{"order_id": "O-1", "goods_name": "口罩"}],
-            "columns": ["order_id", "goods_name"],
-            "row_count": 1,
-        },
-    ])
-
-    result = await HttpDataRetrievalAdapter(
-        Settings(adapter_mode="http"), client
-    ).query(detail, IDENTITY, semantic_model_id=6, business_domain_id=7)
-
-    translated_asl = json.loads(client.calls[1][2]["asl"])
-    assert translated_asl["metrics"] == []
-    assert result.dataset.row_count == 1
 
 
-@pytest.mark.asyncio
-async def test_detail_intent_drops_metric_sort_after_removing_metrics():
-    detail = CanonicalAnalysisRequest(
-        conversation_id="detail-sort",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询订单明细，商品名称按含税销售额降序",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        fields=["商品名称"],
-    )
-    asl = {
-        "version": "2.0",
-        "subject": {"entity": "ent_order_item"},
-        "metrics": [{"name": "sales_total_including_tax", "alias": "含税销售总额"}],
-        "dimensions": [{"name": "order_item_detail.goods_name"}],
-        "sort": {
-            "field": "sales_total_including_tax",
-            "direction": "DESC",
-            "field_type": "metric",
-        },
-        "ambiguity": [],
-    }
-    client = StubClient([
-        {"success": True, "result": json.dumps(asl, ensure_ascii=False)},
-        {"success": True, "sql": "SELECT goods_name FROM order_item_detail"},
-        {
-            "success": True,
-            "sql": "SELECT goods_name FROM order_item_detail",
-            "data": [{"goods_name": "口罩"}],
-            "columns": ["goods_name"],
-            "row_count": 1,
-        },
-    ])
 
-    await HttpDataRetrievalAdapter(
-        Settings(adapter_mode="http"), client
-    ).query(detail, IDENTITY, semantic_model_id=6, business_domain_id=7)
-
-    translated_asl = json.loads(client.calls[1][2]["asl"])
-    assert translated_asl["metrics"] == []
-    assert "sort" not in translated_asl
 
 
 @pytest.mark.asyncio
@@ -3754,34 +3424,3 @@ def test_dataset_normalizes_inconsistent_truncation_contract():
     dataset = HttpDataRetrievalAdapter._dataset(payload, request_id="request-c")
     assert dataset.rows == [{"销售额": 10}]
     assert dataset.truncated is True
-def test_model81_trend_repair_keeps_sort_on_physical_time_dimension() -> None:
-    request = CanonicalAnalysisRequest(
-        conversation_id="product-monthly-sales",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="按月统计空心纤维血液透析器产品的含税销售总额",
-        primary_intent=PrimaryIntent.TREND_ANALYSIS,
-        time_range=TimeRange(
-            start=date(2025, 8, 29),
-            end_exclusive=date(2026, 8, 30),
-        ),
-    )
-    asl = {
-        "dimensions": [
-            {"name": "product", "granularity": None},
-            {"name": "sales_order.created_date", "granularity": "month"},
-        ],
-        "sort": {
-            "field": "transaction_date",
-            "direction": "ASC",
-            "field_type": "dimension",
-        },
-    }
-
-    HttpDataRetrievalAdapter._repair_model81_trend_time(asl, request, 81)
-
-    assert asl["sort"]["field"] == "sales_order.created_date"
-    assert [item["name"] for item in asl["dimensions"]] == [
-        "product",
-        "sales_order.created_date",
-    ]

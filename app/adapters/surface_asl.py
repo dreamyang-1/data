@@ -6,47 +6,6 @@ from app.adapters.base import AdapterError
 from app.services.asl_surface_handoff import build_surface_asl_input
 from app.observability.call_timing import track_operation
 
-# 共享地理字典只为未声明归属的条件提供兼容回退；显式业务归属保持不变。
-_REGION_FIELD_OWNERS = (
-    ("省份", "省份"),
-    ("province", "省份"),
-    ("城市", "城市"),
-    ("city", "城市"),
-    ("区域", "区域"),
-    ("地区", "区域"),
-    ("region", "区域"),
-)
-
-
-def _region_owner_extraction(extraction):
-    """返回谓词归属修正后的提取副本；无需修正时返回 None。"""
-    if not isinstance(extraction, dict):
-        return None
-    changed = False
-    entities = list(extraction.get("实体") or [])
-    filters = []
-    for item in extraction.get("过滤条件") or []:
-        if not isinstance(item, dict):
-            filters.append(item)
-            continue
-        field = str(item.get("field") or "").casefold()
-        owner = next((name for word, name in _REGION_FIELD_OWNERS if word in field), None)
-        if owner is None:
-            filters.append(item)
-            continue
-        # Preserve an explicitly declared business owner; the ASL catalog
-        # resolves its field. A dictionary is only a fallback for an unowned slot.
-        owner = item.get("entity") or owner
-        filters.append(dict(item, entity=owner))
-        changed = changed or item.get("entity") != owner
-        if owner not in entities:
-            entities.append(owner)
-            changed = True
-    if not changed:
-        return None
-    return {**extraction, "实体": entities, "过滤条件": filters}
-
-
 async def generate_surface_asl(
     client, settings, *, completed_question, mentions, authorized_scope,
     identity, application_id, request_id, time_range=None, confirmed_metrics=(),
@@ -103,7 +62,7 @@ async def generate_surface_asl(
 
     generated, asl, ambiguities = await _generate(payload)
     used_fallback = False
-    if ambiguities and execution_domains:
+    if ambiguities and execution_domains and authorized_scope.scope_mode == "MODEL_WIDE":
         # 业务域收窄只是召回提示：收窄后展示属性无法与分组对象关联时，
         # 回退到模型级范围重新绑定一次。授权范围仍由 _confirm_generated_scope
         # 校验，不扩大用户可访问的语义模型边界。
@@ -116,17 +75,6 @@ async def generate_surface_asl(
         if not fallback_ambiguities:
             generated, asl, ambiguities = fallback_generated, fallback_asl, []
             used_fallback = True
-    if ambiguities:
-        # 补齐已声明的实体上下文，不把医院/经销商归属改成共享地区字典。
-        owner_extraction = _region_owner_extraction(structured_extraction)
-        if owner_extraction is not None:
-            owner_payload = {**payload, "structured_extraction": owner_extraction}
-            if used_fallback:
-                owner_payload.update(business_domain_id=None, business_domain_ids=[])
-            owner_generated, owner_asl, owner_ambiguities = await _generate(
-                owner_payload, ":owner"
-            )
-            generated, asl, ambiguities = owner_generated, owner_asl, owner_ambiguities
     # Reuse the existing scope checks, including metric provenance. Do not make
     # authorization depend on model-extracted mentions or returned business text.
     from app.adapters.http import HttpDataRetrievalAdapter

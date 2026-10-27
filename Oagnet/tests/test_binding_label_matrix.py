@@ -83,7 +83,7 @@ def test_entity_alias_binding_matrix(subject, slot, mode):
     elif slot == 'dimensions':
         assert ast['dimensions'][0]['name'] == identity
     elif slot == 'display_fields':
-        assert ast['dimensions'][0]['name'] == code + '.name'
+        assert ast['display_fields'][0]['name'] == code + '.name'
     else:
         assert ast['sort']['field'] in {code + '.name', code + '.code', identity}
         assert ast['sort']['direction'] == 'ASC'

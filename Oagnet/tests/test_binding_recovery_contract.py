@@ -31,10 +31,10 @@ def test_partial_display_does_not_prevent_catalog_filter_recovery():
     plan.update(metrics=[], filters=[], display_fields=[
         {'index': 0, 'key': 'hospital.name'}, {'index': 1, 'error': 'no catalog field'}])
     ast, repairs = run(extraction, knowledge, plan)
-    assert not ast['ambiguity']
+    assert ast['ambiguity']
     assert ast['filters'] == [{'field': 'hospital.province', 'operator': '=', 'value': '上海市'}]
-    assert [d['name'] for d in ast['dimensions']] == ['hospital.name']
-    assert any(r['type'] == 'OMIT_UNAVAILABLE_DISPLAY_FIELD' for r in repairs)
+    assert [d['name'] for d in ast['display_fields']] == ['hospital.name']
+    assert not any(r['type'] == 'OMIT_UNAVAILABLE_DISPLAY_FIELD' for r in repairs)
 
 
 @pytest.mark.parametrize('values,valid', [(['上海', '北京'], True),

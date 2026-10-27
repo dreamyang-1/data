@@ -283,4 +283,4 @@ def test_main_uses_planner_payload_preserves_shape_and_validates(monkeypatch):
     assert not ast['ambiguity']
     assert ast['metrics']==[]
     assert ast['filters']==[{'field':'sales_order.amount_with_tax','operator':'=','value':1000}]
-    assert len(ast['dimensions'])==3
+    assert len(ast['display_fields'])==3 and ast['dimensions']==[]

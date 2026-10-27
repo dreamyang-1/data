@@ -107,7 +107,7 @@ def test_non_time_dimension_and_detail_date_do_not_acquire_model_grain():
         p[target] = [{'index': 0, 'key': 'hospital.name' if metric_query else 'hospital.date', 'granularity': 'quarter'}]
         ast, _ = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))))
         assert not ast['ambiguity']
-        assert ast['dimensions'][0]['granularity'] is None
+        assert ast[target][0].get('granularity') is None
 
 
 def test_time_dimension_binding_can_supply_authorized_field_missing_from_attribute_topk():
