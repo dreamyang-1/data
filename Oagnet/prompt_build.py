@@ -1609,7 +1609,7 @@ def _canonical_surface_name(surface, allowed_kinds, store, embed_fn,
     ranked = []
     for hit in hits or []:
         identity = _record_identity(hit.metadata or {})
-        if not identity or identity[0] not in allowed_kinds or not identity[2]:
+        if not identity or (allowed_kinds is not None and identity[0] not in allowed_kinds) or not identity[2]:
             continue
         ranked.append((hit.score, identity))
     if not ranked:
@@ -1626,13 +1626,13 @@ def _canonical_surface_name(surface, allowed_kinds, store, embed_fn,
     return best[2], 'rewritten'
 
 
-# 各槽位允许映射到的目录类型：指标位只认指标；过滤位只认物理属性/维度。
+# 各槽位允许映射到的目录类型。
 _SECTION_KINDS = {
     '指标': ('metric',),
     '维度': ('dimension', 'attribute'),
     '展示字段': ('metric', 'attribute', 'dimension'),
     '排序': ('metric', 'attribute', 'dimension'),
-    '过滤条件': ('attribute', 'dimension'),
+    '过滤条件': None,
 }
 
 

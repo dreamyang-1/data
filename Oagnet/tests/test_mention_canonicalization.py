@@ -99,6 +99,54 @@ def test_canonical_metric_not_overwritten_by_nearer_attribute():
     assert repairs == []
 
 
+def test_metric_filter_is_not_rewritten_to_its_underlying_attribute():
+    extraction = {'指标': ['含税销售总额'], '过滤条件': [
+        {'entity': None, 'field': '含税销售总额', 'op': '>',
+         'value': [1000000], 'stage': 'having'}]}
+    repairs, _ = run_canonicalize(extraction)
+    assert extraction['过滤条件'][0]['field'] == '含税销售总额'
+    assert repairs == []
+
+
+def test_selected_metric_filter_is_preserved_even_with_where_stage():
+    extraction = {'指标': [{'name': '含税销售总额'}], '过滤条件': [
+        {'field': '含税销售总额', 'op': '>', 'value': [1000000], 'stage': 'where'}]}
+    repairs, _ = run_canonicalize(extraction)
+    assert extraction['过滤条件'][0]['field'] == '含税销售总额'
+    assert repairs == []
+
+
+def test_metric_filter_flows_through_catalog_binding_as_having():
+    from copy import deepcopy
+    from test_structured_binding import fixture, run
+    extraction, knowledge, plan = fixture()
+    knowledge = deepcopy(knowledge)
+    knowledge['metrics'][0].metadata['calculation_rule'] = {
+        'calc_formula': 'count_hospital=COUNT(hospital.name)'}
+    extraction['指标'] = [{'name': '区域全部医院总数'}]
+    extraction['过滤条件'] = [{'field': '区域全部医院总数', 'op': '>',
+                            'value': [12], 'stage': 'having'}]
+    plan['filters'] = [{'index': 0, 'key': 'hospital.name'}]
+    records = {'区域全部医院总数': [
+        (0.85, {'type': 'attribute', 'attr_code': 'name', 'attr_name': '医院名称'}),
+        (0.80, {'type': 'metric', 'metric_code': 'count_hospital',
+                'metric_name': '区域全部医院总数'}),
+    ]}
+    run_canonicalize(extraction, records)
+    ast, _ = run(extraction, knowledge, plan)
+    assert ast['having'] == ['COUNT(hospital.name) > 12']
+    assert not ast['filters'] and not ast['ambiguity']
+
+
+def test_row_level_amount_filter_remains_an_attribute():
+    extraction = {'指标': ['含税销售总额'], '过滤条件': [
+        {'entity': '销售订单', 'field': '含税金额', 'op': '>',
+         'value': [1000000], 'stage': 'where'}]}
+    repairs, _ = run_canonicalize(extraction)
+    assert extraction['过滤条件'][0]['field'] == '含税金额'
+    assert repairs == []
+
+
 def test_canonical_attribute_not_rewritten():
     extraction = {'展示字段': [{'name': '商品名称'}, {'field': '含税金额'}]}
     repairs, _ = run_canonicalize(extraction)
@@ -160,9 +208,10 @@ def test_filter_value_not_touched():
     records = {'卖出去的钱': RECORDS['卖出去的钱']}
     repairs, _ = run_canonicalize(extraction, records)
     item = extraction['过滤条件'][0]
-    # 字段按属性/维度允许集合解析（本用例无属性候选 → 保持原样）
+    # 过滤字段允许匹配指标，筛选值保持原样。
     assert item['value'] == '卖出去的钱'
-    assert item['field'] == '卖出去的钱'
+    assert item['field'] == '含税销售总额'
+    assert repairs
 
 
 def test_filter_field_rewritten_with_value_kept():
