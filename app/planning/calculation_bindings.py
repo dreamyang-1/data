@@ -208,6 +208,22 @@ def normalize_result_operation(operation):
                         step[target]=condition[source]
             operator=step.get('operator','eq')
             step['operator']={'>':'gt','>=':'gte','<':'lt','<=':'lte','=':'eq','==':'eq','!=':'ne'}.get(operator,operator)
+        if step.get('type') in {'sort', 'sort_limit'} and isinstance(step.get('order_by'), list) and step.get('order_by'):
+            # 规划器把排序意图写成 order_by 列表词形（[{field,direction}]）时
+            # 归一到 field+order 标量契约，否则下方校验会把带列表的 sort_limit
+            # 误判为缺字段降级成纯 limit（排序被静默丢弃，按原始顺序截断）。
+            first = step.pop('order_by')[0]
+            if isinstance(first, dict):
+                field = first.get('field') or first.get('name')
+                direction = first.get('direction') or first.get('order')
+                if isinstance(field, str) and field.strip():
+                    if 'field' in step and step['field'] != field.strip():
+                        raise ValueError('结果排序字段存在冲突')
+                    step['field'] = field.strip()
+                if isinstance(direction, str) and direction.strip():
+                    if 'order' in step and step['order'] != direction.strip():
+                        raise ValueError('结果排序方向存在冲突')
+                    step['order'] = direction.strip()
         if step.get('type') in {'sort', 'sort_limit'} and 'order' in step:
             direction = step.pop('order')
             if str(direction).lower() not in {'asc', 'desc'}:
@@ -320,10 +336,27 @@ def validate_result_operation(operation):
         raise ValueError('未知或嵌套结果操作')
     def fields(values):
         return all(isinstance(value, str) and value.strip() for value in values)
+    # 2026-10-22 宽松化（q51 实测）：规划器把“主销前3产品”这类排序意图编译成
+    # 缺字段的 sort/sort_limit 时，不再整体拒绝规划（原 ValueError 会把多任务
+    # DAG 与单任务兜底全部打成 SAFE_FALLBACK）。按 2026-10-21 用户裁决的
+    # “排序无效跳过”同族语义处理：sort 步骤丢弃，sort_limit 降级为纯 limit，
+    # 方向非法时回退默认降序；字段/类型合法的步骤保持原校验。
+    kept = []
     for step in steps:
         if step['type'] in {'sort', 'sort_limit'}:
-            if not fields([step.get('field')]) or type(step.get('descending', True)) is not bool:
-                raise ValueError('排序操作缺少明确字段或方向')
+            if type(step.get('descending', True)) is not bool:
+                step['descending'] = True
+            if not fields([step.get('field')]):
+                if (step['type'] == 'sort_limit'
+                        and type(step.get('count')) is int
+                        and 1 <= step['count'] <= 10000):
+                    kept.append({'type': 'limit', 'count': step['count']})
+                continue
+            kept.append(step)
+            continue
+        kept.append(step)
+    steps = kept
+    for step in steps:
         if step['type'] in {'limit', 'sort_limit'}:
             if type(step.get('count')) is not int or not 1 <= step['count'] <= 10000:
                 raise ValueError('结果限制必须是1至10000的整数')
@@ -509,8 +542,9 @@ def materialize_declared_division(decomposition):
         binding[role]['source_task_index'] = 0
     compute = DecomposedTask(question=f'根据上述任务的查询结果计算{label}，{left}除以{right}，不再查询数据库',
         name=f'计算{label}'[:60], depends_on=(0,), expected_output=label,
-        intent=PrimaryIntent.COMPARISON_ANALYSIS, structured={
+        intent=task.intent, structured={
             '意图':'指标计算','指标':[{'name':label}], '是否查询数据库':'否','计算绑定':binding,
+            '计算绑定来源':'DECLARED_CALCULATION',
             '排序':copy.deepcopy((task.structured or {}).get('排序') or []),
             '限制':(task.structured or {}).get('限制')})
     source = replace(task, name=f'统计{left}和{right}'[:60],structured=query,

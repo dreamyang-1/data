@@ -16,7 +16,6 @@ from pathlib import Path
 import httpx
 from pydantic import BaseModel, SecretStr
 
-from app.domain.models import PrimaryIntent
 from app.observability.langfuse_client import generation_under, text_metadata
 
 logger = logging.getLogger(__name__)
@@ -24,28 +23,6 @@ logger = logging.getLogger(__name__)
 # api key 兜底文件：设置项为空时读取，进程内只读一次
 _KEY_FILE = Path.home() / ".jev_api_key"
 _key_file_cache: str | None = None
-
-# 意图选项：key 与 PrimaryIntent 枚举值一致，覆写时可直接构造枚举
-_INTENT_DESCRIPTIONS: dict[PrimaryIntent, str] = {
-    PrimaryIntent.METRIC_QUERY: "统计汇总类问题，如销售额、订单数、各对象汇总值、排名前N",
-    PrimaryIntent.DETAIL_QUERY: "要名单、清单、原始记录或属性字段",
-    PrimaryIntent.TREND_ANALYSIS: "按时间维度看变化走势",
-    PrimaryIntent.COMPARISON_ANALYSIS: "两个对象、两个时期或两份结果的比较",
-    PrimaryIntent.COMPOSITION_ANALYSIS: "构成、份额、百分比",
-    PrimaryIntent.ANOMALY_ANALYSIS: "找波动大、超出阈值、突增突降的对象",
-    PrimaryIntent.ROOT_CAUSE_ANALYSIS: "解释指标变化的原因",
-    PrimaryIntent.FORECAST_ANALYSIS: "预估未来期间的数值",
-    PrimaryIntent.REPORT_GENERATION: "按固定格式出报表",
-    PrimaryIntent.METRIC_DEFINITION: "问指标定义或统计口径",
-    PrimaryIntent.DATA_LINEAGE: "问数据来源或加工链路",
-    PrimaryIntent.DATA_QUALITY: "问数据完整性、准确性",
-    PrimaryIntent.CAPABILITY_HELP: "问系统本身能做什么",
-    PrimaryIntent.CHAT: "寒暄问候，无业务数据诉求",
-    PrimaryIntent.OUT_OF_SCOPE: "与业务数据无关的请求",
-}
-INTENT_CRITERIA: dict[str, str] = {
-    item.value: description for item, description in _INTENT_DESCRIPTIONS.items()
-}
 
 # 状态识别选项：key 与 V2 ContextProposal.relation 枚举一致，仅影子比对用
 RELATION_CRITERIA: dict[str, str] = {
@@ -236,34 +213,3 @@ async def jev_choice(
         return JevChoiceResult(
             choice=choice, confidence=confidence, probabilities=probabilities
         )
-
-
-def apply_jev_intent_override(result, jev_result, min_confidence: float) -> bool:
-    """把 jev 意图判定覆写到分类结果上，返回是否发生覆写。
-
-    仅当 jev 结果非空、置信度达标、且与当前意图不同时覆写；
-    覆写为 CHAT/OUT_OF_SCOPE 时同步清空查询槽位，避免展示参数残留。
-    """
-    if jev_result is None or jev_result.confidence < min_confidence:
-        return False
-    try:
-        intent = PrimaryIntent(jev_result.choice)
-    except ValueError:
-        return False
-    if result.primary_intent == intent:
-        return False
-    result.primary_intent = intent
-    result.intent_source = "JEV_DECIDER"
-    if intent in (PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE):
-        result.secondary_intents = []
-        result.metrics = []
-        result.entity = None
-        result.fields = []
-        result.dimensions = []
-        result.filters = []
-        result.time_range = None
-        result.operators = []
-        result.missing_slots = []
-        result.risk_level = "LOW"
-        result.asl_template = None
-    return True

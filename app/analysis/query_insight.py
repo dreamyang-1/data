@@ -46,12 +46,21 @@ def build_query_result_insight(
     if total_row_count_confirmed and not truncated:
         summary_points.append("本次返回的是完整查询结果，没有发生结果截断。")
     profile = profile_dataset(columns, rows)
+    metric_names = {name for metric in request.metrics for name in (metric.input, metric.canonical_name) if name}
+    for item in profile['columns']:
+        name = item['name']
+        if name in request.dimensions or name.endswith(('（编码）', '_code', '_id')) or (
+                metric_names and name not in metric_names):
+            # A numeric representation does not make a grouping key a measure.
+            item['inferred_type'] = 'TEXT'
+            item.pop('numeric_summary', None)
 
     if returned_row_count == 1:
         visible_values = [
             f"{column}为{_display_value(rows[0].get(column), column=column)}"
             for column in columns[:MAX_SINGLE_ROW_VALUES]
-            if _number(rows[0].get(column)) is not None
+            if _number(rows[0].get(column)) is not None and
+                any(item['name'] == column and item['inferred_type'] == 'NUMBER' for item in profile['columns'])
         ]
         if visible_values:
             summary_points.append("这次结果的核心值是" + "，".join(visible_values) + "。")

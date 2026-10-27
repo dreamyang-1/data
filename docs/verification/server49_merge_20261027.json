@@ -1,0 +1,555 @@
+{
+  "task": "将 server49 最新 DataAnalysis_Agent 源码合并到本地",
+  "completed_at_utc": "2026-10-27T04:26:23.087652+00:00",
+  "scope": "DataAnalysis_Agent source and tests; server-to-local only",
+  "server_head_at_final_check": "2ac093c41ea38bc0f7160c806517c8ee2c8af267",
+  "local_base_commit": "4b1cdcd7a061b7342397e367f00b8bfe53c82dae",
+  "merge_method": "按文件内容历史查找共同基线，三方合并并人工解决重叠逻辑；包含服务器未提交源码；不覆盖整目录。",
+  "preserved_local_behaviors": [
+    "当前语义模型文件来源隔离，不恢复跨模型提示词兜底",
+    "沿用识别节点给出的意图",
+    "依赖查询的显式字段传值规则移入服务器新版参数提取提示词",
+    "本地独立业务修复与无关未提交文件"
+  ],
+  "integration_cleanup": [
+    "删除服务器已替代的旧 intent sidecar、独立 coverage 检查调用及重复参数提取函数",
+    "按服务器新模块位置统一导入，删除已迁移的旧参数提示词文本",
+    "补齐服务器代码中但版本库未收录的运行依赖模块"
+  ],
+  "config_files_copied": false,
+  "credentials_copied": false,
+  "server_modified": false,
+  "server_restart_performed": false,
+  "live_business_regression_performed": false,
+  "checks": {
+    "python_syntax": "PASS",
+    "workspace_app_import": "PASS",
+    "git_worktree_app_import": "PASS",
+    "cached_diff_check": "PASS",
+    "config_hashes_unchanged": true,
+    "unrelated_dirty_file_hashes_unchanged": true,
+    "remote_file_hashes_match_final_snapshot": true,
+    "local_before_full_offline": {
+      "passed": 6328,
+      "failed": 277,
+      "errors": 7
+    },
+    "merged_full_offline_before_final_three_file_refresh": {
+      "errors": 85,
+      "passed": 5697,
+      "failed": 581
+    },
+    "remote_source_control_full_offline_before_final_three_file_refresh": {
+      "errors": 86,
+      "passed": 5680,
+      "failed": 581
+    },
+    "final_refreshed_targeted": {
+      "passed": 217,
+      "failed": 45
+    },
+    "remote_source_control_refreshed_targeted": {
+      "passed": 217,
+      "failed": 45
+    }
+  },
+  "verification_limits": [
+    "全量测试未通过；没有宣称业务功能全部正常。",
+    "隔离目录部分跨服务测试缺少 test_pinned_catalog 等辅助模块；这些收集错误不等同于已确认的业务故障。",
+    "合并版相对服务器对照多出两条失败：test_compound_router_keeps_plan_and_has_no_single_extraction 在本地基线已失败；test_root_intent_keeps_computation_task_deterministic_override 的服务器断言与保留的本地意图继承规则冲突。",
+    "最新三个文件复测结果与服务器对照一致，均为217通过、45失败；失败未在本次源码同步中修复。",
+    "本次没有部署、重启服务器或运行真实历史业务问题回归。"
+  ],
+  "files": [
+    {
+      "path": "app/analysis/anomaly_detection.py",
+      "deleted": false,
+      "integrated_sha256": "e7bc50de3914cc2deebc7c173a24c061115131e3852f833cb49bc70c594819ee"
+    },
+    {
+      "path": "app/analysis/capabilities.py",
+      "deleted": false,
+      "integrated_sha256": "e5c4c22dab836bfb69df92ca4fc51363e2a45956ad4fa0e4de7bfbd9bb4e1993"
+    },
+    {
+      "path": "app/analysis/chain_tools/composition.py",
+      "deleted": false,
+      "integrated_sha256": "a8061f70f85696438865b603210df6e2478d27ef2b88e0a54924cc6d6c91af03"
+    },
+    {
+      "path": "app/analysis/chain_tools/temporal_window.py",
+      "deleted": false,
+      "integrated_sha256": "2becfb8df820c83192d4ca5f9cce94c702becb7a3225396bead3fee6c03e1bdc"
+    },
+    {
+      "path": "app/analysis/contracts.py",
+      "deleted": false,
+      "integrated_sha256": "0ba6effba496db26aa8dac27bb017ce4f7fb5213113a40e727deee3f1d51e0b1"
+    },
+    {
+      "path": "app/analysis/coverage.py",
+      "deleted": false,
+      "integrated_sha256": "0d21e04243f76c4a9b1436c76bbfc836d69f8e7da39cff72190df7494fa736fe"
+    },
+    {
+      "path": "app/analysis/engine.py",
+      "deleted": false,
+      "integrated_sha256": "aeafac27cf88e8b4cef8515b845625ad9a89af30e6b8a631f7da424c9c7ff164"
+    },
+    {
+      "path": "app/analysis/independent_tools.py",
+      "deleted": false,
+      "integrated_sha256": "1380db1d7a0f630a11165b86c356120080d6df5a451efdf9c2efeffab4356991"
+    },
+    {
+      "path": "app/analysis/intents.py",
+      "deleted": false,
+      "integrated_sha256": "756c031c3d40a67f0e0cbe2e911729a314827c8e51f332522ddedc24db29c137"
+    },
+    {
+      "path": "app/analysis/interpretation.py",
+      "deleted": false,
+      "integrated_sha256": "628535266bdb4eb55a1e2bac3be28ab05448ef407392c46c8de797c8e90bd3f9"
+    },
+    {
+      "path": "app/analysis/operators.py",
+      "deleted": false,
+      "integrated_sha256": "4cf0a54d4cca5a4ebc94241f3b33783717eb9f84656132845ba8f130c63153d5"
+    },
+    {
+      "path": "app/analysis/period_comparison.py",
+      "deleted": false,
+      "integrated_sha256": "0006c236d3e4be785e0b4b343237403b8879d196912a7bc97f14367fa850ef8d"
+    },
+    {
+      "path": "app/analysis/planning.py",
+      "deleted": false,
+      "integrated_sha256": "04e7a3bd420d55b336d95828eca533c16f74ad78b531d1499ab0ba2926d55631"
+    },
+    {
+      "path": "app/analysis/query_insight.py",
+      "deleted": false,
+      "integrated_sha256": "64710734cb21b7116e9ad0a041dcfb4b7f64cb11f343354f08f19249ce929783"
+    },
+    {
+      "path": "app/analysis/report_contract.py",
+      "deleted": false,
+      "integrated_sha256": "8b10eab1a37a9414d160dcc5757873d727af83e9658c93c0b8e994f00e2a0759"
+    },
+    {
+      "path": "app/analysis/requirements.py",
+      "deleted": false,
+      "integrated_sha256": "065b15e4c38c7066ad3349eae165f89d2b07f0c691f3279b6456b582c626ec76"
+    },
+    {
+      "path": "app/analysis/tool_selection.py",
+      "deleted": false,
+      "integrated_sha256": "dc08bf22594790659544a3e160189a20fb4f6f7562c30c327aae3bacab696eab"
+    },
+    {
+      "path": "app/analysis/tools/__init__.py",
+      "deleted": false,
+      "integrated_sha256": "bdd4afba04411baba8f506489cdef3a8c94d7283608d733d9b5ba0417986fbd5"
+    },
+    {
+      "path": "app/analysis/tools/compiler.py",
+      "deleted": false,
+      "integrated_sha256": "667414ccdc82331bd534b7f19f68b2e6807a7a142ff3f2f1b8c6ed9be300349e"
+    },
+    {
+      "path": "app/analysis/tools/definitions/__init__.py",
+      "deleted": false,
+      "integrated_sha256": "25ae9ec78d8df8f86497b87429738722d6b6695056119349655a2c5ce679245e"
+    },
+    {
+      "path": "app/analysis/tools/definitions/anomaly.py",
+      "deleted": false,
+      "integrated_sha256": "88a2c92791832fe98bd322b8ac45cb6e94c9a72226a3a64a699c3635562218fb"
+    },
+    {
+      "path": "app/analysis/tools/definitions/attribution.py",
+      "deleted": false,
+      "integrated_sha256": "9399c95d0a4517d7e2550b7935142079c6c37e893f07e20f02b470f14f0a9fcf"
+    },
+    {
+      "path": "app/analysis/tools/definitions/comparison.py",
+      "deleted": false,
+      "integrated_sha256": "ab5daea53ed485a59a42fb0cd1a7fb25761b50e4dca8dd3eb47c1b08f3d88718"
+    },
+    {
+      "path": "app/analysis/tools/definitions/composition.py",
+      "deleted": false,
+      "integrated_sha256": "0f91cf03792610eb4d3c148ea60441ca58af656b3cdf2a8def2051052e52f667"
+    },
+    {
+      "path": "app/analysis/tools/definitions/forecast.py",
+      "deleted": false,
+      "integrated_sha256": "7ad40c0bc9521142c3f693d95b1e116d5d9e27f4e877ef2768379a9e1df6351a"
+    },
+    {
+      "path": "app/analysis/tools/definitions/schemas.py",
+      "deleted": false,
+      "integrated_sha256": "e5955c6ca235509c61ff4049fa72b5908e75ca3cb523a7c9dd6c0a357d1c801c"
+    },
+    {
+      "path": "app/analysis/tools/definitions/trend.py",
+      "deleted": false,
+      "integrated_sha256": "f3e3ac76009fb2166ed277be06507f1198e4935c410221b3c62f21c5c1623c7d"
+    },
+    {
+      "path": "app/analysis/tools/execution.py",
+      "deleted": false,
+      "integrated_sha256": "3bbd194dc8a60fe9cdabbe9a4fe0cc225b5a5cac1ca95f03f209f83ba8b510fb"
+    },
+    {
+      "path": "app/analysis/tools/executors.py",
+      "deleted": false,
+      "integrated_sha256": "2d3dd5a4c35f0e18158fc7a5bea1cc88265b72ced2649f5faf47e4f9ac007333"
+    },
+    {
+      "path": "app/analysis/tools/inputs.py",
+      "deleted": false,
+      "integrated_sha256": "55b591a9cb37a9128afaa2c6d36d64ef540d093eb06a8218deadc27ed8fb4522"
+    },
+    {
+      "path": "app/analysis/tools/plans.py",
+      "deleted": false,
+      "integrated_sha256": "b694739fff43c7e4a0672929c773f21584fe3bb295990017521caed28dfa4e81"
+    },
+    {
+      "path": "app/analysis/tools/registry.py",
+      "deleted": false,
+      "integrated_sha256": "6809d9ef95601031ee46ec08ffd421f7e131fb6becad318fc6cd47862b5cadf6"
+    },
+    {
+      "path": "app/analysis/tools/requirements.py",
+      "deleted": false,
+      "integrated_sha256": "296e1661cb826f8549b4444246a7cc90ef839d7587863c6fa2d5a8f0b6ac6bee"
+    },
+    {
+      "path": "app/analysis/tools/results.py",
+      "deleted": false,
+      "integrated_sha256": "4c359f1bcc1bed2393be8229a0cadfed0a15491a8d05b05a0f10b09100e8c5de"
+    },
+    {
+      "path": "app/config.py",
+      "deleted": false,
+      "integrated_sha256": "2023c14bd46fbab6f406c6a6c2947cc18ee987232dc28936e30495c4cb60131c"
+    },
+    {
+      "path": "app/decision/__init__.py",
+      "deleted": false,
+      "integrated_sha256": "93fcd068b475c4d256ce4ef7637d6b5a2989852ba540ca54419db0bc80deb809"
+    },
+    {
+      "path": "app/decision/intent_sidecar.py",
+      "deleted": true,
+      "integrated_sha256": null
+    },
+    {
+      "path": "app/decision/jev_client.py",
+      "deleted": false,
+      "integrated_sha256": "e72f103080ec3f0cbda3a377f8513ca8b5b78789d0b2775e25298aaaad1b4a93"
+    },
+    {
+      "path": "app/decision/relation_decider.py",
+      "deleted": false,
+      "integrated_sha256": "9ef1f762b454298dec6c0e8a9db764713c500eb306d79b2e912c3e2459768a0f"
+    },
+    {
+      "path": "app/gate/__init__.py",
+      "deleted": false,
+      "integrated_sha256": "222aeb04cf2222e3e54c458189476a42a3bd4e124f7867333795b6744a45f1a5"
+    },
+    {
+      "path": "app/gate/gate.py",
+      "deleted": false,
+      "integrated_sha256": "9c55fd3c9c1344d4f50d17dbdfdaf544bea07d7e5c892fb2d2ff8c736511e5e7"
+    },
+    {
+      "path": "app/gate/prompt.py",
+      "deleted": false,
+      "integrated_sha256": "1442f4604c8269e191c08edcd3a6143b1ad3ac84a962e226b97be5b9f761deb7"
+    },
+    {
+      "path": "app/observability/langfuse_client.py",
+      "deleted": false,
+      "integrated_sha256": "c82e24eb802142d430002c9b5693c3e59d9e39bd0ce0207ef28eccc952fe3fba"
+    },
+    {
+      "path": "app/planning/analysis_task_planner.py",
+      "deleted": false,
+      "integrated_sha256": "a58df1dfa3e61ae0e45d17c192a84f794908a0e1a692bee745eed61f44b5afab"
+    },
+    {
+      "path": "app/planning/calculation_bindings.py",
+      "deleted": false,
+      "integrated_sha256": "7abb43e8143cf3e302e2eba42154168f9b51419206929483de821546cdb7ed3c"
+    },
+    {
+      "path": "app/planning/compat.py",
+      "deleted": false,
+      "integrated_sha256": "ba8abddfd37323dbb92d9c683cfe2b2fed6e572d5989af085bc343c6cef6b1ca"
+    },
+    {
+      "path": "app/planning/compound_question.py",
+      "deleted": false,
+      "integrated_sha256": "f4f970624a5a2d8c372048634188c203eceffa63c07e4ccc8592f3b16faa7998"
+    },
+    {
+      "path": "app/planning/metric_thresholds.py",
+      "deleted": false,
+      "integrated_sha256": "3576297607d0a68c86c67cff8688de44a8b036f7ea945485ca72e1a03b5aee90"
+    },
+    {
+      "path": "app/planning/structured_extraction_prompt.txt",
+      "deleted": true,
+      "integrated_sha256": null
+    },
+    {
+      "path": "app/planning/task_dag.py",
+      "deleted": false,
+      "integrated_sha256": "4bfdaa24760ae8a6057a901377554d67ea69baf9b5243f6c64c2a811404d922b"
+    },
+    {
+      "path": "app/planning/task_plan_stages.py",
+      "deleted": false,
+      "integrated_sha256": "91b7f6cc4bd9dcd141db77182ce6d3df620a0c2d91d3b3a511f5179f862757f3"
+    },
+    {
+      "path": "app/presentation/analysis_details.py",
+      "deleted": false,
+      "integrated_sha256": "89656ac513976f8708f34fa72722b78636f82a2d333b11c9cc078d1df2eac39f"
+    },
+    {
+      "path": "app/semantic_v2/canonical_execution_bridge.py",
+      "deleted": false,
+      "integrated_sha256": "701c4a84485c92cfb6d84cc820b61ee29879033bb3ece9264f4f83e26a9f4aaf"
+    },
+    {
+      "path": "app/semantic_v2/context_contract.py",
+      "deleted": false,
+      "integrated_sha256": "bc90e8a252e1a3035bc63675fecec7d25f0130a14d84fb67f45e23ba60fd8b10"
+    },
+    {
+      "path": "app/semantic_v2/context_proposal.py",
+      "deleted": false,
+      "integrated_sha256": "3d8066bb48b0a3d8ec98ec4c51501af6d592b91da08775df5c8178112b6f4abf"
+    },
+    {
+      "path": "app/semantic_v2/context_v1_execution.py",
+      "deleted": false,
+      "integrated_sha256": "f131ad40b08742fe08789355b82fd2c9029369bc126648b647f31f0fc7287249"
+    },
+    {
+      "path": "app/semantic_v2/models.py",
+      "deleted": false,
+      "integrated_sha256": "194da334438dd4f8d5848cd355206b1ed3965ba4aed898b8ee75602ab854be10"
+    },
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "deleted": false,
+      "integrated_sha256": "66124897b069eee934aa599232369d94f15484804d320d666ee4eac671af9d94"
+    },
+    {
+      "path": "app/semantic_v2/recognition_client.py",
+      "deleted": false,
+      "integrated_sha256": "fb57c1518e11b4b4eb0c0edd32eb78b19ce6853f364f74264535971348db4142"
+    },
+    {
+      "path": "app/services/analysis_delivery.py",
+      "deleted": false,
+      "integrated_sha256": "1b51c56a8039638f96388f7745036b60f5b91928069aba02abbbd7397ba2ab0c"
+    },
+    {
+      "path": "app/services/calculation_execution.py",
+      "deleted": false,
+      "integrated_sha256": "36d9ca43837697907e7000dba6d517b5b173cba8fbd4c4f2652b90d230b637da"
+    },
+    {
+      "path": "app/services/dag_recovery.py",
+      "deleted": false,
+      "integrated_sha256": "d4cd1a779d542c611cfebf7acc3419dcc6598a6897f967ea8986fef2fdd5bc96"
+    },
+    {
+      "path": "app/services/insight_delivery.py",
+      "deleted": false,
+      "integrated_sha256": "3071f737d18e7a1b5f5a9e0a4318840a2acc50f631780333636a30ce501d3000"
+    },
+    {
+      "path": "app/services/orchestrator.py",
+      "deleted": false,
+      "integrated_sha256": "fc1b379df0ccf24ca7577f1f20d15b7c80c37fff4d059c69a02ebcd77a59dfdb"
+    },
+    {
+      "path": "app/services/semantic_decision.py",
+      "deleted": false,
+      "integrated_sha256": "68c9f8edee3af6d445099ecb0dd8f779a20c320a73e2ae61e4dddcbce3aed4a1"
+    },
+    {
+      "path": "app/structured_extraction/__init__.py",
+      "deleted": false,
+      "integrated_sha256": "de680cd227d2197f4f93df82de35f65bca0f03e824c2ae29afd0c8973966ed86"
+    },
+    {
+      "path": "app/structured_extraction/extractor.py",
+      "deleted": false,
+      "integrated_sha256": "f1debc488551dbd0daa17aa2ba7c667e6baa7429df488bafa0382a4dfaff213e"
+    },
+    {
+      "path": "app/structured_extraction/prompts.py",
+      "deleted": false,
+      "integrated_sha256": "9d453b106f2c6362b7c90249a577f951a73df8a9baedc9c773e33678c54e6a20"
+    },
+    {
+      "path": "pyproject.toml",
+      "deleted": false,
+      "integrated_sha256": "a64c14ffb678445eed2d03bf24b9deead1cafec2c834ac3ee3194657b9ebe337"
+    },
+    {
+      "path": "tests/test_analysis_delivery_regressions.py",
+      "deleted": false,
+      "integrated_sha256": "ff2f89c5ca178f59585ab628da7d391fb942b04ece14325b18fded120ca6e569"
+    },
+    {
+      "path": "tests/test_analysis_requirements_contract.py",
+      "deleted": false,
+      "integrated_sha256": "5186d14e9e9e6dc65975673c8df5e14d46eb0fc13ca6da7669936907ae9aab2d"
+    },
+    {
+      "path": "tests/test_analysis_task_planner.py",
+      "deleted": false,
+      "integrated_sha256": "f8140232c7f29d96ba57f5823b4ecec8eff3b63b8e44baa5579661b214ccea13"
+    },
+    {
+      "path": "tests/test_basic_arithmetic_contract.py",
+      "deleted": false,
+      "integrated_sha256": "11fa39da6a68000835bdd92c3b62c72f64466622aa1e6ed95f1cf91ca7033ffb"
+    },
+    {
+      "path": "tests/test_clarification_module.py",
+      "deleted": false,
+      "integrated_sha256": "c9268d22d9febeacdbccd47331a5c2adcdc18b74fb69fbbc68b36ba9d0b4dfa4"
+    },
+    {
+      "path": "tests/test_composable_analysis_operators.py",
+      "deleted": false,
+      "integrated_sha256": "d35eb693f3ca3ab03ae5cef0a7c317b1dbe6a3dadfb3a9235e9fbe3bb3712005"
+    },
+    {
+      "path": "tests/test_composition_comparison_operators.py",
+      "deleted": false,
+      "integrated_sha256": "3953684e1b02768db7c67f8a8e7ef5f45183606453a6919897ac487be82a266a"
+    },
+    {
+      "path": "tests/test_frontend_test4_repairs.py",
+      "deleted": false,
+      "integrated_sha256": "14447ddcf3040dfa6689c504a62a6750307ece26c7826282b15818345302db87"
+    },
+    {
+      "path": "tests/test_full_analysis_playbooks.py",
+      "deleted": false,
+      "integrated_sha256": "6fcfa5c0469a67066b2e7a1954a3a760aff5f87c1327c0b2d7989fdf499e52c1"
+    },
+    {
+      "path": "tests/test_gate.py",
+      "deleted": false,
+      "integrated_sha256": "c42c790d8cb93a04df8884a5f2ca8cda1e5fb6d9e72abaae419a600b64b59df5"
+    },
+    {
+      "path": "tests/test_goal_intent_contract.py",
+      "deleted": false,
+      "integrated_sha256": "d89e6036a4584009707f37a511c568499dedb19c38df2d8805c15370bc727524"
+    },
+    {
+      "path": "tests/test_independent_analysis_tools.py",
+      "deleted": false,
+      "integrated_sha256": "1d0cfc47776c62c4b37c861cca399acc02ae0838e8bb2f202e58c5eb28da5b68"
+    },
+    {
+      "path": "tests/test_jev_client.py",
+      "deleted": false,
+      "integrated_sha256": "f030945862a39f29c3b3b3d30711cf8d78b05931e73ef589578e75f645b360af"
+    },
+    {
+      "path": "tests/test_jev_intent_override.py",
+      "deleted": true,
+      "integrated_sha256": null
+    },
+    {
+      "path": "tests/test_jev_relation_decider.py",
+      "deleted": false,
+      "integrated_sha256": "5f7469001c2ed0b3c4014b1f882c49df98b0d74680d41fc56b6048bf3e085332"
+    },
+    {
+      "path": "tests/test_metric_target_contract.py",
+      "deleted": false,
+      "integrated_sha256": "f2a25b6d8bfe967d38fdb923dd15b6d5d389aaecf8cf204baac94b43f9d8ec06"
+    },
+    {
+      "path": "tests/test_metric_unit_normalization.py",
+      "deleted": false,
+      "integrated_sha256": "1f018afbb1a3aba435eb7e2f2433d8d16bae57f6429d6bdd3567de124e2a02d6"
+    },
+    {
+      "path": "tests/test_model_only_tool_selection.py",
+      "deleted": false,
+      "integrated_sha256": "067a5c4495f3f0a77f047390ba5ebc755cac9fbb2d7a43f278a28983231e038a"
+    },
+    {
+      "path": "tests/test_model_tool_catalog.py",
+      "deleted": false,
+      "integrated_sha256": "0103bc5ce3d3fa5d044940ff15c5cd840f329b9c6a78a790dc89ff31d0dcf4f4"
+    },
+    {
+      "path": "tests/test_model_tool_routing_context.py",
+      "deleted": false,
+      "integrated_sha256": "b0802d0294195dad0867ce36bc081f8de8f04bcde0c48674ad1c4750d75a7e34"
+    },
+    {
+      "path": "tests/test_plan_execution_contract.py",
+      "deleted": false,
+      "integrated_sha256": "c69ceada7c8410a7eff7ef68160e3df9a8e43616758eda14d715805cc21678d7"
+    },
+    {
+      "path": "tests/test_planning_display_payload.py",
+      "deleted": false,
+      "integrated_sha256": "eaa5c8a7bac330d1f7e9d7ba9828b15c618a6e1e49c0a3f6fd817dec8a0332c7"
+    },
+    {
+      "path": "tests/test_task_dag.py",
+      "deleted": false,
+      "integrated_sha256": "f5f0afbc5bc02a8502fa5e7be2322e570ee7bc0b99f79f283fcb054e71ebd656"
+    },
+    {
+      "path": "tests/test_temporal_analysis_operators.py",
+      "deleted": false,
+      "integrated_sha256": "bb335c094ceb056bd11f0abcf55917776b28d2ca5e659d74d12d558ee7b2a82e"
+    },
+    {
+      "path": "tests/test_time_series_presentation.py",
+      "deleted": false,
+      "integrated_sha256": "cacc39907ecf605c50217e02bf7f8a6acfe301a431326e9f9f3f746741680274"
+    },
+    {
+      "path": "tests/test_v2_context_production_round5.py",
+      "deleted": false,
+      "integrated_sha256": "bc2df3016684492c00cd79a86e31a14fc7ee229f45c1acfd9ef8740a7fae0184"
+    },
+    {
+      "path": "tests/test_v2_context_v1_execution_bridge.py",
+      "deleted": false,
+      "integrated_sha256": "e9ca7cae3c5c18e4fd01bc14239313c011416c0cec1c5af6e316a1b80a0c9c8f"
+    },
+    {
+      "path": "tests/test_v2_lightweight_current_turn.py",
+      "deleted": false,
+      "integrated_sha256": "40cff02bc44a60087aa9b4e3ab0171bc6c62ea32c50b66a9916df8f88d245b6a"
+    },
+    {
+      "path": "tests/test_v2_raw_turn_recognition.py",
+      "deleted": false,
+      "integrated_sha256": "ff049a652cb3a82da261631e12f09a28cb93c9712d1c330da5c422116152d1c6"
+    }
+  ]
+}

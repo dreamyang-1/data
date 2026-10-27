@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import re
+from contextlib import nullcontext
 
 import httpx
 from jsonschema import Draft202012Validator
@@ -18,6 +19,16 @@ from .recognition_slot_repair import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class _NoopGeneration:
+    """trace=False 时替代 Langfuse generation 的空实现。"""
+
+    def set_response(self, _payload=None) -> None:
+        return None
+
+
+_NOOP_GENERATION = _NoopGeneration()
 
 
 _DIAGNOSTIC_PATH_LIMIT = 16
@@ -184,6 +195,10 @@ class RecognitionModelClient:
         # 识别环节允许配置更快的专用型号，缺省与意图模型保持一致。
         return self.settings.v2_recognition_model_name or self.settings.intent_model_name
 
+    @property
+    def model_name(self) -> str:
+        return self._model_name
+
     @staticmethod
     def _choice_payload(payload):
         choice = payload['choices'][0]
@@ -210,6 +225,10 @@ class RecognitionModelClient:
             'POST', '/chat/completions', headers=headers,
             json={**body, 'stream': True},
         ) as response:
+            # 4xx/5xx 时先读出响应体，外层 HTTPStatusError 处理器才能打印
+            # 具体错误原因；不预读时流式响应访问 .text 会抛 ResponseNotRead
+            if response.is_error:
+                await response.aread()
             response.raise_for_status()
             content_type = response.headers.get('content-type', '').casefold()
             if 'text/event-stream' not in content_type:
@@ -253,7 +272,8 @@ class RecognitionModelClient:
                             published_prefix = True
             return ''.join(fragments), finish_reason, refusal
 
-    async def complete(self, *, stage, instruction, context, output_model, schema=None):
+    async def complete(self, *, stage, instruction, context, output_model, schema=None,
+                       trace=True, usage_out=None, context_first=False):
         operation_suffix = {
             'v2_current_turn': 'current_turn',
             'v2_semantic_edits': 'semantic_edits',
@@ -273,6 +293,9 @@ class RecognitionModelClient:
                 output_model=output_model,
                 schema=schema,
                 timing=timing,
+                trace=trace,
+                usage_out=usage_out,
+                context_first=context_first,
             )
 
     async def _repair_current_turn_slots(self, raw, schema, context, timing):
@@ -310,6 +333,9 @@ class RecognitionModelClient:
         output_model,
         schema=None,
         timing: OperationHandle,
+        trace=True,
+        usage_out=None,
+        context_first=False,
     ):
         if not self.settings.intent_model_api_key:
             raise RecognitionFailure('V2_MODEL_NOT_CONFIGURED')
@@ -318,10 +344,19 @@ class RecognitionModelClient:
             'name': stage, 'strict': True, 'schema': schema}}
             if self.settings.intent_model_response_format == 'json_schema'
             else {'type': 'json_object'})
-        messages = [
-            {'role': 'system', 'content': instruction + '\nJSON Schema:\n' + json.dumps(schema, ensure_ascii=False)},
-            {'role': 'user', 'content': json.dumps(context, ensure_ascii=False, allow_nan=False)},
-        ]
+        contract_message = {
+            'role': 'system',
+            'content': instruction + '\nJSON Schema:\n' + json.dumps(schema, ensure_ascii=False),
+        }
+        data_message = {
+            'role': 'user',
+            'content': json.dumps(context, ensure_ascii=False, allow_nan=False),
+        }
+        # 数据在前、合同在后：Langfuse 上打开节点先看到本轮问题与上下文摘要
+        messages = (
+            [data_message, contract_message] if context_first
+            else [contract_message, data_message]
+        )
         # Never truncate away candidates, schema, evidence or scope checks.
         if len(json.dumps(messages, ensure_ascii=False)) > 250_000:
             raise RecognitionFailure('V2_RECOGNITION_CONTEXT_TOO_LARGE')
@@ -329,12 +364,19 @@ class RecognitionModelClient:
             enable_thinking=self.settings.intent_model_enable_thinking, response_format=response_format)
         headers = {'Authorization': 'Bearer ' + self.settings.intent_model_api_key.get_secret_value()}
         try:
-            # 识别模型调用接入 Langfuse，按环节区分（current_turn / semantic_edits）
-            with trace_generation(
-                name=f"v2-recognition-{str(stage).removeprefix('v2_')}",
-                model=body.get("model"),
-                messages=body.get("messages"),
-            ) as generation:
+            # 识别模型调用接入 Langfuse，按环节区分（current_turn / semantic_edits）；
+            # trace=False 时由调用方自建 generation（relation 终审要动态标注拍板模型），
+            # usage 经 usage_out 透出给调用方
+            span_context = (
+                trace_generation(
+                    name=f"v2-recognition-{str(stage).removeprefix('v2_')}",
+                    model=body.get("model"),
+                    messages=body.get("messages"),
+                )
+                if trace
+                else nullcontext(_NOOP_GENERATION)
+            )
+            with span_context as generation:
                 async with httpx.AsyncClient(base_url=self.settings.intent_model_base_url.rstrip('/'),
                         timeout=self.settings.intent_model_timeout_seconds, transport=self.transport) as client:
                     for attempt in range(self.settings.intent_model_max_retries + 1):
@@ -358,6 +400,12 @@ class RecognitionModelClient:
                                 timing.mark_first_result()
                                 payload = response.json()
                                 generation.set_response(payload)
+                                if usage_out is not None:
+                                    usage = payload.get('usage') or {}
+                                    usage_out.update({
+                                        'input_tokens': int(usage.get('prompt_tokens') or usage.get('input_tokens') or 0),
+                                        'output_tokens': int(usage.get('completion_tokens') or usage.get('output_tokens') or 0),
+                                    })
                                 content, finish_reason, refusal = self._choice_payload(payload)
                             break
                         except (httpx.TimeoutException, httpx.NetworkError):

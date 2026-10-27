@@ -82,6 +82,13 @@ def _column(reference, declared, *, role=None):
     candidates = roles.get('month', []) if role == 'month' else []
     if len(candidates) == 1 and candidates[0] in reference.columns:
         return candidates[0]
+    if isinstance(declared, str) and declared.strip():
+        # 宽松列名解析（宽松化裁决）：规划词形与 ASL 展示别名的简称/全称
+        # 方差由共享 resolve_column_loose 统一处理；无法唯一确定保持失败。
+        from minio_followup_store import resolve_column_loose
+        resolved = resolve_column_loose(declared, reference.columns)
+        if resolved is not None:
+            return resolved
     raise ValueError('计算字段未出现在指定任务的实际结果中：' + str(declared))
 
 
@@ -124,10 +131,18 @@ def _legacy_division(task, inputs):
     elif any(word in wording for word in ('覆盖率', '占比', '比例')) and len(inputs) == 2:
         scalar = [(name, data) for name, data in inputs.items() if len(data[1]) == 1]
         multi = [(name, data) for name, data in inputs.items() if len(data[1]) > 1]
-        if len(scalar) != 1 or len(multi) != 1:
+        if len(scalar) == 2:
+            # 分子分母都是1行合计（部分÷整体占比形态，如"新合作医院销售额
+            # 占12月总销售额比例"）：按依赖顺序取分子=第一个依赖、分母=第二
+            # 个依赖，与规划器"先部分后整体"的拆分顺序一致。
+            ordered = [name for name in task.depends_on if name in inputs]
+            operands = [{'source_task_id': name, 'column': _numeric_column(*inputs[name], wording)}
+                        for name in ordered]
+        elif len(scalar) != 1 or len(multi) != 1:
             return None
-        operands = [{'source_task_id': name, 'column': _numeric_column(*data, wording)}
-                    for name, data in [multi[0], scalar[0]]]
+        else:
+            operands = [{'source_task_id': name, 'column': _numeric_column(*data, wording)}
+                        for name, data in [multi[0], scalar[0]]]
     else:
         return None
     label = next((name for name in ('区域医院覆盖率', '覆盖率', '占比', '比例')
@@ -208,7 +223,13 @@ def _simple_arithmetic(binding, inputs, roles):
     if binding.get('format','number') not in {'number','percent'}:raise ValueError('不支持的计算输出格式')
     if roles==('numerator','denominator'):
         from app.numeric_operations import derive_operands
-        if any(derive_operands(step,row)[1]<=0 for row in rows):raise ValueError('计算分母必须大于零')
+        # 宽松化：分母非正的行剔除后继续算其余行；全部行无效时保持
+        # 失败契约（invalid denominator is not a success）
+        valid = [row for row in rows if derive_operands(step, row)[1] > 0]
+        if valid:
+            rows = valid
+        elif any(derive_operands(step, row)[1] <= 0 for row in rows):
+            raise ValueError('计算分母必须大于零')
     columns,rows = _steps(columns,rows,step)
     return columns,rows,step,evidence
 
@@ -242,6 +263,15 @@ def _arithmetic(binding, inputs):
         raise ValueError('缺少计算结果字段名')
     if first.dataset_id == second.dataset_id:
         columns, rows = list(first.columns), [dict(row) for row in left]
+        # 同一数据集的两路取数可能各自只带一个指标列（总额、笔数）。只保留
+        # first 的列会把分母列丢掉，最终结果表就只剩分子和计算结果。
+        for column in second.columns:
+            if column not in columns:
+                columns.append(column)
+        for row, right_row in zip(rows, right):
+            for column in second.columns:
+                if column not in row:
+                    row[column] = right_row.get(column)
         operands = [(row[left_column], row[right_column]) for row in rows]
     elif (operator == 'divide' and left and len(right) == 1
           or (len(left) == 1 and _row_scalar(first, second))
@@ -253,6 +283,16 @@ def _arithmetic(binding, inputs):
         right_scalar = forced_denominator or (len(right) == 1 and _row_scalar(second, first))
         main, source_rows = (second, right) if left_scalar and not right_scalar else (first, left)
         columns, rows = list(main.columns), [dict(row) for row in source_rows]
+        # 标量侧（如全省只有一行总额/笔数）的指标列同样要保留，
+        # 否则结果表只剩主表一侧的列和计算列，分母口径看不见。
+        scalar_rows = right if main is first else left
+        if len(scalar_rows) == 1:
+            for column, value in scalar_rows[0].items():
+                if column in columns or column.startswith('_'):
+                    continue
+                columns.append(column)
+                for row in rows:
+                    row[column] = value
         operands = [(left[0 if len(left) == 1 else index][left_column],
                      right[0 if len(right) == 1 else index][right_column]) for index in range(len(rows))]
     else:
@@ -271,6 +311,18 @@ def _arithmetic(binding, inputs):
         operands = [(row[left_column], row[right_column]) for row in rows]
     if label in columns:
         raise ValueError('计算结果不能覆盖输入字段')
+    if operator == 'divide':
+        # 宽松化：分母为零/非正的行剔除后继续算其余行；全部行无效时
+        # 走下方逐行检查保持失败契约
+        kept_rows, kept_operands = [], []
+        for row, (left_value, right_value) in zip(rows, operands):
+            right_number = numeric_value(right_value)
+            if right_number == 0 or (ratio_contract and right_number <= 0):
+                continue
+            kept_rows.append(row)
+            kept_operands.append((left_value, right_value))
+        if kept_rows:
+            rows, operands = kept_rows, kept_operands
     for row, (left_value, right_value) in zip(rows, operands):
         left_number, right_number = numeric_value(left_value), numeric_value(right_value)
         if operator == 'divide':
@@ -303,11 +355,19 @@ def _steps(columns, rows, operation):
             continue
         if step['type'] == 'derive':
             from app.numeric_operations import derive_operands
-            for row in rows:
-                operands = derive_operands(step,row)
-                if step.get('operator') in {'divide','floor_divide','modulo'} and operands[1] == 0:
+            if step.get('operator') in {'divide', 'floor_divide', 'modulo'}:
+                # 宽松化：分母为零的行剔除后继续算其余行；全部行无效时保持
+                # 失败契约（与绑定路径 _arithmetic/_simple_arithmetic 的分母
+                # 宽松化语义一致，除数为零是唯一数学未定义的分母取值）。
+                valid = [row for row in rows if derive_operands(step, row)[1] != 0]
+                if valid:
+                    rows = valid
+                elif rows:
                     from app.numeric_operations import NumericOperationError
                     raise NumericOperationError('计算除数不能为零')
+            else:
+                for row in rows:
+                    derive_operands(step, row)
         columns, rows = apply_followup_operation(columns, rows, step)
         if step['type']=='derive':
             for row in rows:numeric_value(row.get(step['result_field']))
@@ -393,25 +453,16 @@ def calculate(task, inputs, legacy_resolver):
                     input_binding['period_column'] = {'declared': declared, 'actual': actual}
             columns, rows = _steps(list(source.columns), [dict(row) for row in original_rows], operation)
         else:
-            # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
-            # 未绑定唯一依赖任务的结果操作按题面显式除法解析（上方已尝试），
-            # 仍解析不出时透传依赖数据集并告警，不再把任务打成执行失败。
-            LOGGER.warning('computation passthrough task=%r 结果操作未绑定唯一依赖任务，透传依赖数据集',
-                           task.question[:120])
-            columns, rows = aligned_input(list(inputs.values()))
-            operation = {'type': 'select', 'columns': list(columns)}
-            input_binding = {dep: {'dataset_id': ref.dataset_id}
-                             for dep, (ref, _) in inputs.items()}
+            # 已声明的核心结果操作必须绑定到唯一输入，不能把未完成计算
+            # 伪装成一次 select 透传。
+            raise ValueError('结果操作未绑定唯一依赖任务，核心计算未完成')
     else:
         columns, rows = aligned_input(list(inputs.values()))
         operation = legacy_resolver(task.question, columns, rows, source_complete=True)
         if operation is None:
-            # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
-            # 没有可执行公式或结果操作时透传依赖任务数据集，不再把任务
-            # 打成执行失败；计算缺失只留告警，不影响其他任务。
-            LOGGER.warning('computation passthrough task=%r 无可执行公式，透传依赖数据集',
-                           task.question[:120])
-            operation = {'type': 'select', 'columns': list(columns)}
+            # 核心计算没有实际运算时必须失败；前序查询可由上游作为受限
+            # 证据保留，但不能冒充本任务的计算交付物。
+            raise ValueError('计算任务缺少可执行公式，核心计算未完成')
         columns, rows = _steps(columns, rows, operation)
         input_binding = {name: {'dataset_id': ref.dataset_id} for name, (ref, _) in inputs.items()}
     # Structured ranking belongs to the same calculation, even when its prose

@@ -14,14 +14,13 @@ import copy
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import Settings
-from app.decision.domain_decider import apply_jev_domain_override
 from app.domain.models import (
     AtomicTask,
     PlannerExtraction,
@@ -122,6 +121,10 @@ class CompoundJudgment:
     final_deliverable: str | None = None
     # 判断方式：STRUCTURED_MODEL 或 DETERMINISTIC_RULE
     judge_source: str = "STRUCTURED_MODEL"
+    # 字段覆盖度结论：口径已定义 / 口径未定义；未定义时给出具体字段名
+    schema_coverage: str = "口径已定义"
+    unsupported_fields: tuple[str, ...] = ()
+    analysis_routes: tuple[str, ...] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -186,11 +189,21 @@ class _JudgeResult(BaseModel):
         "MUTUALLY_EXCLUSIVE_BUSINESS_BRANCHES, or COMPOSITE_REPORT_FACETS 之一",
     )
     shared_conditions: list[str] = Field(default_factory=list, max_length=20)
+    schema_coverage: str = Field(
+        default="口径已定义",
+        max_length=20,
+        description="必填；查询所需字段是否全部被业务语义规范定义：口径已定义 或 口径未定义",
+    )
+    unsupported_fields: list[str] = Field(
+        default_factory=list,
+        max_length=20,
+        description="schema_coverage为口径未定义时必填；语义上无法匹配到业务语义规范中任何项的属性、指标或维度名称",
+    )
 
 
 _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输出符合JSON Schema的JSON，不回答用户问题，不调用工具。
 
-你的职责：判断用户问题是一个可单独验收的业务目标（单一问题），还是多个完全独立、需要分别交付的业务目标（复合问题）；同时对每个问题（或单一问题本身）识别问题意图和所属业务域。不做参数提取，不做执行层的任务拆解，这些由后续环节完成。
+你的职责：判断用户问题是一个可单独验收的业务目标（单一问题），还是多个完全独立、需要分别交付的业务目标（复合问题）；同时对每个问题（或单一问题本身）识别问题意图和所属业务域，并检查查询所需字段是否被业务语义规范覆盖（口径未定义判断）。不做参数提取，不做执行层的任务拆解，这些由后续环节完成。
 
 复合问题的判定标准：多个业务目标完全独立，各自都能单独验收，互相不消费对方的结果。只要其中一个目标需要使用另一个目标返回的名单、范围、排名或计算结果，就说明它们共同构成一个业务目标，属于单一问题，由后续任务拆解环节处理，不在这里拆分。
 
@@ -216,29 +229,27 @@ _JUDGE_SYSTEM_PROMPT = """你是数据智能体的问题拆分判断器。只输
 10. “前N名销售人员以及所属公司”等同一对象的唯一关联属性，不是额外的分组目标；把关联属性保留在查询的展示字段中。任何用户要求返回的属性不得遗漏。
 
 问题意图枚举（intent字段从中选择最贴合的一个，只输出枚举名本身）：
-指标查询、明细查询、趋势分析、对比分析、占比分析、解释口径、闲聊、非数据任务。
+指标查询、明细查询、趋势分析、对比分析、占比分析、异常分析、归因分析、预测分析、解释口径、闲聊、非数据任务。
+
+同比环比判定补充：问题含同比、环比、同期比等期间对比措辞时，两期对比（如"11月环比10月""今年同比去年"）intent输出对比分析，不输出趋势分析；落在多期时间序列上的逐期同比/环比（带时间范围或各月、逐期等序列措辞，如"各月环比变化情况""近6个月同比增长趋势"）intent输出趋势分析，多期序列的逐期计算由趋势链路承载，不属于两期对比。
 
 极值判定补充：问题按最高、最低、最快、最慢等极值挑出某个对象或订单（如"哪个订单的均价最低"）时，intent输出明细查询，不输出指标查询；极值不存在大于/小于的门槛数值，不属于阈值筛选。极值依据的数值口径由后续环节处理：口径是业务语义规范中已注册指标的，提取环节把该指标写入指标通道并按登记口径计算后排序取最值；未注册的口径按明细列排序加行数限制实现。
 
 业务域（business_domain）从注入的业务语义规范中识别，输出业务域名称（如“医药销售域”）；规范中识别不到时输出null。
+
+字段覆盖度检查规则（schema_coverage与unsupported_fields的输出依据）：
+1. 只检查问题中明确要求的属性、指标、维度三类要素；关系、筛选值、计算方式不在检查范围。
+2. 匹配按语义不按字面：问题用语与规范项存在措辞差异（修饰词增减、语序变化、口语化表达）时，按语义相似判断是否指向同一业务概念，能判定为同一概念即为口径已定义。例如规范定义了"合作科室"，问题说"合作综合科室"，两者指向同一业务概念，按口径已定义处理。
+3. 同义词、别名、上下位、衍生计算、规范关系路径同样按已定义处理。
+4. 只有语义上确实对应不到规范内任何项（规范中没有该业务概念）时，schema_coverage才输出口径未定义，unsupported_fields逐个列出对应不上的名称；任一子问题存在未定义要素即判口径未定义，全部并入unsupported_fields。
+5. 不得把未定义要素臆造为规范字段；商品名称、厂家名称等具体值与品牌、品类等独立维度不是同一概念，前者不构成对后者的语义匹配；不得因字段未定义而改变复合/单一判断或问题意图。
+6. 要素未定义不代表问题无法回答：规范内可替代的字段不影响本判断，只判断用户明确要求的要素是否有对应概念。
 
 子问题生成规则：
 1. 每个子问题必须是自然、完整、可独立理解和执行的业务问题。补全原句中对该子问题生效的产品、地区、指标、时间、筛选、排序及排除条件，不保留只有“另一个、上述条件”等内容的空泛指代。
 2. 只允许复用用户原文明确提供的事实和共享条件；不得创造指标、日期、数量、业务对象、筛选值、口径或数据库字段，不负责替用户消除业务歧义。
 3. 子问题之间完全独立，不互相消费结果。保持用户目标的原始顺序，不重复、不遗漏，子问题总数为2到5。若无需拆分，split输出false且sub_questions输出空数组。
 4. 拆分时analyze_summary必填：一句面向用户的话说明子问题结构，子问题相互独立可并行，用“问题N”指代，不描述内部技术步骤。
-
-判定示例：
-- “查询空心纤维血液透析器合作的经销商名单。查询外周插管中心静脉导管合作的医院名单。” → split=true，两个并行子问题，均补全各自产品和返回对象。
-- “查询TDC-3产品的主要适用科室和次要适用科室。” → split=true，两个并行子问题，均保留TDC-3。
-- “查询空心纤维血液透析器合作的经销商和医院名单。” → split=true，因为返回对象和关系结果不同。
-- “找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院。” → split=false：后一步消费前一步名单，是一个业务目标，由任务拆解环节处理。
-- “分别查询今年和去年上海市销售额，并比较同比变化。” → split=false：比较依赖两份查询结果，是一个业务目标。
-- “查询订单笔数大于5笔的经销商名单。” → split=false：阈值筛选是执行细节，是一个业务目标。
-- “2025年上海市平均每单销售金额是多少。” → split=false：平均每单销售金额是规范登记的复合口径指标，可直接查询。
-- “查看上海各经销商科室业务匹配度。” → split=false：科室业务匹配度与规范内任何指标都无关且无法派生，不拆分，后续环节按指标口径解释处理。
-- “统计各经销商近12月的平均月度销量增长率。” → split=false：平均月度销量增长率由规范内指标“销量”派生，属于一个可验收目标。
-- “分析费森尤斯产品在上海市和江苏省最近一年的销售趋势。” → split=false。
 """
 
 
@@ -1100,11 +1111,72 @@ class MetricSubstitutionDetected(RuntimeError):
 
 
 def _analysis_goal_label(label, question):
-    from app.analysis.intents import LABELS, analysis_goals
-    goals = analysis_goals(question)
-    if goals and (not label or label in LABELS.values() or label == '指标查询'):
-        return '、'.join(LABELS[intent] for intent in goals)
+    # The model label is authoritative; question text cannot overwrite it.
     return (label or '').strip() or None
+
+
+COVERAGE_DEFINED = "口径已定义"
+COVERAGE_UNDEFINED = "口径未定义"
+
+
+def _normalize_schema_coverage(value) -> str:
+    """模型可能照平台模板输出英文枚举，归一到中文结论；无法识别按已定义处理。"""
+    text = str(value or "").strip()
+    if text in (COVERAGE_UNDEFINED, "未覆盖", "not_covered"):
+        return COVERAGE_UNDEFINED
+    return COVERAGE_DEFINED
+
+
+
+def _validate_model_routes(judgment, routes):
+    from app.analysis.tools.registry import chain_for_intent, CHAINS
+    from app.analysis.intents import primary_intent_from_label
+    allowed = set(routes)
+    entries = judgment.entries if judgment.is_compound else (judgment,)
+    observed = set()
+    for item in entries:
+        intent = primary_intent_from_label(item.intent)
+        chain = chain_for_intent(intent)
+        if chain is not None:
+            observed.add(chain)
+    if observed != allowed:
+        if observed and observed.issubset(allowed):
+            # 判断模型未引入未确认链路，只是按更少的链路组织任务（如把
+            # "对比A、B各季度趋势"判成按业态分组的单一趋势）。按其结构执行，
+            # 确认后未被覆盖的链路本轮不落地。
+            logger.warning(
+                "compound judge covered subset of confirmed routes: routes=%s observed=%s",
+                sorted(allowed), sorted(observed))
+            return replace(judgment, analysis_routes=tuple(routes))
+        if len(allowed) != 1 or len(observed) != 1:
+            raise TaskPlanningError('ANALYSIS_ROUTE_CHANGED_AFTER_COMPLETION:' + str(sorted(allowed)) + '->' + str(sorted(observed)))
+        # 补全阶段确认的链路是权威路由。判断模型偶尔会按问句字面把意图
+        # 标成另一条链路（如两期份额变化标成对比）；单链路冲突时改回已确认
+        # 链路的意图标签继续执行，空集或跨多链路冲突无法确定性对齐，仍按合同失败。
+        confirmed = next(iter(allowed))
+        confirmed_label = CHAINS[confirmed][0]
+        logger.warning(
+            "compound judge relabeled to confirmed chain: routes=%s observed=%s label=%s",
+            sorted(allowed), sorted(observed), confirmed_label)
+        if judgment.is_compound:
+            entries = tuple(
+                replace(entry, intent=confirmed_label)
+                if chain_for_intent(primary_intent_from_label(entry.intent)) not in allowed
+                and chain_for_intent(primary_intent_from_label(entry.intent)) is not None
+                else entry
+                for entry in judgment.entries)
+            judgment = replace(judgment, entries=entries)
+        else:
+            judgment = replace(judgment, intent=confirmed_label)
+    return replace(judgment, analysis_routes=tuple(routes))
+
+
+def _analysis_planning_kwargs(judgment, intent):
+    from app.analysis.tools.registry import chain_for_intent
+    chain = chain_for_intent(intent)
+    if judgment.analysis_routes is not None and chain in judgment.analysis_routes:
+        return {'analysis_chain': chain}
+    return {}
 
 
 class CompoundQuestionJudge:
@@ -1125,6 +1197,7 @@ class CompoundQuestionJudge:
         *,
         semantic_context: str = "",
         semantic_model_id: int | None = None,
+        analysis_routes: list[str] | None = None,
     ) -> CompoundJudgment:
         """判断问题是否复合。判断模型失败时落确定性规则，规则也拆不出按单一处理。"""
         if (
@@ -1138,32 +1211,42 @@ class CompoundQuestionJudge:
                         question,
                         semantic_context=semantic_context,
                         semantic_model_id=semantic_model_id,
+                        **({'analysis_routes': analysis_routes} if analysis_routes is not None else {}),
                     )
+                    from app.analysis.tools.registry import chain_for_intent
+                    from app.analysis.intents import primary_intent_from_label
+                    if not judgment.is_compound and not analysis_routes and chain_for_intent(primary_intent_from_label(judgment.intent)) is None:
+                        # Frozen ordinary-query dependency repair. This cannot
+                        # introduce an analysis chain or select any analysis tool.
+                        precise=_ranked_relation_plan(question) or _parallel_ranking_plan(question)
+                        if precise is not None and all(chain_for_intent(task.primary_intent) is None for task in precise.tasks):
+                            validate_plan(precise,source_question=question)
+                            result=self._judgment_from_rule_plan(precise)
+                            return replace(result,analysis_routes=tuple(analysis_routes)) if analysis_routes is not None else result
+                    if analysis_routes is not None:
+                        return _validate_model_routes(judgment, analysis_routes)
                     if not judgment.is_compound:
-                        # 模型判单一是权威的，但三类结构明确的规则仍可胜出：
-                        # 排名+关系依赖、双排名并行、多分析面报告。
-                        precise = (
-                            _ranked_relation_plan(question)
-                            or _parallel_ranking_plan(question)
-                            or _report_plan(
-                                question, max_tasks=self.settings.multi_question_max_tasks
-                            )
-                        )
-                        if precise is not None:
-                            validate_plan(precise, source_question=question)
-                            return self._judgment_from_rule_plan(precise)
                         return judgment
                     plan = _plan_from_judgment(judgment)
                     validate_plan(plan, source_question=question)
                     return judgment
                 except (httpx.HTTPError, KeyError, ValueError, RuntimeError,
-                        json.JSONDecodeError, TaskPlanningError):
+                        json.JSONDecodeError, TaskPlanningError) as exc:
                     # 传输、Schema 或落地校验失败先整体重试一次，仍失败才落规则
+                    logger.warning(
+                        "compound judge attempt failed: routes=%s attempt=%s error=%r",
+                        analysis_routes, attempt, exc)
                     if attempt == 1:
                         break
+        if analysis_routes is not None or (self.settings.intent_model_enabled
+            and self.settings.multi_question_model_enabled and self.settings.intent_model_api_key):
+            raise TaskPlanningError("模型意图合同未通过校验；未退回关键词路由")
         rule_plan = rule_split_plan(question, max_tasks=self.settings.multi_question_max_tasks)
         if rule_plan is None:
             return CompoundJudgment(is_compound=False, judge_source="DETERMINISTIC_RULE")
+        from app.analysis.tools.registry import chain_for_intent
+        if any(chain_for_intent(task.primary_intent) is not None for task in rule_plan.tasks):
+            raise TaskPlanningError('MODEL_ANALYSIS_ROUTING_REQUIRED')
         validate_plan(rule_plan, source_question=question)
         return self._judgment_from_rule_plan(rule_plan)
 
@@ -1194,6 +1277,7 @@ class CompoundQuestionJudge:
         *,
         semantic_context: str = "",
         semantic_model_id: int | None = None,
+        analysis_routes: list[str] | None = None,
     ) -> CompoundJudgment:
         from app.domain.semantic_description import load_semantic_description
 
@@ -1210,8 +1294,19 @@ class CompoundQuestionJudge:
             semantic_context = semantic_context[:prior_start].rstrip()
 
         schema = _JudgeResult.model_json_schema()
-        system_content = _JUDGE_SYSTEM_PROMPT
-        # 语义规范只用于识别复合指标、业务对象这类需要按规范拆分的形态；
+        from app.analysis.coverage import GUIDANCE
+        system_content = _JUDGE_SYSTEM_PROMPT + '\n' + GUIDANCE
+        if analysis_routes is None:
+            from app.analysis.tools.registry import recognition_directory, ROUTING_INSTRUCTION
+            system_content += '\n分析链路与工具名称：' + json.dumps(recognition_directory(), ensure_ascii=False)
+            system_content += '\n依据上述目录语义判断意图，不按时间词或关键词猜测链路。'
+        if analysis_routes is not None:
+            from app.analysis.tools.registry import CHAINS
+            system_content += "\n补全模型已确认的分析链路：" + json.dumps(
+                [{"chain_id": key, "intent": CHAINS[key][0]} for key in analysis_routes], ensure_ascii=False)
+            system_content += ("。分析链路不得重判，不得遗漏或新增。普通查询不要求分析。"
+                "多条链路拆成各自独立交付子问题，分别保留适用条件；本阶段不选工具参数。\n")
+        # 语义规范用于复合指标识别、业务域判定与字段覆盖度检查；
         # 注入链路与参数提取一致：远程描述文件 > 平台粘贴段 > 内置兜底。
         reference = await load_semantic_description(self.settings, semantic_model_id)
         remote_spec = (
@@ -1220,15 +1315,9 @@ class CompoundQuestionJudge:
             else ""
         )
         if remote_spec:
-            system_content += (
-                "\n业务语义规范（仅用于识别需要按规范拆分的复合指标与业务对象）：\n"
-                + remote_spec + "\n"
-            )
+            system_content += "\n业务语义规范：\n" + remote_spec + "\n"
         elif semantic_context.strip():
-            system_content += (
-                "\n业务语义规范（仅用于识别需要按规范拆分的复合指标与业务对象）：\n"
-                + semantic_context + "\n"
-            )
+            system_content += "\n业务语义规范：\n" + semantic_context + "\n"
         if prior_block:
             system_content += "\n" + prior_block + "\n"
         system_content += general_rules
@@ -1272,14 +1361,26 @@ class CompoundQuestionJudge:
         if not content:
             raise ValueError("compound judge returned empty content")
         result = _JudgeResult.model_validate(json.loads(_strip_json_fences(content)))
+        from app.analysis.coverage import source_field_gaps
+        schema_coverage = _normalize_schema_coverage(result.schema_coverage)
+        from app.analysis.intents import primary_intent_from_label, analysis_goals
+        model_intents = (analysis_goals(routes=analysis_routes) if analysis_routes is not None
+            else [primary_intent_from_label(item.intent) for item in result.sub_questions]
+            if result.split else [primary_intent_from_label(result.intent)])
+        unsupported_fields = source_field_gaps(question, result.unsupported_fields, intents=model_intents)
+        if schema_coverage == COVERAGE_UNDEFINED and not unsupported_fields:
+            # 未定义结论必须带具体字段名，否则中断话术没有可报内容，按已定义处理
+            schema_coverage = COVERAGE_DEFINED
         judgment: CompoundJudgment
         if not result.split:
             if result.sub_questions:
                 raise ValueError("single decision must not contain sub questions")
             judgment = CompoundJudgment(
                 is_compound=False,
-                intent=_analysis_goal_label(result.intent, question),
+                intent=(result.intent if analysis_routes is not None else _analysis_goal_label(result.intent, question)),
                 business_domain=(result.business_domain or "").strip() or None,
+                schema_coverage=schema_coverage,
+                unsupported_fields=unsupported_fields,
             )
         else:
             if len(result.sub_questions) < 2:
@@ -1288,7 +1389,7 @@ class CompoundQuestionJudge:
                 CompoundJudgmentEntry(
                     question=item.question.strip(),
                     label=(item.label.strip() if item.label and item.label.strip() else None),
-                    intent=_analysis_goal_label(item.intent, item.question),
+                    intent=(item.intent if analysis_routes is not None else _analysis_goal_label(item.intent, item.question)),
                     business_domain=(item.business_domain or "").strip() or None,
                     expected_output=(
                         item.expected_output.strip()
@@ -1305,14 +1406,9 @@ class CompoundQuestionJudge:
                 analyze_summary=summary,
                 split_reason_code=(result.split_reason_code or "").strip() or None,
                 shared_conditions=tuple(dict.fromkeys(result.shared_conditions)),
+                schema_coverage=schema_coverage,
+                unsupported_fields=unsupported_fields,
             )
-        # jev 业务域终审：候选取业务域总览表，置信度达标覆写，失败保留判断器原值
-        try:
-            judgment = await apply_jev_domain_override(
-                self.settings, judgment, question, remote_spec or semantic_context
-            )
-        except Exception:
-            logger.warning("jev domain override failed in compound judge", exc_info=True)
         return judgment
 
 
@@ -1340,6 +1436,7 @@ class CompoundTaskPlanner:
         semantic_context: str = "",
         semantic_model_id: int | None = None,
         root_intent: PrimaryIntent | None = None,
+        intents_locked: bool = False,
     ) -> TaskPlan:
         if not judgment.is_compound or len(judgment.entries) < 2:
             raise TaskPlanningError("复合规划需要至少两个子问题")
@@ -1347,20 +1444,29 @@ class CompoundTaskPlanner:
         # 结构节点必须先于并行分支登记：子任务各自拷贝上下文，节点在
         # 并行前登记，各子问题规划才能挂到同一个任务拆分与规划节点下
         ensure_structural_span("task_planning", name="任务拆分与规划")
-        from app.planning.compat import recognized_planning_intent, inherit_recognized_intent
+        from app.analysis.intents import primary_intent_from_label
+        entry_intents = [
+            primary_intent_from_label(entry.intent) or root_intent
+            for entry in judgment.entries
+        ]
+        if intents_locked and any(intent is None for intent in entry_intents):
+            raise TaskPlanningError("复合问题的每个子问题都必须携带上游意图")
         decompositions = await asyncio.gather(*(
             self._single.plan_question(
                 entry.question,
                 semantic_context=semantic_context,
                 semantic_model_id=semantic_model_id,
-                root_intent=recognized_planning_intent(entry, root_intent),
+                root_intent=entry_intent,
+                **_analysis_planning_kwargs(judgment, entry_intent),
             )
-            for entry in judgment.entries
+            for entry, entry_intent in zip(judgment.entries, entry_intents, strict=True)
         ))
         tasks: list[AtomicTask] = []
         question_groups: list[QuestionTaskGroup] = []
         group_terminals: list[list[str]] = []
-        for entry, decomposition in zip(judgment.entries, decompositions):
+        for entry, entry_intent, decomposition in zip(
+            judgment.entries, entry_intents, decompositions, strict=True,
+        ):
             offset = len(tasks)
             entry_tasks = decomposition.tasks
             if not entry_tasks:
@@ -1368,16 +1474,37 @@ class CompoundTaskPlanner:
                 entry_tasks = (
                     DecomposedTask(question=entry.question),
                 )
-            from app.planning.analysis_task_planner import build_analysis_task_plan, standardize_period_analysis_plan
-            expanded = standardize_period_analysis_plan(entry.question, decomposition)
+            from app.planning.analysis_task_planner import (
+                ANALYSIS_PLAYBOOKS, build_analysis_task_plan,
+                normalize_analysis_task_plan, standardize_period_analysis_plan,
+                validate_task_plan_execution_contract,
+            )
+            from app.analysis.tools.compiler import compile_decomposition
+            expanded = compile_decomposition(entry.question, decomposition)
+            if expanded is None:
+                expanded = standardize_period_analysis_plan(entry.question, decomposition)
             if expanded is None and len(entry_tasks) == 1 and not entry_tasks[0].depends_on:
                 original = entry_tasks[0]
                 expanded = build_analysis_task_plan(entry.question, PlannerExtraction(
                     intent=original.intent or decomposition.intent,
                     parameters=list(original.parameters), structured=original.structured),
                     task_question=original.question, task_name=original.name)
+            if expanded is None and entry_intent in ANALYSIS_PLAYBOOKS and len(entry_tasks) >= 2:
+                candidate = TaskPlan(tasks=[
+                    AtomicTask(
+                        task_id=f"task-{index + 1}", question=task.question,
+                        name=task.name,
+                        depends_on=[f"task-{dependency + 1}" for dependency in task.depends_on],
+                        expected_output=task.expected_output,
+                        parameters=list(task.parameters), extraction=task.structured,
+                        primary_intent=task.intent or decomposition.intent,
+                    )
+                    for index, task in enumerate(entry_tasks)
+                ], planner="STRUCTURED_MODEL")
+                expanded = normalize_analysis_task_plan(entry.question, candidate, entry_intent)
             if expanded is not None:
-                inherit_recognized_intent(recognized_planning_intent(entry, root_intent), plan=expanded)
+                validate_task_plan_execution_contract(expanded, entry_intent)
+            if expanded is not None:
                 indexes = {task.task_id: index for index, task in enumerate(expanded.tasks)}
                 entry_tasks = tuple(DecomposedTask(question=task.question, name=task.name,
                     depends_on=tuple(indexes[dep] for dep in task.depends_on),
@@ -1603,14 +1730,13 @@ class CompoundQuestionRouter:
         semantic_context: str = "",
         semantic_model_id: int | None = None,
         root_intent: PrimaryIntent | None = None,
+        intents_locked: bool = False,
     ) -> CompoundRouteResult:
         """按既有判断结论分发：复合走 CompoundTaskPlanner，单一走 SingleQuestionPlanner。
 
         root_intent 是意图识别节点的根意图，透传给全部任务拆解，
         规划阶段不再做意图判断。
         """
-        from app.planning.compat import recognized_planning_intent
-        root_intent = recognized_planning_intent(judgment, root_intent)
         if judgment.is_compound:
             try:
                 plan = await self._planner.plan(
@@ -1619,6 +1745,7 @@ class CompoundQuestionRouter:
                     semantic_context=semantic_context,
                     semantic_model_id=semantic_model_id,
                     root_intent=root_intent,
+                    intents_locked=intents_locked,
                 )
             except MetricSubstitutionDetected:
                 # 概念词被误拆成统计+计算：整个拆分作废，
@@ -1647,6 +1774,7 @@ class CompoundQuestionRouter:
         semantic_context: str = "",
         semantic_model_id: int | None = None,
         root_intent: PrimaryIntent | None = None,
+        intents_locked: bool = False,
     ) -> CompoundRouteResult:
         judgment = await self.judge_only(
             question,
@@ -1659,6 +1787,7 @@ class CompoundQuestionRouter:
             semantic_context=semantic_context,
             semantic_model_id=semantic_model_id,
             root_intent=root_intent,
+            intents_locked=intents_locked,
         )
 
     async def _route_single(
@@ -1670,12 +1799,21 @@ class CompoundQuestionRouter:
         semantic_model_id: int | None = None,
         root_intent: PrimaryIntent | None = None,
     ) -> CompoundRouteResult:
+        if root_intent is None:
+            from app.analysis.intents import primary_intent_from_label
+            root_intent = primary_intent_from_label(judgment.intent)
         decomposition = await self._single.plan_question(
             question,
             semantic_context=semantic_context,
             semantic_model_id=semantic_model_id,
             root_intent=root_intent,
+            **_analysis_planning_kwargs(judgment, root_intent),
         )
+        from app.analysis.tools.compiler import compile_decomposition
+        catalog_plan = compile_decomposition(question, decomposition)
+        if catalog_plan is not None:
+            validate_plan(catalog_plan, source_question=question)
+            return CompoundRouteResult(judgment=judgment, plan=catalog_plan)
         if len(decomposition.tasks) <= 1:
             first = next(iter(decomposition.tasks), None)
             outcome = PlannerOutcome(

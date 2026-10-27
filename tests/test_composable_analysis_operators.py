@@ -71,6 +71,50 @@ def test_structural_shift_reconciles_share_changes_to_zero():
     assert result.facts["share_change_residual"] == pytest.approx(0)
 
 
+def test_structural_shift_uses_bound_metric_and_display_dimension():
+    request = CanonicalAnalysisRequest(
+        conversation_id="c", tenant_id="t", user_id="u",
+        original_question="仅分析各渠道业态含税销售总额的份额变化",
+        primary_intent=PrimaryIntent.COMPOSITION_ANALYSIS,
+        metrics=[{"input": "含税销售总额", "canonical_name": "含税销售总额"}],
+        dimensions=["渠道业态"],
+    )
+    columns = ["期间", "period_role", "渠道业态", "渠道业态（编码）", "含税销售总额"]
+    rows = [
+        {"期间": "2025年11月", "period_role": "BASE", "渠道业态": "线上", "渠道业态（编码）": 1, "含税销售总额": 60},
+        {"期间": "2025年11月", "period_role": "BASE", "渠道业态": "线下", "渠道业态（编码）": 2, "含税销售总额": 40},
+        {"期间": "2025年12月", "period_role": "CURRENT", "渠道业态": "线上", "渠道业态（编码）": 1, "含税销售总额": 90},
+        {"期间": "2025年12月", "period_role": "CURRENT", "渠道业态": "线下", "渠道业态（编码）": 2, "含税销售总额": 10},
+    ]
+    output = AnalysisEngine().analyze(
+        request, columns, rows, KnowledgeContext(query=request.original_question),
+    )
+    assert output.method == "structural_share_shift"
+    assert output.facts["value_column"] == "含税销售总额"
+    assert output.facts["dimension_column"] == "渠道业态"
+    assert output.facts["shifts"][0]["share_change"] == pytest.approx(0.3)
+
+
+def test_structural_shift_uses_period_union_and_discloses_absent_members():
+    result = REGISTRY.execute(
+        "structural_share_shift",
+        ["期间", "period_role", "渠道", "渠道（编码）", "含税销售总额"],
+        [
+            {"期间": "11月", "period_role": "BASE", "渠道": "存续", "渠道（编码）": 1, "含税销售总额": 50},
+            {"期间": "11月", "period_role": "BASE", "渠道": "退出", "渠道（编码）": 2, "含税销售总额": 50},
+            {"期间": "12月", "period_role": "CURRENT", "渠道": "存续", "渠道（编码）": 1, "含税销售总额": 50},
+            {"期间": "12月", "period_role": "CURRENT", "渠道": "新增", "渠道（编码）": 3, "含税销售总额": 50},
+        ],
+        metric="含税销售总额", dimension="渠道",
+    )
+    shifts = {item["label"]: item for item in result.facts["shifts"]}
+    assert shifts["退出"]["current_share"] == 0
+    assert shifts["新增"]["base_share"] == 0
+    assert result.facts["share_change_residual"] == pytest.approx(0)
+    assert len(result.facts["missing_period_members"]) == 2
+    assert "退出" in result.warnings[0] and "新增" in result.warnings[0]
+
+
 def test_contribution_operator_ranks_absolute_effect_and_marks_non_causal():
     result = REGISTRY.execute("dimension_contribution_decomposition", [
         "区域", "销售额贡献"

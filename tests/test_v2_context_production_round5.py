@@ -122,7 +122,7 @@ async def test_discovery_cap_and_scope_before_recognition(catalog):
     steps=[metric_step('销售额') for _ in range(7)];engine,_=planner(catalog,steps);bases=await turns(engine,steps)
     session=ScopedPlanSession(request(message_id='next'),IDENTITY,catalog[0])
     discovered=discover_context(session,state=bases[-1].next_state,plans=tuple(b.plan_state for b in bases))
-    assert len(discovered.model_context['candidate_tasks'])==4
+    assert len(discovered.model_context['candidate_tasks'])==6
     assert discovered.model_context['candidate_tasks'][0]['task_id']=='task:turn6'
     crossed=bases[-1].next_state
     scope=crossed.context.authorized_scope.model_copy(update={'semantic_model_id':82})

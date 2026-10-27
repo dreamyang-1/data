@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     # fail-closed execution-scope handling are unchanged.
     demo_mode: bool = False
     surface_asl_execution_enabled: bool = False
+    # Internal two-stage capability catalog; never changes API or semantic scope.
+    analysis_tool_catalog_enabled: bool = True
     # Public thinking/progress text uses the same SSE ``message_chunk``
     # contract as the final answer.  These settings control presentation only;
     # model, ASL and SQL stages continue to consume complete validated values.
@@ -238,6 +240,34 @@ class Settings(BaseSettings):
     # V2 对话状态识别专用模型；不配置时回退 intent_model_name。
     # 识别调用每轮必发且 prompt 随核心指令变长，可以用更快的型号压首屏时延。
     v2_recognition_model_name: str | None = None
+    # 结构化参数提取单独使用的模型，不配置时回退 intent_model_*。
+    # 只影响任务参数提取这一处调用，意图识别、复合问题判断保持原模型。
+    extraction_model_base_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_EXTRACTION_MODEL_BASE_URL", "EXTRACTION_MODEL_BASE_URL"
+        ),
+    )
+    extraction_model_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_EXTRACTION_MODEL_API_KEY", "EXTRACTION_MODEL_API_KEY"
+        ),
+    )
+    extraction_model_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_EXTRACTION_MODEL_NAME", "EXTRACTION_MODEL_NAME"
+        ),
+    )
+    # 网关协议：openai 走 /chat/completions；workflow_chat 走平台
+    # /chat/workflow_chat（返回 SSE 形式的 answer 文本）
+    extraction_model_protocol: Literal["openai", "workflow_chat"] = Field(
+        default="openai",
+        validation_alias=AliasChoices(
+            "DATA_AGENT_EXTRACTION_MODEL_PROTOCOL", "EXTRACTION_MODEL_PROTOCOL"
+        ),
+    )
     intent_model_response_format: Literal["json_schema", "json_object"] = "json_object"
     intent_model_timeout_seconds: float = Field(default=30, gt=0, le=60)
     intent_model_max_retries: int = Field(default=1, ge=0, le=2)
@@ -255,6 +285,44 @@ class Settings(BaseSettings):
             "CLARIFICATION_DECIDER_ENABLED",
         ),
     )
+    # jev 决策模型（TypeSafe SystemOne）：门控判定与状态识别共用。
+    # 出网走本机反向隧道，可用性随隧道波动，调用失败一律静默回退原判定。
+    jev_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("DATA_AGENT_JEV_ENABLED", "JEV_ENABLED"),
+    )
+    jev_relation_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_JEV_RELATION_ENABLED",
+            "DATA_AGENT_JEV_STATE_SHADOW_ENABLED",
+            "JEV_RELATION_ENABLED",
+        ),
+    )
+    jev_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATA_AGENT_JEV_API_KEY", "JEV_API_KEY"),
+    )
+    jev_model: str = "jev-1.13.0"
+    jev_base_url: str = "https://api.typesafe.ai/v1/systemone"
+    # 空串=直连；默认指向 Windows 侧自由猫的 SSH 反向隧道入口
+    jev_proxy: str = "http://127.0.0.1:17890"
+    jev_min_confidence: float = Field(default=0.8, ge=0, le=1)
+    jev_timeout_seconds: float = Field(default=3.0, gt=0, le=30)
+    # 问题理解与补全前置门控：进理解节点前先按门控提示词判定六分类，
+    # 闲聊/危险/非业务/待定短路回复，业务类放行。默认关闭。判定模型由
+    # gate_judge 选择：jev 为结构化选项判定，失败、低置信、危险复核时
+    # 回退 qwen 全提示词；qwen 为直接使用全提示词判定。
+    gate_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("DATA_AGENT_GATE_ENABLED", "GATE_ENABLED"),
+    )
+    gate_judge: str = Field(
+        default="jev",
+        validation_alias=AliasChoices("DATA_AGENT_GATE_JUDGE", "GATE_JUDGE"),
+    )
+    # 门控语义规范按 model_id 拉取后的进程内缓存时长，避免每轮请求都查库下载
+    gate_spec_cache_seconds: int = Field(default=300, ge=30, le=3600)
     multi_question_enabled: bool = True
     multi_question_model_enabled: bool = True
     multi_question_max_tasks: int = Field(default=5, ge=2, le=5)

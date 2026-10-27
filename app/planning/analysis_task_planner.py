@@ -9,13 +9,13 @@
 from __future__ import annotations
 
 import copy
+import calendar
 import re
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from app.analysis.chain_tools.temporal_window import (
     disjunctive_periods_to_range,
-    has_yoy_signal,
     parse_absolute_range,
 )
 from app.domain.models import (
@@ -87,7 +87,7 @@ _RELATIVE_RANK = {
 
 
 # 时间类维度不是业务分组：拼进任务文本会被下游误绑成业务值
-# （实测"查询2025年10月各业务日期的X"被绑成商品名称过滤值）
+# （如"查询2025年10月各业务日期的X"会被绑成商品名称过滤值）
 _TIME_DIMENSION_WORDS = {
     "业务日期", "日期", "时间", "月份", "月", "年份", "年", "季度", "周",
     "星期", "日", "半年", "period", "date", "time", "month", "year", "quarter", "week",
@@ -187,6 +187,9 @@ def _comparison_periods(question: str) -> list[tuple[str, tuple[int, int]]] | No
 def _retrieval_extraction(structured: dict[str, Any], **overrides: Any) -> dict[str, Any]:
     cloned = copy.deepcopy(structured)
     cloned.pop(_ANALYSIS_BINDING_KEY, None)
+    cloned.pop("计算绑定", None)
+    cloned.pop("计算绑定来源", None)
+    cloned.pop("结果操作", None)
     cloned["意图"] = "指标查询"
     cloned["是否查询数据库"] = "是"
     for key, value in overrides.items():
@@ -229,7 +232,31 @@ def _display_window_start_label(time_range: str) -> str | None:
     return bounds[0][:7]
 
 
+def _plain_period_text(time_text: str) -> str:
+    """ISO区间粘连"各维度"时会被下游解析误绑成业务过滤值，
+    改写为自然中文日期写法，与问句原生的期间表述一致。"""
+    text = str(time_text or "").strip()
+    single_year = re.fullmatch(
+        r"(\d{4})\s*-\s*01\s*-\s*01\s*[至~]\s*\1\s*-\s*12\s*-\s*31", text)
+    if single_year is not None:
+        return single_year.group(1) + "年"
+    whole_month = re.fullmatch(
+        r"(\d{4})\s*-\s*(\d{2})\s*-\s*01\s*[至~]\s*\1\s*-\s*\2\s*-\s*(\d{1,2})", text)
+    if whole_month is not None:
+        year, month = int(whole_month.group(1)), int(whole_month.group(2))
+        if int(whole_month.group(3)) == calendar.monthrange(year, month)[1]:
+            return f"{year}年{month}月"
+    iso_range = re.fullmatch(
+        r"(\d{4})\s*-\s*(\d{1,2})\s*-\s*(\d{1,2})\s*[至~]\s*"
+        r"(\d{4})\s*-\s*(\d{1,2})\s*-\s*(\d{1,2})", text)
+    if iso_range is not None:
+        y1, m1, d1, y2, m2, d2 = (int(item) for item in iso_range.groups())
+        return f"{y1}年{m1}月{d1}日至{y2}年{m2}月{d2}日"
+    return text
+
+
 def _query_clause(time_text: str, grouping: str, metric_text: str) -> str:
+    time_text = _plain_period_text(time_text)
     middle = f"{time_text}{grouping}的" if (time_text or grouping) else ""
     return f"查询{middle}{metric_text}"
 
@@ -275,7 +302,7 @@ def build_analysis_task_plan(
     保证分析链路在任务表与调度执行中都是独立可见的节点。
     """
     structured = extraction.structured
-    intent = analysis_intent(extraction.intent, question) if extraction.intent else None
+    intent = extraction.intent
     playbook = ANALYSIS_PLAYBOOKS.get(intent)
     if playbook is None or not isinstance(structured, dict):
         return None
@@ -359,18 +386,33 @@ def build_analysis_task_plan(
     merge_mode = "concat"
     binding_periods: list[dict[str, str]] = []
 
-    if intent is PrimaryIntent.COMPARISON_ANALYSIS:
-        periods = _comparison_periods(question)
+    if intent is PrimaryIntent.COMPARISON_ANALYSIS or (
+        intent is PrimaryIntent.COMPOSITION_ANALYSIS
+        and (
+            "structural_share_shift" in (requirements.get("methods") or [])
+            or "share_shift" in (requirements.get("tool_selection", {}).get("capabilities") or [])
+        )
+    ):
+        from app.analysis.tools.compiler import periods_from_proposal
+        declared_periods = periods_from_proposal(structured)
+        periods = declared_periods if declared_periods is not None else _comparison_periods(question)
         if periods is not None:
+            from app.analysis.period_comparison import sort_field_key
+            requirements['comparison_dimensions'] = [name for name in dimensions if not _is_time_dimension(name)]
+            requirements['output_sort'] = [copy.deepcopy(item) for item in structured.get('排序') or []
+                                           if sort_field_key(item.get('field'))]
             merge_mode = "period_roles"
             grouping = ("各" + "、".join(dimensions)) if dimensions else ""
             for index, (label, sort_key) in enumerate(periods):
                 role = "基期" if index == 0 else "当前期"
                 # 裸月份（"10月"）补全对齐后的年份，ASL 侧不需要再猜年份；
                 # 年份来自原问题中的另一期间提及，不引入新时间条件
-                if "年" not in label and sort_key[0] > 1900:
+                if declared_periods is None and "年" not in label and sort_key[0] > 1900:
                     label = f"{sort_key[0]}年{label}"
                 period_structured = _retrieval_extraction(structured)
+                # Derived comparison columns do not exist in either SQL input.
+                period_structured['排序'] = [item for item in period_structured.get('排序') or []
+                                            if not sort_field_key(item.get('field'))]
                 granularity = period_structured.get("时间粒度")
                 if isinstance(granularity, dict):
                     granularity["time_range"] = label
@@ -387,34 +429,77 @@ def build_analysis_task_plan(
                 })
                 binding_periods.append({"task": task_id, "label": label, "role": role})
 
+    if (
+        intent is PrimaryIntent.COMPARISON_ANALYSIS
+        and not retrieval_specs
+        and len(requirements.get("windows") or []) > 1
+    ):
+        # Relative comparison windows come from structured requirements, never
+        # from prose in a discarded model calculation task.
+        merge_mode = "period_roles"
+        requirements["comparison_dimensions"] = [
+            name for name in dimensions if not _is_time_dimension(name)
+        ]
+        for index, window in enumerate(requirements["windows"]):
+            role = "当前期" if window.get("role") == "target" else "基期"
+            period_structured = _retrieval_extraction(structured)
+            granularity = copy.deepcopy(period_structured.get("时间粒度") or {})
+            granularity["time_range"] = f"{window['start']}至{window['end']}"
+            period_structured["时间粒度"] = granularity
+            task_id = f"task-{index + 1}"
+            grouping = [name for name in dimensions if not _is_time_dimension(name)]
+            text = _window_query(
+                granularity, requirements.get("grain"), metric_text, grouping, period_structured,
+            )
+            retrieval_specs.append({
+                "task_id": task_id, "question": text,
+                "name": ("同比基期：" if role == "基期" else "") + text[:54],
+                "structured": period_structured,
+            })
+            binding_periods.append({
+                "task": task_id, "label": granularity["time_range"], "role": role,
+            })
+
     if intent is PrimaryIntent.ROOT_CAUSE_ANALYSIS and dimensions:
         # Keep both periods even if the extractor has retained only November.
-        periods = _comparison_periods(question)
+        from app.analysis.tools.compiler import periods_from_proposal
+        declared_periods = periods_from_proposal(structured)
+        periods = declared_periods if declared_periods is not None else _comparison_periods(question)
         if periods:
-            normalized = [f"{key[0]}年{key[1]}月" if key[0] > 1900 and key[1] else label
+            normalized = [f"{key[0]}年{key[1]}月" if declared_periods is None and key[0] > 1900 and key[1] else label
                           for label, key in periods]
-            bounds = _absolute_window_bounds('和'.join(normalized))
+            if declared_periods is not None:
+                from app.analysis.tools.plans import plan_from_structured
+                declared = plan_from_structured(structured).comparison_periods
+                bounds = (min(p.start for p in declared).isoformat(),
+                          (max(p.end_exclusive for p in declared)-timedelta(days=1)).isoformat())
+            else:
+                bounds = _absolute_window_bounds('和'.join(normalized))
             time_text = f"{bounds[0]}至{bounds[1]}" if bounds else '和'.join(normalized)
             structured = copy.deepcopy(structured)
             structured['时间粒度'] = {**(structured.get('时间粒度') or {}), 'time_range': time_text,
-                                      'unit': '月' if any('月' in label for label in normalized) else '年'}
+                                      'unit': (requirements.get('grain') if declared_periods is not None
+                                               else '月' if any('月' in label for label in normalized) else '年')}
         # Independent marginal dimensions must never be added together.
         drill_dimensions = dimensions[:3]
         requirements = build_requirements(intent, question, structured, today=today)
         requirements['unexecuted_dimensions'] = dimensions[3:]
-        total_structured = _retrieval_extraction(structured, 维度=[])
+        granularity = structured.get('时间粒度') or {}
+        time_dimension = next((name for name in _dimension_names(structured) if _is_time_dimension(name)),
+                              granularity.get('anchor') or '业务日期')
+        total_structured = _retrieval_extraction(structured, 维度=[time_dimension], 排序=[])
         retrieval_specs.append({
             "task_id": "task-1",
-            "question": _query_clause(time_text, "", metric_text),
+            "question": _window_query(granularity, requirements['grain'], metric_text, [time_dimension], structured),
             "name": _query_clause(time_text, "", metric_text)[:60],
             "structured": total_structured,
         })
         for offset, dimension in enumerate(drill_dimensions, start=2):
             retrieval_specs.append({
                 "task_id": f"task-{offset}",
-                "question": _query_clause(time_text, f"各{dimension}", metric_text),
+                "question": _window_query(granularity, requirements['grain'], metric_text, [time_dimension, dimension], structured),
                 "name": _query_clause(time_text, f"各{dimension}", metric_text)[:60],
-                "structured": _retrieval_extraction(structured, 维度=[dimension]),
+                "structured": _retrieval_extraction(structured, 维度=[time_dimension, dimension], 排序=[]),
             })
 
     if not retrieval_specs:
@@ -484,6 +569,9 @@ def build_analysis_task_plan(
         display_start_label = None
 
     analysis_structured = copy.deepcopy(structured)
+    analysis_structured.pop("计算绑定", None)
+    analysis_structured.pop("计算绑定来源", None)
+    analysis_structured.pop("结果操作", None)
     if intent != extraction.intent:
         from app.analysis.intents import LABELS
         analysis_structured["意图"] = LABELS[intent]
@@ -498,7 +586,10 @@ def build_analysis_task_plan(
         "source_question": str(question or "").strip(),
         "display_window_start": display_start_label,
         "requirements": requirements,
-        "optional_dependencies": [spec["task_id"] for spec in retrieval_specs if spec["name"].startswith("同比基期：")],
+        "optional_dependencies": (
+            [spec["task_id"] for spec in retrieval_specs if spec["name"].startswith("同比基期：")]
+            if intent is PrimaryIntent.TREND_ANALYSIS else []
+        ),
     }
     selection = requirements.get('tool_selection') or {}
     if selection.get('mode') == 'SELECTED':
@@ -507,12 +598,13 @@ def build_analysis_task_plan(
         analysis_structured[_ANALYSIS_BINDING_KEY]['tool'] = '、'.join(names)
         analysis_structured[_ANALYSIS_BINDING_KEY]['sub_tools'] = {}
     retrieval_ids = [spec["task_id"] for spec in retrieval_specs]
-    analysis_question = _analysis_question(
-        intent, metric_text, time_text, dimensions, binding_periods,
-        source_question=str(question or ""),
-    )
     if selection.get('mode') == 'SELECTED':
         analysis_question = f"对{time_text}{metric_text}执行" + '、'.join(names)
+    else:
+        analysis_question = _analysis_question(
+            intent, metric_text, time_text, dimensions, binding_periods,
+            source_question=str(question or ""),
+        )
     tasks = [
         AtomicTask(
             task_id=spec["task_id"],
@@ -575,7 +667,7 @@ def _window_query(granularity, grain, metric_text, dimensions, structured):
     grouping = {"day": "分日", "week": "分周", "month": "分月", "quarter": "分季度", "half_year": "分半年", "year": "分年"}.get(grain, "")
     time_text = str(granularity.get("time_range") or "")
     # 整年区间写成“2025年”，不叠加“分年”和日期区间：粘连长句会被规则解析
-    # 误当成商品筛选值（实测“2025-01-01至2025-12-31分年各业务员”）。
+    # 误当成商品筛选值（如“2025-01-01至2025-12-31分年各业务员”）。
     single_year = re.fullmatch(r"(\d{4})\s*-\s*01\s*-\s*01\s*[至~]\s*\1\s*-\s*12\s*-\s*31", time_text)
     if single_year is not None:
         time_text = single_year.group(1) + "年"
@@ -599,6 +691,229 @@ def _window_query(granularity, grain, metric_text, dimensions, structured):
     return text
 
 
+def _local_result_task(task: AtomicTask) -> bool:
+    extraction = task.extraction or {}
+    return bool(task.depends_on) and (
+        _NO_DATABASE_MARK in task.question
+        or str(extraction.get("是否查询数据库") or "").startswith("否")
+    )
+
+
+def _dependency_closure(plan: TaskPlan, terminal: AtomicTask) -> set[str]:
+    by_id = {task.task_id: task for task in plan.tasks}
+    remaining = list(terminal.depends_on)
+    result = {terminal.task_id}
+    while remaining:
+        task_id = remaining.pop()
+        if task_id in result:
+            continue
+        result.add(task_id)
+        task = by_id.get(task_id)
+        if task is not None:
+            remaining.extend(task.depends_on)
+    return result
+
+
+def normalize_analysis_task_plan(
+    question: str,
+    plan: TaskPlan | None,
+    intent: PrimaryIntent | None,
+) -> TaskPlan | None:
+    """Give model-preplanned DAGs the same analysis contract as single tasks.
+
+    A prose task name or a sort operation is not an analysis deliverable.  A
+    self-contained analysis subgraph can be replaced by its canonical playbook;
+    mixed plans retain unrelated tasks and only replace their local analysis
+    terminal when no additional retrieval is required.
+    """
+    if plan is None or intent not in ANALYSIS_PLAYBOOKS:
+        return plan
+    expected_type = ANALYSIS_PLAYBOOKS[intent]["analysis_type"]
+
+    def has_real_calculation(task: AtomicTask) -> bool:
+        extraction = task.extraction or {}
+        calculation = extraction.get("计算绑定") or {}
+        operation = (extraction.get("结果操作") or {}).get("operation") or {}
+        steps = operation.get("operations") or operation.get("steps") or [operation]
+
+        def explicit_result(field):
+            return bool(field and str(field) in question)
+
+        registered = bool(calculation) and (
+            extraction.get("计算绑定来源") in {"REGISTERED_COMPOUND", "DECLARED_CALCULATION"}
+        )
+        return registered or any(
+            isinstance(step, dict) and step.get("type") == "aggregate"
+            and any(explicit_result(item.get("alias"))
+                    for item in step.get("aggregations") or [] if isinstance(item, dict))
+            for step in steps
+        )
+
+    matching_ids = {
+        task.task_id for task in plan.tasks
+        if isinstance((task.extraction or {}).get(_ANALYSIS_BINDING_KEY), dict)
+        and (task.extraction or {})[_ANALYSIS_BINDING_KEY].get("analysis_type") == expected_type
+    }
+    from app.analysis.tools.plans import plan_from_structured
+    catalog_proposal = next((plan_from_structured(task.extraction) for task in plan.tasks
+                             if (task.extraction or {}).get('_analysis_tool_plan')), None)
+    if (
+        catalog_proposal is not None
+        and len(matching_ids) == 1
+        and all(
+            (not task.depends_on and not _local_result_task(task))
+            or task.task_id in matching_ids
+            or (_local_result_task(task) and has_real_calculation(task))
+            for task in plan.tasks
+        )
+    ):
+        return plan
+    candidates = [task for task in plan.tasks if _local_result_task(task)]
+    terminal = candidates[-1] if candidates else None
+    by_id = {task.task_id: task for task in plan.tasks}
+    sources = (
+        [by_id[task_id] for task_id in terminal.depends_on if task_id in by_id]
+        if terminal is not None
+        else [task for task in plan.tasks if not task.depends_on and not _local_result_task(task)]
+    )
+    if not sources:
+        from app.planning.task_dag import TaskPlanningError
+        raise TaskPlanningError("分析目标没有可用的前序取数依赖")
+    seed_source = sources[0]
+    if (
+        _local_result_task(seed_source)
+        or seed_source.depends_on
+        or not _metric_text(seed_source.extraction or {})
+    ):
+        closure = _dependency_closure(plan, terminal) if terminal is not None else set()
+        retrieval_sources = [
+            task for task in plan.tasks
+            if task.task_id in closure and not _local_result_task(task)
+        ]
+        if not retrieval_sources:
+            from app.planning.task_dag import TaskPlanningError
+            raise TaskPlanningError("分析目标不能仅依赖另一个分析任务的派生结果")
+        seed_source = retrieval_sources[0]
+    seed = copy.deepcopy(seed_source.extraction or {})
+    seed["是否查询数据库"] = "是"
+    canonical = build_analysis_task_plan(
+        question,
+        PlannerExtraction(intent=intent, parameters=[], structured=seed),
+        task_question=seed_source.question,
+        task_name=seed_source.name,
+    )
+    if canonical is None:
+        from app.planning.task_dag import TaskPlanningError
+        raise TaskPlanningError("分析目标无法展开为规范分析链路")
+    if terminal is None:
+        # A collapsed plan still carries the immutable root goal. Recompile the
+        # canonical DAG instead of requiring the deleted local node to reappear.
+        return canonical
+    terminal_extraction = terminal.extraction or {}
+    real_calculation = has_real_calculation(terminal)
+    if not real_calculation and _dependency_closure(plan, terminal) == {
+        task.task_id for task in plan.tasks
+    }:
+        return canonical
+
+    # Mixed deliverables and real calculations must retain their existing
+    # inputs.  Only a weak analysis terminal may be replaced together with its
+    # canonical retrieval subgraph.
+    if not real_calculation and len(canonical.tasks) != 2:
+        from app.planning.task_dag import TaskPlanningError
+        raise TaskPlanningError("混合任务中的分析目标需要额外取数窗口，未执行不完整计划")
+    canonical_analysis = canonical.tasks[-1]
+    tasks = list(plan.tasks)
+    if real_calculation and len(tasks) >= 12:
+        from app.planning.task_dag import TaskPlanningError
+        raise TaskPlanningError("混合任务超过十二节点上限，无法追加分析交付节点")
+    analysis_id = terminal.task_id
+    if real_calculation:
+        used_ids = {task.task_id for task in tasks}
+        suffix = len(tasks) + 1
+        while f"task-{suffix}" in used_ids:
+            suffix += 1
+        analysis_id = f"task-{suffix}"
+    analysis = canonical_analysis.model_copy(deep=True)
+    analysis.task_id = analysis_id
+    analysis.name = terminal.name or analysis.name
+    analysis.depends_on = [terminal.task_id] if real_calculation else list(terminal.depends_on)
+    analysis_extraction = copy.deepcopy(terminal_extraction if real_calculation else sources[0].extraction or {})
+    analysis_extraction.pop("计算绑定", None)
+    analysis_extraction.pop("计算绑定来源", None)
+    analysis_extraction.pop("结果操作", None)
+    analysis_extraction["是否查询数据库"] = "否"
+    analysis_extraction[_ANALYSIS_BINDING_KEY] = copy.deepcopy(
+        canonical_analysis.extraction[_ANALYSIS_BINDING_KEY]
+    )
+    analysis_extraction[_ANALYSIS_BINDING_KEY]["merge"] = "concat"
+    analysis_extraction[_ANALYSIS_BINDING_KEY]["periods"] = []
+    analysis_extraction[_ANALYSIS_BINDING_KEY]["optional_dependencies"] = []
+    analysis.extraction = analysis_extraction
+    analysis.parameters = list(extraction_to_parameters(analysis_extraction))
+    if real_calculation:
+        tasks.append(analysis)
+    else:
+        tasks[tasks.index(terminal)] = analysis
+    return plan.model_copy(update={"tasks": tasks})
+
+
+def validate_task_plan_execution_contract(
+    plan: TaskPlan | None,
+    intent: PrimaryIntent | None,
+) -> None:
+    """Reject incomplete core deliverables before any query is executed."""
+    if plan is None:
+        return
+    from app.planning.task_dag import TaskPlanningError
+    by_id = {task.task_id: task for task in plan.tasks}
+    for task in plan.tasks:
+        extraction = task.extraction or {}
+        calculation = extraction.get("计算绑定")
+        operation = extraction.get("结果操作")
+        binding = extraction.get(_ANALYSIS_BINDING_KEY)
+        if calculation is not None and operation is not None:
+            raise TaskPlanningError(f"任务{task.task_id}同时声明计算公式与结果操作")
+        if calculation is not None and (
+            not isinstance(calculation, dict) or not str(calculation.get("result_field") or "").strip()
+        ):
+            raise TaskPlanningError(f"任务{task.task_id}缺少明确的计算结果字段")
+        if binding is not None and (
+            not isinstance(binding, dict) or not binding.get("analysis_type") or not task.depends_on
+        ):
+            raise TaskPlanningError(f"任务{task.task_id}的分析绑定或输入依赖不完整")
+        if isinstance(binding, dict):
+            if any(
+                isinstance((by_id.get(task_id).extraction or {}).get(_ANALYSIS_BINDING_KEY), dict)
+                for task_id in task.depends_on
+                if by_id.get(task_id) is not None
+            ):
+                raise TaskPlanningError(f"任务{task.task_id}不得消费另一个分析任务的派生结果")
+            requirements = binding.get("requirements") or {}
+            selection = requirements.get("tool_selection") or {}
+            capabilities = selection.get("capabilities") or []
+            if selection.get("mode") == "SELECTED" and not capabilities:
+                raise TaskPlanningError(f"任务{task.task_id}缺少明确的指定分析能力")
+            if "share_shift" in capabilities and (
+                binding.get("merge") != "period_roles"
+                or {item.get("role") for item in binding.get("periods") or []} != {"基期", "当前期"}
+            ):
+                raise TaskPlanningError(f"任务{task.task_id}的结构变化分析缺少基期和本期输入")
+        if _local_result_task(task) and calculation is None and operation is None and binding is None:
+            raise TaskPlanningError(f"任务{task.task_id}缺少可执行的计算或分析合同")
+    if intent in ANALYSIS_PLAYBOOKS:
+        expected_type = ANALYSIS_PLAYBOOKS[intent]["analysis_type"]
+        matching = [
+            task for task in plan.tasks
+            if isinstance((task.extraction or {}).get(_ANALYSIS_BINDING_KEY), dict)
+            and (task.extraction or {})[_ANALYSIS_BINDING_KEY].get("analysis_type") == expected_type
+        ]
+        if not matching:
+            raise TaskPlanningError("用户分析目标未绑定对应分析链路")
+        if len(matching) != 1:
+            raise TaskPlanningError("用户分析目标必须且只能绑定一个分析终端")
+
+
 def standardize_period_analysis_plan(question, decomposition):
     """Canonicalize same-scope period queries without losing any input window.
 
@@ -609,6 +924,7 @@ def standardize_period_analysis_plan(question, decomposition):
     """
     import json
     tasks = decomposition.tasks
+    output_sort = []
     if re.search(r'平方|立方|开根|方差|标准差|中位数|分位数|协方差|相关系数|对数|取余|阶乘|绝对值', question):
         return None
     if any((task.structured or {}).get('分析绑定') or (task.structured or {}).get('计算绑定') for task in tasks):
@@ -622,9 +938,15 @@ def standardize_period_analysis_plan(question, decomposition):
             continue
         operation = ((task.structured or {}).get('结果操作') or {}).get('operation') or {}
         steps = operation.get('operations') or operation.get('steps') or [operation]
-        if any(not isinstance(step, dict) or step.get('type') not in {None, 'derive', 'aggregate'}
+        if any(not isinstance(step, dict) or step.get('type') not in {None, 'derive', 'aggregate', 'sort'}
                or step.get('type') == 'derive' and step.get('operator') not in {'add', 'subtract', 'multiply', 'divide'} for step in steps):
             return None
+        derived = {step.get('result_field') for step in steps if step.get('type') == 'derive'}
+        for step in steps:
+            if step.get('type') == 'sort':
+                if step.get('field') not in derived or step.get('direction', 'asc') not in {'asc', 'desc'}:
+                    return None
+                output_sort.append({'field': step['field'], 'order': step.get('direction', 'asc')})
     def shape(task):
         value = task.structured or {}
         return json.dumps({key: value.get(key) for key in ('业务域', '实体', '指标', '维度', '展示字段', '过滤条件', '限制')},
@@ -636,10 +958,16 @@ def standardize_period_analysis_plan(question, decomposition):
     if any(window is None for window in windows):
         return None
     seed = queries[max(range(len(queries)), key=lambda index: windows[index][0])]
-    intent = analysis_intent(decomposition.intent or seed.intent, question)
+    intent = decomposition.intent or seed.intent
     if intent not in ANALYSIS_PLAYBOOKS:
         return None
+    from app.analysis.period_comparison import sort_field_key
+    if output_sort and (intent != PrimaryIntent.COMPARISON_ANALYSIS or any(
+            not sort_field_key(item['field']) for item in output_sort)):
+        return None
     structured = copy.deepcopy(seed.structured)
+    if output_sort:
+        structured['排序'] = output_sort
     source_bounds = _absolute_window_bounds(question) if intent == PrimaryIntent.TREND_ANALYSIS else None
     if source_bounds:
         structured['时间粒度']['time_range'] = f'{source_bounds[0]}至{source_bounds[1]}'
