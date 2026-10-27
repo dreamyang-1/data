@@ -14490,6 +14490,8 @@ class DataAnalysisOrchestrator:
         semantic_extractions: tuple[dict[str, Any], ...]
         | list[dict[str, Any]] = (),
     ) -> AgentResponse:
+        from exception_explainer.integration import record_parameter_blocker
+        record_parameter_blocker(request, source_stage=source_stage)
         # Atomic metrics suggested while a derived metric is unresolved are
         # implementation hints, not valid answers for the user's requested
         # metric. Keep the clarification open-text and explain what definition
