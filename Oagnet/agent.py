@@ -20,6 +20,8 @@ from config import (
     API_KEY,
     BASE_URL,
     LLM_MAX_RETRIES,
+    LLM_CONNECT_TIMEOUT_SECONDS,
+    LLM_READ_TIMEOUT_SECONDS,
     LLM_MODEL,
     require_runtime_secret,
 )
@@ -8718,12 +8720,18 @@ def _validate_intent_asl_contract(
 
 @lru_cache(maxsize=1)
 def _get_chat_model():
+    import httpx
+
     return init_chat_model(
         model=LLM_MODEL,
         model_provider="openai",
         api_key=require_runtime_secret(API_KEY, "OAGNET_API_KEY/DASHSCOPE_API_KEY"),
         base_url=BASE_URL,
-        timeout=None,
+        timeout=httpx.Timeout(
+            float(LLM_READ_TIMEOUT_SECONDS),
+            connect=float(LLM_CONNECT_TIMEOUT_SECONDS),
+            pool=float(LLM_CONNECT_TIMEOUT_SECONDS),
+        ),
         max_retries=LLM_MAX_RETRIES,
         temperature=0,
         extra_body={"enable_thinking": False},
