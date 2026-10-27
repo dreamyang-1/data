@@ -285,7 +285,8 @@ class QwenAnalysisSynthesizer:
             latest = remove_unsupported_text(latest, contract)
             # Ratio reports repeatedly paraphrased the same unsupported
             # inference without trigger words. Review every sentence.
-            candidates = review_candidates(latest, review_all=bool(contract['executed_ratios']))
+            candidates = review_candidates(latest, review_all=bool(
+                contract['executed_ratios'] or contract['returned_value_distributions']))
             if candidates:
                 raw = await self._request_content(EVIDENCE_REVIEW_PROMPT,
                     {"evidence_context": {**prompt_input, "report_contract": contract}, "items": candidates},
