@@ -15,7 +15,7 @@
     "DataAnalysis_Agent/exception_explainer/integration.py": "de0a9d30004601b8da35ad88a854c4cca83414633a5dba322a7b3463e4b57f12"
   },
   "candidate_hashes": {
-    "Oagnet/agent.py": "cd963d6bd1d1fb8603f21ac72561bd440abd06e1d4b5ccf9ca9cf6a536f51e9d",
+    "Oagnet/agent.py": "f50f61fce12b05baadb3fb7b1d51679d5d829481b1a1bec5bd859ae5b62f3499",
     "Oagnet/structured_binding.py": "a5f5ff061b0f162d07f04adcb90429fc9854fe123cb00ba90c6a066af1c8bbd8",
     "Oagnet/structured_time.py": "dc38f7a8996fc6c1dab286b5cb063770dea718bcdf8b257b498d90209604cfca",
     "Oagnet/asl_contract.py": "dd2df85ce944bc6c9dd88f6c405b0fa27bfece19a483c1ef59f42ef1c0e9453a",
@@ -35,5 +35,6 @@
   "actual_sql_candidate_hashes": {
     "sql_translator_prod.py": "e80148d543465e07c054ce9b7a60ea54d3b1e4a2a4ae9ac3afe478949757b0e1",
     "semantic_scope.py": "b0ce2b40526fc73333e75775a97f404c5852f1cc3992c86b2161ad38ba2a1ccc"
-  }
+  },
+  "previous_agent_candidate_hash": "cd963d6bd1d1fb8603f21ac72561bd440abd06e1d4b5ccf9ca9cf6a536f51e9d"
 }

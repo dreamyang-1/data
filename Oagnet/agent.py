@@ -5640,6 +5640,7 @@ def _contract_projection_candidates(
 
     scored: list[tuple[int, str]] = []
     display_fields: set[str] = set()
+    exact_selected_fields: set[str] = set()
     entity_scope = (
         exact_object_entities or related_object_entities or set(attributes_by_entity)
     )
@@ -5663,11 +5664,18 @@ def _contract_projection_candidates(
             for value in _metadata_term_values(metadata.get(key)):
                 entity_labels.update(_contract_entity_label_variants(value))
         for field, attribute in attributes_by_entity.get(entity_code, {}).items():
-            if field not in authorized or _is_relationship_key_field(field, attributes_by_entity):
+            if field not in authorized:
                 continue
             terms = {_contract_label(field.rsplit(".", 1)[-1])}
             for key in ("attr_code", "attr_name", "description", "synonyms"):
                 terms.update(_contract_label(value) for value in _metadata_term_values(attribute.get(key)))
+            exact_selected = bool(prefer_display and preferred_fields and field in preferred_fields
+                                  and field in set(knowledge.get('_vector_authorized_fields') or [])
+                                  and target in terms)
+            if _is_relationship_key_field(field, attributes_by_entity) and not exact_selected:
+                continue
+            if exact_selected:
+                exact_selected_fields.add(field)
             is_display = any(bool(attribute.get(flag)) for flag in (
                 "is_main_attribute", "is_primary_name", "is_display_name", "is_name",
             )) or str(attribute.get("semantic_role") or "").casefold() in {
@@ -5689,6 +5697,9 @@ def _contract_projection_candidates(
                 scored.append((0, field))
             elif partial:
                 scored.append((1, field))
+
+    if exact_selected_fields:
+        return sorted(exact_selected_fields)
 
     if prefer_display and scored:
         best_display_score = min(
@@ -5813,7 +5824,9 @@ def _contract_filter_present(
                         for member in (value if isinstance(value, list) else [value])}
             same_value = members(actual_value) == members(expected_value)
         else:
-            same_value = actual_value == expected_value
+            expected_scalar = expected_value[0] if isinstance(expected_value, list) and len(expected_value) == 1 else expected_value
+            actual_scalar = actual_value[0] if isinstance(actual_value, list) and len(actual_value) == 1 else actual_value
+            same_value = actual_scalar == expected_scalar
             if not same_value and allowed_fields and str(item.get('field') or '') in allowed_fields:
                 from surface_literals import typed_numeric_threshold_proof
                 numeric_proof = typed_numeric_threshold_proof(
