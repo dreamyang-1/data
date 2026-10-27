@@ -425,7 +425,7 @@ def _redis_connection_config(settings: Settings) -> dict[str, Any]:
         "db": database,
         "password": unquote(parsed.password) if parsed.password else None,
         "decode_responses": True,
-        "socket_timeout": 35,
+        "socket_timeout": None,
         "socket_connect_timeout": 10,
         "protocol": 2,
         "ssl": parsed.scheme == "rediss",
@@ -448,13 +448,12 @@ class LimitedScalarExternalDependencies:
 class LimitedScalarRuntimeHandler(PersistedScalarApiHandler):
     def __init__(self, *args, startup_receipt: dict,
                  readiness_probe: Callable[[], Awaitable[dict[str, bool]]],
-                 readiness_cache_seconds: float, readiness_timeout_seconds: float,
+                 readiness_cache_seconds: float,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.startup_receipt = startup_receipt
         self._readiness_probe = readiness_probe
         self._readiness_cache_seconds = readiness_cache_seconds
-        self._readiness_timeout_seconds = readiness_timeout_seconds
         self._readiness_cached_at = 0.0
         self._readiness_cached: dict[str, bool] | None = None
         self._readiness_lock = asyncio.Lock()
@@ -470,9 +469,7 @@ class LimitedScalarRuntimeHandler(PersistedScalarApiHandler):
                     and now - self._readiness_cached_at < self._readiness_cache_seconds):
                 return dict(self._readiness_cached)
             try:
-                checks = await asyncio.wait_for(
-                    self._readiness_probe(), timeout=self._readiness_timeout_seconds
-                )
+                checks = await self._readiness_probe()
             except Exception:
                 checks = {
                     "v2_limited_scalar_redis": False,
@@ -566,7 +563,7 @@ def _build_external_dependencies(settings: Settings) -> LimitedScalarExternalDep
         sql_planner=sql_planner,
         transport=transport,
         redis=Redis.from_url(settings.effective_redis_url(), decode_responses=True,
-                             socket_connect_timeout=10, socket_timeout=35),
+                             socket_connect_timeout=10, socket_timeout=None),
         data_source_target_digest=target_digest,
         module_origins={
             name: str(Path(module.__file__).resolve())
@@ -779,5 +776,4 @@ def build_limited_scalar_handler(
         startup_receipt=startup_receipt,
         readiness_probe=readiness_probe,
         readiness_cache_seconds=settings.limited_scalar_readiness_cache_seconds,
-        readiness_timeout_seconds=settings.limited_scalar_readiness_timeout_seconds,
     )

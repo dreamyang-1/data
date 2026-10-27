@@ -114,7 +114,7 @@ async def jev_choice(
     ) as observation:
         try:
             async with httpx.AsyncClient(
-                timeout=settings.jev_timeout_seconds,
+                timeout=None,
                 proxy=settings.jev_proxy or None,
                 transport=transport,
             ) as client:

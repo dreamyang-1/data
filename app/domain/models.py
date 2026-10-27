@@ -575,8 +575,9 @@ class ToolConfig(StrictModel):
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default="", max_length=1000)
     type: Literal["", "tool", "flow"] = ""
-    timeout: int = Field(
-        default=15,
+    # Legacy platform input is accepted, but does not impose an execution limit.
+    timeout: int | None = Field(
+        default=None,
         ge=1,
         le=180,
         validation_alias=AliasChoices("timeout", "time_out"),
@@ -1312,7 +1313,7 @@ class AnalysisStep(StrictModel):
     parallel_group: str | None = Field(default=None, max_length=100)
     expected_output: str = Field(min_length=1, max_length=500)
     required: bool = True
-    timeout_seconds: float = Field(default=30, gt=0, le=300)
+    timeout_seconds: float | None = Field(default=None, gt=0, le=300, description="兼容历史输入，不作为执行时限")
     max_attempts: int = Field(default=1, ge=1, le=3)
 
 

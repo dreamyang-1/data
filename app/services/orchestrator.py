@@ -1069,7 +1069,7 @@ class DataAnalysisOrchestrator:
                 if client is None or client.is_closed:
                     client = httpx.AsyncClient(
                         base_url=settings.intent_model_base_url.rstrip("/"),
-                        timeout=settings.pending_triage_timeout_seconds,
+                        timeout=None,
                     )
                     self._triage_http_client = client
                 resp = await client.post(
@@ -1304,7 +1304,7 @@ class DataAnalysisOrchestrator:
         if client is None or client.is_closed:
             client = httpx.AsyncClient(
                 base_url=settings.intent_model_base_url.rstrip("/"),
-                timeout=settings.intent_model_timeout_seconds,
+                timeout=None,
             )
             self._triage_http_client = client
         try:
@@ -5244,7 +5244,7 @@ class DataAnalysisOrchestrator:
                     )
                 try:
                     merged_insight, synthesis = await deliver_root_insight(
-                        materials, generate_insight, timeout=self.settings.analysis_synthesis_timeout_seconds)
+                        materials, generate_insight)
                     final_plan = getattr(synthesis, "final_answer", {}) or {}
                     if synthesis is None:
                         insight_degraded = True

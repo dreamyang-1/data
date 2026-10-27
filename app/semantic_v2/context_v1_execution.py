@@ -2206,7 +2206,7 @@ def build_context_v1_execution_handler(
             settings.effective_redis_url(),
             decode_responses=True,
             socket_connect_timeout=10,
-            socket_timeout=35,
+            socket_timeout=None,
         ),
     )
     store = RedisContextStateStore(

@@ -15,9 +15,6 @@ from .jev_client import RELATION_CRITERIA, jev_choice
 
 logger = logging.getLogger(__name__)
 
-# 终审等待上限：jev 与识别模型并行发起且先完成，正常轮这里不等待；
-# 上限只兜底极端慢的请求
-RELATION_DECIDER_WAIT_SECONDS = 1.0
 
 
 def build_relation_state(
@@ -112,10 +109,7 @@ async def adopt_relation_verdict(
     """
     if task is None:
         return False
-    done, _ = await asyncio.wait({task}, timeout=RELATION_DECIDER_WAIT_SECONDS)
-    if not done:
-        task.cancel()
-        return False
+    await asyncio.wait({task})
     qwen_relation = str(context_trace.get("FINAL_RELATION") or "")
     if not qwen_relation:
         # 关系未定（status≠ACCEPTED），没有可终审的基准

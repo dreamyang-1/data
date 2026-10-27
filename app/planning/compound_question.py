@@ -1351,7 +1351,7 @@ class CompoundQuestionJudge:
         ) as generation:
             async with httpx.AsyncClient(
                 base_url=self.settings.intent_model_base_url.rstrip("/"),
-                timeout=self.settings.multi_question_model_timeout_seconds,
+                timeout=None,
                 transport=self._transport,
             ) as client:
                 response = await client.post(

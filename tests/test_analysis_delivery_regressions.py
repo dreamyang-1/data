@@ -76,7 +76,7 @@ async def test_real_model_multitask_planner_enters_standard_analysis(monkeypatch
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('question,intent,label,period,dimensions', CASES)
-async def test_real_dag_tools_deliver_results_even_when_root_insight_times_out(monkeypatch, question, intent, label, period, dimensions):
+async def test_real_dag_tools_deliver_results_even_when_root_insight_fails(monkeypatch, question, intent, label, period, dimensions):
     agent = service()
     agent.task_planner = CompoundQuestionRouter(agent.settings)
     agent.analysis_engine = AnalysisEngine()
@@ -111,9 +111,8 @@ async def test_real_dag_tools_deliver_results_even_when_root_insight_times_out(m
             dataset_id=ref.dataset_id, evidence=[EvidenceItem(evidence_id='query', kind='QUERY_RESULT',
                 source_ref='synthetic', payload={'row_count': len(rows)})])
     async def slow(*args, **kwargs):
-        await asyncio.sleep(60)
+        raise RuntimeError("synthetic upstream failure")
     agent.analysis_synthesizer = SimpleNamespace(synthesize_combined=slow)
-    agent.settings.analysis_synthesis_timeout_seconds = .02
     monkeypatch.setattr(agent, '_handle', query)
     with progress_scope(lambda event: events.append(event)):
         # Include the frozen earlier stages in this integration assertion.
@@ -174,7 +173,7 @@ def test_missing_derive_field_is_named_before_numeric_validation():
 async def test_failed_calculation_cannot_be_silently_replaced_by_model_arithmetic():
     generate = AsyncMock(return_value=('伪造同比123%', SimpleNamespace(final_answer={})))
     material = [{'status': 'FAILED', 'calculation_incomplete': True, 'summary': '环比计算未完成：缺少上月字段。'}]
-    answer, synthesis = await deliver_root_insight(material, generate, timeout=1)
+    answer, synthesis = await deliver_root_insight(material, generate)
     generate.assert_not_called()
     assert '未完成' in answer and '123' not in answer and synthesis is None
     text = _evidence_line(EvidenceItem(evidence_id='failed', kind='ANALYSIS_RESULT', source_ref='test',

@@ -32,7 +32,7 @@ class ToolRequest(StrictModel):
     kind: Literal["HTTP_TOOL", "MCP_TOOL", "INTERNAL_TOOL"]
     arguments: dict[str, Any] = Field(default_factory=dict)
     input_schema: dict[str, Any] | None = None
-    timeout_seconds: float = Field(default=15, gt=0, le=300)
+    timeout_seconds: float | None = Field(default=None, gt=0, le=300, description="兼容历史输入，不作为执行时限")
     max_attempts: int = Field(default=1, ge=1, le=3)
     idempotent: bool = True
     execution_id: str = Field(default_factory=lambda: str(uuid4()))
@@ -155,9 +155,7 @@ class ToolRuntime:
         last_error: ToolError | None = None
         for attempt in range(1, allowed_attempts + 1):
             try:
-                output = await asyncio.wait_for(
-                    executor(request.arguments), timeout=request.timeout_seconds
-                )
+                output = await executor(request.arguments)
                 if result_validator is not None:
                     await self._maybe_await(result_validator(output))
                 return await self._finish(
@@ -171,7 +169,7 @@ class ToolRuntime:
             except asyncio.TimeoutError:
                 last_error = ToolError(
                     code="TOOL_TIMEOUT",
-                    message=f"工具执行超过 {request.timeout_seconds:g} 秒",
+                    message="工具上游返回超时错误",
                     retryable=True,
                     error_type="timeout",
                     status_code=504,

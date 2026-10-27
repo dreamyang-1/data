@@ -17,7 +17,6 @@ class ModelConfig:
     base_url: str
     api_key: str
     model: str
-    timeout: float = 30
 
 
 async def explain(state: Diagnostics, config: ModelConfig | None, *,
@@ -34,7 +33,7 @@ async def explain(state: Diagnostics, config: ModelConfig | None, *,
     messages = [{'role': 'system', 'content': SYSTEM_PROMPT},
                 {'role': 'user', 'content': json.dumps(payload, ensure_ascii=False)}]
     try:
-        async with httpx.AsyncClient(timeout=config.timeout) as client:
+        async with httpx.AsyncClient(timeout=None) as client:
             result = await client.post(config.base_url.rstrip('/') + '/chat/completions',
                 headers={'Authorization': 'Bearer ' + config.api_key},
                 json={'model': config.model, 'messages': messages, 'temperature': 0,

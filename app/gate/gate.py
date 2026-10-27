@@ -187,7 +187,7 @@ async def _qwen_gate(settings, *, question: str, context: str, spec: str,
     ) as observation:
         try:
             async with httpx.AsyncClient(
-                timeout=getattr(settings, "intent_model_timeout_seconds", 15),
+                timeout=None,
                 transport=transport,
             ) as client:
                 response = await client.post(

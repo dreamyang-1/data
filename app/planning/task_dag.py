@@ -1404,7 +1404,7 @@ class SingleQuestionPlanner:
                 messages=[{'role': 'system', 'content': system_content},
                           {'role': 'user', 'content': user_content}]) as generation:
             async with httpx.AsyncClient(base_url=base_url,
-                    timeout=timeout or self.settings.multi_question_model_timeout_seconds,
+                    timeout=None,
                     transport=self._transport) as client:
                 response = await client.post('/chat/workflow_chat', headers=headers, json=payload)
                 response.raise_for_status()
@@ -1435,7 +1435,7 @@ class SingleQuestionPlanner:
                    'Content-Type': 'application/json'}
         with trace_generation(name=name, model=body['model'], messages=body['messages']) as generation:
             async with httpx.AsyncClient(base_url=base_url,
-                    timeout=timeout or self.settings.multi_question_model_timeout_seconds, transport=self._transport) as client:
+                    timeout=None, transport=self._transport) as client:
                 response = await client.post('/chat/completions', headers=headers, json=body)
                 response.raise_for_status()
                 payload = response.json()
@@ -1582,8 +1582,7 @@ class SingleQuestionPlanner:
                 "single-question-task-parameters",
                 _SINGLE_SYSTEM_PROMPT + system_content + '\n已规划任务JSON：\n' + parameter_request,
                 question,
-                timeout=max(self.settings.multi_question_model_timeout_seconds,
-                            min(60, self.settings.multi_question_model_timeout_seconds * len(boundaries))),
+
             )
         try:
             parameters = parameter_items(extracted, boundaries)

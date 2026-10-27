@@ -168,14 +168,19 @@ async def test_repeated_bad_prose_is_removed_without_losing_selection_or_good_fa
 
 
 @pytest.mark.asyncio
-async def test_synthesis_total_deadline_degrades_report_not_query(monkeypatch):
+async def test_synthesis_waits_for_generation_and_review_without_deadline(monkeypatch):
     monkeypatch.setattr('app.analysis.synthesis._semantic_reference', reference)
     async def handler(request):
-        await asyncio.sleep(.2)
-        return httpx.Response(200)
-    settings = Settings(env='test', intent_model_api_key='test', analysis_synthesis_timeout_seconds=.02)
-    with pytest.raises(SynthesisValidationError, match='deadline'):
-        await QwenAnalysisSynthesizer(settings, httpx.MockTransport(handler)).synthesize_combined('问题', [material()])
+        assert all(value is None for value in request.extensions['timeout'].values())
+        await asyncio.sleep(.03)
+        data = json.loads(json.loads(request.content)['messages'][1]['content'])
+        output = ({'reviews': [{'id': item['id'], 'kind': 'FACT', 'supported': True} for item in data['items']]}
+                  if 'items' in data else report('平均成交金额为20元/笔。'))
+        return httpx.Response(200, json={'choices': [{'message': {'content': json.dumps(output)}}]})
+    settings = Settings(env='test', intent_model_api_key='test', analysis_synthesis_timeout_seconds=.001)
+    assert not hasattr(settings, 'analysis_synthesis_timeout_seconds')
+    text, output = await QwenAnalysisSynthesizer(settings, httpx.MockTransport(handler)).synthesize_combined('问题', [material()])
+    assert '20元/笔' in text and output.final_answer['result_task_ids'] == ['calc']
 
 
 def test_answer_has_no_total_or_asl_deadline():

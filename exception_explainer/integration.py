@@ -16,7 +16,7 @@ def _config(settings):
     if not settings.intent_model_enabled or key is None:
         return None
     return ModelConfig(settings.intent_model_base_url, key.get_secret_value(),
-                       settings.intent_model_name, settings.intent_model_timeout_seconds)
+                       settings.intent_model_name)
 
 
 async def exception_message(state: Diagnostics, settings, exc: Exception) -> str:

@@ -97,7 +97,7 @@ async def test_tool_runtime_does_not_retry_non_idempotent_tool():
 
 
 @pytest.mark.asyncio
-async def test_tool_runtime_timeout_is_bounded_and_reported():
+async def test_tool_runtime_ignores_legacy_execution_timeout():
     async def executor(_):
         await asyncio.sleep(0.1)
 
@@ -112,10 +112,9 @@ async def test_tool_runtime_timeout_is_bounded_and_reported():
         executor,
     )
 
-    assert result.status == "FAILED"
-    assert result.error.code == "TOOL_TIMEOUT"
-    assert result.error.retryable is True
-    assert result.latency_ms < 100
+    assert result.status == "COMPLETED"
+    assert result.error is None
+    assert result.latency_ms >= 90
 
 
 @pytest.mark.asyncio

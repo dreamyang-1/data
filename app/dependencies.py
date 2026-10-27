@@ -107,8 +107,8 @@ def build_container(settings: Settings) -> Container:
             password=settings.mysql_password.get_secret_value(),
             database=settings.mysql_database,
             connect_timeout=settings.mysql_connect_timeout_seconds,
-            read_timeout=settings.mysql_read_timeout_seconds,
-            write_timeout=settings.mysql_write_timeout_seconds,
+            read_timeout=None,
+            write_timeout=None,
         )
     knowledge_cache = None
     if (
@@ -148,7 +148,7 @@ def build_container(settings: Settings) -> Container:
             password=settings.mysql_password.get_secret_value(),
             database=settings.mysql_database,
             connect_timeout=settings.mysql_connect_timeout_seconds,
-            read_timeout=settings.mysql_read_timeout_seconds,
+            read_timeout=None,
         )
     if (
         settings.platform_upload_reference_resolution_enabled
@@ -165,7 +165,7 @@ def build_container(settings: Settings) -> Container:
             password=settings.mysql_password.get_secret_value(),
             database=settings.mysql_database,
             connect_timeout=settings.mysql_connect_timeout_seconds,
-            read_timeout=settings.mysql_read_timeout_seconds,
+            read_timeout=None,
             max_age_seconds=settings.platform_upload_reference_max_age_seconds,
         )
     if settings.minio_dataset_enabled and settings.env != "test":
@@ -256,7 +256,6 @@ def build_container(settings: Settings) -> Container:
                 HttpEntityAttributeSearcher(
                     base_url=settings.asl_generator_base_url,
                     path=settings.entity_attribute_search_path,
-                    timeout_seconds=settings.question_rewrite_timeout_seconds,
                     top_k=settings.question_rewrite_top_k,
                     score_threshold=settings.question_rewrite_search_threshold,
                     display_resolve_path=settings.semantic_display_resolve_path,
