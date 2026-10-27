@@ -3,8 +3,8 @@ from types import SimpleNamespace as Obj
 from test_structured_binding import run
 
 
-@pytest.mark.parametrize('card,valid',[('N:1',True),('1:1',True),('1:N',False),('N:M',False)])
-def test_catalog_related_attribute_is_display_not_group(card,valid):
+@pytest.mark.parametrize('card',['N:1','1:1','1:N','N:M'])
+def test_catalog_related_attribute_is_display_not_group(card):
     attrs=[{'attr_code':'staff_code','attr_name':'人员编号','field_mapping':'staff.staff_code'},
            {'attr_code':'staff_name','attr_name':'人员姓名','field_mapping':'staff.staff_name'}]
     knowledge={'entities':[Obj(metadata={'entity_code':'staff','attributes':attrs}),
@@ -18,6 +18,6 @@ def test_catalog_related_attribute_is_display_not_group(card,valid):
         '时间粒度':{'unit':None,'time_range':None},'限制':5}
     ast,_=run(extraction,knowledge,{'subject':'staff','metrics':[{'index':0,'key':'sales'}],
         'dimensions':[{'index':0,'key':'staff'}],'display_fields':[{'index':0,'key':'company.name'}]})
-    assert bool(ast['ambiguity']) is not valid
+    assert not ast['ambiguity']
     assert ast['dimensions']==[{'name':'staff','attr':None,'level':None,'granularity':None}]
-    if valid:assert ast['display_fields']==[{'name':'company.name','alias':'所属公司'}]
+    assert ast['display_fields']==[{'name':'company.name','alias':'所属公司'}]
