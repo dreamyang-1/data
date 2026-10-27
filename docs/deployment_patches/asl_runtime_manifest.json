@@ -1,0 +1,36 @@
+{
+  "description": "Candidate runtime files and pre-deployment source hashes; no environment files or runtime data.",
+  "feature_base": "c9751b988354de8834b486e8c28d5d4e7fe97d67",
+  "source_hashes": {
+    "Oagnet/agent.py": "6a20cdedaf2ac7351470738d386a2f5bc80f7843270e3ce11a2aa9a706fcf95f",
+    "Oagnet/structured_binding.py": "3e255b6f0f94abcc45d4a4f9066b6749aa5fb629531c097ba24db34c115ac5ef",
+    "Oagnet/structured_time.py": "2f164d52b31f20bc609ea355030065047caac3541a62937c853d832ea40289f6",
+    "Oagnet/asl_contract.py": "9c0ea6ff2cd86cfd2de90f6501be052a64410c11266ca29ac8fda36c28b2866c",
+    "sql-translator/sql_translator_prod.py": "0d0e655cceb014bd18157741b5c9aa0d3889671b0c44a2b2d66648f23f8883fc",
+    "DataAnalysis_Agent/app/services/intent_asl_contract.py": "c603aa360f6dad17f74ddcffb999a497be6312ed73542dbc8b949968910bb8ad",
+    "DataAnalysis_Agent/app/adapters/http.py": "a5b75df66d612b6b4cd932f9c6ffc94e2a9683bcf30653383af417a9b596e55c",
+    "DataAnalysis_Agent/app/structured_extraction/prompts.py": "1b4a671b052df771380003ba6fd07c758f68331d6612aff084db56c5e77c3ad9",
+    "DataAnalysis_Agent/app/adapters/surface_asl.py": "6e2915b9fd4725e91e92610f1b637f6701b316ccb45784f3ee6a241c7f3bf802",
+    "DataAnalysis_Agent/app/presentation/intent_recognition.py": "1a19e16df82d6e74ecaa270523a04ae2176a151121a66cd116bf687edf93cc71",
+    "sql-translator/semantic_scope.py": "6447c255d9c7324f5e9cc6d7bb2646f90d5fa425b8417592d59ce81cedb8c0f2",
+    "DataAnalysis_Agent/exception_explainer/prompt.py": "68239ee1e155666c38b9c2d4ca39f3598578907dc51d71ebd007d5044a772d28",
+    "DataAnalysis_Agent/exception_explainer/integration.py": "de0a9d30004601b8da35ad88a854c4cca83414633a5dba322a7b3463e4b57f12",
+    "sql-translator/sql_join_safety.py": null
+  },
+  "candidate_hashes": {
+    "Oagnet/agent.py": "cd963d6bd1d1fb8603f21ac72561bd440abd06e1d4b5ccf9ca9cf6a536f51e9d",
+    "Oagnet/structured_binding.py": "a5f5ff061b0f162d07f04adcb90429fc9854fe123cb00ba90c6a066af1c8bbd8",
+    "Oagnet/structured_time.py": "dc38f7a8996fc6c1dab286b5cb063770dea718bcdf8b257b498d90209604cfca",
+    "Oagnet/asl_contract.py": "dd2df85ce944bc6c9dd88f6c405b0fa27bfece19a483c1ef59f42ef1c0e9453a",
+    "sql-translator/sql_translator_prod.py": "1d9dd165253ad7eb446557011fce761a3d46d39f233a32bf22e072f7ceac6e56",
+    "DataAnalysis_Agent/app/services/intent_asl_contract.py": "5d4952e95193c50608789798da35ad5bf9bfcb89553d02aae1550bade35ad245",
+    "DataAnalysis_Agent/app/adapters/http.py": "9d39f4fe8d39bb1abca04386c6e66a63385bd3f163250429e565188e170eb6ea",
+    "DataAnalysis_Agent/app/structured_extraction/prompts.py": "4ec93986cf5bc2038c68adc84e8c82e3e01c383927bf0b5905e1ffc2c0d69838",
+    "DataAnalysis_Agent/app/adapters/surface_asl.py": "23e2a0444933d6fd6d06b25cc831c2a2f7e8ceca5ea573496b75de3d9194681b",
+    "DataAnalysis_Agent/app/presentation/intent_recognition.py": "8e83d1d4b39b5016db9613bc5f7ba37f04ce6652e83274701b9a4bfd4ff75e84",
+    "sql-translator/semantic_scope.py": "b21ed8a9665ed1ed741fd3710a3e0b0fe89d7bf5894d76c26cd5fadb65c9cfe6",
+    "DataAnalysis_Agent/exception_explainer/prompt.py": "0cf36b0d3a47c4d341fc2f9ecf75c263dc3a6065c1282928ce993082a5bed957",
+    "DataAnalysis_Agent/exception_explainer/integration.py": "32339d2c234d11535b6b04b06e3e42a0c10c349482b3a28d93c1172594e1ee18",
+    "sql-translator/sql_join_safety.py": "e2ae99382250a3dfe7ceec8ba6cae51e59e030584f90ae19d05070112335833b"
+  }
+}

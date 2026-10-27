@@ -8161,7 +8161,7 @@ def _ground_executable_vector_values(
 
 
 def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
-    """Require executable business fields AND values in the vector recall scope."""
+    """Require executable business fields in the vector recall scope."""
     ast = json.loads(content)
     vector_fields = set(knowledge.get("_vector_authorized_fields") or [])
     from related_scope import related_fields
@@ -8214,8 +8214,12 @@ def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
     if isinstance(time_context, dict) and str(time_context.get("anchor") or "") not in vector_fields:
         raise ValueError("ASL time_context anchor was not validated by vector semantic scope")
     sort = ast.get("sort")
-    if isinstance(sort, dict) and sort.get("field_type") == "field":
-        if str(sort.get("field") or "") not in vector_fields:
+    if isinstance(sort, dict):
+        sort_field = str(sort.get("field") or "")
+        sort_type = sort.get("field_type")
+        allowed_sort = (vector_metrics if sort_type == "metric" else
+                        vector_dimensions if sort_type == "dimension" else vector_fields)
+        if sort_field not in allowed_sort:
             raise ValueError("ASL sort field was not validated by vector semantic scope")
     for expression in ast.get("having") or []:
         fields = re.findall(
@@ -8224,8 +8228,6 @@ def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
         )
         if any(field not in vector_fields for field in fields):
             raise ValueError("ASL having field was not validated by vector semantic scope")
-    from vector_filter_grounding import ground_filter_values
-    ground_filter_values(ast, knowledge, validate_only=True)
 
 
 def _verify_missing_asl_fields_in_vector_store(
