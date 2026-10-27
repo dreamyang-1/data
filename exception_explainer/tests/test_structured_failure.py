@@ -53,7 +53,8 @@ async def test_structured_pending_gets_model_reason_and_reference_without_changi
     assert blocker['parameters']['时间范围'] == '2025年'
     assert blocker['missing_slots'] == ['semantic_ambiguity']
     assert 'private-result' not in json.dumps(evidence)
-    assert result.answer.endswith(response.answer) and result.answer != response.answer
+    assert result.answer != response.answer and response.answer not in result.answer
+    assert '前后两次' in result.answer
     assert result.model_dump(exclude={'answer'}) == response.model_dump(exclude={'answer'})
 
 

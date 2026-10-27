@@ -99,8 +99,11 @@ async def explain_response(state: Diagnostics, settings, response):
     updated = response.model_copy(deep=True)
     # Partial data, tables, files and status stay intact; explanation is only presentation.
     partial = response.status not in failed_statuses or bool(outcome['completed_tasks']) or bool(response.files)
-    updated.answer = (message + '\n\n' + response.answer) if structured_stop else (
-        (response.answer + '\n\n' + message) if partial else message)
+    if structured_stop and not outcome['completed_tasks'] and not response.files:
+        # 原说明可能含参数 JSON；最终回答只给通俗解释，候选和恢复信息留在原字段。
+        updated.answer = message
+    else:
+        updated.answer = (response.answer + '\n\n' + message) if partial else message
     return updated
 
 

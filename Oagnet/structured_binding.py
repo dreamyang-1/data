@@ -1,6 +1,7 @@
 """Bind planner slots to finite catalog candidates; never extract from a question."""
 import json
 import logging
+import math
 import re
 from datetime import date, datetime, timedelta
 from query_binding_review import _metadata, _object, _field
@@ -84,6 +85,54 @@ def issue(slot, value, reason, candidates=()):
             'candidate_details': [dict(canonical_name=name, structured_slot=slot, source_parameter=value)
                                   for name in candidates],
             'source': 'STRUCTURED_EXTRACTION'}
+
+
+def _filter_input_error(original):
+    """Check extraction shape before catalog selection can hide a missing part."""
+    if not isinstance(original, dict):
+        return '筛选条件提取不完整：没有分别提取筛选字段、比较方式和条件值'
+    name = original.get('field') or original.get('name')
+    if not isinstance(name, str) or not name.strip():
+        return '筛选条件没有提取出字段名称，无法确定要筛选哪一项'
+    operator = str(original.get('op') or original.get('operator') or '').strip().upper()
+    if not operator:
+        return f'“{name}”的筛选条件没有提取出比较方式，例如大于、等于或属于哪些值'
+    if operator not in OPERATORS:
+        return f'“{name}”的筛选比较方式提取有问题，当前不支持这种比较方式'
+    value = original.get('value')
+    values = value if isinstance(value, list) else [value]
+    if not values or any(v is None or (isinstance(v, str) and not v.strip()) for v in values):
+        return f'“{name}”的筛选条件没有提取出完整的条件值，无法确定要和什么值比较'
+    if any(isinstance(v, (dict, list, bool)) for v in values):
+        return f'“{name}”的筛选条件值提取格式有问题，需要具体的文字、数字或日期'
+    if operator == 'BETWEEN' and len(values) != 2:
+        return f'“{name}”的筛选范围提取不完整或有误，需要起点和终点两个值'
+    if len(values) > 1 and operator not in {'=', '!=', 'IN', 'NOT IN', 'BETWEEN'}:
+        return f'“{name}”的筛选条件提取有问题：这种比较方式需要一个值，却提取出了多个值'
+    return None
+
+
+def _unselected_metric_reason(key, usage, extraction, ast, catalog):
+    """Differentiate omission from failed binding using scoped catalog evidence."""
+    if key in {m['name'] for m in ast['metrics']}:
+        return None
+    name = catalog['metrics'][key].get('metric_name') or key
+    selected = [_exact_choice_keys('metrics', item,
+                    parameter_catalog(catalog, item, extraction, 'metrics'))
+                for item in extraction['指标']]
+    if any(key in keys for keys in selected):
+        return f'{usage}用了“{name}”，该指标已经提取，但未能正确匹配到当前可用的指标，不能用于{usage}'
+    for section, target in (('维度', 'dimensions'), ('展示字段', 'display_fields')):
+        for item in extraction[section]:
+            scoped = parameter_catalog(catalog, item, extraction, target)
+            if (_exact_choice_keys('metrics', item, scoped) == [key]
+                    and not _exact_choice_keys(target, item, scoped)):
+                return f'{usage}用了“{name}”，但它被放进了{section}，没有作为指标提取，位置放错了'
+    if not extraction['指标']:
+        return f'{usage}用了“{name}”，但指标列表为空，没有提取出“{name}”指标'
+    if all(len(keys) == 1 for keys in selected):
+        return f'{usage}用了“{name}”，但指标列表中只提取了其他指标，漏提了“{name}”'
+    return f'{usage}用了“{name}”，但提取的指标未能匹配到它，指标提取或匹配有问题'
 
 
 def apply_surface_requirements(ast, extraction):
@@ -845,7 +894,8 @@ def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=No
         return ast, repairs
     for key in SECTIONS:
         if not isinstance(extraction.get(key), list):
-            ast['ambiguity'].append(issue(key, extraction.get(key), '缺少参数数组，空数组也应显式提供'))
+            reason = f'{key}没有提取出来' if extraction.get(key) is None else f'{key}提取格式有问题，应分别列出每一项'
+            ast['ambiguity'].append(issue(key, extraction.get(key), reason))
     if ast['ambiguity']: return ast, repairs
     catalog = catalog_candidates(knowledge)
     # Do not repeat full entity attributes/relations alongside the same fields.
@@ -912,6 +962,11 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
         rows = plan.get(target) or []
         if not isinstance(rows, list): rows = []
         for index, original in enumerate(extraction[source]):
+            if target == 'filters':
+                input_error = _filter_input_error(original)
+                if input_error:
+                    ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, input_error))
+                    continue
             slot_catalog = parameter_catalog(catalog, original, extraction, target)
             owner_candidates = slot_catalog.get('_parameter_owner_candidates')
             owner_error = slot_catalog.get('_parameter_owner_error')
@@ -921,12 +976,21 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 continue
             label = (original.get('name') or original.get('field')) if isinstance(original,dict) else original
             if not isinstance(label,str) or not label.strip():
-                ast['ambiguity'].append(issue(f'{source}[{index+1}]',original,'上游未明确该参数的业务字段或指标名称'))
+                ast['ambiguity'].append(issue(f'{source}[{index+1}]',original,f'{source}第{index+1}项没有提取出名称'))
                 continue
             found = [r for r in rows if isinstance(r, dict) and type(r.get('index')) is int and r['index'] == index]
             choice = found[0] if len(found) == 1 else {}
             key = choice.get('key')
             exact_keys = _exact_choice_keys(target, original, slot_catalog)
+            if target in {'metrics', 'dimensions', 'display_fields'} and not exact_keys:
+                other = 'display_fields' if target == 'metrics' else 'metrics'
+                alternatives = _exact_choice_keys(other, original, slot_catalog)
+                if len(alternatives) == 1:
+                    reason = (f'“{label}”是普通字段，却被放进了指标；指标提取位置有误'
+                              if target == 'metrics' else
+                              f'“{label}”是需要计算的指标，却被放进了{source}；提取位置有误，应放在指标中')
+                    ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, reason))
+                    continue
             if target in {'dimensions', 'sort'} and not exact_keys and _grain_slot_unit(label):
                 # Month/quarter/year denote a grain of the governed date field,
                 # not a separate database attribute. Use the same key in SELECT
@@ -999,12 +1063,22 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     key = resolved
             # 已选指标的阈值按完整目录公式处理，不能把日期差等行级指标误判成不支持。
             if target == 'filters' and isinstance(key, str) and key in catalog['metrics']:
-                having_expr = _metric_having_expression(key, original, catalog) if extraction['指标'] else None
+                reason = _unselected_metric_reason(key, '筛选条件', extraction, ast, catalog)
+                values = original['value'] if isinstance(original['value'], list) else [original['value']]
+                if reason is None and (len(values) != 1 or not isinstance(values[0], (int, float))
+                                       or not math.isfinite(values[0])):
+                    reason = f'“{label}”指标已提取，但筛选条件值提取有问题，需要一个用于比较的数字'
+                if reason is None and str(original.get('op') or original.get('operator')).strip() not in {'=', '!=', '>', '>=', '<', '<='}:
+                    reason = f'“{label}”指标已提取，但当前不支持对该指标使用这种筛选比较方式'
+                if reason:
+                    ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, reason))
+                    continue
+                having_expr = _metric_having_expression(key, original, catalog)
                 if having_expr:
                     ast['having'].append(having_expr)
                     continue
                 ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
-                    '该指标的筛选公式或数值阈值未能绑定到当前授权目录，请核对指标定义和条件值'))
+                    f'“{label}”指标和筛选数字已经提取，但当前无法按已登记的计算公式完成筛选；这不是漏提指标或条件值'))
                 continue
             allowed = (catalog['metrics'] if target == 'metrics' else
                        {**catalog['dimensions'], **slot_catalog['fields']} if target == 'dimensions' else
@@ -1089,8 +1163,10 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     if (ast['metrics'] and not scalar_projection
                             and not any(_group_exposes_field(d, key, catalog) for d in ast['dimensions'])
                             and not _related_display_field(ast['dimensions'], key, catalog)):
-                        ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
-                            '结构化参数要求汇总指标并显示这个字段，但没有提供能确定每组对应名称的分组。请在结构化参数中明确按谁统计；ASL不会自行添加分组。'))
+                        reason = (f'要汇总指标并展示“{label}”，但没有提取出按谁分别统计的分组维度，无法把汇总结果对应到每个名称'
+                                  if not extraction['维度'] else
+                                  f'已提取分组维度和展示字段“{label}”，但尚不能确定每组结果对应哪个“{label}”；不能仅据此判断是漏提参数或缺少关系配置')
+                        ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, reason))
                     ast['display_fields'].append({'name': key, 'alias': allowed[key].get('attr_name') or key})
                 elif key not in {d['name'] for d in ast['dimensions']}:
                     temporal = extraction.get('时间粒度') or {}
@@ -1107,12 +1183,8 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     ast['dimensions'].append(dict(name=key, attr=choice.get('attr') if target=='dimensions' and '.' not in key else None,
                                                   level=None, granularity=granularity))
             elif target == 'filters':
-                if not isinstance(original, dict):
-                    ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '条件必须包含 field/op/value'));continue
-                operator = str(original.get('op') or original.get('operator') or '').upper()
+                operator = str(original.get('op') or original.get('operator') or '').strip().upper()
                 value = original.get('value'); vals = value if isinstance(value, list) else [value]
-                if operator not in OPERATORS or not vals or any(v is None or isinstance(v, (dict,list,bool)) or v == '' for v in vals):
-                    ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '运算符或条件值缺失/不支持'));continue
                 corrected = _vector_correct_filter(key, vals, slot_catalog, operator)
                 vector_repaired = False
                 if corrected is not None:
@@ -1266,18 +1338,18 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                         f'字段 {key} 已匹配，但条件值尚未匹配到该字段的向量标准值，请核对字段层级及值目录'))
                     continue
                 if len(vals)>1 and operator in {'=','!='}: operator='IN' if operator=='=' else 'NOT IN'
-                if (operator=='BETWEEN' and len(vals)!=2) or (len(vals)>1 and operator not in {'IN','NOT IN','BETWEEN'}):
-                    ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '该运算符与多个条件值不兼容'));continue
                 append_filter({'field':key,'operator':operator,'value':vals if operator in {'IN','NOT IN','BETWEEN'} else vals[0]})
             elif target == 'sort':
                 direction = str(original.get('order') or original.get('direction') or '').upper() if isinstance(original,dict) else ''
                 if direction not in {'ASC','DESC'}:
-                    ast['ambiguity'].append(issue(source, original, '当前ASL仅支持一个明确升序/降序的排序字段'));continue
+                    reason = '没有提取出排序方向，需要明确从高到低还是从低到高' if not direction else '排序方向提取有问题，需要明确从高到低还是从低到高'
+                    ast['ambiguity'].append(issue(source, original, f'“{label}”{reason}'));continue
                 if ast.get('sort'):
                     ast['ambiguity'].append(issue(source, original, '当前ASL仅支持一个排序字段，不能忽略已声明的次级排序'))
                     continue
                 if key in catalog['metrics'] and key not in {m['name'] for m in ast['metrics']}:
-                    ast['ambiguity'].append(issue(source, original, '排序使用的指标未在结构化指标中声明；请先补全结构化参数'))
+                    ast['ambiguity'].append(issue(source, original,
+                        _unselected_metric_reason(key, '排序', extraction, ast, catalog)))
                     continue
                 ast['sort']={'field':key,'direction':direction,'field_type':'metric' if key in catalog['metrics'] else 'field' if '.' in key else 'dimension'}
         if extraction[source] and any(not isinstance(r,dict) or type(r.get('index')) is not int or not 0<=r['index']<len(extraction[source]) for r in rows):
