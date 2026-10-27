@@ -1,25 +1,12 @@
 --- a/sql-translator/sql_translator_prod.py
 +++ b/sql-translator/sql_translator_prod.py
-@@ -21,0 +22 @@
-+from sql_join_safety import SQLJoinError, validate_join_connectivity
-@@ -1042 +1043 @@
--        normalized = str(value or '').strip().upper().replace(' ', '').replace('-', '')
-+        normalized = str(value or '').strip().upper().replace(' ', '').replace('-', '').replace('_', '')
-@@ -1717,0 +1719,2 @@
-+        group_entities = self._aggregate_group_entities(dimensions, model_id)
-+        group_tables = {self._get_entity_base_table(code, model_id) for code in group_entities}
-@@ -1720,0 +1724,8 @@
-+                continue
-+            # Legacy ASL put to-one display attributes in dimensions. A missing
-+            # company label must not remove an otherwise valid salesperson.
-+            # Explicit entity groups and caller filters retain their semantics.
-+            if table not in group_tables and any(
-+                self._relation_path(code, table, model_id, to_one_only=True)
-+                for code in group_entities
-+            ):
-@@ -1734,0 +1746 @@
-+
-@@ -2167,41 +2178,0 @@
+@@ -730 +730 @@
+-    for key in ("metrics", "dimensions", "filters", "having", "ambiguity"):
++    for key in ("metrics", "dimensions", "display_fields", "filters", "having", "ambiguity"):
+@@ -746 +746 @@
+-    for key in ("metrics", "dimensions"):
++    for key in ("metrics", "dimensions", "display_fields"):
+@@ -2479,41 +2478,0 @@
 -    def _dimension_display_companion(self, dimension: Dict, entity_code: str,
 -                                     model_id: Optional[str]) -> Optional[tuple]:
 -        """Keep a registered entity dimension's identity and expose its label.
@@ -61,73 +48,43 @@
 -        if len(candidates) != 1:
 -            return None
 -        return next(iter(candidates.items()))
-@@ -2212,0 +2184 @@
+@@ -2525,0 +2485 @@
 +        projected_expressions = set()
-@@ -2252,8 +2224,3 @@
+@@ -2565,8 +2525,3 @@
 -            companion = self._dimension_display_companion(dim, entity_code, model_id)
 -            if companion and not any(d.get('name') == companion[0] for d in dimensions):
 -                display_field, display_alias = companion
 -                if display_alias in output_aliases:
 -                    raise ValueError(f"列别名重复: {display_alias}")
 -                output_aliases.add(display_alias)
--                select_parts.append(f"{display_field} AS `{display_alias.replace('`', '``')}`")
+-                select_parts.append(effective_dialect.select_alias(display_field, display_alias))
 -                alias = f"{alias}（编码）"
 +            if expr in projected_expressions:
 +                continue
 +            projected_expressions.add(expr)
-@@ -2367,3 +2334 @@
+@@ -2694,3 +2649 @@
 -            companion = self._dimension_display_companion(dim, entity_code, model_id)
 -            if companion and companion[0] not in group_parts:
 -                group_parts.append(companion[0])
 +        group_parts = list(dict.fromkeys(group_parts))
-@@ -2473,3 +2437,0 @@
+@@ -2953,3 +2905,0 @@
 -                    companion = self._dimension_display_companion(dim_item, '', model_id)
 -                    if companion and not any(d.get('name') == companion[0] for d in dimensions):
 -                        dim_alias = f"{dim_alias}（编码）"
-@@ -2494,3 +2455,0 @@
+@@ -2974,3 +2923,0 @@
 -                        companion = self._dimension_display_companion(dim_item, '', model_id)
 -                        if companion and not any(d.get('name') == companion[0] for d in dimensions):
 -                            dim_alias = f"{dim_alias}（编码）"
-@@ -3024 +2983 @@
+@@ -3625 +3572 @@
 -            'subject': dict, 'metrics': list, 'dimensions': list, 'filters': list,
 +            'subject': dict, 'metrics': list, 'dimensions': list, 'display_fields': list, 'filters': list,
-@@ -3062,0 +3022,75 @@
-+    def _aggregate_group_entities(self, dimensions: List[Dict], model_id: str) -> List[str]:
-+        """Entity identities already declared as the aggregation grain."""
-+        starts = []
-+        for dim in dimensions:
-+            code = str(dim.get('name') or '')
-+            if dim.get('granularity'):
-+                continue
-+            if '.' in code:
-+                for entity in self.loader.iter_entities(model_id):
-+                    owner = entity.get('entity_code')
-+                    if any(a.get('field_mapping') == code and (
-+                            self._semantic_flag(a.get('is_primary_key'))
-+                            or self._semantic_flag(a.get('is_unique'))
+@@ -3677 +3624,2 @@
+-                            or a.get('attr_code') == str(owner)+'_code') for a in entity.get('attributes') or []):
 +                            or a.get('attr_code') in {str(owner)+'_code', str(owner)+'_id', 'id'}
 +                            or str(a.get('field_mapping') or '').rsplit('.', 1)[-1] == 'id') for a in entity.get('attributes') or []):
-+                        starts.append(owner)
-+                continue
-+            if not self._get_entity(code, model_id):
-+                continue
-+            definition = self._get_dimension(code, model_id) or {}
-+            if not definition.get('enum_list'):
-+                starts.append(code)
-+        return list(dict.fromkeys(starts))
-+
-+    def _aggregate_display_dimensions(self, ast: Dict, model_id: str) -> List[Dict]:
-+        """Project to-one related attributes without changing the declared grain.
-+
-+        GROUP BY the dependent attribute satisfies ONLY_FULL_GROUP_BY. The
-+        declared to-one path means it cannot split an identity group. Unknown
-+        and to-many relationships are not guessed or reduced with MIN/MAX.
-+        """
-+        displays = ast.get('display_fields') or []
-+        if not isinstance(displays, list):
-+            raise ValueError('display_fields必须是数组')
-+        if not displays:
-+            return []
+@@ -3699,2 +3647,12 @@
+-        if not ast.get('metrics'):
+-            raise ValueError('明细展示字段继续由dimensions承载')
 +        groups = ast.get('dimensions') or []
 +        grouped_fields = {self._get_dimension_field(d['name'], d.get('attr'), model_id,
 +                          (ast.get('subject') or {}).get('entity')) or d['name']
@@ -140,171 +97,34 @@
 +            scalar = scalar and bool(formula) and not re.search(
 +                r'\b(?:COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT|STDDEV\w*|VARIANCE)\s*\(', formula, re.I)
 +            scalar_fields.update(re.findall(r'\b([A-Za-z_]\w*)\.[A-Za-z_]\w*', formula))
-+        starts = self._aggregate_group_entities(ast.get('dimensions') or [], model_id)
-+        result = []
-+        for item in displays:
-+            field = item.get('name') if isinstance(item, dict) else None
-+            if not isinstance(field, str) or not re.fullmatch(r'[A-Za-z_]\w*\.[A-Za-z_]\w*', field):
-+                raise ValueError('展示字段必须使用已注册的表.字段')
-+            table = field.split('.')[0]
-+            owners = [e for e in self.loader.iter_entities(model_id)
-+                      if any(a.get('field_mapping') == field for a in e.get('attributes') or [])]
-+            if not owners:
-+                raise ValueError(f'展示字段未注册: {field}')
+@@ -3712 +3670 @@
+-            safe = False
 +            safe = (not ast.get('metrics') and not ast.get('having')) or field in grouped_fields or (scalar and scalar_fields == {table})
-+            for source in starts:
-+                if self._get_entity_base_table(source, model_id) == table:
+@@ -3715 +3673,2 @@
+-                    continue
 +                    safe = True
 +                    break
-+                path = self._relation_path(source, table, model_id, to_one_only=True)
-+                if path and all(RedisDSLLoader._canonical_cardinality(r.get('relation_type'))
-+                                in {'ONE_TO_ONE', 'MANY_TO_ONE'} for r in path):
-+                    safe = True
-+                    break
-+            if not safe:
-+                raise ValueError(f'展示字段与分组实体没有唯一的N:1/1:1关联: {field}')
-+            if field not in {d.get('name') for d in result}:
-+                result.append(dict(item))
-+        return result
-+
-@@ -3064 +3098,4 @@
--                       model_id: Optional[str]) -> Optional[List[Dict]]:
-+                       model_id: Optional[str], *, to_one_only: bool = False) -> Optional[List[Dict]]:
-+        # Subject derivation keeps its existing forward-only behavior. Related
-+        # aggregate attributes use the same published reverse edges as JOIN
-+        # generation, with cardinality reversed relative to the traversal.
-@@ -3075,2 +3112,34 @@
--            for relation in entity.get('relations', []) or []:
--                target = relation.get('target_entity')
-+            candidates = [(relation, None) for relation in entity.get('relations', []) or []]
-+            if to_one_only:
-+                for registered in self.loader.iter_entities(model_id):
-+                    source = registered.get('entity_code')
-+                    if not source or source == entity_code:
-+                        continue
-+                    # Use the request's authoritative, domain-filtered graph,
-+                    # not stale relationships in the underlying Redis payload.
-+                    authoritative = self._get_entity(source, model_id) or {}
-+                    candidates.extend((relation, source)
-+                        for relation in authoritative.get('relations', []) or []
-+                        if relation.get('target_entity') == entity_code)
-+            for relation, reverse_source in candidates:
-+                target = reverse_source or relation.get('target_entity')
-+                if to_one_only:
-+                    cardinality = RedisDSLLoader._canonical_cardinality(relation.get('relation_type'))
-+                    if reverse_source:
-+                        cardinality = RedisDSLLoader._reverse_cardinality(cardinality)
-+                    if cardinality not in {'ONE_TO_ONE', 'MANY_TO_ONE'}:
-+                        continue
-+                    current_table = self._get_entity_base_table(entity_code, model_id)
-+                    next_table = self._get_entity_base_table(target, model_id)
-+                    join_key = relation.get('join_key') or ''
-+                    segments = (self._build_reverse_join_segments(
-+                        join_key, current_table, next_table, entity_code, model_id)
-+                        if reverse_source else self._build_join_segments(
-+                            join_key, current_table, next_table, target, model_id))
-+                    if not segments:
-+                        continue
-+                    try:
-+                        validate_join_connectivity('SELECT 1 FROM ' + current_table + ' ' + ' '.join(segments))
-+                    except SQLJoinError:
-+                        continue
-+                    relation = dict(relation, target_entity=target, relation_type=cardinality)
-@@ -3079,0 +3149 @@
-+
-@@ -3247 +3317,3 @@
--        dimensions = ast.get('dimensions', [])
+@@ -3954 +3913,3 @@
+-        dimensions = [*ast.get('dimensions', []), *self._aggregate_display_dimensions(ast, model_id)]
 +        group_dimensions = ast.get('dimensions', [])
 +        display_fields = self._aggregate_display_dimensions(ast, model_id)
 +        dimensions = [*group_dimensions, *display_fields]
-@@ -3320 +3392 @@
--                dimensions,
-+                group_dimensions,
-@@ -3338 +3410,3 @@
--            else self._build_group_by_clause(dimensions, entity_code, model_id)
+@@ -3978 +3939 @@
+-        if detail_having_grouped and not dimensions:
++        if detail_having_grouped and not group_dimensions:
+@@ -4097 +4058,3 @@
+-            else self._build_group_by_clause(dimensions, entity_code, model_id, dialect)
 +            else self._build_group_by_clause(
 +                [*group_dimensions, *display_fields] if group_dimensions else [],
-+                entity_code, model_id)
-@@ -3986,0 +4061 @@
-+                'effective_filter_summary': self._effective_filter_summary(ast_data, resolved_model_id),
-@@ -4005,0 +4081,2 @@
-+            (r'^展示字段与分组实体没有唯一的N:1/1:1关联:', 'AGGREGATE_DISPLAY_RELATION_UNSAFE'),
-+            (r'^展示字段未注册:', 'SEMANTIC_ASSET_NOT_FOUND'),
-@@ -4060,0 +4138,4 @@
-+            display_match = re.fullmatch(
-+                r'展示字段(?:未注册|与分组实体没有唯一的N:1/1:1关联):\s*([A-Za-z_]\w*\.[A-Za-z_]\w*)', raw)
-+            if display_match is not None and len(display_match.group(1)) <= 128:
-+                identity = f'展示字段: {display_match.group(1)}'
-@@ -4061,0 +4143 @@
-+            'AGGREGATE_DISPLAY_RELATION_UNSAFE': '展示字段与分组对象之间缺少可确认的单一归属关系，不能安全加入汇总结果',
-@@ -4103,0 +4186,70 @@
-+
-+    def _execution_defaults(
-+        self, ast: Dict, model_id: Optional[str], entity_code: Optional[str] = None,
-+    ) -> Dict:
-+        """One source for SQL's existing defaults and their public explanation.
-+
-+        Never put system rules in caller filters or modify the caller's ASL.
-+        """
-+        metrics = ast.get('metrics') or []
-+        dimensions = ast.get('dimensions') or []
++                entity_code, model_id, dialect)
+@@ -5175 +5138 @@
+-        is_detail = not metrics and bool(dimensions)
 +        is_detail = not metrics and bool(dimensions or ast.get('display_fields'))
-+        limit = ast.get('limit')
-+        conditions = []
-+        if metrics and dimensions:
-+            entity_code = entity_code or (ast.get('subject') or {}).get('entity')
-+            if not entity_code:
-+                entity_code = self._get_bind_entity(metrics[0]['name'], model_id)
-+            if not entity_code:
-+                entity_code = self._derive_subject_entity(dimensions, ast.get('filters') or [], model_id)
-+            conditions = self._group_identity_non_null_conditions(
-+                dimensions, ast.get('filters') or [], entity_code, model_id,
-+            )
-+        return {
-+            'system_filters': [
-+                {'condition': condition, 'source': 'ENTITY_IDENTITY_DEFAULT',
-+                 'reason': '分组实体的主名称字段排除空值组；该组对应的记录不参与本次汇总'}
-+                for condition in conditions
-+            ],
-+            'effective_limit': limit if limit is not None else (MAX_QUERY_ROWS if is_detail else None),
-+            'limit_source': 'ASL' if limit is not None else ('DETAIL_DEFAULT' if is_detail else 'NONE'),
-+        }
-+
-+
-+    def _effective_filter_summary(
-+        self, ast: Dict, model_id: Optional[str]
-+    ) -> Dict:
-+        """Expose the two sources of WHERE predicates without rewriting ASL.
-+
-+        ``asl_filters`` are caller/query predicates. ``metric_global_filters``
-+        are governed predicates expanded from the selected metric definitions.
-+        Keeping them separate prevents callers from executing the same metric
-+        rule twice while making the final SQL provenance reviewable.
-+        """
-+
-+        asl_filters = [
-+            dict(item) for item in (ast.get('filters') or [])
-+            if isinstance(item, dict)
-+        ]
-+        metric_global_filters = []
-+        for metric in ast.get('metrics') or []:
-+            if not isinstance(metric, dict):
-+                continue
-+            metric_code = str(metric.get('name') or '').strip()
-+            if not metric_code:
-+                continue
-+            for rule in _normalize_global_filters(
-+                self._get_metric_global_filters(metric_code, model_id)
-+            ):
-+                metric_global_filters.append({
-+                    'metric': metric_code,
-+                    'filter_type': rule['filter_type'],
-+                    'condition': rule['condition'],
-+                    'source': 'METRIC_DEFINITION',
-+                })
-+        return {
-+            'asl_filters': asl_filters,
-+            'metric_global_filters': metric_global_filters,
-+            **self._execution_defaults(ast, model_id),
-+        }
-+
+--- a/sql-translator/semantic_scope.py
++++ b/sql-translator/semantic_scope.py
+@@ -356 +356 @@
+-        for dimension in ast.get('dimensions', []):
++        for dimension in [*ast.get('dimensions', []), *ast.get('display_fields', [])]:
+@@ -382 +382 @@
+-                ast.get('dimensions', []), ast.get('filters', []), model_id
++                [*ast.get('dimensions', []), *ast.get('display_fields', [])], ast.get('filters', []), model_id
