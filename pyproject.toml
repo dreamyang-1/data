@@ -33,7 +33,7 @@ entity-extraction = ["gliner>=0.2.21,<0.3"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["tests"]
+testpaths = ["tests", "exception_explainer/tests"]
 pythonpath = ["."]
 
 [tool.ruff]
@@ -43,4 +43,7 @@ line-length = 100
 py-modules = ["minio_followup_store"]
 
 [tool.setuptools.packages.find]
-include = ["app*"]
+include = ["app*", "exception_explainer*"]
+
+[tool.setuptools.package-data]
+exception_explainer = ["README.rst", "third_party/*.txt"]
