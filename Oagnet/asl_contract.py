@@ -58,9 +58,9 @@ class IntentASLContract(BaseModel):
         if self.intent == "DETAIL_QUERY":
             if not self.query_object:
                 raise ValueError("DETAIL_QUERY contract requires query_object")
-            if not self.required_projections:
+            if not (self.required_projections or self.required_groupings or self.required_metrics):
                 raise ValueError("DETAIL_QUERY contract requires required_projections")
-            if self.projection_mode is None:
+            if not self.required_metrics and self.projection_mode is None:
                 raise ValueError("DETAIL_QUERY contract requires projection_mode")
         if self.time_dimension_required and self.intent != "TREND_ANALYSIS":
             raise ValueError("time_dimension_required is only valid for TREND_ANALYSIS")
@@ -73,8 +73,6 @@ class IntentASLContract(BaseModel):
                 raise ValueError("REQUIRED time_policy requires canonical_time_range")
         elif self.canonical_time_range is not None:
             raise ValueError("canonical_time_range is only valid for REQUIRED time_policy")
-        if self.intent == "DETAIL_QUERY" and self.required_groupings:
-            raise ValueError("DETAIL_QUERY cannot declare aggregate groupings")
         if self.sorting is not None:
             required = self.sorting.get("required")
             direction = str(self.sorting.get("direction") or "").upper()

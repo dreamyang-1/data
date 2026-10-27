@@ -1327,7 +1327,7 @@ class HttpDataRetrievalAdapter:
         )
         dimensions = tuple(dict.fromkeys(
             str(item.get("name") or "").strip().rsplit(".", 1)[-1]
-            for item in (asl.get("dimensions") or [])
+            for item in [*(asl.get("display_fields") or []), *(asl.get("dimensions") or [])]
             if isinstance(item, dict) and str(item.get("name") or "").strip()
         ))
         if not subject_code or not dimensions:
@@ -2205,14 +2205,12 @@ class HttpDataRetrievalAdapter:
                 "metric_definition_fingerprints": metric_definition_fingerprints,
                 "authorized_scope_fingerprint": request.authorized_semantic_scope.fingerprint() if request.authorized_semantic_scope else None,
                 "intent_asl_contract": intent_asl_contract,
+                "structured_extraction": (request._planner_extraction.structured if request._planner_extraction else None),
+                "asl_binding_version": "structured-only-display-v1",
             }, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
         intent_contract_confirmed = False
         asl_repairs: list[dict[str, Any]] = []
-        asl = (
-            None
-            if request.dependency_constraints or request.semantic_entity_mentions
-            else self._reuse_time_only_asl(request, semantic_model_id)
-        )
+        asl = None
         if asl is None and asl_cache_key is not None:
             cached = self._asl_plan_cache.get(asl_cache_key)
             if cached is not None:
@@ -2346,64 +2344,17 @@ class HttpDataRetrievalAdapter:
         if contract_notices:
             # 宽松放行的结构性缺口随修复回执透出，便于排查但不拦停任务。
             asl_repairs.extend(contract_notices)
-        self._remove_unrequested_metric_window_time(asl, request)
-        self._repair_model81_trend_time(asl, request, semantic_model_id)
-        self._bind_canonical_time_range(
-            asl,
-            request,
-            time_policy=str(
-                (intent_asl_contract or {}).get("time_policy") or "OPTIONAL"
-            ),
-        )
-        self._repair_required_model81_dimensions(asl, request, semantic_model_id)
-        self._deduplicate_relationship_identity_dimensions(asl)
+        # ASL is already bound and validated. Never add/remove metrics, time,
+        # grouping, projections or sorting after the structured-only boundary.
         self._validate_semantic_entity_mentions(asl, request, asl_repairs)
-        bound_metric_codes = {
-            metric.metric_id.split(":", 1)[1]
-            for metric in request.metrics
-            if metric.metric_id and ":" in metric.metric_id
-        }
-        if bound_metric_codes:
-            selected_metric_codes = {
-                str(item.get("name"))
-                for item in (asl.get("metrics") or [])
-                if isinstance(item, dict) and item.get("name")
-            }
-            if selected_metric_codes != bound_metric_codes:
-                # Metric resolution is the authoritative semantic binding. The
-                # ASL model occasionally drops the second metric from an
-                # otherwise valid multi-metric request. Repair that projection
-                # deterministically instead of returning a misleading partial
-                # result or an administrator-facing conflict message.
-                if (
-                    request.primary_intent == PrimaryIntent.METRIC_QUERY
-                    and selected_metric_codes.issubset(bound_metric_codes)
-                ):
-                    asl["metrics"] = [
-                        {
-                            "name": metric.metric_id.split(":", 1)[1],
-                            "alias": metric.canonical_name or metric.input,
-                            "time_anchor": None,
-                        }
-                        for metric in request.metrics
-                        if metric.metric_id and ":" in metric.metric_id
-                    ]
-                    sort = asl.get("sort")
-                    if (
-                        isinstance(sort, dict)
-                        and str(sort.get("field_type") or "").lower() == "metric"
-                        and str(sort.get("field") or "") not in bound_metric_codes
-                    ):
-                        sort["field"] = next(iter(bound_metric_codes))
-                else:
-                    raise AdapterError(
-                        "ASL_METRIC_SELECTION_INVALID",
-                        "ASL metrics differ from caller-bound semantic metrics",
-                        details={
-                            "expected_metric_codes": sorted(bound_metric_codes),
-                            "selected_metric_codes": sorted(selected_metric_codes),
-                        },
-                    )
+        expected_codes = set((intent_asl_contract or {}).get("required_metric_codes") or [])
+        actual_codes = {str(item.get("name")) for item in asl.get("metrics") or []
+                        if isinstance(item, dict) and item.get("name")}
+        if expected_codes and actual_codes != expected_codes:
+            raise AdapterError("ASL_METRIC_SELECTION_INVALID",
+                "ASL metrics differ from structured metric bindings",
+                details={"expected_metric_codes": sorted(expected_codes),
+                         "selected_metric_codes": sorted(actual_codes)})
         ambiguities = asl.get("ambiguity") or []
         if not isinstance(ambiguities, list):
             raise AdapterError("ASL_RESPONSE_INVALID", "ASL ambiguity must be a list")
@@ -2423,7 +2374,7 @@ class HttpDataRetrievalAdapter:
         self._validate_no_synthetic_product_filter(asl, request)
         self._validate_dependency_constraints(asl, request)
         if request.primary_intent == PrimaryIntent.DETAIL_QUERY:
-            dimensions = asl.get("dimensions")
+            dimensions = [*(asl.get("display_fields") or []), *(asl.get("dimensions") or [])]
             if not isinstance(dimensions, list) or not dimensions:
                 raise AdapterError(
                     "ASL_ANALYSIS_SHAPE_INVALID",
@@ -2451,62 +2402,6 @@ class HttpDataRetrievalAdapter:
                         "projected_dimensions": dimensions,
                     },
                 )
-            # DETAIL_QUERY means row-level projection. Some model generations
-            # additionally emit a generic metric such as “订单明细”, which turns
-            # the query into GROUP BY aggregation and can introduce an unsafe
-            # cross-table join. The intent selected by the orchestrator is the
-            # authoritative execution shape, so aggregate metrics outside the
-            # caller contract are removed. Contract-required metrics (明细里按
-            # 商品分组的含税销售总额) must survive: the SQL translator validates
-            # the published metric formula against the generated SQL, and
-            # stripping them here fails the request with METRIC_FORMULA_STALE.
-            requested_metric_labels = {
-                str(item).strip()
-                for item in ((intent_asl_contract or {}).get("required_metrics") or [])
-                if str(item).strip()
-            }
-            requested_metric_labels.update(
-                str(item).strip()
-                for item in ((intent_asl_contract or {}).get("required_metric_codes") or [])
-                if str(item).strip()
-            )
-            if requested_metric_labels:
-                kept_metrics = []
-                for metric in asl.get("metrics") or []:
-                    if not isinstance(metric, dict):
-                        continue
-                    name = str(metric.get("name") or "").strip()
-                    alias = str(metric.get("alias") or "").strip()
-                    if name in requested_metric_labels or alias in requested_metric_labels:
-                        kept_metrics.append(metric)
-                asl["metrics"] = kept_metrics
-            else:
-                asl["metrics"] = []
-            # A row-level detail projects no aggregate, so an ORDER BY on a
-            # metric code would reference a column that never reaches SELECT
-            # (MySQL 1054). Drop that sort instead of emitting invalid SQL;
-            # detail ordering must use a projected field.
-            sort = asl.get("sort")
-            if (
-                isinstance(sort, dict)
-                and str(sort.get("field_type") or "").lower() == "metric"
-            ):
-                asl.pop("sort", None)
-            # Relationship lists are set-shaped even though the physical joins
-            # may contain several paths to the same projected combination.  The
-            # translator applies this before LIMIT; ordinary order/event detail
-            # remains explicitly row-shaped.
-            planner_extraction = getattr(request, "_planner_extraction", None)
-            planner_mode = explicit_projection_mode(
-                planner_extraction.structured
-                if planner_extraction is not None
-                else None
-            )
-            asl["projection_mode"] = planner_mode or (
-                "DISTINCT"
-                if requires_distinct_relationship_projection(request)
-                else "ROWS"
-            )
         elif grouped_partner_metric:
             dimensions = asl.get("dimensions")
             metrics = asl.get("metrics")
@@ -2804,11 +2699,8 @@ class HttpDataRetrievalAdapter:
             "查询对象": (asl.get("subject") or {}).get("entity")
             if isinstance(asl.get("subject"), dict)
             else asl.get("subject"),
-            "dimensions / display_fields": asl.get("dimensions") or [],
-            **({"关联展示字段": asl['display_fields']} if asl.get('display_fields') else {}),
-            "字段用途": (
-                "dimensions" if asl.get("metrics") else "display_fields"
-            ) if asl.get("dimensions") else None,
+            "分组维度": asl.get("dimensions") or [],
+            "展示字段": asl.get("display_fields") or [],
             "排序": asl.get("sort"),
             "结果上限": asl.get("limit"),
             "时间范围": asl.get("time_context"),
@@ -4305,308 +4197,10 @@ class HttpDataRetrievalAdapter:
         }
         return bool(left_aliases & right_aliases)
 
-    @staticmethod
-    def _reuse_time_only_asl(
-        request: CanonicalAnalysisRequest, semantic_model_id: int | None
-    ) -> dict[str, Any] | None:
-        if (
-            "DETERMINISTIC_LIMIT_FAST_PATH" in request.assumptions
-            and request.asl_template is not None
-            and request.ranking_limit is not None
-            and semantic_model_id is not None
-        ):
-            template = copy.deepcopy(request.asl_template)
-            template["limit"] = request.ranking_limit
-            # Preserve every previously grounded metric, filter, relation and
-            # time anchor.  Only the presentation limit is allowed to change.
-            return template
-        if (
-            "DETERMINISTIC_GRAIN_FAST_PATH" in request.assumptions
-            and request.asl_template is not None
-            and semantic_model_id is not None
-        ):
-            grain = next(
-                (
-                    value.split("=", 1)[1]
-                    for value in request.assumptions
-                    if value.startswith("DEFAULT_TIME_GRANULARITY=")
-                ),
-                None,
-            )
-            template = copy.deepcopy(request.asl_template)
-            dimensions = template.get("dimensions")
-            temporal = next(
-                (
-                    item for item in dimensions
-                    if isinstance(item, dict)
-                    and HttpDataRetrievalAdapter._is_temporal_asl_item(item)
-                ),
-                None,
-            ) if isinstance(dimensions, list) else None
-            if grain is None or temporal is None:
-                return None
-            temporal["granularity"] = grain
-            time_context = template.get("time_context")
-            if request.time_range is not None and isinstance(time_context, dict):
-                template["time_context"] = {
-                    **time_context,
-                    "type": "range",
-                    "start": request.time_range.start.isoformat(),
-                    "end": (
-                        request.time_range.end_exclusive - timedelta(days=1)
-                    ).isoformat(),
-                }
-            template["ambiguity"] = []
-            return template
-        if (
-            "DETERMINISTIC_TIME_FAST_PATH" not in request.assumptions
-            or request.asl_template is None
-            or request.time_range is None
-            or semantic_model_id is None
-        ):
-            return None
-        template = copy.deepcopy(request.asl_template)
-        metrics = template.get("metrics")
-        time_context = template.get("time_context")
-        if not isinstance(metrics, list) or not isinstance(time_context, dict):
-            return None
-        expected = {
-            metric.metric_id.split(":", 1)[1]
-            for metric in request.metrics
-            if metric.metric_id and metric.metric_id.startswith(f"{semantic_model_id}:")
-        }
-        selected = {
-            str(item.get("name"))
-            for item in metrics
-            if isinstance(item, dict) and item.get("name")
-        }
-        # Detail queries legitimately have no metrics.  They still need the
-        # deterministic time fast path: regenerating ASL for a time-only
-        # follow-up can reinterpret a previously grounded brand filter as a
-        # product-name LIKE filter.  Reuse is safe when the verified template
-        # is a row projection with at least one dimension and both metric sets
-        # are empty.
-        detail_projection = (
-            not expected
-            and not selected
-            and str(template.get("projection_mode") or "ROWS").upper() == "ROWS"
-            and isinstance(template.get("dimensions"), list)
-            and bool(template.get("dimensions"))
-        )
-        if (
-            (not expected and not detail_projection)
-            or selected != expected
-            or not time_context.get("anchor")
-        ):
-            return None
-        template["time_context"] = {
-            **time_context,
-            "type": "custom",
-            "start": request.time_range.start.isoformat(),
-            "end": (request.time_range.end_exclusive - timedelta(days=1)).isoformat(),
-        }
-        template["ambiguity"] = []
-        return template
 
-    @staticmethod
-    def _repair_model81_trend_time(
-        asl: dict[str, Any],
-        request: CanonicalAnalysisRequest,
-        semantic_model_id: int | None,
-    ) -> None:
-        """Bind model 81 trends to its authoritative transaction-date dimension."""
-        if (
-            semantic_model_id != 81
-            or request.primary_intent != PrimaryIntent.TREND_ANALYSIS
-            or request.time_range is None
-        ):
-            return
-        # Contextual grain replacements are rendered into the canonical
-        # executable question while ``original_question`` intentionally keeps
-        # the audit history. Prefer executable text so “改成按季度” cannot be
-        # repaired back to the previous monthly dimension.
-        text = request.rewritten_question or request.original_question
-        granularity = next(
-            (
-                value
-                for pattern, value in (
-                    (r"按(?:日|天)", "day"),
-                    (r"按周", "week"),
-                    (r"按月", "month"),
-                    (r"按季度", "quarter"),
-                    (r"按年", "year"),
-                )
-                if re.search(pattern, text)
-            ),
-            "month",
-        )
-        dimensions = asl.get("dimensions")
-        if not isinstance(dimensions, list):
-            dimensions = []
-        temporal = next(
-            (
-                item for item in dimensions
-                if HttpDataRetrievalAdapter._is_temporal_asl_item(item)
-            ),
-            None,
-        )
-        if temporal is None:
-            temporal = {
-                "name": "transaction_date",
-                "attr": None,
-                "level": None,
-                "granularity": granularity,
-            }
-            # A time repair must not discard requested business dimensions
-            # such as product, dealer, or hospital.
-            asl["dimensions"] = [*dimensions, temporal]
-        else:
-            temporal["granularity"] = granularity
-        asl["time_context"] = {
-            "type": "range",
-            "anchor": "sales_order.created_date",
-            "start": request.time_range.start.isoformat(),
-            "end": (request.time_range.end_exclusive - timedelta(days=1)).isoformat(),
-        }
-        asl["sort"] = {
-            # Keep ORDER BY aligned with the actual selected time dimension.
-            # Oagnet may return the physical anchor rather than the semantic
-            # dimension code; mixing the two produces an unknown SQL column.
-            "field": str(temporal.get("name") or "transaction_date"),
-            "direction": "ASC",
-            "field_type": "dimension",
-        }
 
-    @staticmethod
-    def _repair_required_model81_dimensions(
-        asl: dict[str, Any],
-        request: CanonicalAnalysisRequest,
-        semantic_model_id: int | None,
-    ) -> None:
-        """Restore stable model-81 dimensions explicitly requested by users.
 
-        Oagnet occasionally keeps the hospital name grouping but drops the
-        sibling hospital-level field. Model 81 has a registered, unambiguous
-        hospital.hospital_level attribute, so this repair is safer than either
-        returning an incomplete table or asking the user for information that
-        was already present in the question.
-        """
-        if semantic_model_id != 81 or "医院等级" not in request.dimensions:
-            return
-        dimensions = asl.get("dimensions")
-        if not isinstance(dimensions, list):
-            dimensions = []
-        projected = {
-            re.sub(r"[^a-z0-9\u4e00-\u9fff]", "", str(item.get("name") or "").lower())
-            for item in dimensions
-            if isinstance(item, dict)
-        }
-        if not any(
-            token in name
-            for name in projected
-            for token in ("医院等级", "医院级别", "hospitallevel", "hospitalgrade")
-        ):
-            dimensions.append({
-                "name": "hospital.hospital_level",
-                "attr": None,
-                "level": None,
-                "granularity": None,
-            })
-            asl["dimensions"] = dimensions
 
-    @staticmethod
-    def _deduplicate_relationship_identity_dimensions(asl: dict[str, Any]) -> None:
-        """Remove a relationship's duplicate identity-name projection.
-
-        The ASL generator can emit both ``dealer`` and
-        ``dealer.dealer_name`` for a request grouped by dealer.  The SQL
-        translator already expands the relationship dimension to its business
-        display name, so keeping the physical name attribute produces two
-        identical SELECT/GROUP BY columns.  Prefer the relationship dimension
-        because it preserves the model's business alias; unrelated attributes
-        such as ``dealer.province`` remain untouched.
-        """
-        dimensions = asl.get("dimensions")
-        if not isinstance(dimensions, list):
-            return
-
-        relationship_names = {
-            str(item.get("name") or "").strip().lower()
-            for item in dimensions
-            if isinstance(item, dict)
-            and "." not in str(item.get("name") or "").strip()
-            and str(item.get("name") or "").strip()
-        }
-        seen: set[str] = set()
-        deduplicated: list[Any] = []
-        removed_to_relationship: dict[str, str] = {}
-        for item in dimensions:
-            if not isinstance(item, dict):
-                deduplicated.append(item)
-                continue
-            name = str(item.get("name") or "").strip()
-            normalized = name.lower()
-            if normalized in seen:
-                continue
-            seen.add(normalized)
-
-            parts = normalized.split(".")
-            if len(parts) == 2:
-                relationship, attribute = parts
-                if (
-                    relationship in relationship_names
-                    and attribute in {"name", f"{relationship}_name"}
-                ):
-                    removed_to_relationship[normalized] = relationship
-                    continue
-            deduplicated.append(item)
-
-        if len(deduplicated) == len(dimensions):
-            return
-        asl["dimensions"] = deduplicated
-
-        sort = asl.get("sort")
-        if isinstance(sort, dict):
-            sort_field = str(sort.get("field") or "").strip().lower()
-            if sort_field in removed_to_relationship:
-                sort["field"] = removed_to_relationship[sort_field]
-
-    @staticmethod
-    def _bind_canonical_time_range(
-        asl: dict[str, Any],
-        request: CanonicalAnalysisRequest,
-        *,
-        time_policy: str = "OPTIONAL",
-    ) -> None:
-        """Keep generated ASL on the canonical half-open request interval.
-
-        The SQL translator's custom/range contract treats ``end`` as inclusive,
-        while the analysis request stores ``end_exclusive``.  Rebinding both
-        dates here prevents a multi-turn month range from accidentally including
-        the first day of the following month.
-        """
-        if request.time_range is None:
-            return
-        time_context = asl.get("time_context")
-        if not isinstance(time_context, dict) or not time_context.get("anchor"):
-            if time_policy.upper() == "REQUIRED":
-                raise AdapterError(
-                    "ASL_TIME_ANCHOR_MISSING",
-                    "time-bound analysis omitted a registered semantic time anchor",
-                )
-            return
-        asl["time_context"] = {
-            **time_context,
-            "type": (
-                time_context.get("type")
-                if time_context.get("type") in {"custom", "range"}
-                else "range"
-            ),
-            "start": request.time_range.start.isoformat(),
-            "end": (
-                request.time_range.end_exclusive - timedelta(days=1)
-            ).isoformat(),
-        }
 
     @staticmethod
     def _is_temporal_asl_item(item: Any) -> bool:
@@ -4630,24 +4224,6 @@ class HttpDataRetrievalAdapter:
             "小时", "日", "天", "周", "月", "季度", "年",
         }
 
-    @classmethod
-    def _remove_unrequested_metric_window_time(
-        cls, asl: dict[str, Any], request: CanonicalAnalysisRequest
-    ) -> None:
-        """Remove calendar scope invented from a precomputed metric's name."""
-        if request.time_range is not None or not any(
-            value.startswith("METRIC_WINDOW_IS_DEFINITION=")
-            for value in request.assumptions
-        ):
-            return
-        asl["time_context"] = None
-        for key in ("dimensions", "filters"):
-            values = asl.get(key)
-            if isinstance(values, list):
-                asl[key] = [
-                    item for item in values
-                    if not cls._is_temporal_asl_item(item)
-                ]
 
     @classmethod
     def _unwrap_sql_response(cls, value: Any) -> dict[str, Any]:

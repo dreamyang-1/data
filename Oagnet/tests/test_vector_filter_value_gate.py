@@ -188,27 +188,20 @@ def test_comparison_cannot_bypass_standard_value_gate():
 PROSE_VALUE = '2025年销售额占比前3的产品线下各'
 
 
-def test_hallucinated_prose_filter_value_is_dropped_with_receipt():
-    # Q60 实测：ASL 生成 LLM 把任务问题的叙述片段幻觉成等值过滤值（规划期
-    # 提取的过滤条件为空、值在执行期生成）。该值永远无法通过向量标准值绑定，
-    # 零候选+多重叙述特征时在绑定闸口剥离并留 repair 记录，任务不再被拦停；
-    # 不猜标准值，真实范围限制由依赖约束在 SQL 翻译阶段另行注入。
+def test_prose_filter_cannot_be_silently_removed():
     ast = draft(PROSE_VALUE)
-    k = catalog(())
-    repairs = ground_filter_values(ast, k)
-    assert ast['filters'] == []
-    assert [r['type'] for r in repairs] == ['PROSE_PLACEHOLDER_FILTER_DROPPED']
-    assert repairs[0]['resolved_field'] == FIELD and repairs[0]['mention'] == PROSE_VALUE
-    # 复检（validate_only）看到的是干净 AST，不再拦停
-    agent._validate_vector_grounded_asl(json.dumps(ast), k)
+    before = deepcopy(ast)
+    with pytest.raises(ASLValidationError):
+        ground_filter_values(ast, catalog(()))
+    assert ast == before
 
 
-def test_prose_element_dropped_from_list_while_real_value_grounds():
+def test_prose_list_element_cannot_be_silently_removed():
     ast = draft(['上海市', PROSE_VALUE], 'IN')
-    k = catalog(('上海市',))
-    repairs = ground_filter_values(ast, k)
-    assert ast['filters'][0]['value'] == ['上海市']
-    assert [r['type'] for r in repairs] == ['PROSE_PLACEHOLDER_FILTER_DROPPED']
+    before = deepcopy(ast)
+    with pytest.raises(ASLValidationError):
+        ground_filter_values(ast, catalog(('上海市',)))
+    assert ast == before
 
 
 def test_validate_only_still_fails_closed_on_prose_value():
@@ -265,63 +258,21 @@ def test_month_field_business_term_still_requires_vector_grounding():
         ground_filter_values(ast, _month_catalog())
 
 
-def test_original_question_generation_is_grounded_before_returning_pass(monkeypatch):
-    k = catalog()
-    class Builder:
-        def __init__(self, *args, **kwargs): self.last_knowledge = deepcopy(k)
-        def build(self, question): return 'scoped vector catalog'
-    monkeypatch.setattr(agent, 'PromptBuilder', Builder)
-    monkeypatch.setattr(agent, '_get_chat_model', lambda: Doc(invoke=lambda messages: Doc(content=json.dumps(draft()))))
-    response = agent.main('上海的经销商有哪些', store=object(), semantic_model_id=130,
-                          business_domain_ids=[], include_evidence=True)
-    assert response['asl_validation'] == 'PASS'
-    assert json.loads(response['result'])['filters'][0]['value'] == '上海市'
-    assert any(r['type'] == 'ADD_SOURCE_RESOLVED_ENTITY_FILTER' and r['mention'] == '上海'
-               and r['resolved_field'] == FIELD and r['canonical_value'] == '上海市'
-               for r in response['asl_repair'])
+def test_original_question_without_parameters_cannot_return_pass(monkeypatch):
+    monkeypatch.setattr(agent, '_get_chat_model', lambda: pytest.fail('no extraction'))
+    response = agent.main('上海的经销商有哪些', store=object(), semantic_model_id=130, include_evidence=True)
+    assert response['asl_validation'] is None
+    assert json.loads(response['result'])['ambiguity']
 
 
 @pytest.mark.parametrize('model_value', ['上海', '上海市'])
 def test_contract_checks_compare_canonical_value_after_grounding(monkeypatch, model_value):
-    k = catalog()
-    class Builder:
-        def __init__(self, *args, **kwargs): self.last_knowledge = deepcopy(k)
-        def build(self, question): return 'scoped vector catalog'
-    monkeypatch.setattr(agent, 'PromptBuilder', Builder)
-    monkeypatch.setattr(agent, '_get_chat_model', lambda: Doc(invoke=lambda messages: Doc(content=json.dumps(draft(model_value)))))
-    response = agent.main('上海的经销商有哪些', store=object(), semantic_model_id=130,
-        business_domain_ids=[], include_evidence=True,
-        intent_asl_contract={'filters': [{'field':FIELD,'operator':'=','value':'上海'}]})
-    assert response['asl_validation'] == 'PASS'
-    assert json.loads(response['result'])['filters'][0]['value'] == '上海市'
-    assert any(r.get('mention') == '上海' and r.get('canonical_value') == '上海市'
-               for r in response['asl_repair'])
-
-
-@pytest.mark.parametrize('injected,passes', [('上海', True), ('不存在的地区', False)])
-def test_late_contract_repair_cannot_bypass_fallback_value_gate(monkeypatch, injected, passes):
-    import query_binding_review
-    import structured_binding
-
-    k = catalog()
-    class Builder:
-        def __init__(self, *args, **kwargs): pass
-        def retrieve(self, text): return deepcopy(k)
-    monkeypatch.setattr(agent, '_recover_question_asl', lambda *args, **kwargs: None)
-    monkeypatch.setattr(agent, 'PromptBuilder', Builder)
-    monkeypatch.setattr(agent, '_get_chat_model', lambda: object())
-    monkeypatch.setattr(agent, 'embed_query', lambda value: [1])
-    monkeypatch.setattr(structured_binding, 'bind', lambda *args, **kwargs: (draft('上海市'), []))
-    monkeypatch.setattr(query_binding_review, 'review_bindings', lambda content, *args, **kwargs: (content, []))
-    def late_repair(ast, *args, **kwargs):
-        ast['filters'][0]['value'] = injected
-    monkeypatch.setattr(agent, '_repair_contract_filter', late_repair)
-    response = agent.main('上海的经销商有哪些', store=Doc(search=lambda *args, **kwargs: []), semantic_model_id=130,
-        business_domain_ids=[], include_evidence=True, structured_extraction={'过滤条件': []},
-        intent_asl_contract={'filters': [{'field': FIELD,'operator': '=','value': injected}]})
-    assert (response['asl_validation'] == 'PASS') is passes
-    ast = json.loads(response['result'])
-    if passes:
-        assert ast['filters'][0]['value'] == '上海市'
-    else:
-        assert ast['ambiguity']
+    ast = draft(model_value); knowledge = catalog()
+    repairs = agent._ground_executable_vector_values(ast, knowledge,
+        {'filters':[{'field':FIELD,'operator':'=','value':'上海'}]},
+        store=None, semantic_model_id=130, domain_ids=[])
+    agent._validate_vector_grounded_asl(json.dumps(ast), knowledge)
+    agent._validate_intent_asl_contract(json.dumps(ast),
+        {'filters':[{'field':FIELD,'operator':'=','value':'上海'}]}, knowledge)
+    assert ast['filters'][0]['value'] == '上海市'
+    assert repairs

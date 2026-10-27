@@ -50,7 +50,7 @@ def test_same_attribute_and_enum_labels_correct_wrong_model_binding(owner, model
     ast, _ = run(e, k, p)
     assert ast['ambiguity'] == []
     assert ast['subject'] == {'entity': 'sales_order'}  # overall subject is not the attribute owner
-    assert ast['dimensions'][0]['name'] == 'dealer.name'
+    assert ast['display_fields'][0]['name'] == 'dealer.name'
     assert ast['filters'] == [{'field': 'dealer.level', 'operator': '=', 'value': 'D0'}]
 
 
@@ -153,7 +153,7 @@ def test_standalone_attribute_recall_retains_parent_owner():
     attrs = k['entities'][0].metadata.pop('attributes')
     k['attributes'] = [Obj(metadata=dict(attr, parent='dealer')) for attr in attrs]
     ast, _ = run(e, k, p)
-    assert not ast['ambiguity'] and ast['dimensions'][0]['name'] == 'dealer.name'
+    assert not ast['ambiguity'] and ast['display_fields'][0]['name'] == 'dealer.name'
 
 
 def test_entity_alias_collision_does_not_become_an_identity():

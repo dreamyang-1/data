@@ -340,10 +340,10 @@ def time_anchor(temporal, ast, catalog, knowledge, model_time):
                 candidates = set()
         else:
             candidates = set()
-            for dim in ast['dimensions']:
+            for dim in [*ast['dimensions'], *ast.get('display_fields', [])]:
                 candidates.update(resolve(dim['name']))
             if not candidates:
-                tables = {d['name'].split('.')[0] for d in ast['dimensions'] if '.' in d['name']}
+                tables = {d['name'].split('.')[0] for d in [*ast['dimensions'], *ast.get('display_fields', [])] if '.' in d['name']}
                 tables.update(f['field'].split('.')[0] for f in ast['filters'])
                 subject = catalog['entities'].get((ast.get('subject') or {}).get('entity'), {})
                 for attr in _object(subject.get('attributes')) or []:

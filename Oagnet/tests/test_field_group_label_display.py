@@ -93,7 +93,7 @@ def _metric_plan(dimension_key):
 
 def _no_display_relation_ambiguity(ast):
     return not any(
-        '没有可确认的唯一关联' in json.dumps(item, ensure_ascii=False)
+        '分组' in json.dumps(item, ensure_ascii=False)
         for item in ast['ambiguity']
     )
 
@@ -109,7 +109,7 @@ def test_field_style_code_group_allows_same_entity_label_display():
                  _metric_plan('product.product_code'))
     assert _no_display_relation_ambiguity(ast), json.dumps(
         ast['ambiguity'], ensure_ascii=False)
-    assert not ast.get('display_fields')
+    assert ast.get('display_fields')
 
 
 def test_logical_product_group_still_allows_label_display():
@@ -118,7 +118,7 @@ def test_logical_product_group_still_allows_label_display():
                  _metric_plan('product'))
     assert _no_display_relation_ambiguity(ast), json.dumps(
         ast['ambiguity'], ensure_ascii=False)
-    assert not ast.get('display_fields')
+    assert ast.get('display_fields')
 
 
 def test_cross_entity_display_without_relation_still_ambiguous():
@@ -131,7 +131,7 @@ def test_cross_entity_display_without_relation_still_ambiguous():
     plan = _metric_plan('product.product_code')
     plan['display_fields'] = [{'index': 0, 'key': 'hospital.hospital_name'}]
     ast, _ = run(_hospital_extraction(), knowledge, plan)
-    assert any('没有可确认的唯一关联' in json.dumps(item, ensure_ascii=False)
+    assert any('分组' in json.dumps(item, ensure_ascii=False)
                for item in ast['ambiguity'])
 
 
@@ -166,11 +166,10 @@ def test_display_field_covered_by_bound_metric_is_omitted():
         _amount_knowledge('sales_total_including_tax=SUM(sales_order.amount_with_tax)'),
         plan,
     )
-    assert _no_display_relation_ambiguity(ast), json.dumps(
-        ast['ambiguity'], ensure_ascii=False)
-    assert not ast.get('display_fields')
-    assert any(item['type'] == 'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC'
-               for item in repairs)
+    assert ast['ambiguity']
+    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['display_fields']}
+    assert 'sales_order.amount_with_tax' not in {d['name'] for d in ast['dimensions']}
+    assert not any(r['type'] in {'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC', 'DISPLAY_FIELD_AS_ROW_PROJECTION'} for r in repairs)
 
 
 def test_detail_display_field_covered_by_metric_is_projected_as_row_column():
@@ -182,11 +181,10 @@ def test_detail_display_field_covered_by_metric_is_projected_as_row_column():
         _amount_knowledge('sales_total_including_tax=SUM(sales_order.amount_with_tax)'),
         plan,
     )
-    assert _no_display_relation_ambiguity(ast), json.dumps(
-        ast['ambiguity'], ensure_ascii=False)
-    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['dimensions']}
-    assert any(item['type'] == 'DISPLAY_FIELD_AS_ROW_PROJECTION'
-               for item in repairs)
+    assert ast['ambiguity']
+    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['display_fields']}
+    assert 'sales_order.amount_with_tax' not in {d['name'] for d in ast['dimensions']}
+    assert not any(r['type'] in {'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC', 'DISPLAY_FIELD_AS_ROW_PROJECTION'} for r in repairs)
 
 
 def test_display_field_not_covered_by_metric_stays_ambiguous():
@@ -198,7 +196,7 @@ def test_display_field_not_covered_by_metric_stays_ambiguous():
         _amount_knowledge('sales_total_including_tax=SUM(sales_order.amount_with_tax)'),
         plan,
     )
-    assert any('没有可确认的唯一关联' in json.dumps(item, ensure_ascii=False)
+    assert any('分组' in json.dumps(item, ensure_ascii=False)
                for item in ast['ambiguity'])
     assert not any(item['type'] == 'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC'
                    for item in repairs)
@@ -230,9 +228,10 @@ def test_contract_detail_intent_projects_field_when_extraction_omits_it():
         plan,
         True,
     )
-    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['dimensions']}
-    assert any(item['type'] == 'DISPLAY_FIELD_AS_ROW_PROJECTION'
-               for item in repairs)
+    assert ast['ambiguity']
+    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['display_fields']}
+    assert 'sales_order.amount_with_tax' not in {d['name'] for d in ast['dimensions']}
+    assert not any(r['type'] in {'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC', 'DISPLAY_FIELD_AS_ROW_PROJECTION'} for r in repairs)
 
 
 def test_contract_metric_intent_omits_field_when_extraction_omits_it():
@@ -247,9 +246,10 @@ def test_contract_metric_intent_omits_field_when_extraction_omits_it():
         plan,
         False,
     )
+    assert ast['ambiguity']
+    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['display_fields']}
     assert 'sales_order.amount_with_tax' not in {d['name'] for d in ast['dimensions']}
-    assert any(item['type'] == 'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC'
-               for item in repairs)
+    assert not any(r['type'] in {'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC', 'DISPLAY_FIELD_AS_ROW_PROJECTION'} for r in repairs)
 
 
 def _salesperson_id_knowledge():
@@ -318,7 +318,7 @@ def test_unflagged_surrogate_id_group_allows_same_entity_label_display():
     ast, _ = run(_salesperson_extraction(), _salesperson_id_knowledge(), plan)
     assert _no_display_relation_ambiguity(ast), json.dumps(
         ast['ambiguity'], ensure_ascii=False)
-    assert not ast.get('display_fields')
+    assert ast.get('display_fields')
 
 
 def test_non_identity_code_group_still_ambiguous():
@@ -328,6 +328,6 @@ def test_non_identity_code_group_still_ambiguous():
             'dimensions': [{'index': 0, 'key': 'salesperson.department_code'}],
             'display_fields': [{'index': 0, 'key': 'salesperson.salesperson_name'}]}
     ast, _ = run(_salesperson_extraction(), _salesperson_id_knowledge(), plan)
-    assert any('没有可确认的唯一关联' in json.dumps(item, ensure_ascii=False)
+    assert any('分组' in json.dumps(item, ensure_ascii=False)
                for item in ast['ambiguity'])
 

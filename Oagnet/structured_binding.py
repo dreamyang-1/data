@@ -283,7 +283,7 @@ def _related_display_field(groups, field, catalog):
         for neighbor in edges.get(current, set()) - seen:
             seen.add(neighbor)
             pending.append(neighbor)
-    return target_table not in starts and target_table in seen
+    return target_table in seen
 
 
 def _metric_covers_display_field(metrics, field, catalog):
@@ -836,7 +836,7 @@ def _temporal_bounds(value):
 def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=None,
          row_level_detail=None):
     """Model chooses bindings; deterministic assembly owns shape/operators/literals."""
-    ast = dict(version='2.0', intent='query', subject={}, metrics=[], dimensions=[], filters=[],
+    ast = dict(version='2.0', intent='query', subject={}, metrics=[], dimensions=[], display_fields=[], filters=[],
                time_context=None, sort=None, limit=None, having=[], ambiguity=[])
     repairs = []
     projection_bindings = []
@@ -1009,17 +1009,6 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
             allowed = (catalog['metrics'] if target == 'metrics' else
                        {**catalog['dimensions'], **slot_catalog['fields']} if target == 'dimensions' else
                        {**catalog['metrics'], **catalog['dimensions'], **slot_catalog['fields']} if target == 'sort' else slot_catalog['fields'])
-            if target == 'filters' and isinstance(original, dict):
-                # 依赖任务的筛选值常被规划器写成占位引用，抽取阶段落成空列表。
-                # 空列表无法生成有效 SQL，剥离该条件继续执行；
-                # 执行期依赖接管若约束已编译仍会注入真实名单。
-                empty_op = str(original.get('op') or original.get('operator') or '').upper()
-                if empty_op in {'IN', 'NOT IN'} and original.get('value') == []:
-                    repairs.append({'type': 'EMPTY_FILTER_VALUE_DROPPED',
-                                    'source': 'STRUCTURED_EXTRACTION',
-                                    'field': original.get('field') or label,
-                                    'operator': empty_op})
-                    continue
             if choice.get('error') or not isinstance(key,str) or key not in allowed:
                 if target == 'filters' and isinstance(original, dict):
                     # 模型绑不出字段时，过滤值若在授权字段上唯一命中则字段+值一起修正
@@ -1071,28 +1060,16 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                         continue
                 reason = choice.get('error') or '未匹配到可执行的标准字段'
                 ownership_conflict = bool(len(exact_keys) > 1 or (required_owners and isinstance(key, str) and key in catalog['fields'] and key not in slot_catalog['fields']))
-                if target == 'display_fields' and not extraction['指标'] and not ownership_conflict and any(isinstance(r.get('key'),str) and r.get('key') in catalog['fields'] for r in rows if isinstance(r, dict)):
-                    # Existing partial display behavior; filters/groupings remain mandatory.
-                    repairs.append({'type': 'OMIT_UNAVAILABLE_DISPLAY_FIELD', 'source': 'VECTOR_DISPLAY_PROJECTION',
-                                    'field': original.get('field') if isinstance(original, dict) else original,
-                                    'entity': original.get('entity', '') if isinstance(original, dict) else ''})
-                else:
-                    problem = issue(f'{source}[{index+1}]', original, reason, choice.get('candidates') or [])
-                    if target == 'filters':
-                        for detail in problem['candidate_details']:
-                            label = detail['canonical_name']
-                            if any(str(v['value']) == label for v in catalog['values']):
-                                detail['binding_kind'] = 'value'
-                            elif label in catalog['fields'] or any(
-                                    f.get('attr_name') == label for f in catalog['fields'].values()):
-                                detail['binding_kind'] = 'field'
-                    ast['ambiguity'].append(problem)
-                continue
-            # 展示位出现指标编码时按指标落位，避免聚合场景在字段白名单处被拒
-            if target == 'display_fields' and extraction['指标'] and isinstance(key, str) and key in catalog['metrics']:
-                if key not in {m['name'] for m in ast['metrics']}:
-                    ast['metrics'].append({'name': key, 'alias': catalog['metrics'][key].get('metric_name') or key,
-                                           'time_anchor': None})
+                problem = issue(f'{source}[{index+1}]', original, reason, choice.get('candidates') or [])
+                if target == 'filters':
+                    for detail in problem['candidate_details']:
+                        label = detail['canonical_name']
+                        if any(str(v['value']) == label for v in catalog['values']):
+                            detail['binding_kind'] = 'value'
+                        elif label in catalog['fields'] or any(
+                                f.get('attr_name') == label for f in catalog['fields'].values()):
+                            detail['binding_kind'] = 'field'
+                ast['ambiguity'].append(problem)
                 continue
             if target == 'metrics':
                 ast['metrics'].append({'name': key, 'alias': allowed[key].get('metric_name') or key, 'time_anchor': None})
@@ -1105,46 +1082,16 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                                     'entity': original.get('entity', '') if isinstance(original, dict) else '',
                                     'field': (original.get('field') or original.get('name')) if isinstance(original, dict) else original,
                                     'resolved_field': key})
-                if target == 'display_fields' and extraction['指标']:
+                if target == 'display_fields':
                     scalar_fields = _scalar_metric_fields(ast['metrics'], catalog)
-                    if (not extraction['维度'] and scalar_fields
-                            and {f.split('.')[0] for f in scalar_fields} == {key.split('.')[0]}):
-                        # 同表行级公式没有聚合粒度；已绑定的展示字段直接随行投影。
-                        if key not in {d['name'] for d in ast['dimensions']}:
-                            ast['dimensions'].append(dict(name=key, attr=None, level=None, granularity=None))
-                        continue
-                    if not any(_group_exposes_field(d, key, catalog) for d in ast['dimensions']):
-                        if _related_display_field(ast['dimensions'], key, catalog):
-                            fields = ast.setdefault('display_fields', [])
-                            if not any(d['name'] == key for d in fields):
-                                fields.append({'name': key, 'alias': allowed[key].get('attr_name') or key})
-                        elif _metric_covers_display_field(ast['metrics'], key, catalog):
-                            # 明细口径由调用方意图契约决定；结构化抽取的“意图”
-                            # 只是建议值，缺失时不能据此把明细字段当成汇总省略。
-                            is_row_level = (
-                                row_level_detail
-                                if row_level_detail is not None
-                                else '明细' in str(extraction.get('意图') or '')
-                            )
-                            if is_row_level:
-                                # 明细返回行级原始列，指标会被行级口径清空；
-                                # 该列与分组字段同处事实行，直接作为返回列投影。
-                                if key not in {d['name'] for d in ast['dimensions']}:
-                                    ast['dimensions'].append(dict(
-                                        name=key, attr=None, level=None, granularity=None))
-                                repairs.append({'type': 'DISPLAY_FIELD_AS_ROW_PROJECTION',
-                                                'source': 'STRUCTURED_EXTRACTION',
-                                                'field': key})
-                            else:
-                                # 汇总场景下该度量已由标准指标按聚合口径投影，
-                                # 不再作为额外的行级列附加。
-                                repairs.append({'type': 'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC',
-                                                'source': 'STRUCTURED_EXTRACTION',
-                                                'field': key,
-                                                'metrics': [m['name'] for m in ast['metrics']
-                                                            if isinstance(m, dict)]})
-                        else:
-                            ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '该展示属性与分组对象之间没有可确认的唯一关联，无法在不改变统计粒度的情况下返回'))
+                    scalar_projection = (not extraction['维度'] and scalar_fields
+                        and {f.split('.')[0] for f in scalar_fields} == {key.split('.')[0]})
+                    if (ast['metrics'] and not scalar_projection
+                            and not any(_group_exposes_field(d, key, catalog) for d in ast['dimensions'])
+                            and not _related_display_field(ast['dimensions'], key, catalog)):
+                        ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
+                            '结构化参数要求汇总指标并显示这个字段，但没有提供能确定每组对应名称的分组。请在结构化参数中明确按谁统计；ASL不会自行添加分组。'))
+                    ast['display_fields'].append({'name': key, 'alias': allowed[key].get('attr_name') or key})
                 elif key not in {d['name'] for d in ast['dimensions']}:
                     temporal = extraction.get('时间粒度') or {}
                     try:
@@ -1327,19 +1274,11 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 if direction not in {'ASC','DESC'}:
                     ast['ambiguity'].append(issue(source, original, '当前ASL仅支持一个明确升序/降序的排序字段'));continue
                 if ast.get('sort'):
-                    # ASL 的 sort 是单一字段；多级排序保留用户声明的主排序，
-                    # 次级排序不阻断执行（同分时由结果自然顺序呈现）。
-                    repairs.append({'type':'SECONDARY_SORT_IGNORED','source':'STRUCTURED_EXTRACTION',
-                                    'field':key,'direction':direction})
+                    ast['ambiguity'].append(issue(source, original, '当前ASL仅支持一个排序字段，不能忽略已声明的次级排序'))
                     continue
                 if key in catalog['metrics'] and key not in {m['name'] for m in ast['metrics']}:
-                    # 按指标排序时该指标必须同时进 SELECT，否则 ORDER BY 会引用
-                    # 一个未投影的指标编码，SQL 与发布公式对不上（METRIC_FORMULA_STALE）
-                    ast['metrics'].append({'name': key,
-                                           'alias': catalog['metrics'][key].get('metric_name') or key,
-                                           'time_anchor': None})
-                    repairs.append({'type': 'METRIC_FROM_SORT_SLOT',
-                                    'source': 'STRUCTURED_EXTRACTION', 'metric': key})
+                    ast['ambiguity'].append(issue(source, original, '排序使用的指标未在结构化指标中声明；请先补全结构化参数'))
+                    continue
                 ast['sort']={'field':key,'direction':direction,'field_type':'metric' if key in catalog['metrics'] else 'field' if '.' in key else 'dimension'}
         if extraction[source] and any(not isinstance(r,dict) or type(r.get('index')) is not int or not 0<=r['index']<len(extraction[source]) for r in rows):
             ast['ambiguity'].append(issue(source, extraction[source], '绑定输出添加了结构化提取中不存在的参数'))
@@ -1367,11 +1306,11 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
         ast['time_context'] = compile_time(temporal, ast, catalog, knowledge, plan.get('time'), clock)
     except (ValueError, TypeError, KeyError, OverflowError) as exc:
         ast['ambiguity'].append(issue('时间粒度', temporal, str(exc)))
-    if not ast['metrics'] and not ast['dimensions'] and not ast['ambiguity']:
+    if not ast['metrics'] and not ast['dimensions'] and not ast['display_fields'] and not ast['ambiguity']:
         ast['ambiguity'].append(issue('指标/展示字段', [], '未声明要计算的指标或返回的字段，不能自行补医院名称或计数'))
     if not ast['subject'] and not ast['ambiguity']:
         candidate = None
-        if not extraction['指标'] and ast['dimensions'] and detail_subject_resolver is not None:
+        if not extraction['指标'] and (ast['dimensions'] or ast['display_fields']) and detail_subject_resolver is not None:
             # Reuse the existing scoped relation-graph binding, not raw question
             # extraction or a hardcoded business table. Only a unique hub wins.
             candidate = detail_subject_resolver(ast, knowledge)

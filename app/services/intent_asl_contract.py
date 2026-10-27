@@ -83,8 +83,51 @@ def _query_object(
     return request.entity or (candidates[-1] if candidates else None)
 
 
+def _structured_contract(request: CanonicalAnalysisRequest, structured: dict) -> dict[str, Any]:
+    """The execution contract reflects slots, including explicitly empty lists."""
+    def labels(key):
+        return list(dict.fromkeys(str(
+            (item.get('field') or item.get('name') or '') if isinstance(item, dict) else item
+        ).strip() for item in (structured.get(key) or []) if item))
+
+    metrics = labels('指标')
+    codes = [metric.metric_id.split(':', 1)[1] for metric in request.metrics
+             if metric.metric_id and ':' in metric.metric_id
+             and (metric.input in metrics or metric.canonical_name in metrics)]
+    filters = [dict(item, operator=str(item.get('op') or item.get('operator') or '').upper())
+               for item in (structured.get('过滤条件') or []) if isinstance(item, dict)]
+    sorting = structured.get('排序') or []
+    temporal = structured.get('时间粒度') or {}
+    entities = labels('实体')
+    return {
+        'version': CONTRACT_VERSION,
+        'intent': request.primary_intent.value,
+        'query_object': entities[0] if entities else request.entity,
+        'metric_required': bool(metrics), 'required_metrics': metrics,
+        'required_metric_codes': codes,
+        'required_projections': labels('展示字段'), 'required_groupings': labels('维度'),
+        'projection_mode': (None if metrics else 'DISTINCT'
+            if str(structured.get('是否去重') or '').casefold() in {'是','true','1','yes','distinct'} else 'ROWS'),
+        'relationship_anchor': None,
+        'filters': [item for item in filters if not _is_negative_filter(item)],
+        'negative_filters': [item for item in filters if _is_negative_filter(item)],
+        'forbidden_filters': [], 'semantic_entity_mentions': [],
+        'sorting': ({'required': True, 'field': sorting[0].get('field'),
+                     'direction': str(sorting[0].get('order') or sorting[0].get('direction') or '').upper(),
+                     'limit': structured.get('限制')} if sorting else None),
+        'time_dimension_required': False,
+        'time_policy': 'OPTIONAL' if temporal.get('time_range') or temporal.get('unit') else 'FORBIDDEN',
+        'canonical_time_range': None,
+    }
+
+
 def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, Any]:
     """Build the authoritative query-shape contract for one canonical request."""
+
+    extraction = getattr(request, '_planner_extraction', None)
+    structured = getattr(extraction, 'structured', None)
+    if isinstance(structured, dict):
+        return _structured_contract(request, structured)
 
     metric_codes = [
         metric.metric_id.split(":", 1)[1]
@@ -94,39 +137,6 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
     required_metric_names = [
         metric.canonical_name or metric.input for metric in request.metrics
     ]
-    # 结构化参数是 ASL 的唯一业务要求来源（2026-10-21 用户要求）：任务规划
-    # 声明的「指标」是权威取数要求。依赖子问题的叙述短语（Q60 实测："销售额
-    # 占比前3的产品线下各商品的销售总数量"里"销售额"属于依赖任务语境）被
-    # 子请求意图重抽取成额外必选指标时，Oagnet 契约闸口会报 "ASL omitted
-    # metrics explicitly named in the question" 拦停整个任务。仅当规划结构化
-    # 参数声明了非空「指标」时按声明收窄；过滤后为空（词形归一差异）则保持
-    # 原列表，绝不把合法指标清空。
-    planner_structured = getattr(request, '_planner_extraction', None)
-    planner_structured = (
-        planner_structured.structured
-        if planner_structured is not None else None
-    )
-    if isinstance(planner_structured, dict) and planner_structured.get('指标'):
-        declared_names = {
-            str(item.get('name') if isinstance(item, dict) else item).strip()
-            for item in planner_structured['指标']
-        } - {''}
-        if declared_names:
-            declared_metrics = [
-                metric for metric in request.metrics
-                if str(metric.input or '').strip() in declared_names
-                or str(metric.canonical_name or '').strip() in declared_names
-            ]
-            if declared_metrics:
-                metric_codes = [
-                    metric.metric_id.split(":", 1)[1]
-                    for metric in declared_metrics
-                    if metric.metric_id and ":" in metric.metric_id
-                ]
-                required_metric_names = [
-                    metric.canonical_name or metric.input
-                    for metric in declared_metrics
-                ]
     ranking = any(
         operator in request.operators
         for operator in (AnalysisOperator.TOP_N, AnalysisOperator.BOTTOM_N, AnalysisOperator.SORT)
@@ -325,9 +335,9 @@ def validate_intent_asl_contract_definition(contract: dict[str, Any]) -> list[st
     if contract.get("intent") == PrimaryIntent.DETAIL_QUERY.value:
         if not contract.get("query_object"):
             errors.append("QUERY_OBJECT_REQUIRED")
-        if not contract.get("required_projections"):
+        if not (contract.get("required_projections") or contract.get("required_groupings") or contract.get("required_metrics")):
             errors.append("DETAIL_PROJECTION_REQUIRED")
-        if contract.get("projection_mode") not in {"DISTINCT", "ROWS"}:
+        if not contract.get("required_metrics") and contract.get("projection_mode") not in {"DISTINCT", "ROWS"}:
             errors.append("DETAIL_PROJECTION_MODE_REQUIRED")
     groupings = contract.get("required_groupings")
     if not isinstance(groupings, list) or any(

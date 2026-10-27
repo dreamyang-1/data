@@ -146,7 +146,7 @@ def test_alias_display_field_cannot_return_another_entity_attribute():
         display_fields=[{'index': 0, 'key': 'product_line.line_level1'}])
     ast, _ = run(e, k, p)
     assert ast['ambiguity'] == []
-    assert [field['name'] for field in ast['dimensions']] == ['department.dept_name']
+    assert [field['name'] for field in ast['display_fields']] == ['department.dept_name']
 
 
 def test_unrecalled_or_unauthorized_name_field_is_not_created_from_an_alias():

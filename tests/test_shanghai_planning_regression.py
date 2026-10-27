@@ -4,7 +4,6 @@ from datetime import date
 import pytest
 
 from app.adapters.base import AdapterError
-from app.adapters.surface_asl import _region_owner_extraction
 from app.domain.models import PlannerExtraction, PrimaryIntent
 from app.planning.analysis_task_planner import build_analysis_task_plan
 from app.planning.task_dag import DecomposedTask, QuestionDecomposition, _collapse_analysis_computation_tasks
@@ -12,28 +11,18 @@ from app.services.orchestrator import DataAnalysisOrchestrator
 from test_surface_asl_client import Client, response, run
 
 
-@pytest.mark.parametrize('owner', ['医院', '经销商'])
-def test_region_retry_retains_explicit_business_owner(owner):
+@pytest.mark.parametrize('owner', ['医院', '经销商', None])
+def test_asl_failure_does_not_fill_owner_or_retry_in_wider_scope(owner):
     original = {'实体': ['销售订单'], '过滤条件': [
         {'entity': owner, 'field': '省份', 'op': '=', 'value': ['上海']}]}
     before = deepcopy(original)
-    fixed = _region_owner_extraction(original)
-    assert fixed['过滤条件'] == original['过滤条件']
-    assert owner in fixed['实体'] and original == before
-
-
-def test_owner_retry_surfaces_current_error_instead_of_old_location_error():
-    class RetryClient(Client):
-        async def post(self, *args, **kwargs):
-            await super().post(*args, **kwargs)
-            result = response()
-            message = '月份排序未绑定' if kwargs['idempotency_key'].endswith(':owner') else '旧的地区归属错误'
-            result['result']['ambiguity'] = [{'type': 'context', 'question': message}]
-            return result
+    result=response();result['result']['ambiguity']=[{'type':'context','question':'条件归属未确定'}]
+    client=Client(result)
     with pytest.raises(AdapterError) as error:
-        run(RetryClient(response()), structured_extraction={
-            '实体': ['销售订单'], '过滤条件': [{'entity': '医院', 'field': '省份', 'value': ['上海']}]})
-    assert error.value.details[0]['question'] == '月份排序未绑定'
+        run(client, structured_extraction=original)
+    assert error.value.details[0]['question']=='条件归属未确定'
+    assert len(client.calls)==1 and original==before
+    assert client.calls[0][0][2]['structured_extraction']==original
 
 
 def test_month_on_month_query_selects_its_automatic_sort_dimension():

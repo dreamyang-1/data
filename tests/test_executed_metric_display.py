@@ -59,9 +59,8 @@ async def test_surface_progress_uses_final_metrics_without_mutating_execution(mo
     assert "指标ID" not in message
     assert "已选指标（来自最终ASL）=" in message
     shape = json.loads(message.split("查询结构=", 1)[1].split("，ASL筛选条件=", 1)[0])
-    assert shape["dimensions / display_fields"] == dimensions
-    assert "分组维度" not in shape
-    assert shape["字段用途"] == (("dimensions" if metrics else "display_fields") if dimensions else None)
+    assert shape["分组维度"] == dimensions
+    assert shape["展示字段"] == []
     assert "dimensions / display_fields" not in result.asl
     for metric in metrics:
         assert metric["name"] in message

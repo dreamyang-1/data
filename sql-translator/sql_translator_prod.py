@@ -727,7 +727,7 @@ def _normalize_asl_compatibility(ast: dict) -> dict:
     """Repair unambiguous formatting only; never discard query constraints."""
     if not isinstance(ast, dict):
         return ast
-    for key in ("metrics", "dimensions", "filters", "having", "ambiguity"):
+    for key in ("metrics", "dimensions", "display_fields", "filters", "having", "ambiguity"):
         if ast.get(key) is None:
             ast[key] = []
         if isinstance(ast[key], list):
@@ -743,7 +743,7 @@ def _normalize_asl_compatibility(ast: dict) -> dict:
         ast["version"] = "2.0"
     if isinstance(ast.get("intent"), str):
         ast["intent"] = ast["intent"].strip().lower()
-    for key in ("metrics", "dimensions"):
+    for key in ("metrics", "dimensions", "display_fields"):
         for item in ast.get(key) or []:
             if isinstance(item, dict) and isinstance(item.get("name"), str):
                 item["name"] = item["name"].strip()
@@ -2461,53 +2461,13 @@ class SQLTranslatorProd:
         """
         return (dialect or sql_dialects.mysql_dialect()).time_bucket(field_ref, granularity)
 
-    def _dimension_display_companion(self, dimension: Dict, entity_code: str,
-                                     model_id: Optional[str]) -> Optional[tuple]:
-        """Keep a registered entity dimension's identity and expose its label.
-
-        Only an entity-named logical dimension is eligible. Explicit physical
-        projections and independently named code dimensions remain unchanged.
-        A companion must be uniquely declared on the same physical table, so
-        this cannot invent a join or replace the original grouping identity.
-        """
-        code = str(dimension.get('name') or '')
-        if '.' in code or dimension.get('granularity'):
-            return None
-        definition = self._get_dimension(code, model_id)
-        if not definition or definition.get('enum_list'):
-            return None
-        entity = self._get_entity(code, model_id)
-        if not entity:
-            return None
-        field = self._dimension_physical_field(dimension, entity_code, model_id)
-        if not field or '.' not in field:
-            return None
-        attrs = entity.get('attributes') or []
-        identity = [a for a in attrs if a.get('field_mapping') == field]
-        if not any(self._semantic_flag(a.get('is_primary_key')) or
-                   a.get('attr_code') in {code + '_id', code + '_code'}
-                   for a in identity):
-            return None
-        candidates = {}
-        for attribute in attrs:
-            mapped = str(attribute.get('field_mapping') or '')
-            if (mapped == field or mapped.split('.')[0] != field.split('.')[0]
-                    or not re.fullmatch(r'[A-Za-z_]\w*\.[A-Za-z_]\w*', mapped)):
-                continue
-            if (self._semantic_flag(attribute.get('is_main_attribute')) or
-                    attribute.get('attr_code') == code + '_name'):
-                label = attribute.get('attr_name')
-                if label:
-                    candidates[mapped] = str(label)
-        if len(candidates) != 1:
-            return None
-        return next(iter(candidates.items()))
 
     def _build_select_clause(self, metrics: List[Dict], dimensions: List[Dict], entity_code: str, model_id: Optional[str] = None, dialect=None) -> str:
         """构建 SELECT 子句"""
         effective_dialect = dialect or sql_dialects.mysql_dialect()
         select_parts = []
         output_aliases = set()
+        projected_expressions = set()
         main_table = self._get_entity_base_table(entity_code, model_id) if entity_code else entity_code
 
         # 先添加维度字段
@@ -2547,14 +2507,9 @@ class SQLTranslatorProd:
 
             field_ref = self._apply_time_granularity(field_ref, granularity, effective_dialect)
             expr, alias = self._build_dim_expression(dim_code, field_ref, dim_alias, model_id)
-            companion = self._dimension_display_companion(dim, entity_code, model_id)
-            if companion and not any(d.get('name') == companion[0] for d in dimensions):
-                display_field, display_alias = companion
-                if display_alias in output_aliases:
-                    raise ValueError(f"列别名重复: {display_alias}")
-                output_aliases.add(display_alias)
-                select_parts.append(effective_dialect.select_alias(display_field, display_alias))
-                alias = f"{alias}（编码）"
+            if expr in projected_expressions:
+                continue
+            projected_expressions.add(expr)
             if alias in output_aliases:
                 raise ValueError(f"列别名重复: {alias}")
             output_aliases.add(alias)
@@ -2668,9 +2623,7 @@ class SQLTranslatorProd:
                     group_parts.append(self._apply_time_granularity(dim_code, granularity, effective_dialect))
                 else:
                     group_parts.append(self._apply_time_granularity(f"{main_table}.{dim_code}", granularity, effective_dialect))
-            companion = self._dimension_display_companion(dim, entity_code, model_id)
-            if companion and companion[0] not in group_parts:
-                group_parts.append(companion[0])
+        group_parts = list(dict.fromkeys(group_parts))
         return f"GROUP BY {', '.join(group_parts)}" if group_parts else ""
 
     def _projected_metric_having(self, conditions, metrics, model_id=None, dialect=None):
@@ -2927,9 +2880,6 @@ class SQLTranslatorProd:
                     dim_alias = self._dimension_alias(
                         field, dim_def, dim_item.get('alias'), model_id
                     )
-                    companion = self._dimension_display_companion(dim_item, '', model_id)
-                    if companion and not any(d.get('name') == companion[0] for d in dimensions):
-                        dim_alias = f"{dim_alias}（编码）"
                     sort_field = effective_dialect.order_alias(str(dim_alias))
                     break
             if not sort_field:
@@ -2948,9 +2898,6 @@ class SQLTranslatorProd:
                         dim_alias = self._dimension_alias(
                             field, dim_def, dim_item.get('alias'), model_id
                         )
-                        companion = self._dimension_display_companion(dim_item, '', model_id)
-                        if companion and not any(d.get('name') == companion[0] for d in dimensions):
-                            dim_alias = f"{dim_alias}（编码）"
                         sort_field = effective_dialect.order_alias(str(dim_alias))
                         break
             if not sort_field:
@@ -3599,7 +3546,7 @@ class SQLTranslatorProd:
     def _validate_ast_contract(self, ast: Dict, model_id: Optional[str]) -> str:
         normalized_model_id = str(_positive_int(model_id))
         expected = {
-            'subject': dict, 'metrics': list, 'dimensions': list, 'filters': list,
+            'subject': dict, 'metrics': list, 'dimensions': list, 'display_fields': list, 'filters': list,
             'having': list,
         }
         for field, expected_type in expected.items():
@@ -3651,7 +3598,8 @@ class SQLTranslatorProd:
                     if any(a.get('field_mapping') == code and (
                             self._semantic_flag(a.get('is_primary_key'))
                             or self._semantic_flag(a.get('is_unique'))
-                            or a.get('attr_code') == str(owner)+'_code') for a in entity.get('attributes') or []):
+                            or a.get('attr_code') in {str(owner)+'_code', str(owner)+'_id', 'id'}
+                            or str(a.get('field_mapping') or '').rsplit('.', 1)[-1] == 'id') for a in entity.get('attributes') or []):
                         starts.append(owner)
                 continue
             if not self._get_entity(code, model_id):
@@ -3673,8 +3621,18 @@ class SQLTranslatorProd:
             raise ValueError('display_fields必须是数组')
         if not displays:
             return []
-        if not ast.get('metrics'):
-            raise ValueError('明细展示字段继续由dimensions承载')
+        groups = ast.get('dimensions') or []
+        grouped_fields = {self._get_dimension_field(d['name'], d.get('attr'), model_id,
+                          (ast.get('subject') or {}).get('entity')) or d['name']
+                          for d in groups if not d.get('granularity')}
+        scalar_fields = set()
+        scalar = bool(ast.get('metrics')) and not groups
+        for metric in ast.get('metrics') or []:
+            definition = self._get_metric(metric['name'], model_id) or {}
+            formula = str((definition.get('calculation_rule') or {}).get('calc_formula') or '')
+            scalar = scalar and bool(formula) and not re.search(
+                r'\b(?:COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT|STDDEV\w*|VARIANCE)\s*\(', formula, re.I)
+            scalar_fields.update(re.findall(r'\b([A-Za-z_]\w*)\.[A-Za-z_]\w*', formula))
         starts = self._aggregate_group_entities(ast.get('dimensions') or [], model_id)
         result = []
         for item in displays:
@@ -3686,10 +3644,11 @@ class SQLTranslatorProd:
                       if any(a.get('field_mapping') == field for a in e.get('attributes') or [])]
             if not owners:
                 raise ValueError(f'展示字段未注册: {field}')
-            safe = False
+            safe = (not ast.get('metrics') and not ast.get('having')) or field in grouped_fields or (scalar and scalar_fields == {table})
             for source in starts:
                 if self._get_entity_base_table(source, model_id) == table:
-                    continue
+                    safe = True
+                    break
                 path = self._relation_path(source, table, model_id, to_one_only=True)
                 if path and all(RedisDSLLoader._canonical_cardinality(r.get('relation_type'))
                                 in {'ONE_TO_ONE', 'MANY_TO_ONE'} for r in path):
@@ -3928,7 +3887,9 @@ class SQLTranslatorProd:
             raise ValueError(str(exc))
 
         metrics = ast.get('metrics', [])
-        dimensions = [*ast.get('dimensions', []), *self._aggregate_display_dimensions(ast, model_id)]
+        group_dimensions = ast.get('dimensions', [])
+        display_fields = self._aggregate_display_dimensions(ast, model_id)
+        dimensions = [*group_dimensions, *display_fields]
         filters = ast.get('filters', [])
         time_context = ast.get('time_context')
         subject = ast.get('subject', {})
@@ -3952,7 +3913,7 @@ class SQLTranslatorProd:
         # 按维度分组后做聚合过滤，一并生成 GROUP BY + HAVING。仅当没有
         # 可用分组维度时才拒绝（无 GROUP BY 的 HAVING 非法）。
         detail_having_grouped = bool(is_detail_projection and having)
-        if detail_having_grouped and not dimensions:
+        if detail_having_grouped and not group_dimensions:
             raise ValueError("明细查询不支持HAVING条件")
         projection_mode = ast.get('projection_mode', 'ROWS')
         if projection_mode == 'DISTINCT' and not is_detail_projection:
@@ -4071,7 +4032,9 @@ class SQLTranslatorProd:
 
         group_by_clause = (
             "" if is_detail_projection and not detail_having_grouped
-            else self._build_group_by_clause(dimensions, entity_code, model_id, dialect)
+            else self._build_group_by_clause(
+                [*group_dimensions, *display_fields] if group_dimensions else [],
+                entity_code, model_id, dialect)
         )
         having_clause = self._build_having_clause(
             self._projected_metric_having([*having, *aggregate_global_conditions], metrics, model_id, dialect))
@@ -5149,7 +5112,7 @@ class SQLTranslatorProd:
         """
         metrics = ast.get('metrics') or []
         dimensions = ast.get('dimensions') or []
-        is_detail = not metrics and bool(dimensions)
+        is_detail = not metrics and bool(dimensions or ast.get('display_fields'))
         limit = ast.get('limit')
         conditions = []
         if metrics and dimensions:

@@ -54,8 +54,11 @@ BASE_URL = _env(
     default="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
 LLM_MAX_RETRIES = _nonnegative_int("OAGNET_LLM_MAX_RETRIES", 0)
-LLM_MAX_CONCURRENCY = _positive_int("OAGNET_LLM_MAX_CONCURRENCY", 1)
-# ASL generation waits for completion; concurrency and retry counts remain bounded.
+LLM_MAX_CONCURRENCY = _positive_int("OAGNET_LLM_MAX_CONCURRENCY", 4)
+ASL_MAX_WAITERS = _nonnegative_int("OAGNET_ASL_MAX_WAITERS", 32)
+LLM_CONNECT_TIMEOUT_SECONDS = _positive_int("OAGNET_LLM_CONNECT_TIMEOUT_SECONDS", 10)
+LLM_READ_TIMEOUT_SECONDS = _positive_int("OAGNET_LLM_READ_TIMEOUT_SECONDS", 120)
+# Queue waiting remains unlimited; each model transport call has a finite timeout.
 
 EMBEDDING_MODEL = _env(
     "OAGNET_EMBEDDING_MODEL", "EMBEDDING_MODEL", default="text-embedding-v4"

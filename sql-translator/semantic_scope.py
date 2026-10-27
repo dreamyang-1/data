@@ -353,7 +353,7 @@ class ScopedTranslator(SQLTranslatorProd):
             visit(metric.get('name'))
         if (ast.get('subject') or {}).get('entity'):
             entity_source(ast['subject']['entity'])
-        for dimension in ast.get('dimensions', []):
+        for dimension in [*ast.get('dimensions', []), *ast.get('display_fields', [])]:
             if not isinstance(dimension, dict):
                 continue
             name = dimension.get('name')
@@ -379,7 +379,7 @@ class ScopedTranslator(SQLTranslatorProd):
         # before translation starts.
         if not (ast.get('subject') or {}).get('entity'):
             derived = self._derive_subject_entity(
-                ast.get('dimensions', []), ast.get('filters', []), model_id
+                [*ast.get('dimensions', []), *ast.get('display_fields', [])], ast.get('filters', []), model_id
             )
             if derived:
                 entity_source(derived)

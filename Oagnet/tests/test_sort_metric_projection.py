@@ -45,12 +45,8 @@ def test_sort_by_metric_projects_the_metric():
     plan = {'subject': 'product', 'metrics': [],
             'sort': [{'index': 0, 'key': 'sales_total_including_tax'}]}
     ast, repairs = run(extraction, knowledge, plan)
-    assert not ast['ambiguity'], ast['ambiguity']
-    assert [m['name'] for m in ast['metrics']] == ['sales_total_including_tax']
-    assert ast['metrics'][0]['alias'] == '含税销售总额'
-    assert ast['sort'] == {'field': 'sales_total_including_tax',
-                           'direction': 'DESC', 'field_type': 'metric'}
-    assert any(r['type'] == 'METRIC_FROM_SORT_SLOT' for r in repairs)
+    assert ast['ambiguity'] and ast['metrics'] == []
+    assert not any(r['type'] == 'METRIC_FROM_SORT_SLOT' for r in repairs)
 
 
 def test_sort_by_metric_does_not_duplicate_declared_metric():
@@ -64,38 +60,10 @@ def test_sort_by_metric_does_not_duplicate_declared_metric():
     assert not any(r['type'] == 'METRIC_FROM_SORT_SLOT' for r in repairs)
 
 
-def test_question_generated_sort_metric_is_projected():
-    from agent import _ensure_sort_metric_projection
-    _, knowledge = sort_fixture()
-    ast = {'metrics': [], 'sort': {'field': 'sales_total_including_tax',
-                                   'direction': 'DESC', 'field_type': 'metric'}}
-    assert _ensure_sort_metric_projection(ast, knowledge) is True
-    assert ast['metrics'] == [{'name': 'sales_total_including_tax',
-                               'alias': '含税销售总额', 'time_anchor': None}]
 
 
-def test_question_generated_sort_metric_is_not_duplicated():
-    from agent import _ensure_sort_metric_projection
-    _, knowledge = sort_fixture()
-    ast = {'metrics': [{'name': 'sales_total_including_tax', 'alias': '含税销售总额',
-                        'time_anchor': None}],
-           'sort': {'field': 'sales_total_including_tax', 'field_type': 'metric',
-                    'direction': 'DESC'}}
-    assert _ensure_sort_metric_projection(ast, knowledge) is False
-    assert len(ast['metrics']) == 1
 
 
-def test_unknown_or_physical_sort_is_left_untouched():
-    from agent import _ensure_sort_metric_projection
-    _, knowledge = sort_fixture()
-    unknown = {'metrics': [], 'sort': {'field': 'not_in_catalog',
-                                       'field_type': 'metric', 'direction': 'DESC'}}
-    assert _ensure_sort_metric_projection(unknown, knowledge) is False
-    assert unknown['metrics'] == []
-    physical = {'metrics': [], 'sort': {'field': 'product.product_name',
-                                        'field_type': 'field', 'direction': 'DESC'}}
-    assert _ensure_sort_metric_projection(physical, knowledge) is False
-    assert physical['metrics'] == []
 
 
 def test_sort_by_physical_field_does_not_add_metric():
@@ -108,37 +76,3 @@ def test_sort_by_physical_field_does_not_add_metric():
     assert ast['metrics'] == []
     assert (ast.get('sort') or {}).get('field_type') == 'field'
     assert not any(r['type'] == 'METRIC_FROM_SORT_SLOT' for r in repairs)
-
-
-def test_missing_sort_is_filled_from_the_only_projected_metric():
-    from agent import _ensure_contract_sort
-    ast = {'metrics': [{'name': 'sales_total_including_tax',
-                        'alias': '含税销售总额', 'time_anchor': None}]}
-    contract = {'sorting': {'required': True, 'direction': 'DESC', 'limit': 1000}}
-    assert _ensure_contract_sort(ast, contract) is True
-    assert ast['sort'] == {'field': 'sales_total_including_tax',
-                           'direction': 'DESC', 'field_type': 'metric'}
-
-
-def test_missing_sort_is_not_invented_for_ambiguous_metric_sets():
-    from agent import _ensure_contract_sort
-    contract = {'sorting': {'required': True, 'direction': 'DESC'}}
-    multiple = {'metrics': [{'name': 'a'}, {'name': 'b'}]}
-    assert _ensure_contract_sort(multiple, contract) is False
-    assert 'sort' not in multiple
-    empty = {'metrics': []}
-    assert _ensure_contract_sort(empty, contract) is False
-    assert 'sort' not in empty
-
-
-def test_existing_sort_or_non_ranking_contract_is_untouched():
-    from agent import _ensure_contract_sort
-    ast = {'metrics': [{'name': 'sales_total_including_tax'}],
-           'sort': {'field': 'product.product_name', 'direction': 'ASC',
-                    'field_type': 'field'}}
-    contract = {'sorting': {'required': True, 'direction': 'DESC'}}
-    assert _ensure_contract_sort(ast, contract) is False
-    assert ast['sort']['direction'] == 'ASC'
-    unranked = {'metrics': [{'name': 'sales_total_including_tax'}]}
-    assert _ensure_contract_sort(unranked, {'sorting': None}) is False
-    assert 'sort' not in unranked

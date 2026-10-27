@@ -573,11 +573,10 @@ def test_validated_asl_is_rendered_as_direct_json_without_field_reformatting():
 
     assert rendered.startswith("结构化解析与校验（ASL）：\n```json\n")
     expected = deepcopy(asl)
-    expected["dimensions / display_fields"] = expected.pop("dimensions")
     assert json.loads(json_text) == expected
     assert "dimensions" in asl and "dimensions / display_fields" not in asl
     assert rendered.endswith(
-        "校验结论：ASL 已通过结构化参数校验，指标、维度与筛选绑定均与语义目录一致。"
+        "校验结论：ASL 已通过结构化参数校验，指标、维度、展示字段与筛选绑定均与语义目录一致。"
     )
     assert "说明：以上 JSON 为页面展示视图" not in rendered
     assert "执行说明：`limit: null`" not in rendered
@@ -608,11 +607,10 @@ def test_asl_display_projects_dimensions_and_closes_with_validation_conclusion(m
     json_text, trailing = after_json.split("\n```", 1)
 
     expected = deepcopy(before)
-    expected["dimensions / display_fields"] = expected.pop("dimensions")
     assert json.loads(json_text) == expected
     assert asl == before
     assert "`dimensions / display_fields`" not in trailing
-    assert trailing.strip() == "校验结论：ASL 已通过结构化参数校验，指标、维度与筛选绑定均与语义目录一致。"
+    assert trailing.strip() == "校验结论：ASL 已通过结构化参数校验，指标、维度、展示字段与筛选绑定均与语义目录一致。"
 
 
 def test_asl_display_handles_missing_slots_without_inventing_fields():
