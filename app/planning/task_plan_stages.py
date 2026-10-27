@@ -174,19 +174,21 @@ def boundary_targets(task, catalog) -> list[str]:
     if 'metric_targets' in task.model_fields_set:
         names = task.metric_targets
     else:
-        # A dependent query's question also describes how its input cohort was
-        # selected. Only its own deliverable requests new metrics; otherwise
-        # "companies of the top five by average amount" expands that average
-        # a second time. Local calculations, definitions and older outlines
-        # without a deliverable retain the existing wording-based behavior.
-        texts = (task.question, task.expected_output or '')
-        if (task.depends_on and task.expected_output and task.expected_output.strip()
-                and not task.definition_only and '不再查询数据库' not in task.question):
-            texts = (task.expected_output,)
-        # Purpose clauses describe a downstream result, not this task's inputs.
-        wording = '；'.join(re.split(r'用于|供后续|以便|用来', text, maxsplit=1)[0]
-                           for text in texts)
+        # A question can mention both its own output and a downstream formula
+        # ("sales total, as input to average order amount"). Identify the
+        # delivered metrics first, so the whole-plan dependency check can see
+        # that those formula inputs already exist instead of expanding again.
+        delivery = (task.expected_output or '').strip()
+        wording = re.split(r'用于|供后续|以便|用来', delivery, maxsplit=1)[0]
         names = targets_in_text(wording, registered, aliases)
+        dependent_detail = (task.depends_on and delivery and not task.definition_only
+                            and '不再查询数据库' not in task.question)
+        if not names and not dependent_detail:
+            # With no named metric in the deliverable, the question supplies
+            # the goal. Dependent detail lookups instead deliver new attributes,
+            # not the metric used to select their input cohort.
+            wording = re.split(r'用于|供后续|以便|用来', task.question, maxsplit=1)[0]
+            names = targets_in_text(wording, registered, aliases)
     return list(dict.fromkeys(aliases.get(name, name) for name in names))
 
 
