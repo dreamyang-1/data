@@ -16,6 +16,9 @@
     {"id":"supplier_first_cooperation","question":"合作时长最长的供应商有哪些?第一次合作是什么时间?","expected":"选出合作时长最长的对象，并返回这些对象首次合作日期；不遗漏后续交付"}
   ],
   "unresolved_context": [
+    {"id":"structured_stop_after_pending_20261026","request":"2025年10月份销售给上海地区医院销售订单总金额排名前三的经销商","missing":"日志可追溯本轮新问题被带回合作时长旧任务并产生结构化参数null；原会话记录已过期，缺少完整前序澄清及原请求授权范围，不能以独立新会话代替该场景验收"},
+    {"id":"earliest_dealer_amount_20261027","request":"合作最早的经销商，它的订单总金额是多少？","missing":"日志可追溯依赖任务在fields槽位停止；原会话记录已过期，尚未恢复原请求完整授权范围与上下文"},
+    {"id":"largest_order_after_pending_20261027","request":"全部历史订单金额最大的一笔订单是哪一笔?","missing":"日志可追溯本轮被带回旧经销商统计任务，名称和编码展示字段关系校验失败；原会话记录已过期，缺少完整前序澄清及原请求授权范围"},
     {"id":"department_hospital_relation","request":"医院与科室多对多判断","missing":"原文实体ID已省略，缺少完整实体ID及模型范围"},
     {"id":"relation_model122","request":"实体关系推荐返回空数组","semantic_model_id":122,"business_domain_id":307,"entity_type_id":"45eae41b-82d6-4bf7-b608-8e341b77d0f8","expected":"直接同名字段关系推荐，不推荐中间表"},
     {"id":"city_province_relation","request":"城市跟省份为什么没有推荐关系","missing":"原请求模型、业务域和实体ID"},
