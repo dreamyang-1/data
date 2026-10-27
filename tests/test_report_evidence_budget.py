@@ -321,6 +321,31 @@ def test_grounded_ratio_keeps_missing_value_and_watermark_limits():
     assert '缺失数据的数量及其对最终数值、排名的影响尚不能确定' in ''.join(result['warnings'])
 
 
+def test_grounded_ratio_recognizes_percentages_and_keeps_invalid_values():
+    from app.analysis.report_contract import grounded_ratio_text
+    item = complete_ratio_material()
+    item['facts']['query_data'].update(rows=[{'平均成交金额': '29.51%'},
+        {'平均成交金额': '0.82%'}, {'平均成交金额': 0.1}, {'平均成交金额': None},
+        {'平均成交金额': 'NaN'}, {'平均成交金额': '3%%'}], total_row_count=6)
+    data = {'tasks': [item], 'semantic_reference': REFERENCE}
+    result = grounded_ratio_text(data, build_report_contract(data))
+    facts = ''.join(result['facts'])
+    assert '3条有效计算结果' in facts
+    assert '最高为29.51%，最低为0.82%，两者相差28.69%' in facts
+    assert '3条结果缺少有限数值' in ''.join(result['warnings'])
+
+
+def test_grounded_ratio_percentage_rows_do_not_report_missing():
+    from app.analysis.report_contract import grounded_ratio_text
+    item = complete_ratio_material()
+    item['facts']['query_data'].update(rows=[{'平均成交金额': '29.51%'},
+        {'平均成交金额': '0.82%'}], total_row_count=2)
+    data = {'tasks': [item], 'semantic_reference': REFERENCE}
+    result = grounded_ratio_text(data, build_report_contract(data))
+    assert '最高为29.51%，最低为0.82%' in ''.join(result['facts'])
+    assert '缺少有限数值' not in ''.join(result['warnings'])
+
+
 @pytest.mark.asyncio
 async def test_complete_ratio_prose_does_not_trust_model_review_or_change_delivery(monkeypatch):
     monkeypatch.setattr('app.analysis.synthesis._semantic_reference', reference)

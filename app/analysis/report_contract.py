@@ -5,8 +5,9 @@ This affects presentation only. It never changes data, SQL or semantic bindings.
 from __future__ import annotations
 
 import re
-from decimal import Decimal, InvalidOperation
 from typing import Any
+
+from app.services.computation_delivery import numeric_value
 
 
 def _metric_units(reference: dict) -> dict[str, str]:
@@ -102,18 +103,22 @@ def grounded_ratio_text(data: dict, contract: dict) -> dict | None:
             metric = ratio['metric']
             if not metric or metric not in query.get('columns', []):
                 return None
-            unit = ratio.get('unit') or ''
+            values = []
+            has_percent = False
+            for row in rows:
+                try:
+                    raw = row.get(metric)
+                    value = numeric_value(raw.strip() if isinstance(raw, str) else raw)
+                except ValueError:
+                    continue
+                has_percent |= isinstance(raw, str) and raw.strip().endswith('%')
+                values.append(value)
+            unit = '%' if has_percent else ratio.get('unit') or ''
+            if has_percent:
+                values = [value * 100 for value in values]
             facts.append(f"“{metric}”按“{ratio['numerator']} ÷ {ratio['denominator']}”计算"
                          + (f"，单位为{unit}" if unit else "")
                          + f"；本次计算结果共返回{len(rows)}条记录，对应属性见结果表。")
-            values = []
-            for row in rows:
-                try:
-                    value = Decimal(str(row.get(metric)).replace(',', ''))
-                except (InvalidOperation, ValueError):
-                    continue
-                if value.is_finite():
-                    values.append(value)
             if values:
                 def number(value):
                     return format(value, ',.4f').rstrip('0').rstrip('.')
