@@ -150,6 +150,19 @@ def test_metric_query_does_not_use_detail_subject_fallback():
     assert ast['ambiguity'] and not ast['subject']
 
 
+def test_empty_in_list_placeholder_filter_is_dropped_not_ambiguous():
+    # 依赖任务的筛选值常被规划器写成占位引用，抽取阶段落成空列表。
+    # 空列表无法生成有效 SQL，剥离后继续执行（执行期依赖接管负责注入真实名单），
+    # 不再报"运算符或条件值缺失"歧义拦停整条任务链。
+    e, k, p = fixture()
+    e['过滤条件'] = [{'field': '省份', 'op': 'IN', 'value': []}]
+    p['filters'] = []
+    ast, repairs = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))))
+    assert not ast['ambiguity']
+    assert ast['filters'] == []
+    assert any(r['type'] == 'EMPTY_FILTER_VALUE_DROPPED' for r in repairs)
+
+
 def test_main_reconnects_existing_subject_binding_without_reextracting(monkeypatch):
     import agent
     e, k, p = dealer_list_fixture()
@@ -491,3 +504,60 @@ def test_surface_requirements_respect_existing_values_and_ambiguity():
         candidate = {'metrics': [], 'dimensions': [], 'limit': None, 'ambiguity': []}
         assert apply_surface_requirements(candidate, {'限制': bad}) == []
         assert candidate['limit'] is None
+
+
+def _dimension_ownership_catalog(dimensions, entities=None):
+    catalog = {'entities': {
+                'product_line': {'entity_id': 'PL1', 'entity_name': '产品线',
+                                 'entity_alias': None, 'attributes': []}},
+            'dimensions': dimensions,
+            'fields': {'dim_product_line.product_line_name': {'owner': 'product_line'}},
+            'metrics': {}, 'relations': []}
+    if entities:
+        catalog['entities'].update(entities)
+    return catalog
+
+
+def test_bare_entity_dimension_label_resolves_exclusively_owned_dimension():
+    """裸实体维度词在维度名与实体名不同字时，按 bind_entities 独占归属兜底。"""
+    from structured_binding import _exact_choice_keys
+
+    catalog = _dimension_ownership_catalog({
+        'product_line_name': {
+            'dim_code': 'product_line_name', 'dim_name': '产品线名称',
+            'bind_entities': [{'entity': '产品线', 'mappingTable': 'dim_product_line',
+                               'mappingColumn': 'product_line_name'}]}})
+    assert _exact_choice_keys('dimensions', {'name': '产品线'}, catalog) == ['product_line_name']
+
+
+def test_entity_dimension_ambiguity_keeps_real_candidates():
+    """同实体发布多个维度时不悄悄改写，返回全部真实候选保留歧义。"""
+    from structured_binding import _exact_choice_keys
+
+    catalog = _dimension_ownership_catalog({
+        'product_line_name': {
+            'dim_code': 'product_line_name', 'dim_name': '产品线名称',
+            'bind_entities': [{'entity': '产品线', 'mappingTable': 'dim_product_line',
+                               'mappingColumn': 'product_line_name'}]},
+        'product_line_level': {
+            'dim_code': 'product_line_level', 'dim_name': '产品线层级',
+            'bind_entities': [{'entity': '产品线', 'mappingTable': 'dim_product_line',
+                               'mappingColumn': 'product_line_level'}]}})
+    keys = _exact_choice_keys('dimensions', {'name': '产品线'}, catalog)
+    assert sorted(keys) == ['product_line_level', 'product_line_name']
+
+
+def test_shared_dimension_is_not_owned_by_one_entity():
+    """映射到多个实体的共享维度不属于独占归属，不得被裸实体词借走。"""
+    from structured_binding import _exact_choice_keys
+
+    catalog = _dimension_ownership_catalog({
+        'shared_region': {
+            'dim_code': 'shared_region', 'dim_name': '大区',
+            'bind_entities': [{'entity': '产品线', 'mappingTable': 'dim_product_line',
+                               'mappingColumn': 'region'},
+                              {'entity': '医院', 'mappingTable': 'dim_hospital',
+                               'mappingColumn': 'region'}]}},
+        entities={'hospital': {'entity_id': 'H1', 'entity_name': '医院',
+                               'entity_alias': None, 'attributes': []}})
+    assert _exact_choice_keys('dimensions', {'name': '产品线'}, catalog) == []

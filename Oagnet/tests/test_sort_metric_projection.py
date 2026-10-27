@@ -108,3 +108,37 @@ def test_sort_by_physical_field_does_not_add_metric():
     assert ast['metrics'] == []
     assert (ast.get('sort') or {}).get('field_type') == 'field'
     assert not any(r['type'] == 'METRIC_FROM_SORT_SLOT' for r in repairs)
+
+
+def test_missing_sort_is_filled_from_the_only_projected_metric():
+    from agent import _ensure_contract_sort
+    ast = {'metrics': [{'name': 'sales_total_including_tax',
+                        'alias': '含税销售总额', 'time_anchor': None}]}
+    contract = {'sorting': {'required': True, 'direction': 'DESC', 'limit': 1000}}
+    assert _ensure_contract_sort(ast, contract) is True
+    assert ast['sort'] == {'field': 'sales_total_including_tax',
+                           'direction': 'DESC', 'field_type': 'metric'}
+
+
+def test_missing_sort_is_not_invented_for_ambiguous_metric_sets():
+    from agent import _ensure_contract_sort
+    contract = {'sorting': {'required': True, 'direction': 'DESC'}}
+    multiple = {'metrics': [{'name': 'a'}, {'name': 'b'}]}
+    assert _ensure_contract_sort(multiple, contract) is False
+    assert 'sort' not in multiple
+    empty = {'metrics': []}
+    assert _ensure_contract_sort(empty, contract) is False
+    assert 'sort' not in empty
+
+
+def test_existing_sort_or_non_ranking_contract_is_untouched():
+    from agent import _ensure_contract_sort
+    ast = {'metrics': [{'name': 'sales_total_including_tax'}],
+           'sort': {'field': 'product.product_name', 'direction': 'ASC',
+                    'field_type': 'field'}}
+    contract = {'sorting': {'required': True, 'direction': 'DESC'}}
+    assert _ensure_contract_sort(ast, contract) is False
+    assert ast['sort']['direction'] == 'ASC'
+    unranked = {'metrics': [{'name': 'sales_total_including_tax'}]}
+    assert _ensure_contract_sort(unranked, {'sorting': None}) is False
+    assert 'sort' not in unranked

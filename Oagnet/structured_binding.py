@@ -908,18 +908,6 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
     def append_filter(predicate):
         ast['filters'].append(predicate)
         knowledge['_structured_filter_origins'].append(index)
-
-    def locate_filter_slot(original, scope_catalog):
-        """声明字段名 + 值唯一命中时返回 (field, values)，多义返回 None。"""
-        if not isinstance(original, dict):
-            return None
-        operator = str(original.get('op') or original.get('operator') or '').upper()
-        if operator not in {'=', '!=', 'IN', 'NOT IN'}:
-            return None
-        raw_vals = original.get('value')
-        raw_vals = raw_vals if isinstance(raw_vals, list) else [raw_vals]
-        return (_declared_field_locate(original.get('field'), raw_vals, scope_catalog)
-                or _vector_locate_value(raw_vals, scope_catalog))
     for source, target in SECTIONS.items():
         rows = plan.get(target) or []
         if not isinstance(rows, list): rows = []
@@ -928,27 +916,6 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
             owner_candidates = slot_catalog.get('_parameter_owner_candidates')
             owner_error = slot_catalog.get('_parameter_owner_error')
             if owner_candidates or owner_error:
-                # 2026-10-23 用户要求：结构化过滤参数作为硬约束优先确定性绑定。
-                # 字段名+值在授权目录里唯一命中时直接落 ASL，不再因实体归属
-                # 追问，避免同一问题反复重新生成 ASL；多义仍保持澄清。
-                located = (locate_filter_slot(original, catalog)
-                           if target == 'filters' else None)
-                if located:
-                    located_field, fixed_vals = located
-                    operator = str(original.get('op') or original.get('operator') or '').upper()
-                    if len(fixed_vals) > 1 and operator in {'=', '!='}:
-                        operator = 'IN' if operator == '=' else 'NOT IN'
-                    append_filter({'field': located_field, 'operator': operator,
-                                   'value': fixed_vals if operator in {'IN', 'NOT IN', 'BETWEEN'}
-                                   else fixed_vals[0]})
-                    repairs.append({'type': 'VECTOR_FILTER_VALUE_CORRECTED',
-                                    'source': 'VECTOR_CATALOG_HARD_CONSTRAINT',
-                                    'original_field': original.get('field'),
-                                    'field': located_field,
-                                    'values': fixed_vals})
-                    knowledge.setdefault('_hard_constraint_filter_indices', set()).add(
-                        len(ast['filters']) - 1)
-                    continue
                 ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
                     owner_error or '该名称或别名对应多个实体，尚未明确参数归属', owner_candidates or []))
                 continue
@@ -1064,14 +1031,6 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                                 or _vector_correct_filter(fallback_key, raw_vals, slot_catalog, op_)
                                 or _vector_locate_value(raw_vals, slot_catalog))
                                if op_ in {'=','!=','IN','NOT IN'} else None)
-                    if located is None and op_ in {'=', '!=', 'IN', 'NOT IN'}:
-                        # 声明实体与字段归属不一致时（例如维度字段“城市名称”被
-                        # 挂在“销售订单”实体下），槽位目录里没有该字段；改在
-                        # 完整授权目录里按声明字段名+值唯一命中绑定，不再为同一
-                        # 问题整轮重新生成 ASL。多义仍保持澄清。
-                        located = (_declared_field_locate(
-                                       original.get('field'), raw_vals, catalog)
-                                   or _vector_locate_value(raw_vals, catalog))
                     if located:
                         located_field, fixed_vals = located
                         operator2 = op_
@@ -1082,8 +1041,6 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                         repairs.append({'type': 'VECTOR_FILTER_VALUE_CORRECTED', 'source': 'VECTOR_CATALOG_FIELD_FALLBACK',
                                         'original_field': original.get('field'),
                                         'field': located_field, 'original_values': raw_vals, 'values': fixed_vals})
-                        knowledge.setdefault('_hard_constraint_filter_indices', set()).add(
-                            len(ast['filters']) - 1)
                         continue
                 if target == 'dimensions':
                     # 维度槽位是纯时间粒度词（如「季度」）时不拦停澄清：

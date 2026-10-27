@@ -114,26 +114,14 @@ def ground_filter_values(ast, knowledge, *, store=None, embed=None,
                     table, _, column = field.partition('.')
                     # Published value vectors support both historical storage
                     # forms: source_field=table.column and table + bare column.
-                    scope_domains = list(domain_ids or [])
                     where = {'$and': [scope_filter(semantic_model_id,
-                        business_domain_ids=scope_domains, record_type='entity_attribute_value'),
+                        business_domain_ids=domain_ids or [], record_type='entity_attribute_value'),
                         {'$or': [{'source_field': field}, {'$and': [
                             {'source_table': table}, {'source_field': column}]}]}]}
                     recalled = list(store.search(embed(surface), top_k=20, where=where))
-                    if not recalled and scope_domains:
-                        # 域收窄只是召回提示：域内向量的值可能未发布，而同一
-                        # 语义模型的标准值已发布。域内零召回时按模型级范围
-                        # 再召回一次，记录仍必须属于同一模型，不跨模型借值。
-                        scope_domains = []
-                        where = {'$and': [scope_filter(semantic_model_id,
-                            business_domain_ids=scope_domains,
-                            record_type='entity_attribute_value'),
-                            {'$or': [{'source_field': field}, {'$and': [
-                                {'source_table': table}, {'source_field': column}]}]}]}
-                        recalled = list(store.search(embed(surface), top_k=20, where=where))
                     for record in recalled:
                         metadata = _metadata(record)
-                        require_candidate_scope(metadata, semantic_model_id, scope_domains)
+                        require_candidate_scope(metadata, semantic_model_id, domain_ids or [])
                         source = str(metadata.get('source_field') or '')
                         qualified = source if '.' in source else str(metadata.get('source_table') or '')+'.'+source
                         if qualified != field:
@@ -141,25 +129,6 @@ def ground_filter_values(ast, knowledge, *, store=None, embed=None,
                     knowledge.setdefault('entity_attribute_values', []).extend(recalled)
                     catalog = catalog_candidates(knowledge)
                     choices = matches(field, surface, catalog)
-            if not choices and not validate_only and field in catalog['fields']:
-                # 用户原词与标准值不是固定后缀/地域等价关系时（如
-                # 华山医院 -> 复旦大学附属华山医院），只要同一字段下恰好
-                # 一个标准值包含该词（或该词包含标准值）即视为唯一证据；
-                # 多义或零命中保持原值，不猜、不跨字段借值。
-                surface_key = re.sub(r'\s+', '', surface).casefold()
-                if len(surface_key) >= 3:
-                    contained = []
-                    for record in catalog.get('values', []):
-                        if record.get('field') != field:
-                            continue
-                        value = re.sub(r'\s+', '', str(record.get('value') or '')).casefold()
-                        if not value:
-                            continue
-                        if surface_key in value or value in surface_key:
-                            if record.get('value') not in contained:
-                                contained.append(record.get('value'))
-                    if len(contained) == 1:
-                        choices = contained
             if len(choices) != 1 or (validate_only and choices[0] != surface):
                 if (not choices and not validate_only
                         and field in catalog['fields']
@@ -177,13 +146,11 @@ def ground_filter_values(ast, knowledge, *, store=None, embed=None,
                     if not isinstance(old, list):
                         break
                     continue
-                # 2026-10-23 用户明确要求：删除该复检环节，不再拦截查询。
-                # 目录里没有可唯一匹配的标准值时保留用户原值继续执行，
-                # 有无标准值都不改写用户已确认的业务值。
-                if not choices:
-                    continue
-                if len(choices) != 1:
-                    continue
+                raise ASLValidationError('ASL_FILTER_VALUE_UNGROUNDED',
+                    '筛选值未唯一匹配到该字段的向量标准值，不能标记 ASL 校验通过',
+                    field=field, details={'validation_stage': 'vector_value_grounding',
+                        'failed_filter': {key: item[key] for key in ('field', 'operator', 'value') if key in item},
+                        'candidate_values': choices})
             canonical = choices[0]
             if original != surface:
                 canonical = original[:len(original)-len(original.lstrip('%'))] + str(canonical) + original[len(original.rstrip('%')):]

@@ -41,17 +41,17 @@ _INTENT_LABELS = {
     PrimaryIntent.OUT_OF_SCOPE: "非数据任务",
 }
 
-# 对话状态对外只呈现三类：新问题、问题追问、澄清问题。
-# 内部细类（条件修改/下钻/纠错/回历史）按追问口径归并展示。
+# 对话状态对外只呈现两类：新问题、问题追问。
+# 内部细类（条件修改/下钻/纠错/回历史/参数补全反问）按追问口径归并展示。
 _TURN_RELATION_LABELS = {
     TurnRelation.STANDALONE_NEW_TOPIC: "新问题",
     TurnRelation.CURRENT_TOPIC_FOLLOWUP: "问题追问",
     TurnRelation.CURRENT_TOPIC_MODIFICATION: "问题追问",
     TurnRelation.CURRENT_TOPIC_DRILLDOWN: "问题追问",
     TurnRelation.HISTORICAL_TOPIC_RETURN: "问题追问",
-    TurnRelation.CLARIFICATION_RESPONSE: "澄清问题",
+    TurnRelation.CLARIFICATION_RESPONSE: "问题追问",
     TurnRelation.CORRECTION: "问题追问",
-    TurnRelation.AMBIGUOUS_RELATION: "澄清问题",
+    TurnRelation.AMBIGUOUS_RELATION: "问题追问",
 }
 
 _INTENT_BASES = {
@@ -845,9 +845,13 @@ def build_intent_recognition_display_v2(
         )
     else:
         time_range = ""
+    from app.analysis.intents import analysis_goals, LABELS
+    goals = analysis_goals(request.original_question)
     intent_label = _INTENT_LABELS.get(
         request.primary_intent, request.primary_intent.value
     )
+    if request.primary_intent in LABELS and goals:
+        intent_label = '、'.join(LABELS[item] for item in goals)
     task_intent = (
         f"{'基于用户文件进行' if file_based else ''}{intent_label}"
         f"（置信度 {request.intent_confidence:.2f}）"

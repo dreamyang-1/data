@@ -15,6 +15,10 @@ def install(monkeypatch, ast=None):
             assert kwargs['semantic_model_id'] == 81
             assert kwargs['business_domain_ids'] == [205]
             self.last_knowledge = catalog()
+            # The frozen ASL gate now requires value evidence as well as the
+            # existing field/metric fixture. Keep all behavior assertions.
+            self.last_knowledge['entity_attribute_values'] = [Obj(metadata={
+                'source_field': 'hospital.province', 'attr_value': '上海市'})]
         def build(self, question):
             seen.append(('question', question))
             return 'Existing scoped generation prompt'

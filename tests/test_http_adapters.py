@@ -929,6 +929,128 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
     assert "正在校验结果集契约和数据源范围。" not in completed_sql_message
 
 
+@pytest.mark.asyncio
+async def test_controlled_requery_does_not_republish_identical_asl_block():
+    # 受控重查（SQL 对齐失败/分析契约重试）会整体重跑 query()；ASL 内容
+    # 未变化时不得在思考流重复发布「工具：智能语义查询器…结构化解析与
+    # 校验（ASL）」块（用户实测同一 ASL 块连续出现两段）。
+    constraint = dependency_constraint()
+    constrained = request().model_copy(update={
+        "primary_intent": PrimaryIntent.DETAIL_QUERY,
+        "entity": "经销商",
+        "fields": ["经销商名称"],
+        "dependency_constraints": [constraint],
+    })
+    asl = {
+        "version": "2.0",
+        "subject": {"entity": "dealer_result"},
+        "metrics": [],
+        "dimensions": [{"name": "dealer_result.dealer_name"}],
+        "filters": [{
+            "field": "department.dept_name",
+            "operator": "IN",
+            "value": constraint.values,
+        }],
+        "ambiguity": [],
+    }
+    round_responses = [
+        {"success": True, "result": json.dumps(asl, ensure_ascii=False)},
+        {
+            "success": True,
+            "sql": "SELECT dealer_name FROM dealer_result WHERE dept_name IN (?, ?)",
+            "effective_filter_summary": {
+                "asl_filters": asl["filters"],
+                "metric_global_filters": [],
+            },
+        },
+        {
+            "success": True,
+            "sql": "SELECT dealer_name FROM dealer_result WHERE dept_name IN (?, ?)",
+            "data": [{"dealer_name": "经销商A"}],
+            "columns": ["dealer_name"],
+            "row_count": 1,
+        },
+    ]
+    client = StubClient(round_responses * 2)
+    progress_messages: list[tuple[str, str]] = []
+
+    async def capture_progress(event):
+        progress_messages.append((event["stage"], event["message"]))
+
+    with progress_scope(capture_progress):
+        await HttpDataRetrievalAdapter(
+            Settings(adapter_mode="http"), client
+        ).query(constrained, IDENTITY, semantic_model_id=81, business_domain_id=205)
+        await HttpDataRetrievalAdapter(
+            Settings(adapter_mode="http"), client
+        ).query(constrained, IDENTITY, semantic_model_id=81, business_domain_id=205)
+
+    assert len(client.calls) == 6
+    asl_blocks = [
+        message for stage, message in progress_messages
+        if stage == "ASL_GENERATION" and message.startswith("工具：")
+    ]
+    assert len(asl_blocks) == 1
+
+
+def test_asl_semantic_fingerprint_ignores_cosmetic_drift() -> None:
+    # 水位/受控重查重跑 query() 时 LLM 重新生成的 ASL 带非语义微差（别名、
+    # 实体改写、时间窗字面量、过滤值重绑），语义相同的 ASL 不得重复发布。
+    from app.adapters.http import _asl_semantic_fingerprint
+
+    base = {
+        "version": "2.0",
+        "intent": "query",
+        "subject": {"entity": "dealer"},
+        "metrics": [{"name": "effective_order_deduplicated_hospital_count",
+                     "alias": "有效订单去重医院数", "time_anchor": None}],
+        "dimensions": [{"name": "dealer.dealer_name"}],
+        "filters": [{"field": "dim_province.province_name", "operator": "=",
+                     "value": "上海市"}],
+        "sort": None,
+        "limit": None,
+        "having": [],
+        "ambiguity": [],
+    }
+    drifted = {
+        "version": "2.0",
+        "intent": "query",
+        "subject": {"entity": "sales_order"},
+        "metrics": [{"name": "effective_order_deduplicated_hospital_count",
+                     "alias": "有效订单去重医院数（重查）", "time_anchor": None}],
+        "dimensions": [{"name": "dealer.dealer_name"}],
+        "filters": [{"field": "dim_province.province_name", "operator": "=",
+                     "value": "上海"}],
+        "sort": None,
+        "limit": None,
+        "having": [],
+        "ambiguity": [],
+    }
+    assert _asl_semantic_fingerprint(base) == _asl_semantic_fingerprint(drifted)
+    assert _asl_semantic_fingerprint(base) != ""
+
+    # 同一分组的跨路径表示漂移：surface 物理字段对 vs query() 逻辑维度@attr
+    surface_dims = dict(base, dimensions=[
+        {"name": "dealer.dealer_name"}, {"name": "dealer.dealer_code"},
+    ])
+    query_dims = dict(base, dimensions=[
+        {"name": "dealer", "attr": "da4b27f443f4412d91480a0c5dacafb7"},
+    ])
+    assert _asl_semantic_fingerprint(surface_dims) == _asl_semantic_fingerprint(query_dims)
+
+    metric_change = dict(base, metrics=[{"name": "sales_amount"}])
+    dimension_change = dict(base, dimensions=[{"name": "hospital.hospital_name"}])
+    operator_change = dict(base, filters=[
+        {"field": "dim_province.province_name", "operator": "IN", "value": ["上海市"]}
+    ])
+    limit_change = dict(base, limit={"count": 10})
+    assert _asl_semantic_fingerprint(metric_change) != _asl_semantic_fingerprint(base)
+    assert _asl_semantic_fingerprint(dimension_change) != _asl_semantic_fingerprint(base)
+    assert _asl_semantic_fingerprint(operator_change) != _asl_semantic_fingerprint(base)
+    assert _asl_semantic_fingerprint(limit_change) != _asl_semantic_fingerprint(base)
+    assert _asl_semantic_fingerprint("not-a-dict") == ""
+
+
 def test_dependency_constraint_field_family_keeps_join_key_kind() -> None:
     assert HttpDataRetrievalAdapter._constraint_field_matches(
         "department.dept_code", "product_dept_relation.dept_code"
@@ -2075,6 +2197,21 @@ def test_current_metric_formula_rejects_unprovable_stale_sql():
     assert exc.value.code == "METRIC_FORMULA_STALE"
 
 
+def test_metric_formula_check_ignores_metrics_dropped_from_detail_asl():
+    definitions = [{
+        "metric_id": "130:sales_total_including_tax",
+        "version": "current",
+        "formula": "annual_total_sales=SUM(sales_order.amount_with_tax)",
+    }]
+    assert HttpDataRetrievalAdapter._active_metric_definitions(
+        {"metrics": []}, definitions
+    ) == []
+    projected = {"metrics": [{"name": "sales_total_including_tax"}]}
+    assert HttpDataRetrievalAdapter._active_metric_definitions(
+        projected, definitions
+    ) == definitions
+
+
 def _dealer_shared_hospital_coverage_request():
     return CanonicalAnalysisRequest(
         conversation_id="dealer-shared-hospital-coverage",
@@ -2155,10 +2292,62 @@ def test_dealer_hospital_coverage_compiles_dealer_numerator_and_shared_denominat
     assert "sales_order.quantity > 0" in compiled
     assert "SELECT COUNT(DISTINCT denominator_hospital.hospital_id)" in compiled
     assert "denominator_city.city_name = '上海市'" in compiled
+    # 目录 format_rule='0.00%'：输出百分数形式，排序保留数值比率。
+    assert "CONCAT(ROUND(" in compiled
+    assert "* 100, 2), '%') AS 区域医院覆盖率" in compiled
     denominator = compiled.split("NULLIF((", 1)[1].split("), 0)", 1)[0]
     assert "dealer" not in denominator
     assert "sales_order" not in denominator
     assert "dealer.city_id = dim_city.city_id" not in compiled
+
+
+def test_dealer_hospital_coverage_admits_catalog_registered_model_130_metric():
+    """130 目录已登记 regional_hospital_coverage 时，同一公共分母治理口径直接准入。"""
+
+    compiled = HttpDataRetrievalAdapter._apply_shared_region_hospital_coverage_policy(
+        "SELECT dealer.dealer_name AS 区域医院覆盖率 FROM dealer",
+        asl=_dealer_shared_hospital_coverage_asl(),
+        request=_dealer_shared_hospital_coverage_request(),
+        metric_definitions=[{
+            "metric_id": "130:regional_hospital_coverage",
+            "version": "current",
+            "formula": (
+                "regional_hospital_coverage="
+                "effective_order_deduplicated_hospital_count / "
+                "total_hospitals_in_region"
+            ),
+            "global_filters": [],
+        }],
+        semantic_model_id=130,
+        business_domain_id=None,
+    )
+
+    assert "FROM sales_order" in compiled
+    assert "sales_order.quantity > 0" in compiled
+    assert "SELECT COUNT(DISTINCT denominator_hospital.hospital_id)" in compiled
+    denominator = compiled.split("NULLIF((", 1)[1].split("), 0)", 1)[0]
+    assert "dealer" not in denominator
+    assert "sales_order" not in denominator
+
+
+def test_dealer_hospital_coverage_admits_surface_path_via_asl_metric_name():
+    """surface 快路径 metric_definitions 恒为空，130 按 ASL 指标名准入。"""
+
+    asl = _dealer_shared_hospital_coverage_asl()
+    asl["metrics"][0]["name"] = "regional_hospital_coverage"
+
+    compiled = HttpDataRetrievalAdapter._apply_shared_region_hospital_coverage_policy(
+        "SELECT 1",
+        asl=asl,
+        request=_dealer_shared_hospital_coverage_request(),
+        metric_definitions=[],
+        semantic_model_id=130,
+        business_domain_id=None,
+    )
+
+    assert "FROM sales_order" in compiled
+    assert "sales_order.quantity > 0" in compiled
+    assert "SELECT COUNT(DISTINCT denominator_hospital.hospital_id)" in compiled
 
 
 def test_dealer_hospital_coverage_rejects_filter_with_undeclared_ratio_scope():

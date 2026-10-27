@@ -20,6 +20,8 @@ from config import (
     API_KEY,
     BASE_URL,
     LLM_MAX_RETRIES,
+    LLM_CONNECT_TIMEOUT_SECONDS,
+    LLM_READ_TIMEOUT_SECONDS,
     LLM_MODEL,
     require_runtime_secret,
 )
@@ -8718,12 +8720,18 @@ def _validate_intent_asl_contract(
 
 @lru_cache(maxsize=1)
 def _get_chat_model():
+    import httpx
+
     return init_chat_model(
         model=LLM_MODEL,
         model_provider="openai",
         api_key=require_runtime_secret(API_KEY, "OAGNET_API_KEY/DASHSCOPE_API_KEY"),
         base_url=BASE_URL,
-        timeout=None,
+        timeout=httpx.Timeout(
+            float(LLM_READ_TIMEOUT_SECONDS),
+            connect=float(LLM_CONNECT_TIMEOUT_SECONDS),
+            pool=float(LLM_CONNECT_TIMEOUT_SECONDS),
+        ),
         max_retries=LLM_MAX_RETRIES,
         temperature=0,
         extra_body={"enable_thinking": False},
@@ -9444,7 +9452,8 @@ def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
         )
         if any(field not in vector_fields for field in fields):
             raise ValueError("ASL having field was not validated by vector semantic scope")
-    # 2026-10-23 用户明确要求：删除筛选值复检环节。
+    from vector_filter_grounding import ground_filter_values
+    ground_filter_values(ast, knowledge, validate_only=True)
 
 
 def _verify_missing_asl_fields_in_vector_store(

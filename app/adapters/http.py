@@ -5,6 +5,7 @@ import asyncio
 import hashlib
 import json
 import logging
+from contextvars import ContextVar
 import math
 import re
 import time
@@ -63,6 +64,81 @@ from app.adapters.semantic_query import CompositeSemanticQueryTool
 
 logger = logging.getLogger(__name__)
 
+# 受控重查（SQL 对齐失败/分析契约重试/水位重查等）会整体重跑 query() 并再次
+# 发布 ASL。重跑时 LLM 重新生成的 ASL 常带非语义性微差（别名、实体改写、时间
+# 窗字面量、空白），精确比对渲染串会把语义相同的 ASL 当成"真变化"重复发布，
+# 思考流出现两段几乎一样的「结构化解析与校验（ASL）」块。因此指纹取语义核心
+# （intent+指标名+维度名+过滤字段/运算符+排序+limit+having），不含别名、实体
+# 改写、时间窗字面量与过滤值；语义相同跳过重复发布，换了指标/维度仍如实展示。
+# 每个请求/asyncio 任务持有独立上下文副本，DAG 子任务经 gather 各自隔离，
+# 指纹不会跨任务泄漏。
+_PUBLISHED_ASL_FINGERPRINT: ContextVar[str] = ContextVar(
+    "published_asl_fingerprint", default=""
+)
+
+
+def _asl_semantic_fingerprint(asl: object) -> str:
+    """Compute the semantic-core fingerprint of a generated ASL plan.
+
+    Only scope-changing components participate: intent, metric names,
+    dimension names, filter fields paired with operators, sort, limit and
+    having. Aliases, subject-entity rewrites (translator resolves equivalent
+    joins), time-window literals and filter values are excluded so that a
+    watermark re-query regenerating the same query with cosmetic drift does
+    not republish an identical-looking ASL block.
+    """
+    if not isinstance(asl, dict):
+        return ""
+    try:
+        def _names(items: object) -> list[str]:
+            if not isinstance(items, list):
+                return []
+            names = []
+            for item in items:
+                if isinstance(item, dict):
+                    name = item.get("name") or item.get("field") or ""
+                else:
+                    name = str(item)
+                if str(name):
+                    names.append(str(name))
+            return sorted(names)
+
+        def _owner_names(items: object) -> list[str]:
+            """Dimension/sort owners: same grouping represented as physical
+            field pairs (surface path: dealer.dealer_name + dealer.dealer_code)
+            or as a logical dimension id (query path: dealer@attr) must yield
+            the same owner set, otherwise a re-query republishes the block."""
+            owners = set()
+            for name in _names(items):
+                owners.add(name.split(".", 1)[0].split("@", 1)[0])
+            return sorted(owners)
+
+        def _filter_pairs(items: object) -> list[list[str]]:
+            if not isinstance(items, list):
+                return []
+            pairs = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                field = str(item.get("field") or item.get("name") or "")
+                operator = str(item.get("operator") or "")
+                if field or operator:
+                    pairs.append([field, operator])
+            return sorted(pairs)
+
+        core = {
+            "intent": str(asl.get("intent") or ""),
+            "metrics": _names(asl.get("metrics")),
+            "dimensions": _owner_names(asl.get("dimensions")),
+            "filters": _filter_pairs(asl.get("filters")),
+            "sort": _owner_names(asl.get("sort")),
+            "limit": asl.get("limit"),
+            "having": sorted(str(item) for item in asl.get("having") or []),
+        }
+        return json.dumps(core, ensure_ascii=False, sort_keys=True)
+    except (TypeError, ValueError):
+        return ""
+
 
 # These codes describe a deterministic semantic/query contract rejection.  A
 # transport-level 5xx wrapper must not make the HTTP client submit the exact
@@ -86,6 +162,19 @@ _NON_RETRYABLE_UPSTREAM_CODES = frozenset({
     "SQL_QUERY_FILTER_OPERATOR_FAILED",
     "SQL_RELATIONSHIP_GRAPH_INCOMPLETE",
 })
+
+
+def _claim_asl_fingerprint(asl: object) -> bool:
+    """True exactly once per request context for a semantically new ASL.
+
+    query() 与 query_surface() 两个发布点共用同一指纹守卫；此处收拢重复的
+    判定逻辑：指纹相同（受控重查重新生成的同语义 ASL）返回 False 跳过发布。
+    """
+    fingerprint = _asl_semantic_fingerprint(asl)
+    if fingerprint == _PUBLISHED_ASL_FINGERPRINT.get():
+        return False
+    _PUBLISHED_ASL_FINGERPRINT.set(fingerprint)
+    return True
 
 
 def _compact_progress_value(value: Any, limit: int = 800) -> str:
@@ -701,13 +790,26 @@ class HttpDataRetrievalAdapter:
     # regional hospital-master denominator shared by every dealer.  The current
     # platform SQL translator can expand the two atomic metrics into the same
     # joined rowset, which incorrectly lets dealer grouping reduce the
-    # denominator.  Until the platform translator exposes a first-class
-    # numerator/denominator scope contract, this adapter compiles that one
-    # published policy into an auditable read-only query and fails closed for
-    # unsupported filters.
-    _SHARED_REGION_HOSPITAL_COVERAGE_METRIC_ID = (
-        "81:screening_area_hospital_coverage"
-    )
+    # denominator (and on model 130's data volume pushes the single joined
+    # query past the 60s server-side execution limit).  Until the platform
+    # translator exposes a first-class numerator/denominator scope contract,
+    # this adapter compiles that one published policy into an auditable
+    # read-only query and fails closed for unsupported filters.
+    # 2026-10-22 用户要求：语义层已登记的复合指标完全按语义层口径执行——
+    # model 130 的 regional_hospital_coverage 登记口径（分子=quantity>0 有效
+    # 订单去重医院、分母=区域医院主数据去重）与 81 治理口径一致，纳入同一
+    # 编译通道；准入只认指标登记编码，业务域不再限定。
+    _SHARED_REGION_HOSPITAL_COVERAGE_METRIC_IDS = frozenset({
+        "81:screening_area_hospital_coverage",
+        "130:regional_hospital_coverage",
+    })
+    # surface 快路径不取指标定义（metric_definitions 恒为空），无法按
+    # metric_id 准入；130 目录登记的 indicator_code 与 ASL 指标 name 一致
+    # （translator 入参实测），按 ASL 指标名补充准入，仅限 model 130；
+    # 81 维持指标定义通道不变。
+    _SHARED_REGION_HOSPITAL_COVERAGE_ASL_METRIC_NAMES = frozenset({
+        "regional_hospital_coverage",
+    })
 
     def __init__(self, settings: Settings, client: PlatformHttpClient) -> None:
         self.settings = settings
@@ -1365,6 +1467,24 @@ class HttpDataRetrievalAdapter:
         # from being copied into a display-name filter (or vice versa).
         return key_kind(expected_normalized) == key_kind(actual_normalized)
 
+    @staticmethod
+    def _is_dependency_reference_text(value: str) -> bool:
+        """Whether a filter value is an unresolved predecessor reference.
+
+        计划器有时把前序任务的值写成模板占位符（如 ${task_0.销售员姓名}）、
+        “复用上述任务返回的名单”或“依赖任务1输出的经销商名称列表”这类自然
+        语言占位（2026-10-21 端到端实测）。该值由依赖约束按标准键注入，占位
+        符本身不是可绑定字面量。
+        """
+        text = value.strip()
+        return bool(
+            re.match(r'^(?:复用|根据|基于)?(?:上述|上一轮|上一步|前序|前一)(?:任务)?'
+                     r'(?:的)?(?:查询)?(?:返回)?(?:的)?(?:结果|名单)(?:[：:]|中(?:的)?|$)', text)
+            or re.match(r'^\$\{\s*task[_-]?\d+(?:\.[^}]*)?\s*\}$', text, re.IGNORECASE)
+            or re.match(r'^(?:依赖)?(?:前序|上述|之前)?任务\d*(?:的)?(?:查询|返回|执行)?'
+                        r'(?:输出)?(?:的)?.{0,24}?(?:结果|名单|列表|输出|名称|编码|值)$', text)
+        )
+
     @classmethod
     def _merge_dependency_filters(cls, request: CanonicalAnalysisRequest) -> None:
         """Put immutable upstream values in structured input, not just prose."""
@@ -1380,30 +1500,27 @@ class HttpDataRetrievalAdapter:
             # owns that binding; without them the placeholder can never bind
             # to a real standard value anyway. Preserve real literals,
             # exclusions and filters on other objects.
+            value = item.get('value')
+            values = value if isinstance(value, list) else [value]
+            has_dependency_reference = any(
+                isinstance(v, str) and cls._is_dependency_reference_text(v)
+                for v in values
+            )
             family_ok = (
                 not families
                 or cls._constraint_field_family(str(item.get('field') or '')) in families
             )
-            if (not family_ok
+            # 依赖占位符必须无条件让位于约束注入（Q60 实测 2026-10-22）：约束
+            # 源列与规划器声明的过滤字段可能属于不同语义族（源列“产品线”→
+            # product，声明字段“产品线一级分类”→category）。family 闸门只为
+            # 保护真实字面量；占位符不是字面量，留下它必然在向量值绑定阶段
+            # 失败并触发整个结构化绑定的澄清拦停。
+            if ((not family_ok and not has_dependency_reference)
                     or str(item.get('operator') or item.get('op') or '=').upper() not in {'=', 'EQ', 'IN'}):
                 return item
-            value = item.get('value')
-            values = value if isinstance(value, list) else [value]
             retained = [v for v in values if not (
                 isinstance(v, str) and v not in request.original_question
-                and (re.match(r'^(?:复用|根据|基于)?(?:上述|上一轮|上一步|前序|前一)(?:任务)?'
-                              r'(?:的)?(?:查询)?(?:返回)?(?:的)?(?:结果|名单)(?:[：:]|中(?:的)?|$)', v.strip())
-                     # 计划器有时把前序任务的值写成模板占位符（如
-                     # ${task_0.销售员姓名}）。该值由下方依赖约束按标准键注入，
-                     # 占位符本身不是可绑定字面量。
-                     or re.match(r'^\$\{\s*task[_-]?\d+(?:\.[^}]*)?\s*\}$', v.strip(), re.IGNORECASE)
-                     # 计划器也会把引用写成“依赖任务1输出的经销商名称列表”
-                     # 这类自然语言占位（2026-10-21 端到端实测）。同样由依赖
-                     # 约束的标准键接管，否则占位文本会被当筛选值去做向量值
-                     # 绑定，必然失败并触发澄清拦停。
-                     or re.match(r'^(?:依赖)?(?:前序|上述|之前)?任务\d*(?:的)?(?:查询|返回|执行)?'
-                                 r'(?:输出)?(?:的)?.{0,24}?(?:结果|名单|列表|输出|名称|编码|值)$',
-                                 v.strip())))]
+                and cls._is_dependency_reference_text(v))]
             if len(retained) == len(values):
                 return item
             resolved_references.update(v for v in values if isinstance(v, str) and v not in retained)
@@ -2448,15 +2565,17 @@ class HttpDataRetrievalAdapter:
         # Publish the validated ASL at its real lifecycle boundary: Oagent has
         # finished and all local ASL guards have passed, while SQL translation
         # and database execution have not started yet.
-        await emit_progress(
-            "ASL_GENERATION",
-            "COMPLETED",
-            f"工具：{SEMANTIC_QUERY_TOOL_NAME}。\n"
-            + render_asl_extraction_json(asl, asl_repairs) + render_binding_notices(asl_repairs),
-            message_limit=65536,
-            display_model="OagentASL",
-            display_version=str(asl.get("version") or "UNKNOWN"),
-        )
+        if _claim_asl_fingerprint(asl):
+            await emit_progress(
+                "ASL_GENERATION",
+                "COMPLETED",
+                f"工具：{SEMANTIC_QUERY_TOOL_NAME}。\n"
+                + render_asl_extraction_json(asl, asl_repairs)
+                + render_binding_notices(asl_repairs),
+                message_limit=65536,
+                display_model="OagentASL",
+                display_version=str(asl.get("version") or "UNKNOWN"),
+            )
 
         if asl_cache_key is not None and not analysis_notices:
             if len(self._asl_plan_cache) >= self.settings.asl_plan_cache_max_items:
@@ -2539,9 +2658,12 @@ class HttpDataRetrievalAdapter:
         execution.dimensions = [str(item.get("name")) for item in asl.get("dimensions", [])
                                 if isinstance(item, dict) and item.get("name")]
         execution.business_domain_ids = list(scope.business_domain_ids)
-        await emit_progress("ASL_GENERATION", "COMPLETED",
-                            render_asl_extraction_json(asl, plan.get("asl_repair")) + render_binding_notices(plan.get("asl_repair")), message_limit=65536,
-                            display_model="OagentASL", display_version=str(asl.get("version") or "UNKNOWN"))
+        # Surface 快路径与 query() 共用同一指纹守卫：surface 失败兜底走 query()
+        # 时，语义相同的 ASL 不再重复发布一段。
+        if _claim_asl_fingerprint(asl):
+            await emit_progress("ASL_GENERATION", "COMPLETED",
+                                render_asl_extraction_json(asl, plan.get("asl_repair")) + render_binding_notices(plan.get("asl_repair")), message_limit=65536,
+                                display_model="OagentASL", display_version=str(asl.get("version") or "UNKNOWN"))
         execution_domains = (
             list(scope.business_domain_ids)
             or list(request.resolved_business_domain_ids)
@@ -3092,12 +3214,20 @@ class HttpDataRetrievalAdapter:
             for item in metric_definitions
             if isinstance(item, dict)
         }
-        if (
-            semantic_model_id != 81
-            or business_domain_id != 205
-            or cls._SHARED_REGION_HOSPITAL_COVERAGE_METRIC_ID
-            not in definition_ids
-        ):
+        admitted = bool(
+            cls._SHARED_REGION_HOSPITAL_COVERAGE_METRIC_IDS & definition_ids
+        )
+        if not admitted and semantic_model_id == 130:
+            asl_metric_names = {
+                str(item.get("name") or "").strip()
+                for item in (asl.get("metrics") or [])
+                if isinstance(item, dict)
+            }
+            admitted = bool(
+                cls._SHARED_REGION_HOSPITAL_COVERAGE_ASL_METRIC_NAMES
+                & asl_metric_names
+            )
+        if not admitted:
             return sql
 
         request_roles = [request.entity or "", *request.dimensions]
@@ -3208,10 +3338,15 @@ class HttpDataRetrievalAdapter:
             *denominator_joins,
             "WHERE " + " AND ".join(denominator_predicates),
         ))
+        # 目录登记 format_rule='0.00%'（unit='%'）：输出按百分数形式展示，
+        # 数值比率单独保留用于排序，避免百分号字符串破坏数值排序语义。
+        ratio_sql = (
+            "COUNT(DISTINCT hospital.hospital_code) /"
+            f"NULLIF(({denominator_sql}), 0)"
+        )
         compiled = " ".join((
             "SELECT dealer.dealer_name AS 经销商,",
-            "COUNT(DISTINCT hospital.hospital_code) /",
-            f"NULLIF(({denominator_sql}), 0) AS 区域医院覆盖率",
+            f"CONCAT(ROUND(({ratio_sql}) * 100, 2), '%') AS 区域医院覆盖率",
             "FROM sales_order",
             "JOIN dealer ON sales_order.dealer_code = dealer.dealer_code",
             "JOIN hospital ON sales_order.hospital_id = hospital.hospital_id",
@@ -3233,7 +3368,7 @@ class HttpDataRetrievalAdapter:
                     "SHARED_DENOMINATOR_SORT_UNSUPPORTED",
                     "公共分母指标仅支持按指标值排序",
                 )
-            compiled += f" ORDER BY 区域医院覆盖率 {direction}"
+            compiled += f" ORDER BY ({ratio_sql}) {direction}"
         limit = asl.get("limit")
         if limit is not None:
             if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 10000:

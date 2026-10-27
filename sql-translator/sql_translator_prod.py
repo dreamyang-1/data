@@ -82,6 +82,11 @@ DIMENSION_KEY_PREFIX = 'semantic_model:dimension:'
 ENTITY_KEY_PREFIX = 'semantic_model:entity:'
 DATA_SOURCE_KEY_PREFIX = 'semantic_model:data_source:'  # 数据源也存储在 Redis 中
 
+# 数值型物理列的格式化日期字面量识别（严格格式才触发紧凑化适配）
+MONTH_LITERAL_RE = re.compile(r'^\d{4}-\d{2}$')
+DAY_LITERAL_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+INT_FIELD_TYPE_RE = re.compile(r'^(?:TINY|SMALL|MEDIUM|BIG)?INT(?:\(\d+\))?$', re.I)
+
 
 def _mapping_backed_code(value, mapped_identifier):
     """Match the catalog reader's absent-code projection, without DB writes."""
@@ -2754,6 +2759,77 @@ class SQLTranslatorProd:
                 row_rules.append(rule)
         return normalized, row_rules, aggregate_conditions
 
+    def _field_physical_type(self, model_id, field: str) -> Optional[str]:
+        """查询过滤字段的物理列类型（table.column → semantic_model_field.type）。"""
+        if model_id is None or not field or '.' not in field:
+            return None
+        cache = getattr(self, '_field_type_cache', None)
+        if cache is None:
+            cache = self._field_type_cache = {}
+        key = (str(model_id), str(field))
+        if key in cache:
+            return cache[key]
+        field_type = None
+        catalog = getattr(self, 'catalog', None)
+        if catalog is None or not callable(getattr(catalog, '_query', None)):
+            cache[key] = field_type
+            return field_type
+        try:
+            table_name, column_name = str(field).split('.', 1)
+            rows = catalog._query(
+                "SELECT f.type FROM semantic_model_field f "
+                "JOIN semantic_model_table t ON t.id=f.table_id "
+                "WHERE f.semantic_model_id=%s AND t.name=%s AND f.name=%s "
+                "AND f.is_deleted=0 LIMIT 1",
+                (model_id, table_name, column_name),
+            )
+            if rows:
+                field_type = rows[0].get('type')
+        except (pymysql.MySQLError, OSError, TimeoutError, ConnectionError, ValueError, AttributeError):
+            field_type = None
+        cache[key] = field_type
+        return field_type
+
+    def _adapt_numeric_field_literals(self, filters: List[Dict], model_id) -> List[Dict]:
+        """数值型物理列的格式化日期字面量按存储格式紧凑化（类型感知适配）。
+
+        总账年月等列物理类型为 INT（存储 202510），ASL 值是 '2025-10' 展示格式；
+        字符串字面量与 INT 列比较时 MySQL 把 '2025-10' 隐式截断为 2025，恒假比较
+        造成静默 0 行。仅当列类型确认为整数族且字面量为严格 YYYY-MM / YYYY-MM-DD
+        时改写为 YYYYMM / YYYYMMDD 数字字面量；类型未知或非整型时保持原值不动，
+        不改业务含义（按已绑定字段类型适配字面量，非擅改）。
+        """
+        adapted: List[Dict] = []
+        for item in filters or []:
+            if not isinstance(item, dict):
+                adapted.append(item)
+                continue
+            field = str(item.get('field') or '')
+            value = item.get('value')
+            if not field or '.' not in field:
+                adapted.append(item)
+                continue
+            field_type = self._field_physical_type(model_id, field)
+            if not field_type or not INT_FIELD_TYPE_RE.fullmatch(str(field_type).strip()):
+                adapted.append(item)
+                continue
+
+            def compact(node):
+                if isinstance(node, str):
+                    if MONTH_LITERAL_RE.fullmatch(node):
+                        return int(node.replace('-', ''))
+                    if DAY_LITERAL_RE.fullmatch(node):
+                        return int(node.replace('-', ''))
+                if isinstance(node, list):
+                    return [compact(entry) for entry in node]
+                return node
+
+            new_value = compact(value)
+            if new_value is not value:
+                item = dict(item, value=new_value)
+            adapted.append(item)
+        return adapted
+
     def _build_filter_clause(self, filters: List[Dict], global_filters: List[Dict], table_alias: str) -> str:
         """构建 WHERE 子句（含全局过滤条件）"""
         all_conditions = []
@@ -3871,7 +3947,12 @@ class SQLTranslatorProd:
         is_detail_projection = not metrics and bool(dimensions)
         if not metrics and not dimensions:
             raise ValueError("AST中未包含指标或明细字段信息")
-        if is_detail_projection and having:
+        # 明细投影 + HAVING 聚合条件（如“只有单一经销商供货的医院”的
+        # HAVING COUNT(DISTINCT sales_order.dealer_code)=1）是合法业务形态：
+        # 按维度分组后做聚合过滤，一并生成 GROUP BY + HAVING。仅当没有
+        # 可用分组维度时才拒绝（无 GROUP BY 的 HAVING 非法）。
+        detail_having_grouped = bool(is_detail_projection and having)
+        if detail_having_grouped and not dimensions:
             raise ValueError("明细查询不支持HAVING条件")
         projection_mode = ast.get('projection_mode', 'ROWS')
         if projection_mode == 'DISTINCT' and not is_detail_projection:
@@ -3966,6 +4047,9 @@ class SQLTranslatorProd:
             if tc:
                 time_conditions.append(tc)
 
+        # 数值型物理列（如 INT 总账年月）的 '2025-10' 展示格式字面量
+        # 在比较时会被 MySQL 隐式截断导致恒假、静默 0 行；先按列类型紧凑化
+        filters = self._adapt_numeric_field_literals(filters, model_id)
         filter_clause = self._build_filter_clause(filters, row_global_filters, main_table)
         if ast.get('related_filters'):
             from related_scope_sql import compile_related_filters
@@ -3986,7 +4070,7 @@ class SQLTranslatorProd:
                 filter_clause = f"WHERE {' AND '.join(time_conditions)}"
 
         group_by_clause = (
-            "" if is_detail_projection
+            "" if is_detail_projection and not detail_having_grouped
             else self._build_group_by_clause(dimensions, entity_code, model_id, dialect)
         )
         having_clause = self._build_having_clause(

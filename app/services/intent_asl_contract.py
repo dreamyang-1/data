@@ -91,6 +91,42 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         for metric in request.metrics
         if metric.metric_id and ":" in metric.metric_id
     ]
+    required_metric_names = [
+        metric.canonical_name or metric.input for metric in request.metrics
+    ]
+    # 结构化参数是 ASL 的唯一业务要求来源（2026-10-21 用户要求）：任务规划
+    # 声明的「指标」是权威取数要求。依赖子问题的叙述短语（Q60 实测："销售额
+    # 占比前3的产品线下各商品的销售总数量"里"销售额"属于依赖任务语境）被
+    # 子请求意图重抽取成额外必选指标时，Oagnet 契约闸口会报 "ASL omitted
+    # metrics explicitly named in the question" 拦停整个任务。仅当规划结构化
+    # 参数声明了非空「指标」时按声明收窄；过滤后为空（词形归一差异）则保持
+    # 原列表，绝不把合法指标清空。
+    planner_structured = getattr(request, '_planner_extraction', None)
+    planner_structured = (
+        planner_structured.structured
+        if planner_structured is not None else None
+    )
+    if isinstance(planner_structured, dict) and planner_structured.get('指标'):
+        declared_names = {
+            str(item.get('name') if isinstance(item, dict) else item).strip()
+            for item in planner_structured['指标']
+        } - {''}
+        if declared_names:
+            declared_metrics = [
+                metric for metric in request.metrics
+                if str(metric.input or '').strip() in declared_names
+                or str(metric.canonical_name or '').strip() in declared_names
+            ]
+            if declared_metrics:
+                metric_codes = [
+                    metric.metric_id.split(":", 1)[1]
+                    for metric in declared_metrics
+                    if metric.metric_id and ":" in metric.metric_id
+                ]
+                required_metric_names = [
+                    metric.canonical_name or metric.input
+                    for metric in declared_metrics
+                ]
     ranking = any(
         operator in request.operators
         for operator in (AnalysisOperator.TOP_N, AnalysisOperator.BOTTOM_N, AnalysisOperator.SORT)
@@ -222,7 +258,7 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
             ),
         ),
         "metric_required": metric_required,
-        "required_metrics": [metric.canonical_name or metric.input for metric in request.metrics],
+        "required_metrics": required_metric_names,
         "required_metric_codes": metric_codes,
         "required_projections": required_projections,
         "required_groupings": required_groupings if not detail_like else [],

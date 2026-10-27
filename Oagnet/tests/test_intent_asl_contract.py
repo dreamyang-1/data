@@ -594,6 +594,46 @@ def test_detail_contract_removes_model_invented_metric_without_weakening_project
     ]
 
 
+def test_detail_contract_binds_requested_metrics_from_recalled_catalog():
+    """明细契约携带 required_metrics 时不得清空指标：模型漏写按召回目录补齐，发明指标照旧清除。"""
+    knowledge = {
+        "metrics": [SimpleNamespace(metadata={
+            "metric_code": "sales_total_including_tax",
+            "metric_name": "含税销售总额",
+        })],
+        "entities": [_entity("dealer", "经销商", "dealer.dealer_name", "经销商名称")],
+    }
+    contract = {
+        "intent": "DETAIL_QUERY", "query_object": "经销商",
+        "metric_required": True,
+        "required_metrics": ["含税销售总额"],
+        "required_metric_codes": ["sales_total_including_tax"],
+        "required_projections": ["经销商名称"],
+        "filters": [], "negative_filters": [],
+        "sorting": None, "time_dimension_required": False,
+    }
+    missing = json.loads(_detail_ast("dealer"))
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(missing, ensure_ascii=False), knowledge, contract
+    )
+    assert json.loads(repaired)["metrics"] == [{
+        "name": "sales_total_including_tax", "alias": "含税销售总额", "time_anchor": None,
+    }]
+    assert "ADD_REQUIRED_METRIC" in [item["type"] for item in repairs]
+
+    chinese_named = json.loads(_detail_ast("dealer"))
+    chinese_named["metrics"] = [{"name": "含税销售总额"}, {"name": "invented_metric"}]
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(chinese_named, ensure_ascii=False), knowledge, contract
+    )
+    result = json.loads(repaired)
+    assert [item["name"] for item in result["metrics"]] == ["sales_total_including_tax"]
+    assert not any(
+        item.get("semantic_label") == "invented_metric" for item in repairs
+    )
+    _validate_intent_asl_contract(repaired, contract, knowledge)
+
+
 def test_negative_filter_polarity_is_part_of_contract_validation():
     ast = json.loads(_detail_ast("dealer"))
     ast["dimensions"] = [{"name": "dealer.dealer_name"}]

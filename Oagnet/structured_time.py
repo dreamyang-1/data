@@ -16,6 +16,7 @@ UNITS = {
     'half_year': 'half_year', '半年': 'half_year', '半年度': 'half_year',
     '日': 'day', '天': 'day', '周': 'week', '星期': 'week', '月': 'month',
     '季': 'quarter', '季度': 'quarter', '年': 'year',
+    '月度': 'month', '周度': 'week', '日度': 'day',
 }
 
 

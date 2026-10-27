@@ -165,6 +165,87 @@ def test_entity_alias_collision_does_not_become_an_identity():
     assert resolve_entities('dealer', catalog['entities']) == {'dealer'}
 
 
+def _owner_release_catalog():
+    return {'entities': {
+                'sales_order': {'entity_id': 'SO1', 'entity_name': '销售订单',
+                                'entity_alias': None, 'attributes': []},
+                'dim_province': {'entity_id': 'DP1', 'entity_name': '省份',
+                                 'entity_alias': None, 'attributes': []}},
+            'fields': {
+                'dim_province.province_name': {
+                    'owner': 'dim_province', 'attr_name': '省份名称',
+                    'attribute_bindings': [{'attr_name': '省份名称', 'owner': 'dim_province'}]}},
+            'metrics': {}, 'relations': []}
+
+
+def test_slot_owner_without_label_evidence_releases_to_unique_label_entity():
+    """声明实体对标签零字段证据且标签唯一命中其他实体时释放声明约束（Q60w 实测）。"""
+    from binding_ownership import parameter_catalog
+
+    catalog = _owner_release_catalog()
+    original = {'entity': '销售订单', 'field': '省份', 'op': '=', 'value': ['上海']}
+    result = parameter_catalog(catalog, original, {}, 'filters')
+    assert result['_parameter_owners'] == {'dim_province'}
+    assert 'dim_province.province_name' in result['fields']
+
+
+def test_slot_owner_without_any_label_evidence_keeps_declared_owner():
+    """标签无唯一证据时不猜，维持声明实体并按原失败路径拦停。"""
+    from binding_ownership import parameter_catalog
+
+    catalog = _owner_release_catalog()
+    original = {'entity': '销售订单', 'field': '州份', 'op': '=', 'value': ['上海']}
+    result = parameter_catalog(catalog, original, {}, 'filters')
+    assert result['_parameter_owners'] == {'sales_order'}
+    assert result['fields'] == {}
+
+
+def test_slot_owner_with_ambiguous_label_evidence_is_not_rehomed():
+    """标签命中多个实体时不得悄悄改写，维持声明实体。"""
+    from binding_ownership import parameter_catalog
+
+    catalog = _owner_release_catalog()
+    catalog['entities']['dim_region'] = {'entity_id': 'DR1', 'entity_name': '省份',
+                                         'entity_alias': None, 'attributes': []}
+    original = {'entity': '销售订单', 'field': '省份', 'op': '=', 'value': ['上海']}
+    result = parameter_catalog(catalog, original, {}, 'filters')
+    assert result['_parameter_owners'] == {'sales_order'}
+
+
+def test_slot_owner_with_own_label_evidence_keeps_owner_constraint():
+    """声明实体自身拥有标签的精确字段证据时，既有所有权约束不变。"""
+    from binding_ownership import parameter_catalog
+
+    catalog = _owner_release_catalog()
+    catalog['entities']['sales_order']['attributes'] = []
+    catalog['fields']['sales_order.status'] = {
+        'owner': 'sales_order', 'attr_name': '订单状态',
+        'attribute_bindings': [{'attr_name': '订单状态', 'owner': 'sales_order'}]}
+    original = {'entity': '销售订单', 'field': '订单状态', 'op': '=', 'value': ['有效']}
+    result = parameter_catalog(catalog, original, {}, 'filters')
+    assert result['_parameter_owners'] == {'sales_order'}
+    assert 'sales_order.status' in result['fields']
+
+
+def test_slot_owner_with_dictionary_edge_keeps_declared_owner():
+    """声明实体经标签维度的 bind_entities 字典边可承接标签时保留声明归属（q61sh 实测）。"""
+    from binding_ownership import parameter_catalog
+
+    catalog = _owner_release_catalog()
+    catalog['entities']['dealer'] = {'entity_id': 'DL1', 'entity_name': '经销商',
+                                     'entity_alias': None, 'attributes': []}
+    catalog['entities']['hospital'] = {'entity_id': 'HP1', 'entity_name': '医院',
+                                       'entity_alias': None, 'attributes': []}
+    catalog['dimensions'] = {'dim_province': {'dim_name': '省份', 'bind_entities': [
+        {'entity': '经销商', 'mappingTable': 'dealer', 'mappingColumn': 'province_id'},
+        {'entity': '医院', 'mappingTable': 'hospital', 'mappingColumn': 'province_id'}]}}
+    catalog['_dictionary_owners'] = {'dim_province.province_name': {'dealer', 'hospital'}}
+    original = {'entity': '经销商', 'field': '省份', 'op': '=', 'value': ['上海']}
+    result = parameter_catalog(catalog, original, {}, 'filters')
+    assert result['_parameter_owners'] == {'dealer'}
+    assert 'dim_province.province_name' in result['fields']
+
+
 @pytest.mark.parametrize('wrong_decision', ['keep', 'wrong_owner', 'missing'])
 def test_explicit_shared_dictionary_owner_overrides_wrong_model_review(wrong_decision):
     from query_binding_review import review_bindings
