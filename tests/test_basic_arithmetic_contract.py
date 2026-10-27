@@ -13,12 +13,18 @@ from test_complex_execution_correctness import service, context, persist, IDENTI
 
 
 def reference(name, columns, rows, **provenance):
+    # These fixture columns belong to explicit source fields, just as executed
+    # SQL results carry provenance; a matching display label alone is not a key.
+    identities = {'部门编码': 'department.department_code',
+                  '经销商（编码）': 'dealer.dealer_code'}
     return DatasetReference(dataset_id=name, bucket='test', object_name=name,
         scope=DatasetScope('test','test','test','test'), columns=tuple(columns), row_count=len(rows),
         byte_size=0,snapshot_id='',data_as_of='',created_at='',expires_at='',source_type='TEST',source_ref='',
         transformation_log=({
         'type':'query_provenance', 'source_truncated':False,
-        'source_total_row_count':len(rows), 'source_quality_status':'PASS', **provenance},))
+        'source_total_row_count':len(rows), 'source_quality_status':'PASS',
+        'column_bindings': {key: value for key, value in identities.items() if key in columns},
+        **provenance},))
 
 
 def binding(operator, left='付款金额', right='核销金额', sources=('q', 'q'), label='结果'):
@@ -102,6 +108,13 @@ def test_arithmetic_cannot_hide_incomplete_or_incompatible_inputs(mode):
     a=reference('a',list(left[0]),left)
     b=reference('b',list(right[0]),right,source_truncated=mode=='truncated',
                 source_quality_status='FAIL' if mode=='failed_quality' else 'PASS')
+    if mode in {'truncated','failed_quality'}:
+        # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
+        # 输入截断/质量失败只告警继续计算（溯源保留质量标记），不再拒绝。
+        columns,rows,operation,evidence,quality=execute(
+            binding('subtract',sources=('a','b')),{'a':(a,left),'b':(b,right)})
+        assert rows
+        return
     with pytest.raises(ValueError):
         execute(binding('subtract',sources=('a','b')),{'a':(a,left),'b':(b,right)})
 
@@ -181,6 +194,71 @@ async def test_original_receivable_question_is_planned_before_bound_subtraction(
     assert all(task.extraction['维度']==['部门'] for task in outcome.plan.tasks)
 
 
+def _ratio_extract(fixed):
+    items = []
+    for task in fixed['tasks']:
+        compute = '不再查询数据库' in task['question']
+        value = {'意图': '指标计算' if compute else '明细查询', '指标': [],
+            '维度': ['经销商'], '展示字段': [], '过滤条件': [],
+            '是否查询数据库': '否' if compute else '是', '输出要求': '默认输出表格'}
+        if compute:
+            # 模型把公式绑定成了退化形态：分子分母同名（X÷X）。
+            value['计算绑定'] = {'operation': 'divide', 'left': {'column': '付款金额'},
+                'right': {'column': '付款金额'}, 'result_field': '付款核销比', 'format': 'number'}
+        items.append({'task_index': task['task_index'], 'extraction': value})
+    return {'tasks': items}
+
+
+@pytest.mark.asyncio
+async def test_published_formula_overrides_model_binding_for_registered_compound_metric(monkeypatch):
+    # 2026-10-21 用户要求：语义层已发布的复合指标公式是计算任务的公式来源。
+    # 模型推断的退化计算绑定（X÷X）在发布公式能唯一绑定成分任务时被覆盖。
+    from app.domain import semantic_description
+    from test_task_planning_stages import setup_planner
+    from app.planning.compound_question import CompoundQuestionRouter, CompoundJudgment
+    question = '查询2026年各经销商付款核销比'
+    planner, calls = setup_planner(monkeypatch, {'tasks': [{'question': question,
+        'metric_targets': ['付款核销比'], 'grain': ['经销商']}]}, extract=_ratio_extract)
+    spec = ('| 指标 | 同义词 | 业务口径 | 单位 | 依赖指标 |\n'
+            '| 付款核销比 | 无 | 付款金额÷核销金额 | 元 | 核销金额, 付款金额 |\n'
+            '| 付款金额 | 无 | 付款金额合计 | 元 | 无 |\n'
+            '| 核销金额 | 无 | 核销金额合计 | 元 | 无 |')
+    monkeypatch.setattr(semantic_description, 'load_semantic_description', AsyncMock(return_value={
+        'available': True, 'source': 'semantic_model_133.md', 'content': spec}))
+    router = CompoundQuestionRouter(planner.settings); router._single = planner
+    outcome = await router.plan_with_judgment(CompoundJudgment(is_compound=False), question, semantic_model_id=133)
+    assert outcome.plan is not None and len(outcome.plan.tasks) == 3
+    assert len(calls) == 2  # 发布公式精确解析，无重试、无公式绑定兜底调用
+    contract = outcome.plan.tasks[-1].extraction['计算绑定']
+    assert contract['operation'] == 'divide'
+    assert contract['numerator']['column'] == '付款金额'
+    assert contract['denominator']['column'] == '核销金额'
+    assert contract['numerator']['source_task_id'] != contract['denominator']['source_task_id']
+
+
+@pytest.mark.asyncio
+async def test_unparsable_published_formula_keeps_lenient_plan_without_override(monkeypatch):
+    # 发布公式含多步运算无法解析为单一计算绑定时，宽松化不拦停规划：
+    # 退化绑定在重试耗尽后按既有契约丢弃，任务留待计算执行器兜底。
+    from app.domain import semantic_description
+    from test_task_planning_stages import setup_planner
+    from app.planning.compound_question import CompoundQuestionRouter, CompoundJudgment
+    question = '查询2026年各经销商付款核销比'
+    planner, calls = setup_planner(monkeypatch, {'tasks': [{'question': question,
+        'metric_targets': ['付款核销比'], 'grain': ['经销商']}]}, extract=_ratio_extract)
+    spec = ('| 指标 | 同义词 | 业务口径 | 单位 | 依赖指标 |\n'
+            '| 付款核销比 | 无 | 付款金额÷核销金额×100 | 元 | 核销金额, 付款金额 |\n'
+            '| 付款金额 | 无 | 付款金额合计 | 元 | 无 |\n'
+            '| 核销金额 | 无 | 核销金额合计 | 元 | 无 |')
+    monkeypatch.setattr(semantic_description, 'load_semantic_description', AsyncMock(return_value={
+        'available': True, 'source': 'semantic_model_133.md', 'content': spec}))
+    router = CompoundQuestionRouter(planner.settings); router._single = planner
+    outcome = await router.plan_with_judgment(CompoundJudgment(is_compound=False), question, semantic_model_id=133)
+    assert outcome.plan is not None and len(outcome.plan.tasks) == 3
+    contract = outcome.plan.tasks[-1].extraction.get('计算绑定')
+    assert not contract or contract['left']['column'] == contract['right']['column']
+
+
 @pytest.mark.asyncio
 async def test_persisted_calculation_results_can_feed_later_arithmetic_tasks():
     agent=service();chat,_=context()
@@ -220,3 +298,118 @@ async def test_derived_single_group_is_not_mistaken_for_a_global_scalar():
     next_result=await agent._respond_pure_computation(chat,IDENTITY,next_task,
         {'difference':result.conversation_id,'tax':'tax'})
     assert next_result.status=='FAILED' and not next_result.dataset_id
+
+
+def test_cross_task_divide_with_single_bound_spec_still_computes():
+    # 2026-10-21 用户裁决宽松放行：规划器把跨任务除法写成绑定了单一依赖的
+    # 结果操作（依赖实际有两个）时，按题面显式除法措辞解析继续计算。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                       {'经销商（编码）': 'D2', '含税销售总额': 60}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                           {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])
+    task = AtomicTask(task_id='compute',
+        question='计算单院产出，含税销售总额/有效订单去重医院数',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否',
+                    '结果操作': {'source_task_id': 'sales', 'operation': {'type': 'select'}}})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                                 {'经销商（编码）': 'D2', '含税销售总额': 60}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                                         {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])},
+        lambda *args, **kwargs: None)
+    values = {row['经销商（编码）']: row['单院产出'] for row in result}
+    assert values == {'D1': 25.0, 'D2': 20.0} and quality == 'PASS'
+
+
+def test_unbound_result_operation_passthrough_instead_of_failure():
+    # 2026-10-21 用户裁决：结果操作解析不出公式时透传依赖数据集并告警，
+    # 不再把计算任务打成执行失败。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4}])
+    task = AtomicTask(task_id='compute', question='按既定口径整理这些商户',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否',
+                    '结果操作': {'source_task_id': 'ghost', 'operation': {'type': 'select'}}})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4}])},
+        lambda *args, **kwargs: None)
+    assert result and quality == 'PASS'
+    assert operation['type'] == 'select'
+
+
+def test_degenerate_divide_binding_is_rederived_not_output_as_one():
+    # 2026-10-21 线上缺陷：规划器把除法两个操作数绑成同一列（医院数÷医院数
+    # 恒为1）。按宽松裁决回退：两个依赖各恰有一个数值指标时确定性重导除法。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                       {'经销商（编码）': 'D2', '含税销售总额': 60}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                           {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])
+    task = AtomicTask(task_id='compute', question='计算这些商户的单院产出并按降序排列',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否', '计算绑定': binding(
+            'divide', '有效订单去重医院数', '有效订单去重医院数', ('hospitals', 'hospitals'),
+            label='单院产出')})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                                 {'经销商（编码）': 'D2', '含税销售总额': 60}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                                         {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])},
+        lambda *args, **kwargs: None)
+    values = {row['经销商（编码）']: row['单院产出'] for row in result}
+    assert values == {'D1': 25.0, 'D2': 20.0} and quality == 'PASS'
+    assert operation['operator'] == 'divide'
+
+
+def test_dimension_sort_field_falls_back_to_metric_value_ordering():
+    # 2026-10-21 用户要求恢复默认：计算任务的排序字段被规划器写成维度名称
+    # （如"经销商名称"）时，回退到计算结果数值列按声明方向排序。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                       {'经销商（编码）': 'D2', '含税销售总额': 60}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                           {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])
+    task = AtomicTask(task_id='compute', question='计算这些商户的单院产出并排序',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否', '计算绑定': binding(
+            'divide', '含税销售总额', '有效订单去重医院数', ('sales', 'hospitals'),
+            label='单院产出'),
+            '排序': [{'field': '经销商名称', 'order': 'desc'}]})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                                 {'经销商（编码）': 'D2', '含税销售总额': 60}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                                         {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])},
+        lambda *args, **kwargs: None)
+    assert [row['单院产出'] for row in result] == [25.0, 20.0] and quality == 'PASS'
+
+
+def test_computation_without_sort_slot_defaults_to_result_descending():
+    # 2026-10-21 用户要求恢复默认：计算任务未携带排序槽位时按计算结果列
+    # 默认降序（与指标类查询默认降序一致）。
+    sales = reference('sales', ('经销商（编码）', '含税销售总额'),
+                      [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                       {'经销商（编码）': 'D2', '含税销售总额': 60}])
+    hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
+                          [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                           {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])
+    task = AtomicTask(task_id='compute', question='计算这些商户的单院产出',
+        depends_on=['sales', 'hospitals'],
+        extraction={'是否查询数据库': '否', '计算绑定': binding(
+            'divide', '含税销售总额', '有效订单去重医院数', ('sales', 'hospitals'),
+            label='单院产出')})
+    columns, result, operation, evidence, quality = calculate(
+        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100},
+                                 {'经销商（编码）': 'D2', '含税销售总额': 60}]),
+               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4},
+                                         {'经销商（编码）': 'D2', '有效订单去重医院数': 3}])},
+        lambda *args, **kwargs: None)
+    assert [row['单院产出'] for row in result] == [25.0, 20.0] and quality == 'PASS'

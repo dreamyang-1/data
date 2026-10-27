@@ -3224,10 +3224,19 @@ class SQLTranslatorProd:
 
     def _detect_additional_joins(self, entity_code: str, dimensions: List[Dict],
                                   filters: List[Dict] = None, having: List[str] = None, model_id: Optional[str] = None,
-                                  metric_entities: Optional[List[str]] = None) -> List[str]:
-        """检测维度和过滤条件是否需要额外的 JOIN"""
+                                  metric_entities: Optional[List[str]] = None,
+                                  dimension_entities: Optional[List[str]] = None) -> List[str]:
+        """检测维度和过滤条件是否需要额外的 JOIN
+
+        metric_entities 作用于过滤路径（既有冻结语义）；dimension_entities
+        仅作用于维度/展示字段路径：bind_entity 标业务主体、公式表才是事实
+        归属的确定性形态下，由公式推导的事实 anchor 不应改变 filter 路由。
+        """
         additional_joins = []
         existing_tables = self._get_existing_join_tables(entity_code, model_id)
+        from dimension_role_joins import scoped_dimension_joins
+        additional_joins.extend(scoped_dimension_joins(
+            self, entity_code, dimensions, filters, model_id, existing_tables))
         dimension_anchor_entities = []
         for dimension in dimensions:
             if not isinstance(dimension, dict):
@@ -3271,7 +3280,9 @@ class SQLTranslatorProd:
             if fact_table_field and '.' in fact_table_field:
                 fact_table = fact_table_field.split('.')[0]
                 if fact_table and fact_table not in existing_tables:
-                    new_joins = self._find_join_to_table(entity_code, fact_table, existing_tables, model_id)
+                    new_joins = self._find_join_to_table(
+                        entity_code, fact_table, existing_tables, model_id,
+                        metric_entities=dimension_entities or metric_entities)
                     if new_joins:
                         additional_joins.append(new_joins)
                         existing_tables.update(self._extract_tables_from_join(new_joins))
@@ -3285,6 +3296,26 @@ class SQLTranslatorProd:
             for dim_ent_code in dim_entities:
                 join_clause = self._find_join_path(entity_code, dim_ent_code, model_id)
                 if join_clause:
+                    # 平长度路径优先指标事实表链路：同一对实体存在多条等长
+                    # 业务路径时（如 医院-城市-经销商 与 医院-销售订单-经销商），
+                    # 维度应跟随指标事实表的路径，避免层级路径造成行数扇出。
+                    # 与过滤侧 _find_join_to_table 的 fact owner 平手偏好同约定。
+                    for anchor in dimension_entities or metric_entities or []:
+                        if anchor in {entity_code, dim_ent_code}:
+                            continue
+                        lead = self._find_join_path(entity_code, anchor, model_id)
+                        tail = self._find_join_path(anchor, dim_ent_code, model_id)
+                        if not lead or not tail:
+                            continue
+                        fact_path = f"{lead} {tail}"
+                        fact_tables = self._extract_tables_from_join(fact_path)
+                        direct_tables = self._extract_tables_from_join(join_clause)
+                        if (
+                            self._get_entity_base_table(entity_code, model_id) not in fact_tables
+                            and len(fact_tables) == len(direct_tables)
+                        ):
+                            join_clause = fact_path
+                            break
                     new_joins = self._filter_existing_joins(join_clause, existing_tables)
                     if new_joins:
                         additional_joins.append(new_joins)
@@ -3869,15 +3900,32 @@ class SQLTranslatorProd:
             existing_tables.update(joins.tables)
 
         metric_owners = set()
+        formula_anchors = set()
         for metric in metrics:
             definition = self._get_metric(metric.get('name'), model_id) or {}
             owners = definition.get('source_dependency', {}).get('bind_entity') or []
             metric_owners.update(owners if isinstance(owners, list) else [owners])
-            if not owners:
-                metric_owners.add(None)
+            # bind_entity 标的是指标的业务主体，与本查询主体经常相同；此时
+            # 事实表归属只能从公式本身推导（如 SUM(sales_order.quantity) 的
+            # sales_order）。仅在此确定性形态下推导，避免 owner 缺失/歧义时
+            # 乱改既有路由（冻结契约：missing/ambiguous keeps existing route）。
+            if isinstance(owners, list) and owners == [entity_code]:
+                formula = str((definition.get('calculation_rule') or {}).get('calc_formula') or '')
+                for formula_table in set(re.findall(r'\b([A-Za-z_]\w*)\.[A-Za-z_]\w*', formula)):
+                    formula_anchors.update(
+                        self._find_all_entities_by_table_name(formula_table, model_id))
+        formula_anchors.discard(entity_code)
+        if not metric_owners:
+            metric_owners.add(None)
         metric_options = {}
         if len(metric_owners) == 1 and None not in metric_owners and entity_code not in metric_owners:
             metric_options['metric_entities'] = list(metric_owners)
+        elif (len(metric_owners) == 1 and entity_code in metric_owners
+              and len(formula_anchors) == 1):
+            # bind_entity==[主体] 且公式推导出唯一事实实体 → 确定性 anchor。
+            # 仅注入维度路径（dimension_entities）：该形态下公式表是事实归属，
+            # 但不能用于 filter 路由（filter 归属语义与聚合目标表无关）。
+            metric_options['dimension_entities'] = list(formula_anchors)
         additional_joins = self._detect_additional_joins(
             entity_code, dimensions, filters, having, model_id, **metric_options)
         include_joins(additional_joins)

@@ -2414,6 +2414,49 @@ async def test_detail_intent_removes_hallucinated_aggregate_metric_before_transl
 
 
 @pytest.mark.asyncio
+async def test_detail_intent_drops_metric_sort_after_removing_metrics():
+    detail = CanonicalAnalysisRequest(
+        conversation_id="detail-sort",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询订单明细，商品名称按含税销售额降序",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        fields=["商品名称"],
+    )
+    asl = {
+        "version": "2.0",
+        "subject": {"entity": "ent_order_item"},
+        "metrics": [{"name": "sales_total_including_tax", "alias": "含税销售总额"}],
+        "dimensions": [{"name": "order_item_detail.goods_name"}],
+        "sort": {
+            "field": "sales_total_including_tax",
+            "direction": "DESC",
+            "field_type": "metric",
+        },
+        "ambiguity": [],
+    }
+    client = StubClient([
+        {"success": True, "result": json.dumps(asl, ensure_ascii=False)},
+        {"success": True, "sql": "SELECT goods_name FROM order_item_detail"},
+        {
+            "success": True,
+            "sql": "SELECT goods_name FROM order_item_detail",
+            "data": [{"goods_name": "口罩"}],
+            "columns": ["goods_name"],
+            "row_count": 1,
+        },
+    ])
+
+    await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).query(detail, IDENTITY, semantic_model_id=6, business_domain_id=7)
+
+    translated_asl = json.loads(client.calls[1][2]["asl"])
+    assert translated_asl["metrics"] == []
+    assert "sort" not in translated_asl
+
+
+@pytest.mark.asyncio
 async def test_detail_intent_rejects_asl_that_omits_requested_field():
     detail = CanonicalAnalysisRequest(
         conversation_id="detail-missing", tenant_id="t1", user_id="u1",
@@ -2471,7 +2514,7 @@ async def test_real_two_stage_contract_and_double_encoded_result():
     assert [call[1] for call in client.calls] == ["/agent/query", "/api/translate", "/api/execute"]
     assert client.calls[0][3]["idempotency_key"].endswith(":asl")
     assert client.calls[0][3]["retryable"] is True
-    assert client.calls[0][3]["timeout"] == 90
+    assert client.calls[0][3]["timeout"] == 0  # ASL waits for completion within the caller's lifecycle.
     assert client.calls[1][3]["idempotency_key"].endswith(":sql-translate")
     assert client.calls[2][3]["idempotency_key"].endswith(":sql-execute")
     assert client.calls[0][3]["idempotency_key"] != client.calls[1][3]["idempotency_key"]

@@ -24,9 +24,6 @@ class MockSemanticAdapter:
                 resolved.append(metric.model_copy(update={"metric_id": spec[0], "version": spec[1], "canonical_name": metric.input, "unit": spec[2]}))
         return resolved
 
-    async def definition(self, metric: MetricRef) -> EvidenceItem:
-        return EvidenceItem(evidence_id=f"definition:{metric.metric_id}:{metric.version}", kind="METRIC_DEFINITION", source_ref="mock-semantic-model", payload={"definition": f"{metric.canonical_name}的已发布模拟口径"})
-
     async def lineage(self, metric: MetricRef, identity: TrustedIdentity) -> EvidenceItem:
         return EvidenceItem(evidence_id=f"lineage:{metric.metric_id}:{metric.version}", kind="DATA_LINEAGE", source_ref="mock-lineage-service", payload={"business_lineage": ["销售交易域", "指标层"]})
 

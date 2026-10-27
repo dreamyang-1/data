@@ -38,9 +38,6 @@ class SemanticStub:
     async def resolve_metrics(self, request, semantic_model_id):
         return request.metrics
 
-    async def definition(self, metric):
-        raise AssertionError("not used")
-
     async def lineage(self, metric, identity):
         raise AssertionError("not used")
 

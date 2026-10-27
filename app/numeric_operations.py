@@ -75,13 +75,19 @@ def parse_literal_binding(question):
 def number(value):
     if value is None or isinstance(value, bool):
         raise NumericOperationError('计算输入必须是有限数值')
+    text = str(value).replace(',', '')
+    percent = text.endswith('%')
+    if percent:
+        text = text[:-1]
+    if '%' in text:
+        raise NumericOperationError('计算输入必须是有限数值')
     try:
-        result = Decimal(str(value).replace(',', ''))
+        result = Decimal(text)
     except (DecimalException, ValueError, TypeError) as exc:
         raise NumericOperationError('计算输入必须是有限数值') from exc
     if not result.is_finite():
         raise NumericOperationError('计算输入必须是有限数值')
-    return result
+    return result / 100 if percent else result
 
 
 def literal(value):

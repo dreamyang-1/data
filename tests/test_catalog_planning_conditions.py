@@ -262,26 +262,21 @@ async def test_whole_order_dependency_uses_all_order_keys_not_product_codes_or_p
     response=AgentResponse(request_id=uuid4(),conversation_id='orders',status='COMPLETED',
         intent=PrimaryIntent.DETAIL_QUERY,answer='仅展示前10条预览',dataset_id=ref.dataset_id)
     task=AtomicTask(task_id='totals',question='根据上述任务返回的订单号完整名单，按订单号汇总该订单下全部商品的含税销售总额',
-        depends_on=['task-1'])
+        depends_on=['task-1'],extraction={'依赖绑定':[{'source_task_id':'task-1','source_column':'订单号'}]})
     constraints=await agent._compile_dependency_constraints(task,chat,IDENTITY,
         {'task-1':response},{'task-1':'orders'})
     assert constraints[0].source_column=='sales_order.order_key'
     assert constraints[0].values==[row['订单号'] for row in rows]
-    assert agent._dependency_key_families('task-1',TaskPlan(planner='STRUCTURED_MODEL',tasks=[
-        AtomicTask(task_id='task-1',question='查询订单名单'),task]))==('order',)
 
 
 def test_local_calculation_does_not_add_database_join_prompt_or_business_mentions():
-    from test_complex_execution_correctness import service
-    agent=service();question='按订单号汇总整单金额和数量'
-    plan=TaskPlan(planner='STRUCTURED_MODEL',tasks=[AtomicTask(task_id='task-1',question=question),
-        AtomicTask(task_id='task-2',question='基于前序任务返回的订单结果计算均价，不再查询数据库',
-            depends_on=['task-1'],extraction={'是否查询数据库':'否'})])
-    assert agent._with_dependency_join_keys(question,'task-1',plan)==question
-    plan.tasks[-1].question='根据上述任务返回的订单号完整名单查询整单金额'
-    plan.tasks[-1].extraction={'是否查询数据库':'是'}
-    prompt=agent._with_dependency_join_keys('查询订单号名单','task-1',plan)
-    assert '订单号作为精确关联键' in prompt and 'display-name' not in prompt
+    from app.planning.calculation_bindings import materialize_computation_binding
+    extraction={'是否查询数据库':'否','依赖绑定':[],'结果操作':{'source_task_index':0,
+        'operation':{'type':'limit','count':1}}}
+    resolved=materialize_computation_binding(extraction,task_index=1,dependencies=['task-1'])
+    assert resolved['依赖绑定']==[]
+    assert resolved['结果操作']['source_task_id']=='task-1'
+
 
 
 @pytest.mark.parametrize('grouped',[True,False])

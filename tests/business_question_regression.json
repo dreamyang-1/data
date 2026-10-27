@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "note": "原文来自用户会话。运行时必须核实原请求范围；不得用本清单创建或扩大授权。推荐接口缺少实体ID的项目不能改写成聊天查询代替验收。",
+  "questions": [
+    {"id":"huashan_sales_products","question":"2025年复旦大学附属华山医院销售订单金额最多的销售员是谁？销售了哪些产品？","expected":"先选销售员，再用真实销售员编码查询同医院2025年全部产品；句式变化不能导致依赖字段误选；附件无报告说明页"},
+    {"id":"shanghai_three_dealers_products","question":"2025年10月份销售给上海地区医院销售订单总金额排名前三的经销商","turns":["这三家每家主要销售什么产品？"],"expected":"追问保留前三家经销商、上海医院及2025年10月范围，返回各家产品"},
+    {"id":"company_top5","question":"给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司","expected":"前五位人员、平均金额、所属公司全部返回；依赖完成后查询公司；金额单位取当前语义文件"},
+    {"id":"shanghai_coverage","question":"统计上海市区域医院覆盖率","expected":"上海筛选保留；分子分母到齐后计算；返回覆盖率"},
+    {"id":"hospital_sales_products","question":"2025年9月到12月期间针对上海交通大学医学院附属新华医院销售订单金额最多的销售员是谁?销售了哪些产品?","expected":"保留医院及月份；产品限定为入选销售员在同医院同期间销售的产品"},
+    {"id":"semantic_entities","question":"当前语义模型中建立了哪些实体","expected":"解释口径直接按当前模型语义文件回答，不追问指标，不执行SQL"},
+    {"id":"orthopedics","question":"看看骨科那边卖得怎么样","expected":"骨科业务值绑定正确，能够查询并输出结果"},
+    {"id":"longest_cooperation","question":"合作时间最长的销售商是哪家?","expected":"按合作时间降序返回销售商，字段角色绑定正确"},
+    {"id":"cooperation_over_three_months","question":"合作时长大于3个月的经销商有哪些","expected":"大于3个月的条件保留并正确换算，返回经销商名称"},
+    {"id":"dealer_duration_exact","question":"查询筛选合作时长超3个月的经销商","expected":"同表行级合作时长公式与名称编码正常返回，超过3个月条件完整执行，不误报展示字段无唯一关联"},
+    {"id":"dealer_duration_recent","question":"查询合作时间长大与3个月的经销商","expected":"保留用户实际措辞；正确识别超过3个月，返回经销商及合作时长"},
+    {"id":"supplier_first_cooperation","question":"合作时长最长的供应商有哪些?第一次合作是什么时间?","expected":"选出合作时长最长的对象，并返回这些对象首次合作日期；不遗漏后续交付"}
+  ],
+  "unresolved_context": [
+    {"id":"department_hospital_relation","request":"医院与科室多对多判断","missing":"原文实体ID已省略，缺少完整实体ID及模型范围"},
+    {"id":"relation_model122","request":"实体关系推荐返回空数组","semantic_model_id":122,"business_domain_id":307,"entity_type_id":"45eae41b-82d6-4bf7-b608-8e341b77d0f8","expected":"直接同名字段关系推荐，不推荐中间表"},
+    {"id":"city_province_relation","request":"城市跟省份为什么没有推荐关系","missing":"原请求模型、业务域和实体ID"},
+    {"id":"company_salesperson_relation","request":"国药公司和销售员这两个表有相同字段，为什么没有推荐","missing":"原请求模型、业务域和实体ID"},
+    {"id":"publication_error","request":"发布失败报错中文化","missing":"发布操作的完整原始参数；不在本轮只读查询回归范围内"}
+  ]
+}

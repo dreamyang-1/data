@@ -1,0 +1,100 @@
+{
+  "baseline": {
+    "passed": 5621,
+    "failed": 231,
+    "error": 7,
+    "skipped": 0
+  },
+  "final": {
+    "passed": 5636,
+    "failed": 231,
+    "error": 7,
+    "skipped": 0
+  },
+  "old_pass_to_new_fail": [],
+  "old_fail_to_new_pass": [],
+  "added_tests": {
+    "tests.test_semantic_relation_restore::test_recreate_entity_restores_business_key_without_saved_relation[customer_code]": "passed",
+    "tests.test_semantic_relation_restore::test_recreate_entity_restores_business_key_without_saved_relation[customer_no]": "passed",
+    "tests.test_semantic_relation_restore::test_recreate_entity_restores_business_key_without_saved_relation[customer_key]": "passed",
+    "tests.test_semantic_relation_restore::test_recreate_entity_restores_business_key_without_saved_relation[customer_id]": "passed",
+    "tests.test_semantic_relation_restore::test_common_non_business_keys_do_not_create_relationships[name]": "passed",
+    "tests.test_semantic_relation_restore::test_common_non_business_keys_do_not_create_relationships[status]": "passed",
+    "tests.test_semantic_relation_restore::test_common_non_business_keys_do_not_create_relationships[id]": "passed",
+    "tests.test_semantic_relation_restore::test_common_non_business_keys_do_not_create_relationships[amount]": "passed",
+    "tests.test_semantic_relation_restore::test_incompatible_types_and_cross_source_are_not_join_candidates": "passed",
+    "tests.test_semantic_relation_restore::test_legacy_bare_field_resolves_in_its_entity_and_reverses": "passed",
+    "tests.test_semantic_relation_restore::test_business_id_takes_precedence_over_surrogate_id": "passed",
+    "tests.test_semantic_relation_restore::test_llm_cannot_replace_unknown_cardinality_with_unproved_claim": "passed",
+    "tests.test_semantic_relation_restore::test_alternative_foreign_keys_are_separate_candidates_not_composite_join": "passed",
+    "tests.test_semantic_relation_restore::test_sub_table_candidates_require_current_entity_mapping": "passed",
+    "tests.test_semantic_relation_restore::test_sub_table_reader_is_scoped_and_filters_deleted_rows": "passed"
+  },
+  "focused_python_passed": 67,
+  "critical_slice_passed": 23,
+  "server_candidate_passed": 58,
+  "snapshot_recreated_pairs": 36,
+  "snapshot_before_empty_pairs": 26,
+  "snapshot_after_empty_pairs": 0,
+  "production_database_writes": 0,
+  "frontend_java_changes_reverted": true,
+  "frontend_java_original_hashes_verified": true,
+  "deployment": {
+    "deployed": true,
+    "source_sha256": "68bb983c673bab141f8d5659cf921d197642f8c29438fdf33a48f8a7931d65ba",
+    "health": {
+      "/live": 200,
+      "/ready": 200
+    },
+    "configuration_unchanged": true,
+    "backup_created": true
+  },
+  "live_api_checks": [
+    {
+      "case": "forward",
+      "http_status": 200,
+      "code": 200,
+      "elapsed_seconds": 2.08,
+      "existing": 1,
+      "inferred": 1,
+      "cardinalities": [
+        "1:N",
+        "1:N"
+      ]
+    },
+    {
+      "case": "reverse",
+      "http_status": 200,
+      "code": 200,
+      "elapsed_seconds": 1.55,
+      "existing": 1,
+      "inferred": 1,
+      "cardinalities": [
+        "N:1",
+        "N:1"
+      ]
+    },
+    {
+      "case": "missing_endpoint",
+      "http_status": 200,
+      "code": 500,
+      "elapsed_seconds": 0.01,
+      "existing": 0,
+      "inferred": 0,
+      "cardinalities": []
+    },
+    {
+      "case": "missing_model",
+      "http_status": 422,
+      "code": null,
+      "elapsed_seconds": 0.0,
+      "existing": 0,
+      "inferred": 0,
+      "cardinalities": []
+    }
+  ],
+  "collection_errors": {
+    "baseline": 0,
+    "final": 0
+  }
+}

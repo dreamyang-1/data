@@ -1,4 +1,4 @@
-"""Internal task boundaries are fixed before intent/parameter extraction."""
+"""Internal task boundaries are fixed before parameter extraction."""
 from __future__ import annotations
 
 import copy
@@ -8,13 +8,26 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
-class TaskBoundary(BaseModel):
-    # Ignore legacy combined responses, but never consume their extraction here.
+class TaskOutline(BaseModel):
+    """The planning model owns task wording and edges, never query parameters."""
     model_config = ConfigDict(extra='ignore')
     question: str = Field(min_length=2, max_length=1000)
     name: str | None = Field(default=None, max_length=60)
     depends_on: list[int] = Field(default_factory=list)
-    expected_output: str | None = Field(default=None, max_length=300)
+    expected_output: str | None = Field(default=None, max_length=300, description=(
+        '本任务需要新查询或计算的交付内容；依赖任务引用的前序入选条件放在question中，'
+        '不要当成本任务的新计算目标。若本步仍需按指标计算、排名或筛选，必须写明该指标。'))
+    definition_only: bool = False
+
+
+class TaskOutlines(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+    tasks: list[TaskOutline] = Field(min_length=1, max_length=12)
+
+
+class TaskBoundary(TaskOutline):
+    # Internal semantic-definition hints used to expand component tasks.
+    # They are not accepted from the planning model or executable parameters.
     metric_targets: list[str] = Field(default_factory=list)
     grain: list[str] = Field(default_factory=list)
     sample_requirements: list[str] = Field(default_factory=list)
@@ -33,59 +46,45 @@ class TaskBoundaries(BaseModel):
     tasks: list[TaskBoundary] = Field(min_length=1, max_length=12)
 
 
-PLANNING_PROMPT = '''你是任务规划器。先确定完成原问题所需的业务任务、输入依赖、结果粒度和交付物，只输出JSON任务计划。
-本阶段不判断任务意图、不提取extraction，不输出实体/字段/过滤条件JSON，不生成ASL或SQL。
-metric_targets仅记录任务要交付的规范登记指标名；grain记录结果中一行代表什么，只用业务名称。
+PLANNING_PROMPT = '''你是任务规划器。先确定完成原问题所需的业务任务、输入依赖和交付物，只输出JSON任务计划。
+每个任务只输出question、name、depends_on、expected_output、definition_only。不生成任何结构化查询或计算参数，包括extraction、metric_targets、grain、实体、指标、维度、展示字段、过滤条件、时间粒度、排序、限制、计算绑定、postprocess或结果操作；不生成ASL或SQL。具体参数全部由后续提取阶段结合任务问题、已识别意图与语义文件生成。
+任务question用完整自然语言描述要做什么，保留实际业务条件。交付物是属性、名单或明细（如“主要销售什么产品”“有哪些客户”）时，不得擅自改成指标统计。需要度量、分组或计算时，在question里说明业务目标及依据，不提前选择结构化字段。
+筛选对象不等于分组维度。例如“看看骨科那边卖得怎么样”中骨科是查询范围，未要求按科室比较时，不得改写成“按适用科室分组”；也不能因为有日期范围就增加按日期分组。
 
 任务边界规则：
+0. 输入问题是本轮补全后的完整问题，结合已识别任务意图与当前语义文件拆分。输出前逐项核对：业务对象及完整名称、日期起止、地域、包含/排除条件、数值阈值、排名指标与方向/名次、前序入选对象、最终交付内容。每项条件必须出现在适用任务的question中，不能只放在name或expected_output里，也不能用“指定时间”“指定医院”等省略实际值。共享条件逐任务保留；仅对某一任务有效的条件不得扩散到其他任务。语义文件用于解释对象关系和登记口径，不得擅改用户明确的条件字面量或补造条件。
+先选对象再查明细时，后续question必须说明依据哪个前序任务返回的入选对象，并保留共享时间和筛选范围；depends_on仅表达执行顺序，不能替代“仅查询入选对象”的业务限定。例如“2025年9月到12月医院A销售订单金额最多的销售员是谁，销售了哪些产品”：前置任务写明“统计2025年9月到12月医院A各销售员销售订单金额，按金额降序取第1名，返回入选销售员”；后续任务写明“查询前序任务选出的最高销售订单金额销售员在2025年9月到12月向医院A销售的全部产品”，并依赖前置任务。不能退化成查询医院A所有产品，不能把商品加入销售员排名分组，也不能把前置Top1传成产品只取1条。若用户分别指定两个时间或两个医院，则各自保留，不强行统一。并列名次按用户要求或登记规则处理，不自行补充业务口径。
 1. 依据最终交付物和真实数据依赖决定任务数量。一个业务问题可以需要多个任务；一份数据集不等于整个目标已经完成。普通原子指标查询、同一粒度的普通多指标查询可以保持一个任务。
 2. 规范登记了依赖成分的复合指标，先按各成分自己的口径取数，再计算目标指标。复合指标做分布、排名、趋势或比较时仍保留计算依赖。不得用“查询均价明细，供后续分析”代替完整计划。
 3. 按订单/客户等逐对象计算的指标必须保留规范规定的对象粒度及唯一业务键。分布分析需要逐样本数据，不能用整批数据的一个加权均值代替；时间范围不等于时间分组，价格分布不等于时间趋势。
 4. 每个任务的question完整保留对它有效的时间、筛选、分组和交付要求。复合指标成分按各自登记口径分配条件；共用区域分母不按经销商分组。不得凭字段名称猜业务口径。
 5. 先排名或筛选对象、再查询这些对象的其他关系或明细时，拆为前置查询和依赖查询。不得把后续返回对象加入前置排名的分组，否则会改变排名粒度。后续任务不继承前置Top N限制。同一对象的唯一关联展示属性可在原查询返回，不为展示字段强制拆任务。
+   每个任务都填写expected_output，区分“本步交付目标”和“前序入选背景”：依赖任务的指标展开以expected_output为准，question仍完整保留入选条件和引用来源。例：先选出2025年平均每单销售金额最高的五名业务员，再查所属公司；前置expected_output写“2025年平均每单销售金额最高的五名业务员及编码”，后续question写“根据前序任务选出的五名业务员查询所属销售公司”，expected_output只写“入选业务员姓名、编码及所属公司名称”，不要再次写平均金额排名或拆一次公式。若后续确实要求这些人2024年的平均每单销售金额，则expected_output必须写明“入选业务员2024年的平均每单销售金额”，保留新的计算。若本步需要新算指标才能筛选或排名，即使最终只返回名单，也必须在expected_output写明指标及筛选、排名要求，不能只写“名单”。不得丢掉原有时间、地域、筛选条件，或凭空生成尚未查询出的人员编码。
 6. 不关联的独立任务不消费彼此结果。有依赖时保留原问题明确的共享时间和筛选范围；用户明确指定不同范围时按各自要求。depends_on从0开始且只引用排在前面的任务。
 7. 根据已有结果直接计算、筛选或投影且无须新数据时，作为依赖任务，question写明“不再查询数据库”。需要前序数据集中没有的新字段或新关系时应查询数据库，不得用前序表代替新结果。
 8. 不把ASL、SQL、取数、校验、洞察等内部技术步骤拆成业务任务；不重复或遗漏用户要求交付的结果。分析可以由最后的计算任务交付，不为流程名称增加空任务。
-9. name是动词加业务目标的陈述句，expected_output写明可验收结果。metric_targets必须使用规范登记原名；解释口径、血缘或闲聊任务不展开指标依赖。
+9. name是动词加业务目标的陈述句，expected_output写明可验收结果。提到登记指标时使用规范原名；解释口径、血缘或闲聊任务不展开指标依赖。
 10. 若已有上一轮完整结果可提供参数，不重复原查询；采样不能当成完整名单。仅在完整性已确认时复用具体参数。
-11. postprocess仅用于明确可执行的既有数据操作，格式为{"source_task_index":0,"operation":{...}}；operation只支持derive、aggregate、filter、select、sort、sort_limit、limit或其pipeline。不得自造distribution、distribution_analysis、binning等操作。普通分布描述并入最终计算任务的交付物，由现有结果分析完成，不另造无法执行的分析任务。需要确认的计算口径保留clarification。禁止添加数据库字段、编程代码或未给出的业务条件。
+11. 计算任务用自然语言写清输入来源、运算目标、统计口径及最终排名要求，实际计算绑定和结果操作由参数提取阶段生成。普通分布描述并入最终计算任务的交付物，不增加空分析任务。不能只写“分析前序结果”而省略要算什么；禁止输出操作JSON、数据库字段、编程代码或未给出的业务条件。
 12. 区分入选对象的条件和对象内部的计算范围。若登记口径要求“该订单下全部商品”，原问题又按采购商品选择订单，必须先查询包含指定商品且满足医院、时间等条件的完整去重订单号名单，再依赖该名单统计每张订单全部商品的金额、数量，最后计算分布。商品条件仅用于入选名单，不可继续限制整单成分；不能把商品均价当成整单均价。其他客户/合同等对象同理。后续问题明确写“根据上述任务返回的完整名单”，不得把预览采样当名单。
 13. 平方、开根、对数、取余等数值计算使用后续本地计算任务，保留原始登记指标或字段作为输入，不把“平方金额”等临时结果名当成未登记数据库指标。方差、标准差、中位数、分位数、相关系数等先取得完整样本并保留正确粒度，再用aggregate；不能对已经求和的一个总数假装完成样本统计。总体与样本口径按原问题明确要求保留。纯数字运算可用无数据库依赖的计算任务。
+14. 只问指标含义、统计口径、公式或如何计算而未要求实际数值时，是说明交付，任务设置definition_only:true；保留用户要解释的指标，question写成“解释…的统计口径”。即使指标已登记或存在成分依赖，也不拆取数、计算或分析任务。查询数值并解释口径的组合请求分别保留数据任务和definition_only任务，不能把数据请求整体改成解释。
 '''
-
-# Postprocessing belongs to planning; the extraction phase must not have to
-# invent a missing calculation task after its boundaries have been frozen.
-from app.numeric_operations import UNARY, BINARY, AGGREGATES
-PLANNING_PROMPT += ('\n数值计算任务可直接声明postprocess，不能只写计算目标而漏掉可执行操作。'
-    'postprocess={"source_task_index":0,"operation":{...}}只引用前序结果列的业务名称，不猜数据库字段。'
-    '一元例：{"type":"derive","operator":"sqrt","field":"订单笔数","result_field":"平方根"}。'
-    '二元例：{"type":"derive","operator":"power","left_field":"订单笔数","right_value":2,"result_field":"平方"}，'
-    '另一侧也可为right_field；field与value常量每侧二选一。'
-    '统计例：{"type":"aggregate","group_by":[],"aggregations":[{"field":"订单笔数","function":"variance_population","alias":"总体方差"}]}。'
-    '先查询各业务员完整的订单笔数样本，再计算这些样本的方差；不能改查一个总数。'
-    '组合运算使用最多5步的pipeline或拆成有依赖的计算任务，后续可引用前面结果列；不得输出表达式或代码。'
-    '纯数值任务没有数据依赖时留待参数阶段生成数值计算绑定。'
-    '可用一元运算：'+','.join(sorted(UNARY))+'；二元运算：'+','.join(sorted(BINARY))+
-    '；统计函数：'+','.join(sorted(AGGREGATES))+'。'
-    '第90百分位用{"field":"订单笔数","function":"percentile","percentile":90,"alias":"P90"}；'
-    'quantile则使用q:0.9，不省略用户指定的分位点。'
-    '相关系数例：{"field":"订单笔数","other_field":"含税销售总额","function":"correlation","alias":"相关系数"}。'
-    '按全体样本平均值筛选原始对象时，aggregate声明retain_rows:true，把平均值附在每个原始样本上，'
-    '然后filter使用field:"订单笔数",operator:"gt",value_field:"平均订单笔数"，'
-    '最后select使用columns:["业务员"]；普通aggregate会把样本压缩，不能用于保留对象名单。'
-    '均值的aggregate、filter和select应全部声明在同一个本地计算任务的pipeline中；'
-    '取数任务只返回登记指标，不能只在取数任务的question或expected_output里承诺计算平均值，而漏掉实际aggregate操作。\n')
-
 
 PARAMETER_PROMPT = '''任务边界已经确定。请为给定任务逐项提取extraction，只输出JSON。
 不得新增、删除、合并任务，不得修改任务问题、依赖和交付物；按task_index对应原任务。
-任务意图在本次提取中顺带给出，不另做一次识别调用；它用于执行路由，不能删除规划已确定的指标或结果粒度。
+意图只由意图识别节点提供，本阶段不判断、不修改、不输出意图或intent字段。任务职责只决定查库、计算等执行参数，不能改变已识别意图。你是结构化参数的唯一生成阶段；指标、维度、展示字段、筛选、时间、排序、限制和计算参数均在本阶段确定，后续不会用规划字段补齐或覆盖，空列表也保留其原意。
+规划只提供自然语言任务与依赖，内部附带的登记指标成分、粒度和样本口径仅用于理解语义文件，不能把业务对象或筛选字段直接当成维度。只有用户要求的分组或登记指标计算确实需要的样本粒度才提取为维度。例：“看看骨科那边卖得怎么样”提取骨科筛选，不因这一筛选自动添加“适用科室”维度。
 每个任务的参数以该任务范围为准，原问题只用于解释共享上下文；不可把其他独立任务的筛选条件混入。
-任务要求交付已注册指标时，即使是明细输出，也必须保留该指标的计算语义。需要聚合的指标按指标查询提取；原始属性明细继续按明细查询提取。
+提取完成前逐项对照任务question：日期范围必须进入时间粒度，医院/地域/商品等限定进入过滤条件，明确的排名指标、方向及Top N进入排序和限制；不能只在输出要求中描述这些约束。前序选出的对象通过已有依赖机制传递，不能编造尚未查询出的姓名或编码，也不能省略入选对象限定。用户问“金额最多的销售员”时，前置查询必须保留按金额降序取第1名；后续“销售了哪些产品”保留相同时间、医院和前序入选销售员，不沿用产品Top1。没有要求排名、时间分组或新增过滤时不要自行添加。
+definition_only=true的任务只解释口径，是否查询数据库为“否”；保留指标名称，不提取实际取数、计算绑定或结果操作。指标已经登记不影响解释意图。
+依赖查询的传值也在本阶段确定：每个任务的extraction都输出“依赖绑定”数组，无需前序值时写[]。需要用前序入选对象查询新数据时，逐项写{"source_task_index":0,"source_column":"业务员"}；source_task_index是当前任务表中已声明依赖的前序任务下标，source_column是该任务交付的数据列名，不是本任务要查的新字段。执行阶段只按此绑定读取实际值，不再根据任务描述猜字段，不要填写尚未查询出的姓名或编码。
+先检查前序任务参数能返回该列：按“业务员”维度统计的结果以“业务员”列承载分组键，姓名是展示属性；后续查询该业务员的产品或所属公司应绑定“业务员”，不能绑定医院，也不能把“销售员编码”展示属性臆当成另一个结果列。若前序只查询“销售员编码”展示字段，则绑定“销售员编码”。按订单号、经销商等对象同理，以前序实际交付的列为准；计算任务保留其输入的对象键列。需要多个前序字段时分别绑定，禁止凭值相同混用不同实体或不同ID/编码字段。前序缺少所需对象键时，在本阶段为其提取相应展示字段，不能改变排名分组。纯计算任务仍用计算绑定或结果操作，依赖绑定写[]；仅有执行顺序而不消费前序值的任务也写[]。
+若入选对象来自外层的前一个子问题、本任务表未提供其下标，只写source_column，不编造source_task_index；外层只有一个已声明依赖时由程序补入该任务ID，多个来源时必须有明确来源，不能猜选。
 逐对象样本需要保留任务指定的分组和唯一业务键；指标登记的聚合后有效样本条件不能改成逐行过滤。
 expected_output是必须完成的交付物，把分析目标保留在输出要求。计算任务必须给出当前规范支持的公式及前序任务输入，不得只写“根据结果计算”。
 sample_requirements是父复合指标登记的有效样本口径，必须在每个成分任务中保留，按相同分组聚合后筛选，不能只约束其中一份输入或改成逐行剔除负数。
-component_input=true表示复合指标的成分统计取数，按指标查询提取；指标及分组按计划保留，不能改成原始金额/数量明细。成分统计不提前排序取前N，最终排名由计算任务完成；明确的前置入选范围仍通过任务依赖传递。
+component_input=true表示复合指标的成分统计取数，提取聚合取数参数但不改判意图；指标及分组按计划保留，不能改成原始金额/数量明细。成分统计不提前排序取前N，最终排名由计算任务完成；明确的前置入选范围仍通过任务依赖传递。
 先选对象再汇总完整对象的任务，只沿用前序完整对象名单，不继承用来筛选入选对象的商品等明细条件。按订单号汇总全部商品时，查询维度和展示字段只保留订单号，不能再按商品分组；时间范围在前置名单中落实，不把整单拆成时间内的部分明细。
 只使用当前规范中的业务对象；物理字段和关系最终绑定交给原有ASL链路。无法确定业务含义时沿用现有澄清方式，不编造参数。
 输出格式：{"tasks":[{"task_index":0,"extraction":{...}}]}，每个任务恰好一项。
@@ -175,8 +174,24 @@ def boundary_targets(task, catalog) -> list[str]:
     registered, aliases = catalog
     # An explicit empty list is meaningful: a dependent detail lookup may
     # mention its parent's ranking measure without returning that measure.
-    names = (task.metric_targets if 'metric_targets' in task.model_fields_set else
-             targets_in_text(task.expected_output or task.question, registered, aliases))
+    if 'metric_targets' in task.model_fields_set:
+        names = task.metric_targets
+    else:
+        # A question can mention both its own output and a downstream formula
+        # ("sales total, as input to average order amount"). Identify the
+        # delivered metrics first, so the whole-plan dependency check can see
+        # that those formula inputs already exist instead of expanding again.
+        delivery = (task.expected_output or '').strip()
+        wording = re.split(r'用于|供后续|以便|用来', delivery, maxsplit=1)[0]
+        names = targets_in_text(wording, registered, aliases)
+        dependent_detail = (task.depends_on and delivery and not task.definition_only
+                            and '不再查询数据库' not in task.question)
+        if not names and not dependent_detail:
+            # With no named metric in the deliverable, the question supplies
+            # the goal. Dependent detail lookups instead deliver new attributes,
+            # not the metric used to select their input cohort.
+            wording = re.split(r'用于|供后续|以便|用来', task.question, maxsplit=1)[0]
+            names = targets_in_text(wording, registered, aliases)
     return list(dict.fromkeys(aliases.get(name, name) for name in names))
 
 
@@ -187,12 +202,16 @@ def component_task_title(task: TaskBoundary, extraction: dict) -> str | None:
     temporal = extraction.get('时间粒度') or {}
     time_range = temporal.get('time_range') if isinstance(temporal, dict) else None
     time_text = time_range if isinstance(time_range, str) else ''
-    grouping = '各' + '、'.join(task.grain) + '的' if task.grain else ''
-    title = f'统计{time_text}{grouping}' + '、'.join(task.metric_targets)
+    def names(key):
+        return [str(item.get('name') or item.get('field') or '') if isinstance(item, dict) else str(item)
+                for item in extraction.get(key) or []]
+    grain, metrics = names('维度'), names('指标')
+    grouping = '各' + '、'.join(grain) + '的' if grain else ''
+    title = f'统计{time_text}{grouping}' + '、'.join(metrics)
     labels = []
     for item in extraction.get('展示字段') or []:
         label = str(item.get('field') or item.get('name') or '') if isinstance(item, dict) else str(item)
-        if label and label not in {*task.grain, *task.metric_targets} and label not in labels:
+        if label and label not in {*grain, *metrics} and label not in labels:
             labels.append(label)
     if labels:
         title += '，附' + '、'.join(labels)
@@ -233,7 +252,7 @@ def _attach_result_analysis(boundaries, catalog):
             return set(boundary_targets(item, catalog))
         analysis_targets = targets(task) or set(targets_in_text(
             task.expected_output or task.question,registered,aliases)) or set(targets_in_text(task.question,registered,aliases))
-        narrative = ('不再查询数据库' in task.question and len(task.depends_on) == 1
+        narrative = (not task.definition_only and '不再查询数据库' in task.question and len(task.depends_on) == 1
                      and re.search(r'分布|洞察|描述', task.question)
                      and analysis_targets == targets(result[task.depends_on[0]]) and bool(analysis_targets))
         executable = False
@@ -269,6 +288,8 @@ def _bind_local_calculations(boundaries, *, spec, catalog, dependencies):
     def targets(task):
         return set(boundary_targets(task, catalog))
     for index, task in enumerate(result):
+        if task.definition_only:
+            continue
         if any(type(dep) is not int or dep < 0 or dep >= index for dep in task.depends_on):
             raise ValueError('任务依赖必须引用排在其前面的任务')
         postprocess = task.postprocess or {}
@@ -293,18 +314,7 @@ def _bind_local_calculations(boundaries, *, spec, catalog, dependencies):
                 # from a predecessor that only promises object identities.
                 task.postprocess = None
                 postprocess = {}
-        if task.depends_on and '不再查询数据库' in task.question and not postprocess:
-            available = set().union(*(targets(result[dep]) for dep in task.depends_on))
-            formula_ready = bool(compound_targets) and all(
-                set(dependencies[name]).issubset(available) for name in compound_targets)
-            analysis_targets = targets(task) or set(targets_in_text(
-                task.expected_output or task.question,registered,aliases)) or set(targets_in_text(task.question,registered,aliases))
-            narrative_ready = bool(analysis_targets) and analysis_targets.issubset(available) and bool(
-                re.search(r'分布|洞察|描述', task.question))
-            if not formula_ready and not narrative_ready:
-                # A phrase cannot make unavailable data appear in an upstream
-                # result. With no executable operation/formula, retain a query.
-                task.question = task.question.replace('，不再查询数据库', '').replace('不再查询数据库', '')
+        # Local operation parameters are supplied later by extraction.
         available = set().union(*(targets(result[dep]) for dep in task.depends_on)) if task.depends_on else set()
         formula_ready = bool(compound_targets) and all(
             set(dependencies[name]).issubset(available) for name in compound_targets)
@@ -355,6 +365,8 @@ def _complete_object_scopes(boundaries, *, spec, catalog, dependencies, source_q
     known = grouping_labels(spec)
     scopes = {}
     for index, task in enumerate(boundaries):
+        if task.definition_only:
+            continue
         for name in boundary_targets(task, catalog):
             if name not in dependencies:
                 continue
@@ -440,6 +452,9 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
         if any(type(dep) is not int or dep < 0 or dep >= old_index for dep in source.depends_on):
             raise ValueError('任务依赖必须引用排在其前面的任务')
         task = source.model_copy(deep=True)
+        if task.definition_only:
+            task.postprocess = None
+            task.clarification = None
         targets = boundary_targets(task, catalog)
         # A planner may list formula inputs while its deliverable still asks
         # for the composite result. Recover that final target before extraction.
@@ -457,7 +472,7 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
                 '秒','分钟','小时','日','周','月','季度','半年','年','月份'}]
         # Metadata and local calculations are not new database component queries.
         local = '不再查询数据库' in task.question
-        metadata = re.search(r'^(?:请)?(?:解释|说明|介绍|定义|查看口径|查询血缘)', task.question)
+        metadata = task.definition_only or re.search(r'^(?:请)?(?:解释|说明|介绍|定义|查看口径|查询血缘)', task.question)
         compound = [name for name in task.metric_targets if name in dependencies
                     and all(part in registered for part in dependencies[name])]
         if local or metadata or not compound or task.clarification:

@@ -2813,3 +2813,46 @@ async def test_contextual_follow_up_inherits_slots_but_switches_to_analysis_inte
     # request remains the first query. The response intent proves routing switched correctly.
     assert remembered is not None
     assert remembered.metrics[0].input == "销售额"
+
+
+def test_judgment_definition_direct_truth_table():
+    # 意图优先的口径直答门：单一问题 + 意图识别节点判定“解释口径”时直答，
+    # 不再进入任务拆分与规划；复合问题、其他意图与空判断不触发。
+    from app.planning.compound_question import CompoundJudgment, CompoundJudgmentEntry
+    from app.services.orchestrator import DataAnalysisOrchestrator
+
+    direct = DataAnalysisOrchestrator._judgment_definition_direct
+    assert direct(None) is False
+    assert direct(
+        CompoundJudgment(is_compound=False, intent="解释口径")
+    )
+    assert direct(
+        CompoundJudgment(is_compound=False, intent="METRIC_DEFINITION")
+    )
+    assert not direct(
+        CompoundJudgment(is_compound=False, intent="查询数据")
+    )
+    assert not direct(
+        CompoundJudgment(
+            is_compound=True,
+            entries=(
+                CompoundJudgmentEntry(question="医院覆盖率是什么"),
+                CompoundJudgmentEntry(question="线索转化率是什么"),
+            ),
+            intent="解释口径",
+        )
+    )
+
+
+def test_parse_definition_answer_variants():
+    from app.analysis.synthesis import parse_definition_answer
+
+    assert parse_definition_answer('{"answer": "覆盖率是指已合作医院占区域医院总数的比例。"}') == (
+        "覆盖率是指已合作医院占区域医院总数的比例。"
+    )
+    assert parse_definition_answer('```json\n{"answer": "指已合作医院数除以区域医院总数。"}\n```') == (
+        "指已合作医院数除以区域医院总数。"
+    )
+    assert parse_definition_answer("不是 JSON 的原文解释") == "不是 JSON 的原文解释"
+    assert parse_definition_answer('{"other": "缺少answer字段"}') == '{"other": "缺少answer字段"}'
+    assert parse_definition_answer(None) == ""

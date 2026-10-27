@@ -72,6 +72,21 @@ def parameter_owners(original, catalog):
     return resolve_entities(original['entity'], catalog['entities'])
 
 
+def matching_dimensions(original, catalog):
+    """Resolve a dimension label only within the current scoped dimension catalog."""
+    label = original.get('name') or original.get('field') if isinstance(original, dict) else original
+    if not isinstance(label, str) or not normalized(label):
+        return []
+    term = normalized(label)
+    dimensions = catalog.get('dimensions') or {}
+    codes = [code for code in dimensions if normalized(code) == term]
+    if codes:
+        return codes
+    return [code for code, meta in dimensions.items()
+            if term in {normalized(value) for value in
+                        [meta.get('dim_name'), *registered_terms(meta.get('synonyms'))] if value}]
+
+
 def matching_fields(original, catalog, *, aliases=True):
     label = original.get('name') or original.get('field') if isinstance(original, dict) else original
     if not isinstance(label, str):
@@ -105,6 +120,7 @@ def parameter_catalog(catalog, original, extraction, target):
     if target == 'metrics':
         return catalog
     owners = parameter_owners(original, catalog)
+    dimensions = matching_dimensions(original, catalog) if target == 'dimensions' else []
     exact = (matching_fields(original, catalog, aliases=False)
              or matching_fields(original, catalog))
     if (isinstance(original, dict) and original.get('entity') and not owners
@@ -115,7 +131,7 @@ def parameter_catalog(catalog, original, extraction, target):
         candidates = entity_label_candidates(original['entity'], catalog['entities'])
         return dict(catalog, _parameter_owner_error='指定实体未在当前授权目录中唯一匹配',
                     _parameter_owner_candidates=sorted(candidates))
-    if not owners and not exact:
+    if not owners and not exact and not dimensions:
         # A whole entity name/alias used as a slot label supplies its parent,
         # not an arbitrary same-named attribute on another entity. Explicit
         # attribute names and explicit slot owners retain their old priority.
@@ -125,7 +141,7 @@ def parameter_catalog(catalog, original, extraction, target):
             if len(matches) > 1:
                 return dict(catalog, _parameter_owner_candidates=sorted(matches))
             owners = matches
-    if not owners and len(exact) > 1:
+    if not owners and len(exact) > 1 and not dimensions:
         hinted = resolve_entities(extraction.get('实体') or [], catalog['entities'])
         matched_owners = {owner for field in exact for owner in field_owners(catalog['fields'][field])}
         if len(hinted & matched_owners) == 1:

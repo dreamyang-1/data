@@ -49,6 +49,9 @@ def binding_notices(repairs):
 
 
 def attach_binding_notices(result, repairs):
+    result.execution_transforms.extend(dict(item) for item in repairs or []
+        if isinstance(item, dict) and item.get('type') == 'STRUCTURED_PROJECTION_BINDING'
+        and item.get('source') == 'STRUCTURED_EXTRACTION')
     messages = binding_notices(repairs)
     if messages:
         result.execution_transforms.append({

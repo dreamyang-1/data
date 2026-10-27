@@ -2,15 +2,40 @@
 from __future__ import annotations
 
 import copy
+import logging
 import re
 
 from minio_followup_store import apply_followup_operation, dataset_source_complete
-from app.services.computation_delivery import aligned_input, has_group_identity, numeric_value
+from app.services.computation_delivery import (
+    aligned_input, has_group_identity, identifier_field, numeric_value)
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _provenance(reference):
     return next((item for item in reference.transformation_log
                  if item.get('type') == 'query_provenance'), {})
+
+
+def _identity_fields(reference):
+    fields = {field for field in _provenance(reference).get('column_bindings', {}).values()
+              if identifier_field(field)}
+    if not fields:
+        fields = {str(name) for name in reference.columns
+                  if identifier_field(str(name)) or any(
+                      tag in str(name).lower() for tag in ('编码', '编号', '（id）', '(id)'))}
+    return fields
+
+
+def _row_scalar(reference, other):
+    """A one-row operand stays a scalar unless it must align with the other input.
+
+    一个只带自身维度身份列的1行合计（如按省份分组的区域医院总数）对另一个
+    无共同身份列的操作数仍是常数；强制按行对齐会让所有覆盖率类计算失败。
+    """
+    if not has_group_identity(reference):
+        return True
+    return not bool(_identity_fields(reference) & _identity_fields(other))
 
 
 def literal_computation(structured):
@@ -116,11 +141,40 @@ def _legacy_division(task, inputs):
             'result_field': label, 'format': 'percent' if re.search('率|占比|比例', label) else 'number'}
 
 
+def _two_dataset_divide(task, inputs):
+    """Degenerate-binding fallback: each dependency contributes exactly one metric.
+
+    Deterministic only when both dependencies expose a single numeric metric;
+    operand direction follows question wording when both columns are mentioned,
+    otherwise the planner's depends_on order.
+    """
+    if len(inputs) != 2:
+        return None
+    try:
+        operands = [{'source_task_id': name, 'column': _numeric_column(ref, rows, task.question)}
+                    for name, (ref, rows) in inputs.items()]
+    except ValueError:
+        return None
+    wording = task.question
+    if all(operand['column'] in wording for operand in operands):
+        operands.sort(key=lambda operand: wording.index(operand['column']))
+    match = re.search(r'计算([^，,。；;（(]{2,60})', wording)
+    label = match[1] if match else '计算结果'
+    label = re.split(r'并|按|然后', label)[0].strip() or '计算结果'
+    label = re.sub(r'^(?:这些|各|所有|上述).+?的', '', label) or label
+    return {'operation': 'divide', 'numerator': operands[0], 'denominator': operands[1],
+            'result_field': label,
+            'format': 'percent' if re.search('率|占比|比例', label) else 'number'}
+
+
 def _check_compatible(first, second, *, same_unit, same_period=True):
     left = _provenance(first).get('fingerprint_components', {})
     right = _provenance(second).get('fingerprint_components', {})
     if left and right:
-        if same_period and left.get('time_range') != right.get('time_range'):
+        # 双方都声明了时间范围才比对；分母全量口径（无时间条件）是合法输入，
+        # 不能因一侧未声明时间就拒绝比率计算。
+        left_period, right_period = left.get('time_range'), right.get('time_range')
+        if same_period and left_period and right_period and left_period != right_period:
             raise ValueError('计算输入的时间范围不一致')
         left_units = {m.get('unit') for m in left.get('metrics', []) if isinstance(m, dict) and m.get('unit')}
         right_units = {m.get('unit') for m in right.get('metrics', []) if isinstance(m, dict) and m.get('unit')}
@@ -189,10 +243,14 @@ def _arithmetic(binding, inputs):
     if first.dataset_id == second.dataset_id:
         columns, rows = list(first.columns), [dict(row) for row in left]
         operands = [(row[left_column], row[right_column]) for row in rows]
-    elif ((len(left) == 1 and not has_group_identity(first))
-          or (len(right) == 1 and not has_group_identity(second))):
-        left_scalar = len(left) == 1 and not has_group_identity(first)
-        right_scalar = len(right) == 1 and not has_group_identity(second)
+    elif (operator == 'divide' and left and len(right) == 1
+          or (len(left) == 1 and _row_scalar(first, second))
+          or (len(right) == 1 and _row_scalar(second, first))):
+        # User-authorized fallback: one denominator applies to every numerator,
+        # even when their grouped identities differ. Other arithmetic is unchanged.
+        forced_denominator = operator == 'divide' and len(right) == 1
+        left_scalar = not forced_denominator and len(left) == 1 and _row_scalar(first, second)
+        right_scalar = forced_denominator or (len(right) == 1 and _row_scalar(second, first))
         main, source_rows = (second, right) if left_scalar and not right_scalar else (first, left)
         columns, rows = list(main.columns), [dict(row) for row in source_rows]
         operands = [(left[0 if len(left) == 1 else index][left_column],
@@ -262,9 +320,13 @@ def calculate(task, inputs, legacy_resolver):
         raise ValueError('计算缺少指定的依赖任务')
     for reference, rows in inputs.values():
         if not rows or not dataset_source_complete(reference, len(rows)):
-            raise ValueError('计算输入不是完整数据集')
+            # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
+            # 输入不完整只告警继续计算（溯源里保留 WARN/FAIL 质量标记），
+            # 不再把任务打成执行失败。
+            LOGGER.warning('computation input incomplete task=%r rows=%s', task.question[:120],
+                           len(rows or []))
         if _provenance(reference).get('source_quality_status') == 'FAIL':
-            raise ValueError('计算输入未通过质量检查')
+            LOGGER.warning('computation input quality FAIL task=%r', task.question[:120])
     structured = task.extraction or {}
     binding, spec = structured.get('计算绑定'), structured.get('结果操作')
     from app.planning.literal_calculation import constant_pipeline
@@ -277,7 +339,23 @@ def calculate(task, inputs, legacy_resolver):
     if binding is not None and spec is not None:
         raise ValueError('计算公式与结果操作不能同时定义')
     legacy = binding is None and spec is None
+    if not legacy and binding is None and isinstance(spec, dict) and len(inputs) == 2:
+        # 规划器可能把跨任务算术写成未绑定唯一来源的结果操作——包括绑定了
+        # 其中一个依赖但依赖实际有两个的形态。回退到题面措辞的确定性解析
+        # （只认除以/覆盖率等显式形态）；解析不出走透传兜底，不再拒绝。
+        name = spec.get('source_task_id')
+        if (set(spec) <= {'source_task_id', 'operation'}
+                and _legacy_division(task, inputs) is not None):
+            legacy = True
     binding = binding or (_legacy_division(task, inputs) if legacy else None)
+    if (binding is not None and binding.get('operation') == 'divide'
+            and binding.get('left') is not None
+            and binding.get('left') == binding.get('right')):
+        # 规划器把除法两个操作数绑成同一列（X÷X 恒为 1）时按用户宽松裁决
+        # 依次回退：题面显式除法措辞 → 两个依赖各恰有一个数值指标的确定性
+        # 重导；都不可得时走透传，绝不输出恒为 1 的伪结果。
+        LOGGER.warning('degenerate divide binding task=%r left==right', task.question[:120])
+        binding = _legacy_division(task, inputs) or _two_dataset_divide(task, inputs)
     percent_label = None
     if binding is not None:
         columns, rows, operation, input_binding = _arithmetic(binding, inputs)
@@ -299,45 +377,98 @@ def calculate(task, inputs, legacy_resolver):
         if not isinstance(spec, dict) or set(spec) - {'source_task_id', 'operation'}:
             raise ValueError('结果操作必须绑定指定任务，不能覆盖数据集身份')
         name = spec.get('source_task_id')
-        if name not in inputs or len(inputs) != 1:
-            raise ValueError('结果操作必须明确绑定唯一依赖任务')
-        source, original_rows = inputs[name]
-        from app.planning.calculation_bindings import normalize_result_operation
-        operation = normalize_result_operation(spec.get('operation'))
-        input_binding = {'source_task_id': name, 'dataset_id': source.dataset_id}
-        steps = operation.get('operations', []) if isinstance(operation, dict) and operation.get('type') == 'pipeline' else [operation]
-        for step in steps:
-            if isinstance(step, dict) and step.get('type') == 'monthly_growth':
-                declared = step.get('period_field')
-                actual = _column(source, declared, role='month')
-                step['period_field'] = actual
-                roles = _provenance(source).get('calculation_columns', {}).get('dimension_identity', {})
-                step['group_by'] = [roles.get(group, group) for group in step.get('group_by', [])]
-                input_binding['period_column'] = {'declared': declared, 'actual': actual}
-        columns, rows = _steps(list(source.columns), [dict(row) for row in original_rows], operation)
+        if name in inputs and len(inputs) == 1:
+            source, original_rows = inputs[name]
+            from app.planning.calculation_bindings import normalize_result_operation
+            operation = normalize_result_operation(spec.get('operation'))
+            input_binding = {'source_task_id': name, 'dataset_id': source.dataset_id}
+            steps = operation.get('operations', []) if isinstance(operation, dict) and operation.get('type') == 'pipeline' else [operation]
+            for step in steps:
+                if isinstance(step, dict) and step.get('type') == 'monthly_growth':
+                    declared = step.get('period_field')
+                    actual = _column(source, declared, role='month')
+                    step['period_field'] = actual
+                    roles = _provenance(source).get('calculation_columns', {}).get('dimension_identity', {})
+                    step['group_by'] = [roles.get(group, group) for group in step.get('group_by', [])]
+                    input_binding['period_column'] = {'declared': declared, 'actual': actual}
+            columns, rows = _steps(list(source.columns), [dict(row) for row in original_rows], operation)
+        else:
+            # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
+            # 未绑定唯一依赖任务的结果操作按题面显式除法解析（上方已尝试），
+            # 仍解析不出时透传依赖数据集并告警，不再把任务打成执行失败。
+            LOGGER.warning('computation passthrough task=%r 结果操作未绑定唯一依赖任务，透传依赖数据集',
+                           task.question[:120])
+            columns, rows = aligned_input(list(inputs.values()))
+            operation = {'type': 'select', 'columns': list(columns)}
+            input_binding = {dep: {'dataset_id': ref.dataset_id}
+                             for dep, (ref, _) in inputs.items()}
     else:
         columns, rows = aligned_input(list(inputs.values()))
         operation = legacy_resolver(task.question, columns, rows, source_complete=True)
         if operation is None:
-            raise ValueError('任务没有可执行的计算公式或结果操作')
+            # 2026-10-21 用户裁决：任务只要能输出就输出，校验尽可能宽松。
+            # 没有可执行公式或结果操作时透传依赖任务数据集，不再把任务
+            # 打成执行失败；计算缺失只留告警，不影响其他任务。
+            LOGGER.warning('computation passthrough task=%r 无可执行公式，透传依赖数据集',
+                           task.question[:120])
+            operation = {'type': 'select', 'columns': list(columns)}
         columns, rows = _steps(columns, rows, operation)
         input_binding = {name: {'dataset_id': ref.dataset_id} for name, (ref, _) in inputs.items()}
     # Structured ranking belongs to the same calculation, even when its prose
     # omits TopN. Keep values numeric until ordering has completed.
     final_steps = []
+    numeric_columns = [
+        column for column in columns
+        if rows and all(isinstance(row.get(column), (int, float))
+                        and not isinstance(row.get(column), bool) for row in rows)
+    ]
     for sort in structured.get('排序') or []:
         field = sort.get('field')
         if field not in columns or str(sort.get('order', 'desc')).lower() not in {'asc', 'desc'}:
-            raise ValueError('计算排序字段或方向无效')
+            # 2026-10-21 用户裁决：排序无法落地时跳过该步骤并告警，
+            # 不拦截任务输出。
+            LOGGER.warning('computation sort skipped task=%r field=%r', task.question[:120], field)
+            continue
+        if field not in numeric_columns:
+            # 2026-10-21 用户要求恢复默认：规划器把排序字段写成维度名称
+            # （如"经销商名称"）时，非数值列不能承担指标排序，回退到结果
+            # 数值列（计算结果列最后生成，优先取末位），保持按指标值排序。
+            fallback = next(
+                (column for column in reversed(numeric_columns) if column != field), None)
+            if fallback is None:
+                LOGGER.warning('computation sort skipped task=%r field=%r 无数值列可回退',
+                               task.question[:120], field)
+                continue
+            LOGGER.warning('computation sort fallback task=%r field=%r -> %r',
+                           task.question[:120], field, fallback)
+            field = fallback
         final_steps.append({'type': 'sort', 'field': field, 'descending': str(sort.get('order', 'desc')).lower() == 'desc'})
     if structured.get('限制') is not None:
         count = structured['限制']
-        if type(count) is not int or not 1 <= count <= 10000:
-            raise ValueError('计算结果人数限制无效')
-        final_steps.append({'type': 'limit', 'count': count})
+        if isinstance(count, str) and re.search(r'\d+', count):
+            count = int(re.search(r'\d+', count).group())
+        elif isinstance(count, float) and count.is_integer():
+            count = int(count)
+        if type(count) is int and 1 <= count <= 10000:
+            final_steps.append({'type': 'limit', 'count': count})
+        else:
+            # 2026-10-21 用户裁决：限制无效时忽略该步骤并告警，不拦截任务输出。
+            LOGGER.warning('computation limit skipped task=%r 限制=%r', task.question[:120],
+                           structured['限制'])
     if final_steps:
         columns, rows = _steps(columns, rows, {'type': 'pipeline', 'operations': final_steps})
         operation = {'type': 'pipeline', 'operations': [operation, *final_steps]}
+    elif (isinstance(operation, dict) and operation.get('type') == 'divide'
+          and isinstance(operation.get('result_field'), str)
+          and operation['result_field'] in columns and rows):
+        # 2026-10-21 用户要求恢复默认：除法计算任务未携带排序槽位时按结果
+        # 列默认降序（与指标类查询默认降序一致）；不改 operation 结构，
+        # 也不影响时序类与透传类任务的原有顺序契约。
+        default_column = operation['result_field']
+        LOGGER.warning('computation default sort task=%r column=%r desc',
+                       task.question[:120], default_column)
+        columns, rows = _steps(columns, rows, {'type': 'pipeline', 'operations': [
+            {'type': 'sort', 'field': default_column, 'descending': True}]})
     if percent_label:
         for row in rows:
             row[percent_label] = f'{numeric_value(row[percent_label])*100:.2f}%'

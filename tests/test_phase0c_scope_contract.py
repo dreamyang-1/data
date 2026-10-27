@@ -490,7 +490,7 @@ async def test_metadata_fallback_preserves_scope_error_without_clarification():
     agent.adapters = AdapterBundle(semantic=HttpSemanticAdapter(agent.settings,client),retrieval=base.retrieval,
         knowledge=base.knowledge,policy=base.policy,analysis=base.analysis)
     request = canonical(chat(business_domain_ids=[205]))
-    request.primary_intent = PrimaryIntent.METRIC_DEFINITION
+    request.primary_intent = PrimaryIntent.DATA_LINEAGE
     response = await agent._metadata_answer(request,IDENTITY,81)
     assert response.error_code == 'SEMANTIC_SCOPE_UNCONFIRMED'
     assert not response.clarification_questions

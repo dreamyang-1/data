@@ -43,7 +43,6 @@ def test_materialized_reference_does_not_become_an_extra_business_filter(value):
 
 @pytest.mark.parametrize('overrides', [
     {'value': '明确指定的经销商'},
-    {'value': '复用上一轮查询结果：经销商', 'constrained': False},
     {'value': '复用上一轮查询结果：医院', 'field': '医院名称'},
     {'value': '复用上一轮查询结果：经销商', 'operator': 'NOT IN'},
     {'value': '复用上一轮查询结果：公司甲', 'question': '仅查询名称为“复用上一轮查询结果：公司甲”的经销商产品'},
@@ -55,6 +54,15 @@ def test_explicit_filters_and_unbound_references_are_preserved(overrides):
     original = request.filters[0].copy()
     HttpDataRetrievalAdapter._merge_dependency_filters(request)
     assert original in request.filters
+
+
+def test_unbound_reference_without_constraints_is_dropped_instead_of_asking():
+    # 2026-10-21 用户裁决：占位引用永远绑定不到真实标准值，无约束可接管时
+    # 直接剥离继续执行（任务不带该筛选输出），不再触发澄清拦停。
+    request = request_for('复用上一轮查询结果：经销商', constrained=False)
+    HttpDataRetrievalAdapter._merge_dependency_filters(request)
+    assert request.filters == []
+    assert request._planner_extraction.structured['过滤条件'] == []
 
 
 def test_mixed_named_selection_keeps_the_named_part():
@@ -69,6 +77,60 @@ def test_resolved_reference_is_not_rebound_as_a_separate_named_entity():
     request.semantic_entity_mentions = [reference, '明确指定的厂家']
     HttpDataRetrievalAdapter._merge_dependency_filters(request)
     assert request.semantic_entity_mentions == ['明确指定的厂家']
+
+
+@pytest.mark.parametrize('value', [
+    '${task_0.经销商名称}',
+    ['${task_0.经销商名称}'],
+    ['${TASK-1.dealer_name}'],
+])
+def test_task_placeholder_reference_is_replaced_by_materialized_keys(value):
+    """计划器把前序任务值写成模板占位符时，由依赖约束的标准键接管。"""
+    request = request_for(value, operator='IN' if isinstance(value, list) else '=')
+    HttpDataRetrievalAdapter._merge_dependency_filters(request)
+    assert [item['field'] for item in request.filters] == ['dealer.dealer_code']
+    assert [item['field'] for item in request._planner_extraction.structured['过滤条件']] == ['dealer.dealer_code']
+
+
+@pytest.mark.parametrize('value', [
+    '依赖任务1输出的经销商名称列表',
+    ['依赖任务1输出的经销商名称列表'],
+    '任务2返回的经销商名称列表',
+    '依赖前序任务结果的名单',
+])
+def test_prose_dependency_reference_is_replaced_by_materialized_keys(value):
+    """2026-10-21 端到端实测：计划器把前序值写成“依赖任务N输出的XX列表”
+    自然语言占位时同样由依赖约束标准键接管，不能当筛选值做向量绑定。"""
+    request = request_for(value, operator='IN' if isinstance(value, list) else '=')
+    HttpDataRetrievalAdapter._merge_dependency_filters(request)
+    assert [item['field'] for item in request.filters] == ['dealer.dealer_code']
+    assert [item['field'] for item in request._planner_extraction.structured['过滤条件']] == ['dealer.dealer_code']
+
+
+def test_prose_reference_mixed_with_explicit_literal_keeps_the_literal():
+    request = request_for(['依赖任务1输出的经销商名称列表', '明确指定的经销商'], operator='IN')
+    HttpDataRetrievalAdapter._merge_dependency_filters(request)
+    assert request.filters[0]['field'] == '经销商名称'
+    assert request.filters[0]['value'] == ['明确指定的经销商']
+
+
+def test_task_placeholder_mixed_with_explicit_literal_keeps_the_literal():
+    request = request_for(['${task_0.经销商名称}', '明确指定的经销商'], operator='IN')
+    HttpDataRetrievalAdapter._merge_dependency_filters(request)
+    assert [item['field'] for item in request.filters] == ['经销商名称', 'dealer.dealer_code']
+    assert request.filters[0]['value'] == ['明确指定的经销商']
+
+
+@pytest.mark.parametrize('overrides', [
+    {'value': '${task_0.医院名称}', 'field': '医院名称'},
+    {'value': '${task_0.经销商名称}', 'question': '仅查询名称为“${task_0.经销商名称}”的经销商产品'},
+    {'value': '${unknown}', 'field': '经销商名称'},
+])
+def test_task_placeholder_outside_bound_scope_is_preserved(overrides):
+    request = request_for(**overrides)
+    original = request.filters[0].copy()
+    HttpDataRetrievalAdapter._merge_dependency_filters(request)
+    assert original in request.filters
 
 
 @pytest.mark.parametrize('lose_keys', [False, True])

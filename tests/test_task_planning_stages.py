@@ -47,10 +47,11 @@ def setup_planner(monkeypatch, plan, *, extract=None):
                 payload = extract(fixed)
             else:
                 payload = {'tasks': [{'task_index': task['task_index'], 'extraction': {
-                    '意图': '指标计算' if '不再查询数据库' in task['question'] else '明细查询',
-                    '指标': [], '维度': [], '展示字段': [], '过滤条件': [],
+                    '意图': '指标计算' if '不再查询数据库' in task['question'] else '指标查询',
+                    '指标': [{'name': name} for name in task['metric_targets']],
+                    '维度': task['grain'], '展示字段': [], '过滤条件': [],
                     '是否查询数据库': '否' if '不再查询数据库' in task['question'] else '是',
-                    '输出要求': '默认输出表格'}} for task in fixed['tasks']]}
+                    '输出要求': task.get('expected_output')}} for task in fixed['tasks']]}
         return httpx.Response(200, json={'choices': [{'message': {'content': json.dumps(payload, ensure_ascii=False)}}]})
 
     settings = Settings(_env_file=None, env='test', intent_model_enabled=True,
@@ -59,7 +60,7 @@ def setup_planner(monkeypatch, plan, *, extract=None):
 
 
 @pytest.mark.asyncio
-async def test_one_incomplete_plan_is_expanded_before_detail_parameters_can_erase_metric(monkeypatch):
+async def test_component_plan_is_expanded_before_parameters_are_extracted(monkeypatch):
     planner, calls = setup_planner(monkeypatch, {'tasks': [{'question': QUESTION,
         'metric_targets': ['订单级均价'], 'expected_output': '逐订单均价样本及价格分布'}]})
     result = await planner.plan_question(QUESTION, semantic_model_id=130)
@@ -111,7 +112,7 @@ async def test_multiple_requested_measures_survive_pre_extraction_expansion(monk
     assert len(calls) == 2 and len(result.tasks) == 6
     outputs = [task.structured['指标'][0]['name'] for task in result.tasks]
     assert set(outputs) == {'订单级均价','平均每单销售金额','订单笔数','含税销售总额','销售总数量'}
-    assert outputs.count('含税销售总额') == 2  # different grains cannot share a scalar dataset
+    assert outputs.count('含税销售总额') == 2  # distinct registered sample grains
     assert result.tasks[-2].depends_on == (0,1)
     assert result.tasks[-1].depends_on == (2,3)
 
@@ -130,15 +131,16 @@ async def test_component_titles_keep_year_grain_and_related_display_before_final
     question='查询2025年订单平均金额最高的前五位销售人员及其所在销售公司'
     def extract(request):
         return {'tasks':[{'task_index':task['task_index'],'extraction':{
-            '意图':'指标计算' if '不再查询数据库' in task['question'] else '排名分析',
-            '指标':[], '维度':['业务员'],
+            '意图':'指标计算' if '不再查询数据库' in task['question'] else '指标查询',
+            '指标':[{'name': name} for name in task['metric_targets']], '维度':['业务员'],
             '展示字段':[{'entity':'业务员','field':'销售员姓名'}, {'entity':'销售公司','field':'国药公司名称'}],
-            '排序':[{'field':'平均每单销售金额','order':'desc'}], '限制':5,
+            '排序':[{'field':'平均每单销售金额','order':'desc'}] if task['depends_on'] else [],
+            '限制':5 if task['depends_on'] else None,
             '时间粒度':{'unit':'年','time_range':'2025年'},
             '过滤条件':[], '输出要求':'按平均每单销售金额降序取前5位并返回所属公司',
             '是否查询数据库':'否' if '不再查询数据库' in task['question'] else '是',
         }} for task in request['tasks']]}
-    planner, calls = setup_planner(monkeypatch, {'tasks':[{'question':question,
+    planner, calls = setup_planner(monkeypatch, {'tasks':[{'question':question + '，交付平均每单销售金额排名',
         'metric_targets':['平均每单销售金额'], 'grain':['业务员']}]}, extract=extract)
     result = await planner.plan_question(question, semantic_model_id=130)
     assert len(calls) == 2 and len(result.tasks) == 3
@@ -208,7 +210,7 @@ def test_expansion_preserves_multiple_terminal_dependencies_and_source_objects()
 @pytest.mark.asyncio
 async def test_narrative_distribution_is_delivered_with_final_calculation_not_invented_operation(monkeypatch):
     plan = {'tasks':[{'question':QUESTION,'metric_targets':['订单级均价']},
-        {'question':'根据前序均价分析分布，不再查询数据库','depends_on':[0],
+        {'question':'根据前序订单级均价分析分布，不再查询数据库','depends_on':[0],
          'metric_targets':['订单级均价'],'expected_output':'逐订单均价的完整分布分析',
          'postprocess':{'source_task_index':0,'operation':{'type':'aggregate','metrics':['median']}}}]}
     planner, calls = setup_planner(monkeypatch, plan)
@@ -229,11 +231,15 @@ def test_executable_dependent_filter_is_not_folded_into_narrative():
 
 
 @pytest.mark.asyncio
-async def test_local_result_operation_is_planned_before_extraction(monkeypatch):
-    plan={'tasks':[{'question':'统计各经销商订单笔数，再按订单笔数降序取前3',
-        'metric_targets':['订单笔数'],'grain':['经销商编码'],'expected_output':'订单笔数前3位经销商',
-        'postprocess':{'source_task_index':0,'operation':{'type':'sort_limit','field':'订单笔数','descending':True,'count':3}}}]}
-    planner,calls=setup_planner(monkeypatch,plan)
+async def test_local_result_operation_is_extracted_after_task_boundaries(monkeypatch):
+    plan={'tasks':[{'question':'统计各经销商订单笔数'},
+        {'question':'根据前序结果按订单笔数降序取前3，不再查询数据库', 'depends_on':[0]}]}
+    def extract(request):
+        return {'tasks':[{'task_index':0,'extraction':{'意图':'指标查询',
+            '指标':[{'name':'订单笔数'}], '维度':['经销商编码'], '是否查询数据库':'是'}},
+            {'task_index':1,'extraction':{'意图':'指标计算','是否查询数据库':'否',
+             '结果操作':{'source_task_index':0,'operation':{'type':'sort_limit','field':'订单笔数','descending':True,'count':3}}}}]}
+    planner,calls=setup_planner(monkeypatch,plan,extract=extract)
     result=await planner.plan_question(plan['tasks'][0]['question'],semantic_model_id=130)
     fixed=json.loads(calls[1]['messages'][0]['content'].split('已规划任务JSON：\n',1)[1])['tasks']
     assert len(fixed)==len(result.tasks)==2
@@ -316,7 +322,10 @@ async def test_clarification_keeps_tentative_operation_out_of_executable_plan(mo
         'clarification':{'question':'采用哪个分组口径？','candidates':['按年','按月']},
         'postprocess':{'operation':{'type':'aggregate','group_by':[],
             'aggregations':[{'field':'订单笔数','function':'avg','alias':'均值'}]}}}]}
-    planner,calls=setup_planner(monkeypatch,plan)
+    def extract(request):
+        return {'tasks':[{'task_index':0, 'extraction':{'意图':'指标计算',
+            '计算待确认':{'question':'采用哪个分组口径？','candidates':['按年','按月']}}}]}
+    planner,calls=setup_planner(monkeypatch,plan,extract=extract)
     result=await planner.plan_question('计算订单笔数的平均值',semantic_model_id=130)
     assert len(result.tasks)==1 and len(calls)==2
     assert result.tasks[0].structured['计算待确认']['candidates']==['按年','按月']
@@ -328,8 +337,11 @@ async def test_component_queries_do_not_take_top_n_before_final_ratio(monkeypatc
     question='查询2025年平均每单销售金额最高的前3位销售员'
     def extract(request):
         return {'tasks':[{'task_index':item['task_index'],'extraction':{
-            '意图':'明细查询','指标':[],'排序':[{'field':item['metric_targets'][0],'order':'desc'}],
-            '限制':3,'是否查询数据库':'否' if '不再查询数据库' in item['question'] else '是'}}
+            '意图':'指标计算' if item['depends_on'] else '指标查询',
+            '指标':[{'name':name} for name in item['metric_targets']],
+            '排序':[{'field':item['metric_targets'][0],'order':'desc'}] if item['depends_on'] else [],
+            '限制':3 if item['depends_on'] else None,
+            '是否查询数据库':'否' if '不再查询数据库' in item['question'] else '是'}}
             for item in request['tasks']]}
     planner,_=setup_planner(monkeypatch,{'tasks':[{'question':question,
         'metric_targets':['平均每单销售金额'],'grain':['业务员编码']}]},extract=extract)
@@ -364,7 +376,7 @@ def test_a_component_query_can_mention_its_later_composite_purpose_without_expan
 
 
 @pytest.mark.asyncio
-async def test_parent_aggregate_sample_rule_uses_registered_metric_instead_of_row_alias(monkeypatch):
+async def test_extracted_sample_predicate_is_left_for_authorized_asl_binding(monkeypatch):
     def extract(request):
         return {'tasks':[{'task_index':item['task_index'],'extraction':{'意图':'明细查询',
             '过滤条件':[{'field':'销量','op':'>','value':[0]}]}} for item in request['tasks']]}
@@ -372,7 +384,7 @@ async def test_parent_aggregate_sample_rule_uses_registered_metric_instead_of_ro
     semantic_description.load_semantic_description.return_value['content'] = SPEC.replace(
         '先按订单号汇总，含税销售总额 ÷ 销售总数量','先按订单号汇总，含税销售总额 ÷ 销售总数量。销量大于0')
     result=await planner.plan_question(QUESTION,semantic_model_id=130)
-    assert all(task.structured['过滤条件'][0]['field']=='销售总数量' for task in result.tasks[:2])
+    assert all(task.structured['过滤条件'][0]['field']=='销量' for task in result.tasks[:2])
 
 
 @pytest.mark.asyncio
@@ -403,11 +415,12 @@ def test_existing_chinese_intent_values_are_normalized_without_an_extra_model(in
 @pytest.mark.asyncio
 async def test_related_detail_lookup_needs_database_when_parent_only_has_ranking(monkeypatch):
     plan={'tasks':[{'question':'查询订单笔数最多的医院','metric_targets':['订单笔数']},
-        {'question':'查询订单笔数最多的医院销售过哪些商品，不再查询数据库','depends_on':[0],
+        {'question':'查询前序任务入选医院销售过哪些商品','depends_on':[0],
          'metric_targets':[],'expected_output':'商品编码和商品名称去重名单'}]}
     def extract(request):
         return {'tasks':[{'task_index':task['task_index'],'extraction':{'意图':'明细查询',
-            '指标':[{'name':'订单笔数'}],'是否查询数据库':'否'}} for task in request['tasks']]}
+            '指标':[{'name':'订单笔数'}] if task['task_index']==0 else [],
+            '是否查询数据库':'是'}} for task in request['tasks']]}
     planner,calls=setup_planner(monkeypatch,plan,extract=extract)
     result=await planner.plan_question('先查询订单最多的医院，再查该医院卖过的商品',semantic_model_id=130)
     assert len(result.tasks)==2 and len(calls)==2

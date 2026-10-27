@@ -55,7 +55,7 @@ def _is_negative_filter(item: dict[str, Any]) -> bool:
 # structured-model dimension such as ``月份`` remains a time bucket instead of
 # displacing the explicit business object (for example 产品).
 _TIME_GRANULARITY_LABELS = frozenset({
-    "时间", "日期", "年", "季度", "季", "月", "月份", "周", "星期", "日", "天",
+    "时间", "日期", "业务日期", "年", "季度", "季", "月", "月份", "周", "星期", "日", "天",
 })
 
 
@@ -109,6 +109,13 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         else AnalysisOperator.BOTTOM_N not in request.operators
     )
     detail_like = request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    # A row-level detail projects raw rows and no aggregate.  When such a task
+    # inherits a ranking marker from an upstream subtask (for example the top
+    # salesperson of task-1 followed by "which products did they sell"), no
+    # metric exists to order by, so demanding canonical sorting can only fail
+    # or force an invented ordering.  Detail tasks that genuinely project a
+    # metric keep the ranking requirement.
+    ranking_sortable = not (detail_like and not request.metrics)
     metric_required = request.primary_intent in {
         PrimaryIntent.METRIC_QUERY,
         PrimaryIntent.TREND_ANALYSIS,
@@ -255,7 +262,8 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
                 "direction": "DESC" if descending else "ASC",
                 "limit": request.ranking_limit,
             }
-            if ranking else None
+            if ranking and ranking_sortable
+            else None
         ),
         "time_dimension_required": request.primary_intent == PrimaryIntent.TREND_ANALYSIS,
         "time_policy": time_policy,

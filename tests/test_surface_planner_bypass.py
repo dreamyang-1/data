@@ -197,7 +197,7 @@ async def test_multi_task_surface_evidence_never_skips_planning():
 
 @pytest.mark.asyncio
 async def test_nondata_single_task_skips_planning_display_and_replies_fixed_greeting():
-    """闲聊/超范围单任务不亮规划节点，直接回固定话术。"""
+    """识别节点确定超范围后，规划不能改判成查数。"""
 
     class _WeatherPlanner(CompoundQuestionRouter):
         async def route_and_plan(self, question, **kwargs):
@@ -229,14 +229,10 @@ async def test_nondata_single_task_skips_planning_display_and_replies_fixed_gree
     async def capture_progress(event):
         progress_events.append(event)
 
+    turn = _chat(question="合肥天气怎么样").model_copy(update={"knowledge_base_names": []})
+    turn._compound_judgment = CompoundJudgment(is_compound=False, intent='非数据任务')
     with progress_scope(capture_progress):
-        response = await orchestrator.handle(
-            # 不绑知识库，验证闲聊直答路径
-            _chat(question="合肥天气怎么样").model_copy(
-                update={"knowledge_base_names": []}
-            ),
-            IDENTITY,
-        )
+        response = await orchestrator.handle(turn, IDENTITY)
 
     # 规划节点对这类问题完全不出现，回复走统一固定话术
     assert [e for e in progress_events if e.get("stage") == "TASK_PLANNING"] == []

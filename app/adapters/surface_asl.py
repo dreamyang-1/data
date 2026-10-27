@@ -6,6 +6,46 @@ from app.adapters.base import AdapterError
 from app.services.asl_surface_handoff import build_surface_asl_input
 from app.observability.call_timing import track_operation
 
+# 共享地理字典只为未声明归属的条件提供兼容回退；显式业务归属保持不变。
+_REGION_FIELD_OWNERS = (
+    ("省份", "省份"),
+    ("province", "省份"),
+    ("城市", "城市"),
+    ("city", "城市"),
+    ("区域", "区域"),
+    ("地区", "区域"),
+    ("region", "区域"),
+)
+
+
+def _region_owner_extraction(extraction):
+    """返回谓词归属修正后的提取副本；无需修正时返回 None。"""
+    if not isinstance(extraction, dict):
+        return None
+    changed = False
+    entities = list(extraction.get("实体") or [])
+    filters = []
+    for item in extraction.get("过滤条件") or []:
+        if not isinstance(item, dict):
+            filters.append(item)
+            continue
+        field = str(item.get("field") or "").casefold()
+        owner = next((name for word, name in _REGION_FIELD_OWNERS if word in field), None)
+        if owner is None:
+            filters.append(item)
+            continue
+        # Preserve an explicitly declared business owner; the ASL catalog
+        # resolves its field. A dictionary is only a fallback for an unowned slot.
+        owner = item.get("entity") or owner
+        filters.append(dict(item, entity=owner))
+        changed = changed or item.get("entity") != owner
+        if owner not in entities:
+            entities.append(owner)
+            changed = True
+    if not changed:
+        return None
+    return {**extraction, "实体": entities, "过滤条件": filters}
+
 
 async def generate_surface_asl(
     client, settings, *, completed_question, mentions, authorized_scope,
@@ -35,34 +75,66 @@ async def generate_surface_asl(
         business_domain_id=execution_domains[0] if execution_domains else None,
         business_domain_ids=execution_domains,
     )
-    with track_operation('UPSTREAM', 'upstream.oagnet.asl_generation',
-                         attributes={'input_mode': 'STRUCTURED_BINDING'}) as timing:
-        generated = await client.post(
-            settings.asl_generator_base_url, settings.asl_generator_path, payload,
-            identity=identity, application_id=application_id,
-            idempotency_key=f"{request_id}:surface-asl", retryable=True,
-            timeout=settings.asl_generation_timeout_seconds,
+    async def _generate(payload_to_send: dict, suffix: str = ""):
+        with track_operation('UPSTREAM', 'upstream.oagnet.asl_generation',
+                             attributes={'input_mode': 'STRUCTURED_BINDING'}) as timing:
+            response = await client.post(
+                settings.asl_generator_base_url, settings.asl_generator_path, payload_to_send,
+                identity=identity, application_id=application_id,
+                idempotency_key=f"{request_id}:surface-asl{suffix}", retryable=True,
+                timeout=0,
+            )
+            timing.mark_first_result()
+        if not isinstance(response, dict) or response.get("success") is not True:
+            raise AdapterError("ASL_GENERATION_FAILED", "ASL generator rejected request")
+        try:
+            parsed = (
+                json.loads(response["result"])
+                if isinstance(response.get("result"), str) else response["result"]
+            )
+        except (KeyError, ValueError, TypeError) as exc:
+            raise AdapterError("ASL_RESPONSE_INVALID", "ASL result is not valid JSON") from exc
+        if not isinstance(parsed, dict):
+            raise AdapterError("ASL_RESPONSE_INVALID", "ASL result must be an object")
+        issues = parsed.get("ambiguity", [])
+        if not isinstance(issues, list):
+            raise AdapterError("ASL_RESPONSE_INVALID", "ASL ambiguity must be a list")
+        return response, parsed, issues
+
+    generated, asl, ambiguities = await _generate(payload)
+    used_fallback = False
+    if ambiguities and execution_domains:
+        # 业务域收窄只是召回提示：收窄后展示属性无法与分组对象关联时，
+        # 回退到模型级范围重新绑定一次。授权范围仍由 _confirm_generated_scope
+        # 校验，不扩大用户可访问的语义模型边界。
+        fallback_payload = {
+            **payload, "business_domain_id": None, "business_domain_ids": [],
+        }
+        fallback_generated, fallback_asl, fallback_ambiguities = await _generate(
+            fallback_payload, ":wide"
         )
-        timing.mark_first_result()
-    if not isinstance(generated, dict) or generated.get("success") is not True:
-        raise AdapterError("ASL_GENERATION_FAILED", "ASL generator rejected request")
+        if not fallback_ambiguities:
+            generated, asl, ambiguities = fallback_generated, fallback_asl, []
+            used_fallback = True
+    if ambiguities:
+        # 补齐已声明的实体上下文，不把医院/经销商归属改成共享地区字典。
+        owner_extraction = _region_owner_extraction(structured_extraction)
+        if owner_extraction is not None:
+            owner_payload = {**payload, "structured_extraction": owner_extraction}
+            if used_fallback:
+                owner_payload.update(business_domain_id=None, business_domain_ids=[])
+            owner_generated, owner_asl, owner_ambiguities = await _generate(
+                owner_payload, ":owner"
+            )
+            generated, asl, ambiguities = owner_generated, owner_asl, owner_ambiguities
     # Reuse the existing scope checks, including metric provenance. Do not make
     # authorization depend on model-extracted mentions or returned business text.
     from app.adapters.http import HttpDataRetrievalAdapter
     from types import SimpleNamespace
     HttpDataRetrievalAdapter._confirm_generated_scope(
         SimpleNamespace(authorized_semantic_scope=authorized_scope), generated,
-        execution_domains[0] if execution_domains else None,
+        execution_domains[0] if execution_domains and not used_fallback else None,
     )
-    try:
-        asl = json.loads(generated["result"]) if isinstance(generated.get("result"), str) else generated["result"]
-    except (KeyError, ValueError, TypeError) as exc:
-        raise AdapterError("ASL_RESPONSE_INVALID", "ASL result is not valid JSON") from exc
-    if not isinstance(asl, dict):
-        raise AdapterError("ASL_RESPONSE_INVALID", "ASL result must be an object")
-    ambiguities = asl.get("ambiguity", [])
-    if not isinstance(ambiguities, list):
-        raise AdapterError("ASL_RESPONSE_INVALID", "ASL ambiguity must be a list")
     # The ASL boundary owns completeness. Do not erase metric/time issues or
     # fabricate a successful plan from caller defaults after it requested input.
     if ambiguities:

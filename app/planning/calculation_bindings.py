@@ -221,6 +221,15 @@ def normalize_result_operation(operation):
             if 'count' in step and step['count'] != count:
                 raise ValueError('结果人数限制存在冲突')
             step['count'] = count
+        if step.get('type') in {'limit', 'sort_limit'}:
+            # 2026-10-21 用户裁决：行数限制写成 '2'/2.0/'前2名' 等可安全
+            # 归一化的字面量时直接换算成整数，不因字面类型差异拦停整个
+            # 计划；无法解释的值仍交由 validate_result_operation 拒绝。
+            count = step.get('count')
+            if isinstance(count, str) and re.search(r'\d+', count):
+                step['count'] = int(re.search(r'\d+', count).group())
+            elif isinstance(count, float) and count.is_integer():
+                step['count'] = int(count)
     # An aggregate consumed alongside its original sample must retain those
     # rows; ordinary aggregate-only statistics continue to reduce the data.
     for index,step in enumerate(steps[:-1]):
@@ -252,6 +261,16 @@ def materialize_computation_binding(extraction, *, task_index, task_offset=0, de
             source['source_task_id'] = dependencies[0]
         if source.get('source_task_id') not in dependencies:
             raise TaskInputBindingError('计算输入必须属于声明的依赖任务')
+    query_bindings = result.get('依赖绑定')
+    if query_bindings is not None:
+        if not isinstance(query_bindings, list):
+            raise TaskInputBindingError('依赖绑定必须是数组')
+        for source in query_bindings:
+            if (not isinstance(source, dict)
+                    or not isinstance(source.get('source_column'), str)
+                    or not source['source_column'].strip()):
+                raise TaskInputBindingError('依赖查询缺少前序输出列')
+            bind(source)
     binding = result.get('计算绑定')
     if binding is not None:
         try:
@@ -349,7 +368,11 @@ def validate_computation_column_lineage(decomposition):
     from app.planning.task_dag import TaskInputBindingError
     schemas={}
     for index,task in enumerate(decomposition.tasks):
-        structured=materialize_computation_binding(task.structured,task_index=index,
+        # Query sources can belong to an outer question whose terminal task
+        # is attached later. This pass validates only computation columns.
+        computation = ({key:value for key,value in task.structured.items() if key!='依赖绑定'}
+                       if isinstance(task.structured,dict) else task.structured)
+        structured=materialize_computation_binding(computation,task_index=index,
             dependencies=[f'task-{dep+1}' for dep in task.depends_on]) or {}
         columns={name for _,name in projection(structured)}
         spec=structured.get('结果操作')

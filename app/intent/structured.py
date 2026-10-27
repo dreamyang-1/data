@@ -1147,6 +1147,13 @@ class HybridIntentClassifier:
                 "下载word", "下载docx",
             ),
             PrimaryIntent.DATA_LINEAGE: ("血缘", "来源表", "来自哪", "表和字段"),
+            PrimaryIntent.SEMANTIC_CATALOG_QUERY: (
+                "建了哪些指标", "建了哪些维度", "建了哪些内容", "建了什么指标",
+                "配置了哪些指标", "配置了哪些维度", "定义了哪些指标", "定义了哪些维度",
+                "登记了哪些指标", "登记了哪些维度", "有哪些指标和维度", "有哪些维度和指标",
+                "都有哪些指标", "都有哪些维度", "包含哪些指标", "包含哪些维度",
+                "哪些指标和维度",
+            ),
             PrimaryIntent.METRIC_DEFINITION: ("口径", "定义", "怎么算", "怎么计算", "如何计算", "公式"),
             PrimaryIntent.DATA_QUALITY: ("数据质量", "数据不全", "刷新", "对账"),
             PrimaryIntent.ROOT_CAUSE_ANALYSIS: ("归因", "下降原因", "为什么", "主要因素"),

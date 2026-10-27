@@ -1,0 +1,187 @@
+{
+  "date": "2026-10-26",
+  "root_cause_classification": "PROVEN",
+  "change_scope": "仅修改计算结果对齐模块，任务规划提示词保持回退版本。",
+  "fixes": [
+    "识别id、table.id、schema.table.ID及已有*_code/*_id等编号字段。",
+    "按完整字段来源匹配；同表id与code、不同表code不能因为编号值相同而视为同一字段。",
+    "删除仅凭展示列包含编码/编号推断可对齐的旧分支；两侧缺少共同字段绑定时不猜测。",
+    "携带对象编号的单行结果不能走无编号合计的横向合并路径。",
+    "原有纯合计标量计算、唯一性检查和授权范围隔离保留。"
+  ],
+  "test_fixture_changes": "三组旧测试补充了明确的物理字段来源；原有金额、排名及业务结果断言未修改。",
+  "application_files": [
+    "app/services/computation_delivery.py"
+  ],
+  "offline": {
+    "new_identity_cases": 33,
+    "new_identity_cases_passed": 33,
+    "full_baseline": {
+      "passed": 6264,
+      "failed": 277,
+      "errors": 7
+    },
+    "full_final": {
+      "passed": 6297,
+      "failed": 277,
+      "errors": 7
+    },
+    "new_regressions": [],
+    "new_collection_errors": [],
+    "note": "全量不是全绿；277项既有失败和7项既有错误仍保留。"
+  },
+  "deployment": {
+    "target": "49",
+    "method": "仅合并本次代码差异，保存部署前备份；保留配置、提示词和其他人的修改。",
+    "live": "UP",
+    "ready": "READY",
+    "protected_files_unchanged": true,
+    "deployed_file_sha256": "1cb78f68cbca27961cfac16419521df56377e0466551a85c945679de3238d4f5"
+  },
+  "original_question": {
+    "question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+    "verdict": "CONTENT_CHECK_PASSED",
+    "task_count": 4,
+    "all_tasks_completed": true,
+    "checks": {
+      "five_unique_people": true,
+      "five_unique_company_rows": true,
+      "company_cohort_matches": true,
+      "company_name_present": true,
+      "amounts_descending": true,
+      "averages_match": true,
+      "all_five_names_in_answer": true,
+      "all_companies_in_answer": true,
+      "name_per_code_matches": true
+    },
+    "sql_checks": {
+      "executions": 3,
+      "component_date_2025": true,
+      "components_not_limited": true,
+      "company_has_join": true,
+      "company_has_no_date": true,
+      "company_filter_count": 5,
+      "company_filter_exact_top5": true
+    },
+    "attachment_rows": [
+      5,
+      5
+    ],
+    "attachment_has_report_notes": false,
+    "validation_limit": "本次真实原问题返回销售员编码；id字段及不同字段禁止合并由明确绑定的离线计算/排名用例验证。"
+  },
+  "historical_regression": {
+    "bounded_concurrency": 2,
+    "isolated_conversations": true,
+    "executed": 10,
+    "execution_completed": 10,
+    "all_content_passed": false,
+    "cases": [
+      {
+        "id": "company_top5",
+        "question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+        "execution_status": "COMPLETED",
+        "content_verdict": "CONTENT_CHECK_PASSED",
+        "note": "已核对最终回答、实际执行SQL或附件中的相关输出。"
+      },
+      {
+        "id": "shanghai_coverage",
+        "question": "统计上海市区域医院覆盖率",
+        "execution_status": "COMPLETED",
+        "content_verdict": "EXISTING_ISSUE",
+        "note": "原问题问上海市整体；本次返回589个经销商的覆盖率。修改前也出现经销商粒度及部分失败，本次不能记为内容验收通过。"
+      },
+      {
+        "id": "hospital_sales_products",
+        "question": "2025年9月到12月期间针对上海交通大学医学院附属新华医院销售订单金额最多的销售员是谁?销售了哪些产品?",
+        "execution_status": "COMPLETED",
+        "content_verdict": "CONTENT_CHECK_PASSED",
+        "note": "已核对最终回答、实际执行SQL或附件中的相关输出。"
+      },
+      {
+        "id": "semantic_entities",
+        "question": "当前语义模型中建立了哪些实体",
+        "execution_status": "COMPLETED",
+        "content_verdict": "CONTENT_CHECK_PASSED",
+        "note": "已核对最终回答、实际执行SQL或附件中的相关输出。"
+      },
+      {
+        "id": "orthopedics",
+        "question": "看看骨科那边卖得怎么样",
+        "execution_status": "COMPLETED",
+        "content_verdict": "CONTENT_CHECK_PASSED",
+        "note": "已核对最终回答、实际执行SQL或附件中的相关输出。"
+      },
+      {
+        "id": "longest_cooperation",
+        "question": "合作时间最长的销售商是哪家?",
+        "execution_status": "COMPLETED",
+        "content_verdict": "CONTENT_CHECK_PASSED",
+        "note": "已核对最终回答、实际执行SQL或附件中的相关输出。"
+      },
+      {
+        "id": "cooperation_over_three_months",
+        "question": "合作时长大于3个月的经销商有哪些",
+        "execution_status": "COMPLETED",
+        "content_verdict": "PARTIALLY_VERIFIED",
+        "note": "SQL的超过90天条件、字段及排序正常，已返回1000条；SQL存在LIMIT 1000，未核实符合条件的全量对象数，不能确认回答中的完整名单表述。"
+      },
+      {
+        "id": "dealer_duration_exact",
+        "question": "查询筛选合作时长超3个月的经销商",
+        "execution_status": "COMPLETED",
+        "content_verdict": "PARTIALLY_VERIFIED",
+        "note": "SQL的超过90天条件、字段及排序正常，已返回1000条；SQL存在LIMIT 1000，未核实符合条件的全量对象数，不能确认回答中的完整名单表述。"
+      },
+      {
+        "id": "dealer_duration_recent",
+        "question": "查询合作时间长大与3个月的经销商",
+        "execution_status": "COMPLETED",
+        "content_verdict": "PARTIALLY_VERIFIED",
+        "note": "SQL的超过90天条件、字段及排序正常，已返回1000条；SQL存在LIMIT 1000，未核实符合条件的全量对象数，不能确认回答中的完整名单表述。"
+      },
+      {
+        "id": "supplier_first_cooperation",
+        "question": "合作时长最长的供应商有哪些?第一次合作是什么时间?",
+        "execution_status": "COMPLETED",
+        "content_verdict": "EXISTING_ISSUE",
+        "note": "本轮和修改前都额外限制首单日期为最近一年，排除了更早合作对象；不符合全局合作时长最长的要求。"
+      }
+    ]
+  },
+  "historical_relation_request": {
+    "case": "relation_model122",
+    "verdict": "BLOCKED_BY_CURRENT_CATALOG",
+    "message": "按原实体、模型和业务域参数复测，返回实体类型不存在；不算推荐功能验收通过。"
+  },
+  "unverified_context": [
+    {
+      "id": "department_hospital_relation",
+      "request": "医院与科室多对多判断",
+      "missing": "原文实体ID已省略，缺少完整实体ID及模型范围"
+    },
+    {
+      "id": "city_province_relation",
+      "request": "城市跟省份为什么没有推荐关系",
+      "missing": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "company_salesperson_relation",
+      "request": "国药公司和销售员这两个表有相同字段，为什么没有推荐",
+      "missing": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "huashan_attachment",
+      "request": "2025华山医院Top1及产品的附件",
+      "missing": "截图未包含完整原问题，不能重构原文代替验收"
+    },
+    {
+      "id": "publication_error",
+      "request": "发布失败报错中文化",
+      "missing": "发布操作的完整原始参数；不在本轮只读查询回归范围内"
+    }
+  ],
+  "review": "仅完整物理字段相同可作为编号对齐依据；展示名重命名不会丢失字段来源；没有把id和业务编码互换。",
+  "remaining_scope": "上海覆盖率粒度、合作最长问题的时间条件、名单完整性及缺失原请求上下文的历史案例不属于本次编号修复，未改动。",
+  "workspace_protection": "仅暂存本次修改的差异；原有未提交改动和配置保留，未加入凭据、日志或实际业务记录。"
+}

@@ -61,8 +61,10 @@ async def test_original_and_three_similar_deliver_real_ranked_artifacts(question
 
 
 def test_alignment_uses_codes_not_names_and_preserves_companions():
-    a = SimpleNamespace(columns=('姓名','人员（编码）','含税销售总额'))
-    b = SimpleNamespace(columns=('姓名','人员（编码）','所属公司','订单笔数'))
+    provenance = ({'type': 'query_provenance',
+                   'column_bindings': {'人员（编码）': 'salesperson.salesperson_code'}},)
+    a = SimpleNamespace(columns=('姓名','人员（编码）','含税销售总额'), transformation_log=provenance)
+    b = SimpleNamespace(columns=('姓名','人员（编码）','所属公司','订单笔数'), transformation_log=provenance)
     cols, rows = aligned_input([(a,[{'姓名':'同名','人员（编码）':'001','含税销售总额':60},
                                    {'姓名':'同名','人员（编码）':'002','含税销售总额':30}]),
                                (b,[{'姓名':'同名','人员（编码）':'002','所属公司':'乙','订单笔数':1},

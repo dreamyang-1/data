@@ -536,7 +536,6 @@ def build_runtime(args, question, conversation, phase):
         "langfuse_enabled": False,
         "intent_model_enabled": False,
         "trusted_backend_token": SecretStr(TOKEN),
-        "request_timeout_seconds": 180,
     })
     app = create_app(app_settings, isolated_chat_handler=handler)
     chat = ChatRequest(
