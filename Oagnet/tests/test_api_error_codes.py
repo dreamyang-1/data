@@ -81,7 +81,7 @@ def test_unknown_validation_keeps_generic_code() -> None:
 def test_upstream_rate_limit_preserves_retry_after_contract() -> None:
     with patch.object(
         api._asl_capacity,
-        "run",
+        "arun",
         side_effect=AslUpstreamRateLimited(retry_after_seconds=7),
     ):
         response = TestClient(api.app).post(
@@ -243,7 +243,7 @@ def test_agent_query_three_way_fanout_queues_model_calls() -> None:
 def test_agent_query_deadline_has_stable_gateway_timeout_code() -> None:
     with patch.object(
         api._asl_capacity,
-        "run",
+        "arun",
         side_effect=AslGenerationDeadlineExceeded("deadline"),
     ):
         response = TestClient(api.app).post(

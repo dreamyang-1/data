@@ -1,3 +1,4 @@
+import asyncio
 """Transport/model-format errors must never become business clarification."""
 import json
 from copy import deepcopy
@@ -88,7 +89,7 @@ def test_api_returns_service_error_and_safe_scope_diagnostics(monkeypatch,stage)
     logs=[]
     monkeypatch.setattr(api.logger,'warning',lambda *args,**kwargs:logs.append(args))
     with pytest.raises(HTTPException) as caught:
-        api.agent_query(api.QueryRequest(query='测试',semantic_model_id=121,business_domain_ids=[287]))
+        asyncio.run(api.agent_query(api.QueryRequest(query='测试',semantic_model_id=121,business_domain_ids=[287])))
     assert caught.value.status_code == 504
     assert caught.value.detail == error.public_detail()
     assert 'ambiguity' not in caught.value.detail

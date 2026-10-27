@@ -34,6 +34,7 @@ from embedding import embed_documents, embed_query
 from agent import main, store as _store
 from config import (
     DAILY_JOB_LEASE_SECONDS,
+    ASL_MAX_WAITERS,
     ENTITY_SYNC_WAIT_SECONDS,
     LLM_MAX_CONCURRENCY,
     OAGNET_HOST,
@@ -62,6 +63,7 @@ _ASL_REQUEST_DEADLINE_SECONDS = None
 _asl_capacity = AslCapacityController(
     build_asl_capacity_policy(
         max_concurrency=LLM_MAX_CONCURRENCY,
+        max_waiters=ASL_MAX_WAITERS,
         queue_timeout_seconds=None,
         llm_timeout_seconds=None,
         request_deadline_seconds=_ASL_REQUEST_DEADLINE_SECONDS,
@@ -1561,7 +1563,7 @@ def _candidate_scope_reason(exc: ValueError) -> str:
 
 
 @app.post("/agent/query", response_model=QueryResponse)
-def agent_query(req: QueryRequest, request: Request = None):
+async def agent_query(req: QueryRequest, request: Request = None):
     """自然语言提问生成 DSL，直接返回 agent 结果
 
     通过 semantic_model_id + 可选业务域参数限定检索作用域：
@@ -1571,7 +1573,7 @@ def agent_query(req: QueryRequest, request: Request = None):
       - 两个业务域字段都为空时：MODEL_WIDE，仅在本轮模型内检索
     """
     try:
-        generated = _asl_capacity.run(
+        generated = await _asl_capacity.arun(
             lambda: main(
                 req.query,
                 **({"selection_key": request.headers.get("Idempotency-Key")}
@@ -1613,7 +1615,8 @@ def agent_query(req: QueryRequest, request: Request = None):
                 result_contract=req.result_contract,
                 exploration_requirements=req.exploration_requirements,
                 include_evidence=True,
-            )
+            ),
+            disconnected=request.is_disconnected if request is not None else None,
         )
         if not isinstance(generated, dict):
             raise ValueError("Oagnet evidence result envelope is missing")

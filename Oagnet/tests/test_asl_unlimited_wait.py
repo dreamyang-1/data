@@ -28,14 +28,25 @@ def test_unlimited_policy_waits_for_queued_and_running_work_without_extra_concur
     assert controller.run(lambda:3)==3
 
 
-def test_asl_model_has_no_sdk_deadline(monkeypatch):
+def test_asl_model_transport_is_bounded_without_queue_deadline(monkeypatch):
+    # User approved bounded transport protection on 2026-10-27. The old assertion
+    # timeout=None is STALE_TEST; unlimited normal queue waiting remains covered.
+    import ast
+    from pathlib import Path
     import agent
-    captured={}
-    def init(**kwargs):captured.update(kwargs);return object()
-    monkeypatch.setattr(agent,'init_chat_model',init)
-    monkeypatch.setattr(agent,'API_KEY','synthetic-test-key')
-    agent._get_chat_model.cache_clear()
-    try:
-        agent._get_chat_model()
-        assert captured['timeout'] is None
-    finally:agent._get_chat_model.cache_clear()
+    captured = {}
+    def init(**kwargs):
+        captured.update(kwargs)
+        return object()
+    # The offline runner replaces the module factory; execute its actual source
+    # with only model construction mocked so this check works in both runners.
+    tree = ast.parse(Path(agent.__file__).read_text(encoding="utf-8"))
+    node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_get_chat_model")
+    namespace = dict(vars(agent), init_chat_model=init, API_KEY="synthetic-test-key")
+    exec(compile(ast.Module(body=[node], type_ignores=[]), agent.__file__, "exec"), namespace)
+    namespace["_get_chat_model"]()
+    timeout = captured["timeout"]
+    assert timeout.connect == agent.LLM_CONNECT_TIMEOUT_SECONDS
+    assert timeout.read == agent.LLM_READ_TIMEOUT_SECONDS
+    assert 0 < timeout.connect <= timeout.read
+    assert timeout.pool == timeout.connect

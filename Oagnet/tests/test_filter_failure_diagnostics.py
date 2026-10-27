@@ -1,3 +1,4 @@
+import asyncio
 """Rejected filter facts survive vector validation and the public API boundary."""
 import json
 
@@ -28,8 +29,8 @@ def test_api_identifies_only_the_rejected_predicate(monkeypatch, index):
 
     monkeypatch.setattr(api, "main", generate)
     with pytest.raises(HTTPException) as caught:
-        api.agent_query(api.QueryRequest(query="订单查询", semantic_model_id=81,
-                                        business_domain_ids=[205]))
+        asyncio.run(api.agent_query(api.QueryRequest(query="订单查询", semantic_model_id=81,
+                                        business_domain_ids=[205])))
     assert caught.value.status_code == 502
     body = caught.value.detail
     assert body["code"] == "ASL_FILTER_INVALID"

@@ -1,3 +1,4 @@
+import asyncio
 """Amounts are comparisons; identifiers/models are not interchangeable IDs."""
 from copy import deepcopy
 import json
@@ -257,7 +258,7 @@ def test_api_does_not_discard_planner_extraction(monkeypatch):
     request = api.QueryRequest(query="单笔销售额为1000的订单", semantic_model_id=81,
                                structured_extraction=raw)
     with pytest.raises(HTTPException):
-        api.agent_query(request)
+        asyncio.run(api.agent_query(request))
     assert observed["structured_extraction"] == raw
 
 
