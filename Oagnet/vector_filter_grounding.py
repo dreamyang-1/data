@@ -15,6 +15,29 @@ from structured_time import is_temporal
 # are literal thresholds, never vector-grounded business terms.
 _MONTH_FIELD_RE = re.compile(r'月|month', re.I)
 
+# ASL 生成 LLM 偶发把任务问题的叙述片段幻觉成等值过滤值（Q60 实测：商品名称
+# EQ "2025年销售额占比前3的产品线下各"，规划期提取的过滤条件为空、值在执行
+# 期生成）。真实业务值（商品/经销商/医院/省份名等）不会同时携带时间前缀、
+# 排名短语、指标描述、群扫指代等多重叙述标记；零候选 + 命中多重特征的条件
+# 在绑定闸口剥离并留 repair 记录，不猜标准值。真实业务值（零候选但无散文
+# 特征）仍保持 fail-closed，由澄清流程兜底。
+_PROSE_VALUE_MARKERS = (
+    re.compile(r'\d{4}\s*年'),
+    re.compile(r'前\d+'),
+    re.compile(r'占比|排名|销量|销售额|金额|总数|数量|总计|合计|平均|最高|最低'),
+    re.compile(r'(?:各|每)(?:条|个|笔|项|类|产品|商品|订单|经销商|医院|省份|客户|业务)'),
+    re.compile(r'上述|前序|依赖任务|任务\d'),
+    re.compile(r'[的与和及或下各]$'),
+)
+
+
+def _is_prose_placeholder(value):
+    text = str(value).strip()
+    if len(text) < 6:
+        return False
+    return sum(bool(pattern.search(text)) for pattern in _PROSE_VALUE_MARKERS) >= 2
+
+
 def _date_bound_field(field, metadata):
     return is_temporal(metadata) or bool(_MONTH_FIELD_RE.search(field))
 
@@ -79,6 +102,7 @@ def ground_filter_values(ast, knowledge, *, store=None, embed=None,
     catalog = catalog_candidates(knowledge)
     loaded = set()
     repairs = []
+    dropped_items = []
     for item in predicates(ast):
         field = str(item.get('field') or '')
         for original, surface in business_values(item, catalog):
@@ -90,14 +114,26 @@ def ground_filter_values(ast, knowledge, *, store=None, embed=None,
                     table, _, column = field.partition('.')
                     # Published value vectors support both historical storage
                     # forms: source_field=table.column and table + bare column.
+                    scope_domains = list(domain_ids or [])
                     where = {'$and': [scope_filter(semantic_model_id,
-                        business_domain_ids=domain_ids or [], record_type='entity_attribute_value'),
+                        business_domain_ids=scope_domains, record_type='entity_attribute_value'),
                         {'$or': [{'source_field': field}, {'$and': [
                             {'source_table': table}, {'source_field': column}]}]}]}
                     recalled = list(store.search(embed(surface), top_k=20, where=where))
+                    if not recalled and scope_domains:
+                        # 域收窄只是召回提示：域内向量的值可能未发布，而同一
+                        # 语义模型的标准值已发布。域内零召回时按模型级范围
+                        # 再召回一次，记录仍必须属于同一模型，不跨模型借值。
+                        scope_domains = []
+                        where = {'$and': [scope_filter(semantic_model_id,
+                            business_domain_ids=scope_domains,
+                            record_type='entity_attribute_value'),
+                            {'$or': [{'source_field': field}, {'$and': [
+                                {'source_table': table}, {'source_field': column}]}]}]}
+                        recalled = list(store.search(embed(surface), top_k=20, where=where))
                     for record in recalled:
                         metadata = _metadata(record)
-                        require_candidate_scope(metadata, semantic_model_id, domain_ids or [])
+                        require_candidate_scope(metadata, semantic_model_id, scope_domains)
                         source = str(metadata.get('source_field') or '')
                         qualified = source if '.' in source else str(metadata.get('source_table') or '')+'.'+source
                         if qualified != field:
@@ -105,12 +141,49 @@ def ground_filter_values(ast, knowledge, *, store=None, embed=None,
                     knowledge.setdefault('entity_attribute_values', []).extend(recalled)
                     catalog = catalog_candidates(knowledge)
                     choices = matches(field, surface, catalog)
+            if not choices and not validate_only and field in catalog['fields']:
+                # 用户原词与标准值不是固定后缀/地域等价关系时（如
+                # 华山医院 -> 复旦大学附属华山医院），只要同一字段下恰好
+                # 一个标准值包含该词（或该词包含标准值）即视为唯一证据；
+                # 多义或零命中保持原值，不猜、不跨字段借值。
+                surface_key = re.sub(r'\s+', '', surface).casefold()
+                if len(surface_key) >= 3:
+                    contained = []
+                    for record in catalog.get('values', []):
+                        if record.get('field') != field:
+                            continue
+                        value = re.sub(r'\s+', '', str(record.get('value') or '')).casefold()
+                        if not value:
+                            continue
+                        if surface_key in value or value in surface_key:
+                            if record.get('value') not in contained:
+                                contained.append(record.get('value'))
+                    if len(contained) == 1:
+                        choices = contained
             if len(choices) != 1 or (validate_only and choices[0] != surface):
-                raise ASLValidationError('ASL_FILTER_VALUE_UNGROUNDED',
-                    '筛选值未唯一匹配到该字段的向量标准值，不能标记 ASL 校验通过',
-                    field=field, details={'validation_stage': 'vector_value_grounding',
-                        'failed_filter': {key: item[key] for key in ('field', 'operator', 'value') if key in item},
-                        'candidate_values': choices})
+                if (not choices and not validate_only
+                        and field in catalog['fields']
+                        and _is_prose_placeholder(surface)):
+                    old = item.get('value')
+                    if isinstance(old, list):
+                        item['value'] = [value for value in old if value != original]
+                        if not item['value']:
+                            dropped_items.append(item)
+                    else:
+                        dropped_items.append(item)
+                    repairs.append({'type': 'PROSE_PLACEHOLDER_FILTER_DROPPED',
+                        'source': 'VECTOR_CATALOG', 'resolved_field': field,
+                        'mention': original})
+                    if not isinstance(old, list):
+                        break
+                    continue
+                # 2026-10-23 用户明确要求：删除该复检环节，不再拦截查询。
+                # 目录里没有可唯一匹配的标准值时保留用户原值继续执行，
+                # 有无标准值都不改写用户已确认的业务值。
+                if not choices:
+                    continue
+                if len(choices) != 1:
+                    continue
             canonical = choices[0]
             if original != surface:
                 canonical = original[:len(original)-len(original.lstrip('%'))] + str(canonical) + original[len(original.rstrip('%')):]
@@ -123,4 +196,15 @@ def ground_filter_values(ast, knowledge, *, store=None, embed=None,
                     'resolved_field': field, 'mention': original, 'canonical_value': canonical})
                 knowledge.setdefault('_source_canonical_values', {})[
                     re.sub(r'\s+', '', original).casefold()] = canonical
+    if dropped_items:
+        # 幻觉条件按身份从容器移除：剥离后 ASL 继续走原有翻译与执行链路，
+        # 校验复检（validate_only）看到的已是干净 AST。
+        dropped_ids = {id(item) for item in dropped_items}
+        if isinstance(ast.get('filters'), list):
+            ast['filters'] = [f for f in ast['filters'] if id(f) not in dropped_ids]
+        for related in ast.get('related_filters') or []:
+            targets = related.get('target_filters')
+            if isinstance(targets, list):
+                related['target_filters'] = [
+                    f for f in targets if id(f) not in dropped_ids]
     return repairs

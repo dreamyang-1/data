@@ -220,7 +220,8 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
     timing_terminal_status = "FAILED"
     existing_progress = _progress_callback.get()
     trace_token = set_log_trace_id(chat.message_id)
-    diagnostics, diagnostics_token = exception_explainer.begin(chat.question)
+    diagnostics, diagnostics_token = exception_explainer.begin(
+        chat.question, scope=chat.authorized_semantic_scope.model_dump(mode='json'))
     failure_message = None
 
     async def trace_progress(event: dict[str, Any]) -> None:
@@ -1429,7 +1430,8 @@ async def chat_stream(
                 yield _event("error", error)
         except Exception as exc:
             logger.exception("unhandled data-analysis SSE execution failure")
-            diagnostics, diagnostics_token = exception_explainer.begin(payload.question)
+            diagnostics, diagnostics_token = exception_explainer.begin(
+                payload.question, scope=payload.authorized_semantic_scope.model_dump(mode='json'))
             try:
                 diagnostics.record_progress({'stage': latest_progress_stage, 'status': 'FAILED'})
                 message = await exception_explainer.exception_message(diagnostics, settings, exc)

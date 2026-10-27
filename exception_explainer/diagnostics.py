@@ -24,13 +24,31 @@ def redact(value: Any, limit: int = 1200) -> str:
     return text[:limit]
 
 
+def bounded_detail(value: Any, depth: int = 0) -> Any:
+    """保留参数结构和校验原因，不携带结果行或连接配置。"""
+    if depth >= 6:
+        return '[嵌套内容省略]'
+    if isinstance(value, dict):
+        return {str(k): bounded_detail(v, depth + 1) for k, v in list(value.items())[:24]
+                if not re.search(r'(?i)password|secret|token|authorization|cookie|api.?key|rows|records|sql', str(k))}
+    if isinstance(value, (list, tuple)):
+        items = [bounded_detail(v, depth + 1) for v in value[:12]]
+        return items + ([f'[另有{len(value) - 12}项省略]'] if len(value) > 12 else [])
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    return redact(value, 1200)
+
+
 @dataclass
 class Diagnostics:
     question: str
+    scope: dict | None = None
     logs: deque = field(default_factory=lambda: deque(maxlen=24))
     warnings: deque = field(default_factory=lambda: deque(maxlen=16))
     progress: deque = field(default_factory=lambda: deque(maxlen=32))
     faults: list = field(default_factory=list)
+    blockers: deque = field(default_factory=lambda: deque(maxlen=12))
+    semantic_reference: dict | None = None
     explaining: bool = False
     closed: bool = False
     explanation: str | None = None
@@ -58,10 +76,12 @@ class Diagnostics:
         evidence = []
         for kind, items in [('progress', list(self.progress)), ('log', list(self.logs)),
                             ('warning', list(self.warnings)), ('exception', list(self.faults)),
+                            ('structured_blocker', list(self.blockers)),
                             ('outcome', [outcome] if outcome else [])]:
             for item in items:
                 evidence.append({'id': f'E{len(evidence) + 1}', 'kind': kind, 'detail': item})
         return {'question': redact(self.question, 1200), 'evidence': evidence,
+                'authorized_scope': self.scope, 'semantic_reference': self.semantic_reference,
                 'notice': '仅当前请求的有限日志；未出现某步骤记录不代表该步骤一定未执行。'}
 
 
@@ -86,12 +106,12 @@ class _RequestLogHandler(logging.Handler):
             pass  # Logging must never interrupt the user's operation.
 
 
-def begin(question: str):
+def begin(question: str, *, scope: dict | None = None):
     with _install_lock:
         root = logging.getLogger()
         if not any(isinstance(h, _RequestLogHandler) for h in root.handlers):
             root.addHandler(_RequestLogHandler(logging.INFO))
-    state = Diagnostics(question)
+    state = Diagnostics(question, scope=scope)
     return state, _current.set(state)
 
 
