@@ -90,6 +90,106 @@ def test_extraction_drops_default_output_table_and_keeps_limit():
     assert kept["限制"] == 1000
 
 
+_METRIC_CATALOG = (
+    frozenset({"合作时长", "含税销售总额"}),
+    {"合作月数": "合作时长"},
+)
+
+
+def test_extraction_promotes_metric_referenced_only_in_filter():
+    """过滤条件引用了登记指标而指标通道漏写时，按登记原名补回并归位条件。"""
+    from app.planning.task_dag import SingleQuestionPlanner
+
+    result = SingleQuestionPlanner._sanitize_extraction(
+        {
+            "意图": "明细查询",
+            "指标": [],
+            "过滤条件": [
+                {
+                    "entity": "经销商",
+                    "field": "合作时长",
+                    "op": ">",
+                    "value": [3650],
+                    "stage": "where",
+                }
+            ],
+        },
+        intent=PrimaryIntent.DETAIL_QUERY,
+        metric_catalog=_METRIC_CATALOG,
+    )
+    assert result["指标"] == [{"name": "合作时长"}]
+    assert result["过滤条件"] == [
+        {
+            "entity": None,
+            "field": "合作时长",
+            "op": ">",
+            "value": [3650],
+            "stage": "having",
+        }
+    ]
+
+
+def test_extraction_promotes_metric_by_alias_and_dedupes():
+    """过滤条件写指标别名时归一为登记原名；指标已声明时不重复补。"""
+    from app.planning.task_dag import SingleQuestionPlanner
+
+    result = SingleQuestionPlanner._sanitize_extraction(
+        {
+            "指标": [{"name": "合作时长"}],
+            "过滤条件": [
+                {"entity": "经销商", "field": "合作月数", "op": ">", "value": [120]}
+            ],
+        },
+        intent=PrimaryIntent.DETAIL_QUERY,
+        metric_catalog=_METRIC_CATALOG,
+    )
+    assert result["指标"] == [{"name": "合作时长"}]
+    assert result["过滤条件"][0]["field"] == "合作时长"
+    assert result["过滤条件"][0]["entity"] is None
+
+
+def test_extraction_promotes_metric_referenced_only_in_sorting():
+    """排序字段引用登记指标而指标通道漏写时，同样补回指标通道。"""
+    from app.planning.task_dag import SingleQuestionPlanner
+
+    result = SingleQuestionPlanner._sanitize_extraction(
+        {
+            "指标": [],
+            "排序": [{"field": "合作时长", "order": "desc"}],
+            "过滤条件": [],
+        },
+        intent=PrimaryIntent.DETAIL_QUERY,
+        metric_catalog=_METRIC_CATALOG,
+    )
+    assert result["指标"] == [{"name": "合作时长"}]
+
+
+def test_extraction_keeps_non_metric_filter_and_runs_without_catalog():
+    """非指标字段的过滤条件原样保留；无指标目录时不做归位。"""
+    from app.planning.task_dag import SingleQuestionPlanner
+
+    raw_filter = {"entity": "经销商", "field": "省份", "op": "=", "value": ["浙江"]}
+    result = SingleQuestionPlanner._sanitize_extraction(
+        {"指标": [], "过滤条件": [dict(raw_filter)]},
+        intent=PrimaryIntent.DETAIL_QUERY,
+        metric_catalog=_METRIC_CATALOG,
+    )
+    assert result["指标"] == []
+    assert result["过滤条件"] == [raw_filter]
+
+    no_catalog = SingleQuestionPlanner._sanitize_extraction(
+        {
+            "指标": [],
+            "过滤条件": [
+                {"entity": "经销商", "field": "合作时长", "op": ">", "value": [3650]}
+            ],
+        },
+        intent=PrimaryIntent.DETAIL_QUERY,
+    )
+    assert no_catalog["指标"] == []
+    assert no_catalog["过滤条件"][0]["entity"] == "经销商"
+
+
 def _split_handler(
     judge_payload: str,
     extract_payload: "str | dict[str, str] | None" = None,
@@ -2227,7 +2327,7 @@ async def test_model_plan_injects_semantic_context_into_system_prompt() -> None:
     assert outcome.single_intent == PrimaryIntent.METRIC_QUERY
     structured = outcome.single_structured
     assert structured is not None
-    assert structured["意图"] == "指标查询"
+    assert structured["意图"] == "统计查询"
     assert structured["时间粒度"] == {"unit": "年", "time_range": "今年"}
     # parameters由结构化提取JSON派生，兼容mentions通道。
     assert list(outcome.single_parameters) == [

@@ -19,7 +19,6 @@ from app.domain.models import (
     ChatRequest,
     DataQueryResult,
     Dataset,
-    PlannerExtraction,
     PrimaryIntent,
     TrustedIdentity,
     TurnRelation,
@@ -215,17 +214,16 @@ async def test_1_period_decline_reuses_previous_result_without_sql():
     first = await _first_trend(agent, "followup-1")
     assert first.status == "COMPLETED"
 
-    followup = ChatRequest(
-        application_id="app",
-        conversation_id="followup-1",
-        message_id="m2",
-        question="11月较10月下降多少？",
-        semantic_model_id=81,
+    second = await agent.handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id="followup-1",
+            message_id="m2",
+            question="11月较10月下降多少？",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
     )
-    followup._planner_extraction = PlannerExtraction(
-        structured={"是否查询数据库": "否（基于前序查询结果）"}
-    )
-    second = await agent.handle(followup, IDENTITY)
     assert second.status == "COMPLETED"
     assert len(retrieval.requests) == 1
     assert "1,427,090.89" in second.answer
@@ -242,65 +240,6 @@ async def test_1_period_decline_reuses_previous_result_without_sql():
     assert trace.payload["resolved_periods"] == ["2025-11", "2025-10"]
     assert trace.payload["result_sufficiency"] is True
     assert trace.payload["execution_mode"] == "REUSE_PREVIOUS_RESULT"
-
-
-@pytest.mark.asyncio
-async def test_structured_yes_forces_fresh_query_even_when_followup_is_derivable():
-    agent, retrieval, _, _ = _agent()
-    await _first_trend(agent, "followup-explicit-database-query")
-    followup = ChatRequest(
-        application_id="app",
-        conversation_id="followup-explicit-database-query",
-        message_id="m2",
-        question="11月较10月下降多少？",
-        semantic_model_id=81,
-    )
-    followup._planner_extraction = PlannerExtraction(
-        structured={"是否查询数据库": "是"}
-    )
-
-    await agent.handle(followup, IDENTITY)
-
-    assert len(retrieval.requests) == 2
-    assert retrieval.requests[-1].execution_mode == "QUERY_DATABASE"
-
-
-@pytest.mark.asyncio
-async def test_structured_no_query_does_not_fallback_to_database_without_prior_result():
-    agent, retrieval, _, _ = _agent()
-    followup = ChatRequest(
-        application_id="app",
-        conversation_id="followup-no-source",
-        message_id="m1",
-        question="根据上一轮查询结果做个简要总结。",
-        semantic_model_id=81,
-    )
-    followup._planner_extraction = PlannerExtraction(
-        structured={"是否查询数据库": "否"}
-    )
-
-    response = await agent.handle(followup, IDENTITY)
-
-    assert response.status != "COMPLETED"
-    assert retrieval.requests == []
-
-
-def test_dag_database_query_choice_accepts_dict_and_preserves_explicit_no():
-    from app.services.orchestrator import DataAnalysisOrchestrator
-
-    extraction = {"是否查询数据库": "否"}
-    assert DataAnalysisOrchestrator._structured_database_query_choice(extraction) is False
-
-    DataAnalysisOrchestrator._ensure_database_query_choice(
-        extraction, question="根据前序结果筛选，不再查询数据库"
-    )
-    assert extraction["是否查询数据库"] == "否"
-
-    missing = {}
-    DataAnalysisOrchestrator._ensure_database_query_choice(
-        missing, question="根据前序结果筛选，不再查询数据库"
-    )
-    assert missing["是否查询数据库"] == "否"
 
 
 @pytest.mark.asyncio

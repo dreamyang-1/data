@@ -129,11 +129,12 @@ def test_calendar_guard_preserves_product_and_institution_literals(name):
 
 
 @pytest.mark.asyncio
-async def test_explicit_lineage_metadata_retains_scope_at_every_hop(sql_backend):
+@pytest.mark.parametrize('intent',[PrimaryIntent.METRIC_DEFINITION,PrimaryIntent.DATA_LINEAGE])
+async def test_explicit_metric_metadata_retains_scope_at_every_hop(sql_backend,intent):
     fixture,_=sql_backend
     settings=Settings(env='test');client=ServiceClient(fixture,settings)
     adapter=HttpSemanticAdapter(settings,client)
-    req=request();req.primary_intent=PrimaryIntent.DATA_LINEAGE
+    req=request();req.primary_intent=intent
     metrics=await adapter.resolve_metrics(req,81)
     result=await adapter.scoped_metadata(req,metrics[0],IDENTITY)
     assert result.payload['business_domain_ids']==[205]

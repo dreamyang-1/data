@@ -349,7 +349,7 @@ class Settings(BaseSettings):
     langfuse_max_content_chars: int = Field(
         default=1000,
         ge=100,
-        le=10000,
+        le=20000,
         validation_alias=AliasChoices(
             "LANGFUSE_MAX_CONTENT_CHARS", "DATA_AGENT_LANGFUSE_MAX_CONTENT_CHARS"
         ),

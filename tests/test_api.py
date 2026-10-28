@@ -231,7 +231,7 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
         events, "ASL_GENERATION", status="RUNNING"
     )
     assert "规划调用：" not in planning_content
-    assert "调度执行" in parsing_running_content
+    assert "解析校验" in parsing_running_content
     assert "正在解析并校验结构化参数" in parsing_running_content
     assert "语义解析" not in QUERY_EXECUTION_CHAIN
     assert QUERY_EXECUTION_CHAIN == (
@@ -255,12 +255,11 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
     assert asl_index < retrieval_completed_index
     document = "".join(event.get("content", "") for event in events
                        if event.get("type") == "message_chunk")
-    titles = ["意图识别", "任务拆分与规划", "调度执行", "结果校验", "数据洞察分析", "最终输出"]
+    titles = ["意图识别", "任务拆分与规划", "解析校验", "调度执行", "结果校验", "数据洞察分析"]
     assert all("#### ◉ " + title in document for title in titles), document
     positions = [document.index("#### ◉ " + title) for title in titles]
     assert positions == sorted(positions)
-    assert document.index("#### ◉ 调度执行") < document.index("结构化解析与校验（ASL）") < document.index("#### ◉ 结果校验")
-    assert "#### ◉ 解析校验" not in document
+    assert document.index("结构化解析与校验（ASL）") < document.index("#### ◉ 调度执行")
     assert next(i for i, e in enumerate(events) if e.get("step") == "output") > retrieval_completed_index
     insight_content = thinking_content(
         events, "INSIGHT_ANALYSIS", status="COMPLETED"
@@ -1810,16 +1809,13 @@ def test_missing_parameter_stream_uses_document_clarification_section_format():
     assert completed["status"] == "NEEDS_CLARIFICATION"
     assert "#### ◉ 意图识别" in thinking
     assert "用户原始问句：统计经销商" in thinking
-    # STALE_TEST(2026-10-19): root AGENTS.md freezes the six public nodes,
-    # including truthful skipped nodes when clarification interrupts execution.
-    assert "#### ◉ 任务拆分与规划" in thinking
+    assert "#### 2、任务拆分与规划" in thinking
     assert "当前任务参数不完整，暂停子任务拆分" in thinking
-    assert "#### ◉ 调度执行" in thinking
+    assert "#### 3、调研执行" in thinking
     assert "跳过所有工具调用，无工具发起请求" in thinking
-    assert "#### ◉ 结果校验" in thinking
+    assert "#### 4、结果生成" in thinking
     assert "等待用户补充参数后再继续处理" in thinking
-    assert "#### ◉ 数据洞察分析" in thinking
-    assert "#### ◉ 最终输出" in thinking
+    assert "#### 5、最终输出" in thinking
     assert "#### ◉ 输出总结" not in thinking
     assert not any(
         event.get("meta", {}).get("stage") == "DATA_RETRIEVAL"
@@ -2074,16 +2070,15 @@ def test_planning_running_milestone_is_not_replayed_after_composite_intent():
     assert thinking.index("补全后的问题：") < thinking.index("拆分判断完成")
 
 
-def test_internal_milestones_share_the_current_six_main_headings():
+def test_all_seven_analytic_thinking_stages_have_normalized_headings():
     expected = {
         "INTENT_RECOGNITION": "#### ◉ 意图识别",
         "FILE_INSPECTION": "#### ◉ 文件感知与解析",
         "TASK_PLANNING": "#### ◉ 任务拆分与规划",
-        "ASL_GENERATION": "#### ◉ 调度执行",
+        "ASL_GENERATION": "#### ◉ 解析校验",
         "DATA_RETRIEVAL": "#### ◉ 调度执行",
         "RELIABILITY_CHECK": "#### ◉ 结果校验",
         "INSIGHT_ANALYSIS": "#### ◉ 数据洞察分析",
-        "FINAL_OUTPUT": "#### ◉ 最终输出",
     }
 
     assert {

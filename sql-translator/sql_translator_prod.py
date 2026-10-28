@@ -2445,9 +2445,24 @@ class SQLTranslatorProd:
         enum_list = dim.get('enum_list', []) if dim else []
         if dim_type == '枚举维度' and enum_list:
             cases = []
+            seen = {}
             for item in enum_list:
-                code = item.get('code', '')
-                name = item.get('name', '')
+                code = item.get('code')
+                if code is None or code == '':
+                    code = item.get('value')
+                elif item.get('value') not in (None, '', code):
+                    if str(item['value']) != str(code):
+                        raise ValueError('枚举编码code/value冲突')
+                name = item.get('name')
+                if isinstance(code, (dict, list, bool)) or code is None or str(code) == '' or not isinstance(name, str) or not name:
+                    raise ValueError('枚举维度缺少有效编码或名称')
+                code = str(code)
+                if code in seen:
+                    if seen[code] != name:
+                        raise ValueError('同一枚举编码对应多个名称')
+                    continue
+                seen[code] = name
+                code, name = code.replace("'", "''"), name.replace("'", "''")
                 cases.append(f"WHEN '{code}' THEN '{name}'")
             return (f"CASE {field_ref} {' '.join(cases)} ELSE {field_ref} END", alias)
         return (field_ref, alias)
@@ -2514,6 +2529,14 @@ class SQLTranslatorProd:
                 raise ValueError(f"列别名重复: {alias}")
             output_aliases.add(alias)
             select_parts.append(effective_dialect.select_alias(expr, alias))
+            if dim_def and dim_def.get('dim_type') == '枚举维度' and dim_def.get('enum_list'):
+                # Keep the registered grouping identity beside its display
+                # label, as for existing entity display companions.
+                identity_alias = f'{dim_alias}（编码）'
+                if identity_alias in output_aliases:
+                    raise ValueError(f'列别名重复: {identity_alias}')
+                output_aliases.add(identity_alias)
+                select_parts.append(effective_dialect.select_alias(field_ref, identity_alias))
 
 
         # 再添加指标

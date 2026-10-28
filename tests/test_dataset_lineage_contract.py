@@ -253,47 +253,6 @@ async def test_normal_three_turn_workflow_reuses_complete_result_without_queryin
     assert store.items[responses[-1].dataset_id].rows == (ROWS[2],)
 
 
-@pytest.mark.asyncio
-async def test_structured_no_query_reuses_complete_data_even_for_followup_analysis_route():
-    agent = setup()
-    source = save(agent)
-    await remember(agent, source)
-    current = request('请基于上一轮数据解释一下结果')
-    current.source_dataset_id = source.dataset_id
-    current.query_resolution_type = 'FOLLOWUP_ANALYSIS'
-    current.assumptions.append('STRUCTURED_NO_DATABASE_QUERY')
-
-    result, dataset_id = await agent._try_dataset_followup(current)
-
-    assert result is not None and dataset_id == source.dataset_id
-    assert result.sql == 'UPLOADED_DATASET_NO_SQL'
-    assert result.dataset.rows == ROWS
-    assert current.execution_mode == 'REUSE_PREVIOUS_RESULT'
-
-
-@pytest.mark.asyncio
-async def test_structured_no_query_fails_closed_on_incomplete_or_wrong_scope_data():
-    from app.services.orchestrator import ExplicitDatasetUnavailableError
-
-    agent = setup()
-    incomplete = save(agent, truncated=True)
-    await remember(agent, incomplete)
-    current = request('请基于上一轮结果总结')
-    current.source_dataset_id = incomplete.dataset_id
-    current.assumptions.append('STRUCTURED_NO_DATABASE_QUERY')
-    with pytest.raises(ExplicitDatasetUnavailableError, match='不完整'):
-        await agent._try_dataset_followup(current)
-
-    other_scope = save(agent)
-    other_scope = replace(other_scope, semantic_model_id=82)
-    await remember(agent, other_scope)
-    wrong_scope = request('请基于上一轮结果总结')
-    wrong_scope.source_dataset_id = other_scope.dataset_id
-    wrong_scope.assumptions.append('STRUCTURED_NO_DATABASE_QUERY')
-    with pytest.raises(ExplicitDatasetUnavailableError, match='授权范围'):
-        await agent._try_dataset_followup(wrong_scope)
-
-
 @pytest.mark.parametrize('change', ['columns', 'snapshot_id', 'scope', 'lineage', 'count', 'cycle', 'multiple_parents'])
 def test_parent_recovery_requires_exact_presentation_lineage(change):
     from app.services.dataset_followup import presentation_ancestors

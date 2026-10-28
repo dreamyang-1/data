@@ -197,6 +197,30 @@ def _retrieval_extraction(structured: dict[str, Any], **overrides: Any) -> dict[
     return cloned
 
 
+def _attribution_display_fields(structured: dict[str, Any], dimension: str | None) -> list[Any]:
+    """Keep projections belonging to this generated marginal query only.
+
+    The total has no business-object grain. A marginal dimension already
+    declares its grouping; only its explicitly requested field/owned labels
+    may follow it. Catalog binding still proves identity and label relations.
+    Never carry labels from the other marginal decompositions into this one.
+    """
+    if dimension is None:
+        return []
+    selected = []
+    for item in structured.get("展示字段") or []:
+        if isinstance(item, str):
+            keep = item == dimension
+        elif isinstance(item, dict):
+            keep = (item.get("field", item.get("name")) == dimension
+                    or item.get("entity") == dimension)
+        else:
+            keep = False
+        if keep:
+            selected.append(copy.deepcopy(item))
+    return selected
+
+
 def _trend_retrieval_window(question: str, structured: dict[str, Any]) -> dict[str, Any] | None:
     """兼容入口：主查询窗口可含相邻基期，同比基期不混入该窗口。"""
     granularity = structured.get("时间粒度")
@@ -323,64 +347,22 @@ def build_analysis_task_plan(
     if requirements.get('grain') and not (structured.get('时间粒度') or {}).get('unit'):
         structured = copy.deepcopy(structured)
         structured['时间粒度'] = {**(structured.get('时间粒度') or {}), 'unit': requirements['grain']}
+    # 对象间对比统一交给目录编译器展开：两个对象各一次取数，期间列承载对象值，
+    # 按对象角色对齐。若落到下面的两期分组展开，declared_periods 是空列表却仍会
+    # 登记 comparison_dimensions 与空 periods，执行期被按分组两期对比索要
+    # “维度（编码）”稳定编码列，对象对比因此报“需要每个维度的稳定编码”。
+    from app.analysis.tools.plans import plan_from_structured
+    declared_plan = plan_from_structured(structured)
+    if (declared_plan is not None and declared_plan.chain == 'comparison'
+            and declared_plan.comparison_kind == 'objects'):
+        from app.analysis.tools.compiler import _compile_objects
+        seed = copy.deepcopy(structured)
+        for key in (_ANALYSIS_BINDING_KEY, "计算绑定", "计算绑定来源", "结果操作"):
+            seed.pop(key, None)
+        return _compile_objects(source_text or question, seed, declared_plan)
     time_text = _time_text(structured)
     dimensions = _grouping_dimensions(structured)
     analysis_type = playbook["analysis_type"]
-
-    grouped = _grouped_top_n(question, dimensions)
-    if grouped is not None:
-        limit, group_dimension, item_dimension = grouped
-        retrieval_structured = _retrieval_extraction(structured)
-        # 分组TopN需要每个分组的全部候选；保留全局LIMIT会截断其他分组。
-        retrieval_structured["限制"] = None
-        # 分析任务的输出要求（前三名、商品名称升序等）不是取数契约，
-        # 带着它会让“产品线”维度绑定被误判为商品名称，这里清空。
-        retrieval_structured["输出要求"] = None
-        # “各A、B”会让绑定只认出 A；写成“各A中B”才能把第二个维度也绑上。
-        grouping_text = "各" + group_dimension + "中" + "、".join(dimensions[1:])
-        retrieval_question = _query_clause(time_text, grouping_text, metric_text)
-        analysis_structured = copy.deepcopy(structured)
-        analysis_structured["是否查询数据库"] = "否"
-        analysis_structured[_ANALYSIS_BINDING_KEY] = {
-            "analysis_type": "group_top_n",
-            "intent": PrimaryIntent.COMPARISON_ANALYSIS.value,
-            "tool": "分组TopN工具",
-            "sub_tools": {},
-            "merge": "concat",
-            "periods": [],
-            "source_question": str(question or "").strip(),
-            "display_window_start": None,
-            "group_top_n": {
-                "limit": limit,
-                "group_dimension": group_dimension,
-                "item_dimension": item_dimension,
-            },
-        }
-        analysis_question = (
-            f"按{group_dimension}分组，取每组{metric_text}最高的前{limit}个{item_dimension}"
-        )
-        grouped_tasks = [
-            AtomicTask(
-                task_id="task-1",
-                question=retrieval_question,
-                name=(task_name or f"获取各{group_dimension}的{item_dimension}{metric_text}")[:60],
-                extraction=retrieval_structured,
-                parameters=tuple(extraction_to_parameters(retrieval_structured)),
-                primary_intent=PrimaryIntent.METRIC_QUERY,
-                expected_output=f"各{group_dimension}全部{item_dimension}的{metric_text}",
-            ),
-            AtomicTask(
-                task_id="task-2",
-                question=f"根据上述任务的查询结果，{analysis_question}，{_NO_DATABASE_MARK}",
-                name=analysis_question[:60],
-                depends_on=["task-1"],
-                extraction=analysis_structured,
-                parameters=tuple(extraction_to_parameters(analysis_structured)),
-                primary_intent=PrimaryIntent.COMPARISON_ANALYSIS,
-                expected_output="分组TopN工具输出的每组前N名结果",
-            ),
-        ]
-        return TaskPlan(tasks=grouped_tasks, planner="DETERMINISTIC_RULE")
 
     retrieval_specs: list[dict[str, Any]] = []
     merge_mode = "concat"
@@ -487,7 +469,9 @@ def build_analysis_task_plan(
         granularity = structured.get('时间粒度') or {}
         time_dimension = next((name for name in _dimension_names(structured) if _is_time_dimension(name)),
                               granularity.get('anchor') or '业务日期')
-        total_structured = _retrieval_extraction(structured, 维度=[time_dimension], 排序=[])
+        total_structured = _retrieval_extraction(
+            structured, 维度=[time_dimension], 展示字段=_attribution_display_fields(structured, None), 排序=[],
+        )
         retrieval_specs.append({
             "task_id": "task-1",
             "question": _window_query(granularity, requirements['grain'], metric_text, [time_dimension], structured),
@@ -499,7 +483,10 @@ def build_analysis_task_plan(
                 "task_id": f"task-{offset}",
                 "question": _window_query(granularity, requirements['grain'], metric_text, [time_dimension, dimension], structured),
                 "name": _query_clause(time_text, f"各{dimension}", metric_text)[:60],
-                "structured": _retrieval_extraction(structured, 维度=[time_dimension, dimension], 排序=[]),
+                "structured": _retrieval_extraction(
+                    structured, 维度=[time_dimension, dimension],
+                    展示字段=_attribution_display_fields(structured, dimension), 排序=[],
+                ),
             })
 
     if not retrieval_specs:

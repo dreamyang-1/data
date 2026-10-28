@@ -10,9 +10,9 @@ def test_dependency_message_uses_http_status_category() -> None:
         upstream_code="FILTER_NOT_SUPPORTED",
     )
     message = DataAnalysisOrchestrator._dependency_message(error)
-    assert "服务未接受生成的查询条件" in message
-    assert "FILTER_NOT_SUPPORTED" not in message
-    assert "没有返回具体哪项" in message
+    assert "拒绝了当前查询合同" in message
+    assert "FILTER_NOT_SUPPORTED" in message
+    assert "无需盲目改写问题" in message
 
 
 def test_dependency_message_keeps_stable_upstream_code_for_unknown_failure() -> None:
@@ -23,9 +23,7 @@ def test_dependency_message_keeps_stable_upstream_code_for_unknown_failure() -> 
         upstream_code="BUSINESS_SCOPE_INVALID",
     )
     message = DataAnalysisOrchestrator._dependency_message(error)
-    assert "BUSINESS_SCOPE_INVALID" not in message
-    assert "暂不能确定根因" in message
-    assert error.upstream_code == "BUSINESS_SCOPE_INVALID"
+    assert "BUSINESS_SCOPE_INVALID" in message
 
 
 def test_time_anchor_configuration_error_does_not_tell_user_to_blindly_retry() -> None:

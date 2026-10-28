@@ -1,7 +1,10 @@
 """Lossless representation repair of model facts before strict V2 validation.
 
 Only exact current-turn evidence can relocate a span or resolve a surface token
-to an already declared negated/temporal mention. No roles, edits, scope, history or business
+to an already declared negated/temporal mention. A surface appearing multiple
+times relocates to the occurrence nearest the model's declared span: the model
+evidently meant one of them and the strings are identical. Surfaces absent from
+the current turn stay rejected. No roles, edits, scope, history or business
 facts are added. The frozen CurrentTurnParser still validates the final result.
 """
 from __future__ import annotations
@@ -19,7 +22,22 @@ def repair_model_parse(parsed: CurrentTurnSemanticParse, *, text: str, turn_id: 
         if text[mention.start_char:mention.end_char] == mention.surface and mention.end_char <= len(text):
             continue
         first = text.find(mention.surface)
-        if first < 0 or text.find(mention.surface, first + 1) >= 0:
+        if first < 0:
+            # surface 不在当前句里（多半是从上下文抄的词），无法无损修复
+            continue
+        occurrences = [start for start in range(len(text) - len(mention.surface) + 1)
+            if text.startswith(mention.surface, start)]
+        if len(occurrences) > 1:
+            # 多次出现时模型声明的 span 仍指向其中一次（只是偏移算错了），
+            # 取与声明位置最近的一次重建 span；surface 完全相同，取最近
+            # 一次是最合理的意图推断
+            nearest = min(occurrences, key=lambda start: abs(start - mention.start_char))
+            old = (mention.start_char, mention.end_char)
+            mention.start_char, mention.end_char = nearest, nearest + len(mention.surface)
+            trace.append({'reason_code': 'EXACT_MULTI_OCCURRENCE_NEAREST_SURFACE_SPAN',
+                'mention_id': mention.mention_id, 'field': 'mention.span',
+                'before': list(old), 'after': [mention.start_char, mention.end_char],
+                'occurrences': len(occurrences)})
             continue
         old = (mention.start_char, mention.end_char)
         mention.start_char, mention.end_char = first, first + len(mention.surface)

@@ -126,6 +126,10 @@ def _evidence_line(item: EvidenceItem) -> str:
         )
 
     if item.kind == "ANALYSIS_RESULT":
+        if payload.get("code") or payload.get("status") in {"FAILED", "NOT_COMPUTABLE"}:
+            return "分析执行记录：计算未完成（" + str(payload.get("reason") or payload.get("code") or "数据不足") + "），不作为成功计算证据"
+        if payload.get("method") == "query-result-summary-v1":
+            return "查询摘要记录：已整理返回数据，不证明用户要求的分析计算已经完成"
         return (
             "分析结果证据：已形成可复算的确定性分析结果"
             "（来源：本轮查询数据和确定性分析器，用于证明分析结论可由数据复核）"

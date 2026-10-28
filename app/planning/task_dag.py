@@ -112,8 +112,6 @@ def _clean_extraction_text(value: Any) -> str:
     return clean_extraction_text(value)
 
 
-
-
 def _ground_location_owners(extraction: dict[str, Any] | None, question: str) -> None:
     """Correct only explicit location modifiers at the NL extraction boundary.
 
@@ -964,7 +962,7 @@ _SINGLE_SYSTEM_PROMPT = EXTRACTION_SYSTEM_PROMPT
 
 
 class SingleQuestionPlanner:
-    """先规划任务与依赖，再批量提取参数；意图由识别节点提供。"""
+    """先规划任务与依赖，再批量提取任务参数；意图随提取返回。"""
 
     def __init__(
         self,
@@ -1483,8 +1481,8 @@ class SingleQuestionPlanner:
         # 通用规则块放在前部：贴着Schema末尾时会干扰指标选择，
         # 使模型在多个可对应的登记指标之间选错（实测多次复现）
         system_content += general_rules
-        # 有模型标识时只读取当前模型的平台注册文件；文件不可用时，
-        # 不把智能体配置中可能属于另一模型的旧规范当作替代文件。
+        # 规范只注入一次：远程按模型生成的描述文件优先，
+        # 平台提示词粘贴段兼容存量，提示词文件内置规范最后兜底。
         reference = await load_semantic_description(self.settings, semantic_model_id)
         remote_spec = reference["content"] if reference.get("available") else ""
         if remote_spec:
@@ -1665,8 +1663,7 @@ class SingleQuestionPlanner:
                     else task_intent
                 )
                 if structured is not None:
-                    if root_intent is None:
-                        structured[_EXTRACTION_INTENT_KEY] = '指标计算'
+                    structured[_EXTRACTION_INTENT_KEY] = '指标计算'
                     structured['是否查询数据库'] = '否'
             if "不再查询数据库" not in task_question:
                 if root_intent is None:

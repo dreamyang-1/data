@@ -1143,7 +1143,16 @@ def _validate_model_routes(judgment, routes):
         if chain is not None:
             observed.add(chain)
     if observed != allowed:
-        if observed and observed.issubset(allowed):
+        if not observed:
+            # 补全模型偶尔会把排名、极值类普通查询路由进分析链路；判断模型
+            # 按普通条目组织时，普通查询按既有行为执行，确认链路仅作为上下文
+            # 元数据保留，不驱动规划，也不因路由误判让整轮请求失败。
+            logger.warning(
+                "compound judge found no analysis entries for confirmed routes: "
+                "routes=%s intents=%s",
+                sorted(allowed), [item.intent for item in entries])
+            return replace(judgment, analysis_routes=tuple(routes))
+        if observed.issubset(allowed):
             # 判断模型未引入未确认链路，只是按更少的链路组织任务（如把
             # "对比A、B各季度趋势"判成按业态分组的单一趋势）。按其结构执行，
             # 确认后未被覆盖的链路本轮不落地。
@@ -1155,7 +1164,7 @@ def _validate_model_routes(judgment, routes):
             raise TaskPlanningError('ANALYSIS_ROUTE_CHANGED_AFTER_COMPLETION:' + str(sorted(allowed)) + '->' + str(sorted(observed)))
         # 补全阶段确认的链路是权威路由。判断模型偶尔会按问句字面把意图
         # 标成另一条链路（如两期份额变化标成对比）；单链路冲突时改回已确认
-        # 链路的意图标签继续执行，空集或跨多链路冲突无法确定性对齐，仍按合同失败。
+        # 链路的意图标签继续执行，跨多链路冲突无法确定性对齐，仍按合同失败。
         confirmed = next(iter(allowed))
         confirmed_label = CHAINS[confirmed][0]
         logger.warning(

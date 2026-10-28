@@ -79,7 +79,6 @@ def persistable_reference(agent, request, chat) -> dict:
     """生产落盘的引用带 scope 指纹：预判的范围校验按同一口径比对。"""
     return {
         "dataset_id": "ds-1",
-        "row_count": 1,
         "semantic_model_id": 81,
         "business_domain_ids": [],
         "scope": {

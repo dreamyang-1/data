@@ -1,4 +1,3 @@
-# 用户2026-10-26要求：按具体失败原因解释，不再断言统一改写问题的文案。
 """ASL 绑定失败的最终输出必须口语化，不复述内部校验原文。
 
 STRUCTURED_ASL_BINDING 阶段 SAFE_FALLBACK 时，最终输出曾直接拼接
@@ -49,9 +48,9 @@ class TestPlainBindingFailureAnswer:
         )])
         answer = Orchestrator._plain_binding_failure_answer(request)
         assert_plain_language(answer)
-        assert "前一步没有传来整理好的查询条件" in answer
-        assert "无需重复说明问题" in answer
-        assert "尚未读取数据" in answer
+        assert "系统处理问题" in answer
+        assert "不是您的问题描述有误" in answer
+        assert "本次查询没有执行" in answer
 
     def test_filter_failure_names_the_business_word(self):
         request = make_request([SemanticAmbiguity(
@@ -62,7 +61,7 @@ class TestPlainBindingFailureAnswer:
         answer = Orchestrator._plain_binding_failure_answer(request)
         assert_plain_language(answer)
         assert "筛选条件“经销商编码”" in answer
-        assert "遗漏了已经确认的" in answer
+        assert "没有能准确对应到数据里的字段" in answer
 
     def test_internal_slot_names_are_never_shown(self):
         request = make_request([SemanticAmbiguity(
@@ -73,7 +72,7 @@ class TestPlainBindingFailureAnswer:
         answer = Orchestrator._plain_binding_failure_answer(request)
         assert_plain_language(answer)
         assert "dimensions" not in answer
-        assert "遗漏了已经确认的筛选条件" in answer
+        assert "部分筛选条件没有能准确对应到数据里的字段" in answer
 
     def test_dimension_failure_uses_grouping_wording(self):
         request = make_request([SemanticAmbiguity(
@@ -83,7 +82,7 @@ class TestPlainBindingFailureAnswer:
         )])
         answer = Orchestrator._plain_binding_failure_answer(request)
         assert_plain_language(answer)
-        assert "遗漏了要求的分组或展示字段“商品”" in answer
+        assert "“商品”的分组或展示方式" in answer
 
     def test_metric_failure_uses_metric_wording(self):
         request = make_request([SemanticAmbiguity(
@@ -93,7 +92,7 @@ class TestPlainBindingFailureAnswer:
         )])
         answer = Orchestrator._plain_binding_failure_answer(request)
         assert_plain_language(answer)
-        assert "缺少已确认的指标“覆盖率”定义" in answer
+        assert "指标“覆盖率”的统计口径" in answer
 
     def test_time_anchor_failure_is_explained_simply(self):
         request = make_request([SemanticAmbiguity(
@@ -107,7 +106,7 @@ class TestPlainBindingFailureAnswer:
     def test_empty_ambiguities_fall_back_to_generic_reason(self):
         answer = Orchestrator._plain_binding_failure_answer(make_request([]))
         assert_plain_language(answer)
-        assert "服务未返回具体失败项" in answer
+        assert "查询条件在系统内部校验时没有通过" in answer
 
     def test_reasons_are_deduplicated(self):
         request = make_request([
@@ -122,9 +121,9 @@ class TestPlainBindingFailureAnswer:
             type="context", question="上游未提供结构化参数", phrase="null",
         )])
         answer = Orchestrator._plain_binding_failure_answer(request)
-        assert "尚未读取数据" in answer
-        assert "检查步骤之间的数据传递" in answer
-        assert "无需重复说明问题" in answer
+        assert "没有执行任何数据查询" in answer
+        assert "换个说法" in answer
+        assert "不用重复提供" in answer
 
 
 class TestStructuredParamClarificationPlain:
@@ -168,7 +167,7 @@ class TestStructuredParamClarificationPlain:
         text = Orchestrator._sanitize_clarification_text(raw)
         for mark in ("结构化参数【", "null", "任务拆分与规划"):
             assert mark not in text
-        assert "前一步没有传来整理好的查询条件" in text
+        assert "没有能准确对应到系统里的数据口径" in text
 
     def test_other_structured_reasons_keep_business_condition(self):
         raw = (
@@ -179,7 +178,7 @@ class TestStructuredParamClarificationPlain:
         for mark in ("结构化参数【", "{", "}", "ASL"):
             assert mark not in text
         assert "含税销售总额" in text
-        assert "排序方式未被正确识别" in text
+        assert "换个说法" in text
 
     def test_normal_business_question_passes_through(self):
         text = Orchestrator._sanitize_clarification_text("请确认要统计哪个大区的销售额？")

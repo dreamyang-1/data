@@ -116,7 +116,7 @@ def _rebuild_patches(**overrides):
 def test_rebuild_failure_returns_detailed_message_and_stage():
     patches = _rebuild_patches(
         rebuild_index_by_scope=lambda *args, **kwargs: (_ for _ in ()).throw(
-            ValueError("实体医院缺少主键映射")),
+            ValueError("实体 hospital 缺少主键映射")),
     )
     for item in patches:
         item.start()
@@ -132,10 +132,10 @@ def test_rebuild_failure_returns_detailed_message_and_stage():
     assert response.status_code == 422
     payload = response.json()
     assert payload["code"] == "VECTOR_SOURCE_INVALID"
-    assert "ValueError" not in payload["message"]
-    assert "实体医院缺少主键映射" in payload["message"]
+    assert "ValueError" in payload["message"]
+    assert "实体 hospital 缺少主键映射" in payload["message"]
     # 失败阶段取最内层 stage，便于定位
-    assert "（阶段：语义向量重建）" in payload["message"]
+    assert "semantic_rebuild" in payload["message"]
     assert payload["detail"]["message"] == payload["message"]
 
 
@@ -158,9 +158,9 @@ def test_rebuild_unexpected_failure_returns_exception_detail():
     assert response.status_code == 500
     payload = response.json()
     assert payload["code"] == "VECTOR_REBUILD_FAILED"
-    assert "ConnectionError" not in payload["message"]
-    assert "向量数据库 连接被拒绝" in payload["message"]
-    assert "（阶段：物理目录准备）" in payload["message"]
+    assert "ConnectionError" in payload["message"]
+    assert "milvus 连接被拒绝" in payload["message"]
+    assert "physical_prepare" in payload["message"]
 
 
 def test_entity_attribute_sync_failure_returns_detailed_message():

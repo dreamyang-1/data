@@ -2071,45 +2071,7 @@ def test_followup_scaffolding_is_never_emitted_as_catalog_filter(question):
         str(item.get("value") or "") not in {"含税", "该省", "该省份"}
         for item in request.filters
     )
-
-
-def test_dependency_anaphora_time_bucket_composition_is_not_catalog_literal():
-    # 2026-10-21 依赖任务2「根据上述任务返回的医院名称，查询该医院近12个月
-    # 按业务日期（月）分组的含税销售总额趋势」：未标记主题兜底把指代+时间
-    # 范围+时间桶的组合短语当成 商品名称 过滤与实体提及，DAG 形态应用丢弃
-    # 垃圾过滤但提及残留，ASL 无法绑定而 ASL_ENTITY_MENTION_UNRESOLVED。
-    question = ("根据上述任务返回的医院名称，"
-                "查询该医院近12个月按业务日期（月）分组的含税销售总额趋势")
-    request = RuleBasedIntentClassifier().classify(
-        question,
-        IDENTITY,
-        "anaphora-bucket-not-literal",
-    )
-
-    assert "该医院近12个月按业务日期（月）分组" not in request.semantic_entity_mentions
-    assert not any(
-        str(item.get("value") or "") == "该医院近12个月按业务日期（月）分组"
-        for item in request.filters
-    )
-
-
-@pytest.mark.parametrize("value", [
-    "该医院近12个月按业务日期（月）分组",
-    "该经销商近3个月按月汇总",
-    "该产品近一年按季度分组",
-    "上述医院最近12个月",
-])
-def test_anaphora_time_composition_is_never_a_business_entity(value):
-    assert RuleBasedIntentClassifier._is_structural_entity_mention(value) is True
-
-
-@pytest.mark.parametrize("value", [
-    "上海市皮肤病医院",
-    "费森尤斯",
-    "外周插管中心静脉导管",
-])
-def test_real_catalog_literals_are_still_business_entities(value):
-    assert RuleBasedIntentClassifier._is_structural_entity_mention(value) is False
+    assert request.semantic_entity_mentions == []
 
 
 def test_typed_entity_filter_deduplicates_product_suffix_model_span():

@@ -14,15 +14,16 @@ class ForecastModelError(ValueError):
 @dataclass(frozen=True)
 class ForecastResult:
     model_name: str
-    forecast: float
-    lower: float
-    upper: float
+    forecast: float | None
+    lower: float | None
+    upper: float | None
     validation_mae: float
     validation_mape: float | None
     validation_points: int
     candidate_scores: dict[str, dict[str, float | None]]
     diagnostics: dict[str, float | int | str | None]
     warnings: list[str]
+    backtests: list[dict]
 
 
 class DeterministicForecastSelector:
@@ -39,7 +40,8 @@ class DeterministicForecastSelector:
         self.minimum_points = minimum_points
         self.validation_fraction = validation_fraction
 
-    def fit_predict(self, values: list[float], *, non_negative: bool) -> ForecastResult:
+    def fit_predict(self, values: list[float], *, non_negative: bool, model_names: list[str] | None = None,
+                    predict_next: bool = True) -> ForecastResult:
         if len(values) < self.minimum_points:
             raise ForecastModelError(
                 f"forecast requires at least {self.minimum_points} ordered observations"
@@ -54,14 +56,24 @@ class DeterministicForecastSelector:
             "recent_mean_3": self._recent_mean,
             "linear_drift": self._linear,
         }
+        if model_names:
+            if any(name not in candidates for name in model_names):
+                raise ForecastModelError('unsupported explicit forecast model')
+            candidates = {name: predictor for name, predictor in candidates.items() if name in model_names}
         scores: dict[str, dict[str, float | None]] = {}
         errors_by_model: dict[str, list[float]] = {}
+        backtests = []
         for name, predictor in candidates.items():
             errors: list[float] = []
             percentage_errors: list[float] = []
             for index in range(validation_start, len(values)):
                 predicted = predictor(values[:index])
+                if non_negative:
+                    predicted = max(0.0, predicted)
                 actual = values[index]
+                backtests.append({'model': name, 'train_points': index, 'validation_index': index,
+                                  'actual': actual, 'predicted': predicted, 'error': actual-predicted,
+                                  'absolute_error': abs(actual-predicted)})
                 errors.append(actual - predicted)
                 if actual != 0:
                     percentage_errors.append(abs(actual - predicted) / abs(actual))
@@ -69,20 +81,22 @@ class DeterministicForecastSelector:
             scores[name] = {
                 "mae": statistics.mean(abs(error) for error in errors),
                 "mape": statistics.mean(percentage_errors) if percentage_errors else None,
+                "rmse": math.sqrt(statistics.mean(error*error for error in errors)),
+                "mean_error": statistics.mean(errors),
             }
 
         # Stable tie-breaking prefers the simpler model, reducing variance on
         # short histories. Dict insertion order is intentional here.
         selected = min(candidates, key=lambda name: float(scores[name]["mae"] or 0.0))
-        forecast = candidates[selected](values)
-        if non_negative:
+        forecast = candidates[selected](values) if predict_next else None
+        if non_negative and forecast is not None:
             forecast = max(0.0, forecast)
 
         absolute_errors = sorted(abs(error) for error in errors_by_model[selected])
         interval_error = self._upper_quantile(absolute_errors, 0.90)
-        lower = forecast - interval_error
-        upper = forecast + interval_error
-        if non_negative:
+        lower = forecast - interval_error if forecast is not None else None
+        upper = forecast + interval_error if forecast is not None else None
+        if non_negative and lower is not None:
             lower = max(0.0, lower)
 
         mean_value = statistics.mean(values)
@@ -134,6 +148,7 @@ class DeterministicForecastSelector:
                 "algorithm_version": self.VERSION,
             },
             warnings=warnings,
+            backtests=backtests,
         )
 
     @staticmethod

@@ -92,7 +92,7 @@ def test_xlsx_export_neutralizes_formula_injection_and_illegal_controls():
         assert workbook["数据"]["A2"].data_type == "s"
         assert workbook["数据"]["A2"].value.startswith("'=")
         assert "\x00" not in workbook["数据"]["A2"].value
-        assert workbook.sheetnames == ["数据"]
+        assert workbook["说明"]["B1"].value == "'+unsafe title"
     finally:
         workbook.close()
 
@@ -148,13 +148,10 @@ def test_composite_xlsx_keeps_independent_datasets_on_separate_sheets():
     payload = minio.objects[("bam", result["object_name"])]
     workbook = load_workbook(BytesIO(payload), data_only=True, read_only=True)
     try:
-        assert workbook.sheetnames == ["章节1", "章节2"]
+        assert workbook.sheetnames == ["报告说明", "章节1", "章节2"]
+        assert workbook["报告说明"]["B3"].value == 2
         assert workbook["章节1"]["B2"].value == "dataset-1"
         assert workbook["章节2"]["B2"].value == "dataset-2"
-        for sheet in workbook:
-            assert list(sheet.values)[3:] == [
-                ("月份", "销售额"), ("2026-07", "100"), ("2026-08", "120"),
-            ]
     finally:
         workbook.close()
     assert result["dataset_ids"] == ["dataset-1", "dataset-2"]

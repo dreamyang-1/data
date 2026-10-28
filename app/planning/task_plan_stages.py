@@ -1,4 +1,4 @@
-"""Internal task boundaries are fixed before parameter extraction."""
+"""Internal task boundaries are fixed before intent/parameter extraction."""
 from __future__ import annotations
 
 import copy

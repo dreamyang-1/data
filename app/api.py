@@ -855,6 +855,8 @@ async def chat_stream(
         planning_start_emitted = False
         composite_child_orderer = _CompositeChildProgressOrderer()
         latest_progress_stage = "INTENT_RECOGNITION"
+        # 门控判为业务场景问题的轮次，意图识别阶段不发进度文案
+        intent_progress_silent = False
         settings = request.app.state.container.settings
         heartbeat_interval = settings.thinking_stream_heartbeat_seconds
 
@@ -909,6 +911,19 @@ async def chat_stream(
             now = time.monotonic()
             if not force and now - last_visible_at < heartbeat_interval:
                 return []
+            if (
+                intent_progress_silent
+                and _thinking_section(latest_progress_stage) == "intent"
+            ):
+                # 业务场景问题轮意图识别阶段只发协议心跳维持连接
+                last_visible_at = now
+                return [_event("heartbeat", {
+                    "step": "system",
+                    "data": {
+                        "stage": latest_progress_stage,
+                        "elapsed_seconds": round(now - started_at, 1),
+                    },
+                })]
             heartbeat_events = _progress_heartbeat_events(
                 latest_progress_stage,
                 elapsed_seconds=now - started_at,
@@ -1011,8 +1026,15 @@ async def chat_stream(
             nonlocal latest_progress_stage, off_topic_flag
             nonlocal planning_data_verdict, planning_data_operation_text
             nonlocal planning_start_emitted
+            nonlocal intent_progress_silent
             stage = str(event.get("stage") or "").upper()
             message_text = str(event.get("message") or "")
+            progress_phase = str(event.get("progress_phase") or "")
+            if progress_phase in {"V2_INTENT_SILENT", "V2_INTENT_VISIBLE"}:
+                # 业务场景问题轮意图识别阶段不发进度文案（心跳）；
+                # 门控放行的追问轮用 VISIBLE 恢复原有展示
+                intent_progress_silent = progress_phase == "V2_INTENT_SILENT"
+                return []
             if bool(event.get("off_topic")):
                 # 语义识别判成业务无关的问题，规划节点对这轮不再点亮
                 off_topic_flag = True

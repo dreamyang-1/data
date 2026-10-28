@@ -1,7 +1,6 @@
 """Final-output units: registered units label tables and chart values only."""
 from types import SimpleNamespace
 import xml.etree.ElementTree as ET
-import pytest
 
 from app.analysis.units import (
     append_unit, header_with_unit, load_metric_units, unit_for_column,
@@ -108,7 +107,6 @@ def test_suggested_charts_include_units():
     assert labels(render_chart_svg(specs[0])) == ["1,200元", "800元"]
 
 
-@pytest.mark.asyncio
-async def test_units_loader_degrades_without_catalog_config():
-    assert await load_metric_units(SimpleNamespace(), 6) == {}
-    assert await load_metric_units(SimpleNamespace(mysql_host=""), None) == {}
+def test_units_loader_degrades_without_catalog_config():
+    assert load_metric_units(SimpleNamespace(), 6) == {}
+    assert load_metric_units(SimpleNamespace(mysql_host=""), None) == {}

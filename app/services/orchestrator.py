@@ -129,7 +129,7 @@ from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
 from app.observability import TraceSummary
 from app.observability.call_timing import track_operation
-from app.observability.langfuse_client import ensure_structural_span, text_metadata, trace_generation
+from app.observability.langfuse_client import trace_generation
 from app.presentation.reliability import root_quality_status
 from app.presentation import (
     QUERY_EXECUTION_CHAIN,
@@ -1565,9 +1565,6 @@ class DataAnalysisOrchestrator:
             # 同一轮 _handle 内部还会对（可能归一化过的）同一问题再算一次，
             # 文本一致时直接复用这份确定性结果
             chat._rules_classification_cache = (chat.question, raw_request)
-            from app.planning.compat import recognized_planning_intent
-            raw_request.primary_intent = recognized_planning_intent(
-                chat._compound_judgment, raw_request.primary_intent)
             planning_question = chat.question
             confirmed_pending_choice = None
             confirmed_extraction = None
@@ -1589,9 +1586,6 @@ class DataAnalysisOrchestrator:
                         planning_pending.request, chat.question
                     )
                     if confirmed_pending_choice is not None:
-                        # 候选确认延续原任务，不能把“4”等回复的规则意图传给规划。
-                        raw_request.primary_intent = planning_pending.request.primary_intent
-                        raw_request.intent_source = planning_pending.request.intent_source
                         planning_question = self._completed_question_with_choice(
                             planning_pending.request, confirmed_pending_choice
                         )
@@ -1638,10 +1632,8 @@ class DataAnalysisOrchestrator:
                         chat.conversation_id,
                     )
             elif literal_structured is not None:
-                chat._planner_extraction=PlannerExtraction(intent=raw_request.primary_intent,
+                chat._planner_extraction=PlannerExtraction(intent=PrimaryIntent.COMPARISON_ANALYSIS,
                     structured=literal_structured)
-                from app.planning.compat import inherit_recognized_intent
-                inherit_recognized_intent(raw_request.primary_intent, extraction=chat._planner_extraction)
                 chat._task_table=[{'任务':'task-1','名称':'计算明确数值','是否查询数据库':'否','依赖':[],'执行状态':'待执行'}]
                 chat._task_table_message_id=chat.message_id
                 await emit_progress('INTENT_RECOGNITION','COMPLETED','已识别为明确数值的计算任务。')
@@ -1886,11 +1878,6 @@ class DataAnalysisOrchestrator:
                                 "multi" if plan is not None else "single",
                                 len(plan.tasks) if plan is not None else 1,
                             )
-                            from app.planning.compat import inherit_recognized_intent
-                            raw_request.primary_intent = recognized_planning_intent(
-                                outcome.judgment, raw_request.primary_intent)
-                            inherit_recognized_intent(raw_request.primary_intent, plan=plan,
-                                extraction=outcome.single_extraction, judgment=outcome.judgment)
                             # 查不查库由确定性信号推导后写进提取参数，展示与
                             # 下游 ASL 生成读同一份：纯计算任务带"不再查询
                             # 数据库"标记，依赖任务要发新查询，其余照常查库。
@@ -1982,7 +1969,7 @@ class DataAnalysisOrchestrator:
                             await emit_progress("FINAL_OUTPUT", "COMPLETED", "本次任务未完成，未将部分查询作为完整答案。")
                             return AgentResponse(
                                 request_id=uuid4(), conversation_id=chat.conversation_id,
-                                status="SAFE_FALLBACK", intent=raw_request.primary_intent,
+                                status="SAFE_FALLBACK", intent=PrimaryIntent.DETAIL_QUERY,
                                 intent_source="TASK_PLANNING_ERROR", intent_confidence=1.0,
                                 answer="本次任务规划未能生成完整的可执行计划，尚未执行查询。"
                                     "未将多个任务降为单次查询；无需重复补充已明确的条件。",
@@ -1995,9 +1982,7 @@ class DataAnalysisOrchestrator:
                     nondata_direct = (
                         plan is None
                         and chat._planner_extraction is not None
-                        and chat._planner_extraction.intent in {
-                            PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE,
-                        }
+                        and chat._planner_extraction.intent in NO_DATA_INTENTS
                     )
                     if plan is None and chat._planner_extraction is not None:
                         from app.services.calculation_execution import literal_computation
@@ -3477,7 +3462,8 @@ class DataAnalysisOrchestrator:
     async def _respond_literal_computation(self, chat, identity):
         """The single-task route must not rewrite a calculator into a SQL query."""
         task=AtomicTask(task_id='task-1',question=chat.question,depends_on=[],
-            extraction=chat._planner_extraction.structured,primary_intent=chat._planner_extraction.intent)
+            extraction=chat._planner_extraction.structured,
+            primary_intent=chat._planner_extraction.intent)
         response=await self._respond_pure_computation(chat,identity,task,{})
         success=response.status=='COMPLETED'
         if success:
@@ -3493,7 +3479,7 @@ class DataAnalysisOrchestrator:
                 response.answer = self._markdown_result_table(
                     list(preview[0]), display, units=computation_units
                 )
-            response.intent=chat._planner_extraction.intent
+            response.intent=task.primary_intent
             chat._last_result_dataset_id=response.dataset_id
         if chat._task_table:
             chat._task_table[0]['执行状态']='已完成' if success else '执行失败'
@@ -3513,8 +3499,7 @@ class DataAnalysisOrchestrator:
             request_id=uuid4(),
             conversation_id=chat.conversation_id,
             status="FAILED",
-            intent=(chat._planner_extraction.intent if chat._planner_extraction is not None
-                    and chat._planner_extraction.intent is not None else PrimaryIntent.CHAT),
+            intent=PrimaryIntent.CHAT,
             intent_source="TASK_PLANNER",
             answer="计算未完成，暂未获得可用的计算结果。",
             reliability=ReliabilityReport(
@@ -3948,9 +3933,9 @@ class DataAnalysisOrchestrator:
         而不是分析任务文本（任务文本里的方法描述会误触信号）；趋势
         分析使用绑定中的能力选择与取数窗口；兼容旧绑定时才补环比信号。
         """
-        intent = task.primary_intent or (
-            PrimaryIntent(str(binding.get("intent"))) if binding.get("intent")
-            else PrimaryIntent.COMPARISON_ANALYSIS)
+        intent = PrimaryIntent(str(binding.get("intent"))) if binding.get("intent") else (
+            task.primary_intent or PrimaryIntent.COMPARISON_ANALYSIS
+        )
         metrics = []
         for item in (task.extraction or {}).get("指标") or []:
             name = item.get("name") if isinstance(item, dict) else item
@@ -4240,7 +4225,7 @@ class DataAnalysisOrchestrator:
                 word in task.question for word in ('覆盖率', '占比', '比例')):
                 evidence_operation = str(operation['left_field']) + ' / ' + str(operation['right_field'])
             return AgentResponse(request_id=uuid4(), conversation_id=chat.conversation_id,
-                status='COMPLETED', intent=task.primary_intent or PrimaryIntent.CHAT, intent_source='TASK_DAG_COMPUTATION',
+                status='COMPLETED', intent=PrimaryIntent.CHAT, intent_source='TASK_DAG_COMPUTATION',
                 answer=chat._dag_deferred_insight['summary'], dataset_id=reference.dataset_id,
                 reliability=ReliabilityReport(level='HIGH' if quality == 'PASS' else 'LIMITED', score=1,
                     gates={'deterministic_computation': True, 'full_result': True},
@@ -12266,7 +12251,7 @@ class DataAnalysisOrchestrator:
                 result._planner_extraction = planner_extraction
                 if planner_extraction.intent is not None:
                     result.primary_intent = planner_extraction.intent
-                    result.intent_source = "INTENT_RECOGNITION"
+                    result.intent_source = "TASK_PLANNER"
                 if (
                     planner_extraction.intent in METADATA_INTENTS
                     and not result.metrics
@@ -12330,15 +12315,34 @@ class DataAnalysisOrchestrator:
     def _apply_dag_structured_query_shape(request, extraction) -> None:
         """A bound child is a complete new query, not a rewrite of its parent.
 
-        Apply only planner-owned slots on this proved-broken dependent path.
-        Catalog grounding still owns identifiers and values; ordinary followups,
-        pending answers, independent children and computation remain unchanged.
+        Apply planner-owned slots to bound dependencies and validated catalog
+        attribution inputs. Generated marginal queries are complete queries;
+        prose fallback must not add product literals or other grouping fields.
+        Catalog grounding still owns identifiers and values. Ordinary queries,
+        followups, Pending answers and other independent children are unchanged.
         """
-        if not {"DAG_BOUND_STRUCTURED_QUERY", "DAG_CALCULATION_INPUT"}.intersection(_INTERNAL_ASSUMPTIONS.get()) or extraction is None:
+        if extraction is None:
             return
         structured = extraction.structured
         if not structured:
             return
+        bound_dependency = bool({"DAG_BOUND_STRUCTURED_QUERY", "DAG_CALCULATION_INPUT"}.intersection(_INTERNAL_ASSUMPTIONS.get()))
+        attribution_input = False
+        declared_plan = structured.get("_analysis_tool_plan")
+        if (extraction.intent == PrimaryIntent.METRIC_QUERY
+                and structured.get("是否查询数据库") == "是"
+                and not structured.get("分析绑定")
+                and isinstance(declared_plan, dict)
+                and declared_plan.get("chain") == "attribution"):
+            from app.analysis.tools.plans import plan_from_structured
+            attribution_input = plan_from_structured(structured) is not None
+        if not bound_dependency and not attribution_input:
+            return
+        if attribution_input:
+            # Filter values and owners are supplied by the validated extraction
+            # and will be catalog-grounded below. Rule-inferred mentions of the
+            # generated date/grouping clause are not additional business names.
+            request.semantic_entity_mentions = []
         current_facts = (
             request.turn_admission.current_turn_facts
             if request.turn_admission is not None else None
@@ -12446,11 +12450,6 @@ class DataAnalysisOrchestrator:
             if planner_extraction is not None
             else None
         )
-        # Fast paths also consume the recognition verdict carried by the plan.
-        if (planner_extraction is not None and planner_extraction.intent is not None
-                and request.primary_intent != planner_extraction.intent):
-            request.primary_intent = planner_extraction.intent
-            request.intent_source = "INTENT_RECOGNITION"
         # Keep the planner's predicate owner at every existing execution entry
         # point (including the fast path). This is not another NL extraction.
         # Names/values are still grounded later by the authorized catalog.

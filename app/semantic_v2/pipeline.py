@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from typing import Literal
 
 from pydantic import ConfigDict, Field, model_validator
@@ -84,6 +85,14 @@ class CurrentTurnParser:
     def parse(*, text: str, turn_id: str, text_ref: str, parsed: CurrentTurnSemanticParse) -> CurrentTurnParseResult:
         for mention in parsed.mentions:
             if mention.end_char > len(text) or text[mention.start_char:mention.end_char] != mention.surface or mention.source_turn_id != turn_id:
+                # 定位 span 校验失败的具体原因：surface 是模型从上下文抄的词
+                # 还是在当前句里出现多次导致修复无从定位
+                actual = text[mention.start_char:mention.end_char] if mention.end_char <= len(text) else '（越界）'
+                occurrences = text.count(mention.surface)
+                logging.getLogger(__name__).warning(
+                    'current-turn mention span mismatch: turn=%s surface=%r declared_span=[%s,%s) actual_slice=%r surface_occurrences_in_turn=%s text=%r',
+                    turn_id, mention.surface, mention.start_char, mention.end_char,
+                    actual, occurrences, text)
                 raise ValueError('SURFACE_PARSE_FAILURE: invalid current-turn mention span')
         return CurrentTurnParseResult(**parsed.model_dump(), turn_id=turn_id, text_ref=text_ref,
                                       text_digest=hashlib.sha256(text.encode()).hexdigest())

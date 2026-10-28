@@ -51,13 +51,20 @@ def _compile_objects(question,structured,proposal):
     from datetime import datetime
     from zoneinfo import ZoneInfo
     requirements=build_model_requirements(proposal,structured,today=datetime.now(ZoneInfo('Asia/Shanghai')).date())
-    requirements['comparison_dimensions']=[name for name in structured.get('维度') or [] if name!='业务日期']
+    # 对象间对比的期间列承载的是对象值，不是同一分组的基期/本期两期形状；
+    # 写入 comparison_dimensions 会让引擎误走分组两期对比，并索要
+    # “维度（编码）”稳定编码列，按对象角色对齐的合并结果因此报错。
     tasks=[];periods=[]
     objects=sorted(proposal.comparison_objects,key=lambda item:0 if item.role=='BASE' else 1)
     for index,item in enumerate(objects,1):
         value=_retrieval_extraction(structured)
+        # 对象过滤按字段名整体替换：同一语义字段会以主实体与枚举实体两个
+        # 别名出现在种子提取里（销售订单.业态名称 与 业态.业态名称 绑定同一
+        # 物理列），除显式不等条件外，同字段的其余写法一律由对象值覆盖，
+        # 避免残留旧对象的等值条件与当前对象形成恒假筛选。
         value['过滤条件']=[predicate for predicate in value.get('过滤条件') or []
-            if not (predicate.get('entity')==item.entity and predicate.get('field')==item.field)]
+            if predicate.get('field')!=item.field
+            or str(predicate.get('op') or '').lower() in ('!=','not in','ne','<>')]
         value['过滤条件'].append({'entity':item.entity,'field':item.field,'op':'=','value':item.value})
         task_id=f'task-{index}'
         text=_window_query(value.get('时间粒度') or {},requirements.get('grain'),_metric_text(value),value.get('维度') or [],value)

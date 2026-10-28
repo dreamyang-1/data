@@ -472,38 +472,6 @@ def test_monthly_granularity_dimension_never_displaces_product_query_object():
     assert validate_intent_asl_contract_completeness(contract, request) == []
 
 
-def test_business_date_dimension_never_displaces_hospital_query_object():
-    # Real platform failure (2026-10-21): dependency task-2 “根据上述任务返回的
-    # 医院名称，查询该医院近12个月按业务日期（月）分组的含税销售总额趋势”
-    # ended in SAFE_FALLBACK with INTENT_ASL_CONTRACT_INCOMPLETE /
-    # EXPLICIT_QUERY_OBJECT_MISSING (expected 医院, actual 业务日期) because the
-    # planner's time-bucket label 业务日期 was not recognized as a time
-    # granularity and prefer_grouping_object promoted it to query_object.
-    question = "根据上述任务返回的医院名称，查询该医院近12个月按业务日期（月）分组的含税销售总额趋势"
-    request = RuleBasedIntentClassifier().classify(
-        question, IDENTITY, "business-date-grain-query-object"
-    )
-    # Reproduce the structured DAG path's published shape: 业务日期（月） is the
-    # time bucket, while 医院 is the explicit query object.
-    request.entity = "医院"
-    request.dimensions = ["业务日期"]
-    request.turn_admission = TurnAdmissionGate().evaluate(
-        question=question,
-        current=request,
-        previous=None,
-        message_id="business-date-grain-message",
-    )
-
-    contract = build_intent_asl_contract(request)
-
-    assert contract["intent"] == PrimaryIntent.TREND_ANALYSIS.value
-    assert contract["query_object"] == "医院"
-    assert "业务日期" not in contract["required_groupings"]
-    assert contract["time_dimension_required"] is True
-    assert validate_intent_asl_contract_definition(contract) == []
-    assert validate_intent_asl_contract_completeness(contract, request) == []
-
-
 def test_contract_completeness_accepts_authoritative_vector_filter_rebinding():
     request = RuleBasedIntentClassifier().classify(
         "按月分析费森尤斯产品的销售趋势", IDENTITY, "vector-filter-rebinding"

@@ -124,7 +124,7 @@ def _build_domain_values(yml_text: str):
     返回 (dim_values, ind_values)：
     - dim_values: {维度名: (所属业务域, 可关联指标所属业务域)}
     - ind_values: {指标名: (所属业务域, 绑定维度所属业务域)}
-    业务域列不允许出现"待确认"，无关联指标时兜底取维度自身所属业务域。
+    业务域列不写"待确认"：维度没有关联指标时，用它自己的所属业务域。
     """
     try:
         data = yaml.safe_load(yml_text) or {}
@@ -195,7 +195,7 @@ def _rewrite_table_rows(lines, start, values):
 
 
 def _fill_business_domain_columns(md: str, yml_text: str) -> str:
-    """用 YML 中的确定性数据回填维度表、指标表的业务域列，消除"待确认"。"""
+    """按 YML 数据回填维度表、指标表的业务域列，替换模型输出的"待确认"。"""
     dim_values, ind_values = _build_domain_values(yml_text)
     lines = md.splitlines()
     i = 0
@@ -240,26 +240,29 @@ async def convert(request: Request, file: UploadFile):
     print(f"[convert] 上传文件名={file.filename!r} 表单字段={list(form.keys())}", flush=True)
 
     md = await _call_model(yml_text)
-    # 模型偶尔会用 ```markdown 围栏包整篇，落盘前剥掉
+    # 模型有时会用 ```markdown 把整篇包起来，写文件前去掉围栏
     md = re.sub(r"^```(?:markdown)?\s*|\s*```$", "", md.strip())
     md = _fill_business_domain_columns(md, yml_text)
 
-    # 命名优先级：YML 名称字段 > 平台库反查 > 上传文件名 > 模型 id
+    # 文件名按模型 id 固定，与定时同步生成的文件同址，模型名称只用于平台展示
     model_id = _semantic_model_id(yml_text)
     model_name = _semantic_model_name(yml_text)
     if not model_name and model_id:
         model_name = _model_name_from_db(model_id)
-    filename = ""
-    if model_name:
-        filename = f"{_safe_filename(model_name)}.md"
-    if filename == ".md":
+    if model_id:
+        filename = f"semantic_model_{model_id}.md"
+    else:
         filename = ""
-    if not filename:
-        stem = Path(file.filename or "").stem.strip()
-        if stem and re.search(r"[一-鿿]", stem):
-            filename = f"{_safe_filename(stem)}.md"
-    if not filename or filename == ".md":
-        filename = f"semantic_model_{model_id or f'unknown_{int(time.time())}'}.md"
+        if model_name:
+            filename = f"{_safe_filename(model_name)}.md"
+        if filename == ".md":
+            filename = ""
+        if not filename:
+            stem = Path(file.filename or "").stem.strip()
+            if stem and re.search(r"[一-鿿]", stem):
+                filename = f"{_safe_filename(stem)}.md"
+        if not filename or filename == ".md":
+            filename = f"semantic_model_unknown_{int(time.time())}.md"
     print(f"[convert] model_id={model_id} 名称={model_name!r} 输出文件={filename!r}", flush=True)
     (FILES_DIR / filename).write_text(md, encoding="utf-8")
 
@@ -276,7 +279,14 @@ def download(filename: str):
     path = FILES_DIR / filename
     if not path.is_file():
         raise HTTPException(404, "文件不存在")
-    return FileResponse(path, filename=filename, media_type="text/markdown")
+    # 存储路径按 id 固定，下载时换成库里当前名称，模型改名即时生效
+    download_name = filename
+    match = re.fullmatch(r"semantic_model_(\d+)\.md", filename)
+    if match:
+        name = _model_name_from_db(match.group(1))
+        if name:
+            download_name = f"{name}.md"
+    return FileResponse(path, filename=download_name, media_type="text/markdown")
 
 
 if __name__ == "__main__":

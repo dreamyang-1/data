@@ -7,16 +7,25 @@ GET  /health            健康检查
 返回体为 {code, data, msg} 结构。
 """
 
+import json
+import logging
 import os
 import re
+import time
 
 import httpx
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel, Field
 
 from prompt import build_prompt
+
+req_logger = logging.getLogger("formula.request")
+req_logger.setLevel(logging.INFO)
+_handler = logging.FileHandler("/root/yyy/formula_service/requests.log", encoding="utf-8")
+_handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+req_logger.addHandler(_handler)
 
 load_dotenv("/root/yyy/DataAnalysis_Agent/.env")
 
@@ -92,14 +101,31 @@ async def _call_model(prompt: str) -> str:
 
 
 @app.post("/formula/generate")
-async def generate(req: FormulaGenerateRequest):
+async def generate(req: FormulaGenerateRequest, request: Request):
+    start = time.time()
+    client = request.client.host if request.client else "-"
+
+    def _log(result: dict) -> dict:
+        # 入参整包记一行，联调时直接对照 Java 侧实际传参
+        req_logger.info(
+            "client=%s level=%s name=%s desc=%s elapsed=%.2fs resp=%s req=%s",
+            client,
+            req.indicatorLevel,
+            req.indicatorName,
+            req.description[:100],
+            time.time() - start,
+            json.dumps(result, ensure_ascii=False)[:500],
+            req.model_dump_json(),
+        )
+        return result
+
     if not req.description.strip() and not req.structured:
-        return _err(400, "description 和 structured 至少提供一个")
+        return _log(_err(400, "description 和 structured 至少提供一个"))
     if req.indicatorLevel in (2, 3):
         if not req.atomicOperators:
-            return _err(400, "派生/复合指标需要提供 atomicOperators")
+            return _log(_err(400, "派生/复合指标需要提供 atomicOperators"))
     elif not req.attributes:
-        return _err(400, "原子指标需要提供 attributes")
+        return _log(_err(400, "原子指标需要提供 attributes"))
 
     prompt = build_prompt(
         description=req.description.strip(),
@@ -114,13 +140,13 @@ async def generate(req: FormulaGenerateRequest):
     try:
         raw = await _call_model(prompt)
     except Exception as e:
-        return _err(500, str(e))
+        return _log(_err(500, str(e)))
 
     formula = _clean_formula(raw)
     if not formula:
-        return _err(500, "模型未返回有效公式")
+        return _log(_err(500, "模型未返回有效公式"))
     if formula.startswith("#UNKNOWN#"):
-        return _err(400, f"无法生成公式: {formula[len('#UNKNOWN#'):].strip()}")
+        return _log(_err(400, f"无法生成公式: {formula[len('#UNKNOWN#'):].strip()}"))
 
     # 原子指标校验字段白名单，引用清单外字段视为幻觉直接打回
     if req.indicatorLevel not in (2, 3):
@@ -131,9 +157,9 @@ async def generate(req: FormulaGenerateRequest):
         valid.discard(".")
         unknown = _extract_field_refs(formula) - valid
         if unknown:
-            return _err(400, f"公式引用了属性列表之外的字段: {', '.join(sorted(unknown))}")
+            return _log(_err(400, f"公式引用了属性列表之外的字段: {', '.join(sorted(unknown))}"))
 
-    return _ok(formula)
+    return _log(_ok(formula))
 
 
 @app.get("/health")

@@ -131,9 +131,13 @@ def test_upstream_multiple_routes_are_authoritative_without_keyword_override():
     subset=_validate_model_routes(CompoundJudgment(is_compound=False,intent='趋势分析'),['trend','comparison'])
     assert subset.intent=='趋势分析'
     assert subset.analysis_routes==('trend','comparison')
-    # 空集（确认了分析链路却判成普通查询）与越权多链路冲突仍按合同失败
-    with pytest.raises(TaskPlanningError):
-        _validate_model_routes(CompoundJudgment(is_compound=False,intent='指标查询'),['anomaly'])
+    # 补全模型把普通排名/极值查询误路由进分析链路：按判断模型的普通条目放行
+    plain=_validate_model_routes(CompoundJudgment(is_compound=False,intent='指标查询'),['comparison'])
+    assert plain.intent=='指标查询'
+    assert plain.analysis_routes==('comparison',)
+    plain_multi=_validate_model_routes(CompoundJudgment(is_compound=False,intent='指标查询'),['trend','comparison'])
+    assert plain_multi.analysis_routes==('trend','comparison')
+    # 越权引入未确认链路仍按合同失败
     with pytest.raises(TaskPlanningError):
         _validate_model_routes(CompoundJudgment(is_compound=False,intent='趋势分析'),['anomaly','forecast'])
 
@@ -270,6 +274,132 @@ async def test_object_comparison_has_explicit_roles_and_separate_filters(monkeyp
     assert len(plan.tasks)==3
     assert [t.extraction['过滤条件'][-1]['value'] for t in plan.tasks[:-1]]==['上海市','北京市']
     assert [p['role'] for p in plan.tasks[-1].extraction['分析绑定']['periods']]==['基期','当前期']
+
+
+def test_object_comparison_replaces_stale_filters_bound_via_alias_entities():
+    """种子提取里同一字段以主实体与枚举实体双别名出现时，对象过滤按字段名整体替换。
+
+    复现背景：判断模型输出 销售订单.业态名称=['直销'] 与 业态.业态名称=直销 两条
+    谓词；旧逻辑只按 (entity,field) 精确匹配清理，CURRENT 对象任务残留
+    销售订单.业态名称=直销，与新增的 业态.业态名称=分销 绑定到同一物理列，
+    生成 business_type_code=3 AND =5 的恒假筛选。
+    """
+    from app.planning.task_dag import QuestionDecomposition,DecomposedTask
+    case=CASES[1]
+    value=proposal(case,comparison_kind='objects',comparison_periods=[],comparison_objects=[
+        {'role':'BASE','entity':'业态','field':'业态名称','value':'直销'},
+        {'role':'CURRENT','entity':'业态','field':'业态名称','value':'分销'}])
+    structured={**parameters(case),'过滤条件':[
+        {'entity':'销售订单','field':'业态名称','op':'=','value':['直销'],'stage':'where'},
+        {'entity':'业态','field':'业态名称','op':'=','value':'直销'}],
+        PLAN_KEY:value}
+    decomposition=QuestionDecomposition(intent=I.COMPARISON_ANALYSIS,tasks=(
+        DecomposedTask(question=case[2],intent=I.METRIC_QUERY,structured=structured,depends_on=()),))
+    plan=compile_decomposition(case[2],decomposition)
+    assert len(plan.tasks)==3
+    assert [task.extraction['过滤条件'] for task in plan.tasks[:-1]]==[
+        [{'entity':'业态','field':'业态名称','op':'=','value':'直销'}],
+        [{'entity':'业态','field':'业态名称','op':'=','value':'分销'}]]
+
+
+def test_object_comparison_replaces_unrecognized_same_field_variants():
+    """同字段未识别的等值写法（如 op=equals）也由对象值覆盖，只保留显式不等条件。"""
+    from app.planning.task_dag import QuestionDecomposition,DecomposedTask
+    case=CASES[1]
+    value=proposal(case,comparison_kind='objects',comparison_periods=[],comparison_objects=[
+        {'role':'BASE','entity':'业态','field':'业态名称','value':'直销'},
+        {'role':'CURRENT','entity':'业态','field':'业态名称','value':'分销'}])
+    structured={**parameters(case),'过滤条件':[
+        {'entity':'销售订单','field':'业态名称','op':'equals','value':'直销'},
+        {'entity':'业态','field':'业态名称','op':'!=','value':'零售'}],
+        PLAN_KEY:value}
+    decomposition=QuestionDecomposition(intent=I.COMPARISON_ANALYSIS,tasks=(
+        DecomposedTask(question=case[2],intent=I.METRIC_QUERY,structured=structured,depends_on=()),))
+    plan=compile_decomposition(case[2],decomposition)
+    assert [task.extraction['过滤条件'] for task in plan.tasks[:-1]]==[
+        [{'entity':'业态','field':'业态名称','op':'!=','value':'零售'},
+            {'entity':'业态','field':'业态名称','op':'=','value':'直销'}],
+        [{'entity':'业态','field':'业态名称','op':'!=','value':'零售'},
+            {'entity':'业态','field':'业态名称','op':'=','value':'分销'}]]
+
+
+def test_object_comparison_keeps_two_row_object_route_not_grouped_period_contract():
+    """对象间对比不能带 comparison_dimensions，否则会误入分组两期对比并索要稳定编码。
+
+    复现背景：对比上海与江苏的订单笔数时，规划把“省份”留在维度里；对象产物
+    契约若继续登记 comparison_dimensions，引擎会按分组两期对比对齐，而按对象
+    角色合并出的两行没有“省份（编码）”列，直接报“需要每个维度的稳定编码”。
+    """
+    from app.domain.models import CanonicalAnalysisRequest,MetricRef,KnowledgeContext
+    from app.planning.task_dag import QuestionDecomposition,DecomposedTask
+    case=CASES[1]
+    value=proposal(case,comparison_kind='objects',comparison_periods=[],comparison_objects=[
+        {'role':'BASE','entity':'省份','field':'省份名称','value':'上海'},
+        {'role':'CURRENT','entity':'省份','field':'省份名称','value':'江苏'}])
+    structured={**parameters(case),'维度':['省份'],PLAN_KEY:value}
+    decomposition=QuestionDecomposition(intent=I.COMPARISON_ANALYSIS,tasks=(
+        DecomposedTask(question=case[2],intent=I.METRIC_QUERY,structured=structured,depends_on=()),))
+    plan=compile_decomposition(case[2],decomposition)
+    requirements=plan.tasks[-1].extraction['分析绑定']['requirements']
+    assert 'comparison_dimensions' not in requirements
+    assert requirements['comparison_periods']==[]
+    request=CanonicalAnalysisRequest(conversation_id='synthetic',tenant_id='t',user_id='u',application_id='a',
+        primary_intent=I.COMPARISON_ANALYSIS,original_question=case[2],
+        metrics=[MetricRef(input=METRIC,canonical_name=METRIC)],dimensions=['省份'],semantic_model_id=81)
+    request._analysis_contract=requirements
+    output=AnalysisEngine().analyze(request,['期间','省份','省份名称',METRIC,'period_role'],[
+        {'期间':'上海市','省份':'310000','省份名称':'上海市',METRIC:35201,'period_role':'基期'},
+        {'期间':'江苏省','省份':'320000','省份名称':'江苏省',METRIC:3762,'period_role':'当前期'}],
+        KnowledgeContext(query='synthetic'))
+    assert output.method=='two_group_comparison'
+    assert (output.facts['base_label'],output.facts['current_label'])==('上海市','江苏省')
+    assert (output.facts['base'],output.facts['current'])==(35201,3762)
+    assert output.facts['absolute_change']==-31439
+
+
+def test_object_comparison_plan_is_rebuilt_by_the_catalog_compiler_not_the_period_playbook():
+    """对象计划无论从哪个规划入口进来，都展开为两次对象取数 + 按对象角色对比。
+
+    复现背景：根意图与链路不一致或 compile_decomposition 未接管时，计划会
+    改由 build_analysis_task_plan 展开；对象计划的 comparison_periods 是空列表，
+    旧逻辑仍会登记 comparison_dimensions 与空 periods，只发一次不带对象过滤的
+    取数，执行期报“需要每个维度的稳定编码”。
+    """
+    from app.domain.models import PlannerExtraction
+    from app.planning.analysis_task_planner import build_analysis_task_plan, normalize_analysis_task_plan
+    from test_analysis_delivery_regressions import TODAY
+    case=CASES[1]
+    value=proposal(case,comparison_kind='objects',comparison_periods=[],comparison_objects=[
+        {'role':'BASE','entity':'省份','field':'省份名称','value':'上海'},
+        {'role':'CURRENT','entity':'省份','field':'省份名称','value':'江苏'}])
+    structured={**parameters(case),'维度':['省份'],PLAN_KEY:value}
+    built=build_analysis_task_plan(case[2],PlannerExtraction(intent=I.COMPARISON_ANALYSIS,
+        parameters=[],structured=copy.deepcopy(structured)),today=TODAY)
+    assert [task.task_id for task in built.tasks]==['task-1','task-2','task-3']
+    assert [task.extraction['过滤条件'][-1]['value'] for task in built.tasks[:-1]]==['上海','江苏']
+    binding=built.tasks[-1].extraction['分析绑定']
+    assert 'comparison_dimensions' not in binding['requirements']
+    assert [item['role'] for item in binding['periods']]==['基期','当前期']
+    # 根意图与链路不一致时走重建路径，产物仍是同一份对象对比契约
+    rebuilt=normalize_analysis_task_plan(case[2],built,I.METRIC_QUERY)
+    assert [task.extraction.get('过滤条件') for task in rebuilt.tasks[:-1]]==[
+        task.extraction['过滤条件'] for task in built.tasks[:-1]]
+    assert 'comparison_dimensions' not in rebuilt.tasks[-1].extraction['分析绑定']['requirements']
+
+
+def test_undeclared_period_contract_never_enters_grouped_two_period_alignment():
+    """只带分组维度、未声明基期/本期的契约不能进入分组两期对齐（旧检查点兼容）。"""
+    from app.domain.models import CanonicalAnalysisRequest,MetricRef,KnowledgeContext
+    request=CanonicalAnalysisRequest(conversation_id='synthetic',tenant_id='t',user_id='u',application_id='a',
+        primary_intent=I.COMPARISON_ANALYSIS,original_question='对比上海与江苏的订单笔数',
+        metrics=[MetricRef(input=METRIC,canonical_name=METRIC)],dimensions=['省份'],semantic_model_id=81)
+    request._analysis_contract={'comparison_dimensions':['省份'],'tool_selection':{
+        'mode':'SELECTED','capabilities':[],'source':'MODEL_CATALOG','parameters':{}}}
+    output=AnalysisEngine()._comparison(request,['期间','省份名称',METRIC,'period_role'],[
+        {'期间':'上海市','省份名称':'上海市',METRIC:35201,'period_role':'基期'},
+        {'期间':'江苏省','省份名称':'江苏省',METRIC:3762,'period_role':'当前期'}],KnowledgeContext(query='synthetic'))
+    assert output.method=='two_group_comparison'
+    assert (output.facts['base'],output.facts['current'])==(35201,3762)
 
 
 def test_output_contract_rejects_unregistered_capability_and_nonfinite_results():

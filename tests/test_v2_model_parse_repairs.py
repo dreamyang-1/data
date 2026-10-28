@@ -47,11 +47,23 @@ def test_valid_original_span_is_not_relocated(text,surface,start,end):
     validate(text,result)
 
 
+@pytest.mark.parametrize('text,surface,start,end,expected',[
+    ('销售额与销售额','销售额',1,4,(0,3)), # 声明偏移错位，取离声明最近的一次出现
+    ('aaa','aa',2,4,(1,3)), # 越界声明，最近一次出现仍在句内
+    ('给出每家医院的销售订单总金额，并按照总金额降序排序','总金额',20,23,(18,21)),
+])
+def test_multi_occurrence_surface_relocates_to_nearest_declared(text,surface,start,end,expected):
+    value=parse(text,surface=surface,start=start,end=end)
+    result,trace=repair_model_parse(value,text=text,turn_id='t')
+    assert trace[0]['reason_code']=='EXACT_MULTI_OCCURRENCE_NEAREST_SURFACE_SPAN'
+    checked=validate(text,result)
+    assert (checked.mentions[0].start_char,checked.mentions[0].end_char)==expected
+
+
 @pytest.mark.parametrize('text,surface,start,end',[
-    ('销售额与销售额','销售额',1,4),
-    ('aaa','aa',2,4), # Overlapping occurrences are still ambiguous.
     ('销售额','销售量',0,3),
     ('销售額','销售额',0,3),
+    ('销售额与销售额','销售总额',0,3),
 ])
 def test_ambiguous_absent_or_fuzzy_surface_stays_rejected(text,surface,start,end):
     value=parse(text,surface=surface,start=start,end=end)
@@ -65,6 +77,48 @@ def test_foreign_turn_is_never_made_current_by_matching_text():
     result,trace=repair_model_parse(value,text='销售额',turn_id='t')
     assert not trace and result.mentions[0].source_turn_id=='history'
     with pytest.raises(ValueError):validate('销售额',result)
+
+
+@pytest.mark.asyncio
+async def test_span_repair_retry_replaces_absent_surface_and_keeps_fields():
+    import types
+    from app.semantic_v2.recognition import RawTurnPlanner
+    text='给出每家医院的总金额排名'
+    value=parse(text,surface='医院名称',start=2,end=6,turn='t')
+    value.explicit_slot_mentions={'subject':['m']}
+    class RepairModel:
+        async def complete(self,**kw):
+            assert kw['stage']=='v2_span_repair'
+            assert kw['context']['validation_error'].startswith('SURFACE_PARSE_FAILURE')
+            previous=kw['context']['previous_mentions']
+            assert previous[0]['surface']=='医院名称'
+            fixed=dict(previous[0])
+            fixed.update(surface='医院',normalized_surface='医院',start_char=4,end_char=6)
+            return kw['output_model'].model_validate({'mentions':[fixed]})
+    planner=RawTurnPlanner(RepairModel(),None)
+    exc=ValueError('SURFACE_PARSE_FAILURE: invalid current-turn mention span')
+    fixed=await planner._retry_span_repair('INSTR',
+        types.SimpleNamespace(question=text,message_id='t'),value,exc)
+    checked=validate(text,fixed)
+    assert (checked.mentions[0].start_char,checked.mentions[0].end_char)==(4,6)
+    assert fixed.explicit_slot_mentions=={'subject':['m']}
+
+
+@pytest.mark.asyncio
+async def test_span_repair_retry_transport_failure_raises_original_error():
+    import types
+    from app.semantic_v2.recognition import RawTurnPlanner
+    class BrokenModel:
+        async def complete(self,**kw):
+            raise RuntimeError('gateway down')
+    planner=RawTurnPlanner(BrokenModel(),None)
+    text='销售额'
+    value=parse(text,surface='销售额',start=1,end=4,turn='t')
+    exc=ValueError('SURFACE_PARSE_FAILURE: invalid current-turn mention span')
+    with pytest.raises(ValueError) as info:
+        await planner._retry_span_repair('INSTR',
+            types.SimpleNamespace(question=text,message_id='t'),value,exc)
+    assert info.value is exc
 
 
 def test_negation_surface_maps_only_to_already_declared_unique_negated_mention():

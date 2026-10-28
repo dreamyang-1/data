@@ -11,6 +11,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import logging
+import re
 import time
 from typing import Any, Awaitable, Callable
 from uuid import uuid4
@@ -1526,6 +1527,15 @@ class V2ContextV1ExecutionBridge:
                 name="问题理解与补全",
                 input={"question": text_metadata(chat.question)},
             )
+            # 意图节点先按静默处理：门控判为业务场景问题时整轮不展示进度
+            # 文案；门控放行或未参与时紧跟一条可见标记恢复原有展示，用户
+            # 可见内容不受影响。
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "",
+                progress_phase="V2_INTENT_SILENT",
+            )
             gate_decision = None
             if self.jev_settings is not None and getattr(
                 self.jev_settings, "gate_enabled", False
@@ -1564,6 +1574,23 @@ class V2ContextV1ExecutionBridge:
                             })
                         except Exception:
                             logger.debug("Langfuse span update failed", exc_info=True)
+            # 门控判定为全新业务问题：识别与补全照常执行，下游仍用补全后
+            # 的问题做输入；这个标记只控制展示层，意图节点跳过承接判定与
+            # 补全的中间进度文案，直接展示结论
+            gate_confirmed_new_task = bool(
+                gate_decision is not None
+                and gate_decision.gate_class == "业务场景问题"
+                and self.surface_asl_execution_enabled
+            )
+            if not gate_confirmed_new_task:
+                # 追问轮、闲聊/危险/非业务/待定短路轮与门控未参与的轮次
+                # 恢复意图节点展示
+                await emit_progress(
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    "",
+                    progress_phase="V2_INTENT_VISIBLE",
+                )
             if gate_decision is not None and gate_decision.action != "pass":
                 # 短路用不到目录，停掉预取任务
                 catalog_task.cancel()
@@ -1612,12 +1639,14 @@ class V2ContextV1ExecutionBridge:
                         context_chat._question_log = question_log
                 except Exception as exc:
                     logger.warning("failed to load question log: %s", exc)
-            await emit_progress(
-                "INTENT_RECOGNITION",
-                "RUNNING",
-                "正在判断本轮问题与会话上下文的关系，并补全问题。",
-                progress_phase="V2_CONTEXT_START",
-            )
+            if not gate_confirmed_new_task:
+                # 业务场景问题不再展示补全相关进度文案，直接进入意图判断。
+                await emit_progress(
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    "正在判断本轮问题与会话上下文的关系，并补全问题。",
+                    progress_phase="V2_CONTEXT_START",
+                )
             if (
                 snapshot.state is None
                 and snapshot.pending is None
@@ -1880,17 +1909,19 @@ class V2ContextV1ExecutionBridge:
                             getattr(context_chat, "_prior_task_table", None)
                         ),
                     )))
-                    await emit_progress(
-                        "INTENT_RECOGNITION",
-                        "RUNNING",
-                        intent_message,
-                    )
-                    await emit_progress(
-                        "INTENT_RECOGNITION",
-                        "RUNNING",
-                        "正在判断问题类型，并识别各问题的意图与业务域。",
-                        progress_phase="V2_COMPOUND_JUDGE_START",
-                    )
+                    if intent_message:
+                        await emit_progress(
+                            "INTENT_RECOGNITION",
+                            "RUNNING",
+                            intent_message,
+                        )
+                    if not gate_confirmed_new_task:
+                        await emit_progress(
+                            "INTENT_RECOGNITION",
+                            "RUNNING",
+                            "正在判断问题类型，并识别各问题的意图与业务域。",
+                            progress_phase="V2_COMPOUND_JUDGE_START",
+                        )
                     judgment_section = ""
                     definition_direct_turn = False
                     judgment = None
@@ -1962,6 +1993,7 @@ class V2ContextV1ExecutionBridge:
                         progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
                         display_model="IntentRecognitionContextProgressV2",
                         display_version="V2",
+                        heading_only=not intent_message,
                     )
             running = await self.store.reserve(
                 snapshot,

@@ -13,18 +13,12 @@ from test_complex_execution_correctness import service, context, persist, IDENTI
 
 
 def reference(name, columns, rows, **provenance):
-    # These fixture columns belong to explicit source fields, just as executed
-    # SQL results carry provenance; a matching display label alone is not a key.
-    identities = {'部门编码': 'department.department_code',
-                  '经销商（编码）': 'dealer.dealer_code'}
     return DatasetReference(dataset_id=name, bucket='test', object_name=name,
         scope=DatasetScope('test','test','test','test'), columns=tuple(columns), row_count=len(rows),
         byte_size=0,snapshot_id='',data_as_of='',created_at='',expires_at='',source_type='TEST',source_ref='',
         transformation_log=({
         'type':'query_provenance', 'source_truncated':False,
-        'source_total_row_count':len(rows), 'source_quality_status':'PASS',
-        'column_bindings': {key: value for key, value in identities.items() if key in columns},
-        **provenance},))
+        'source_total_row_count':len(rows), 'source_quality_status':'PASS', **provenance},))
 
 
 def binding(operator, left='付款金额', right='核销金额', sources=('q', 'q'), label='结果'):

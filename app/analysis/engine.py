@@ -14,7 +14,6 @@ from app.analysis.profiling import profile_dataset
 from app.analysis.visualization import build_chart_specs
 from app.analysis.operators import AnalysisOperatorRegistry, OperatorInputError
 from app.analysis.chain_tools.composition import (
-    cumulative_contribution_threshold,
     group_share_threshold,
 )
 from app.analysis.chain_tools.temporal_window import (
@@ -1354,7 +1353,11 @@ class AnalysisEngine:
         }
 
     def _comparison(self, request, columns, rows, knowledge) -> AnalysisOutput:
-        if (getattr(request, '_analysis_contract', None) or {}).get('comparison_dimensions'):
+        contract = getattr(request, '_analysis_contract', None) or {}
+        # 分组两期对齐只在契约明确声明了基期与本期时成立。对象间对比的期间列
+        # 承载的是对象值（每个对象一行），旧检查点或未声明期间的计划同样不能
+        # 按分组编码对齐，否则会报出误导性的“需要每个维度的稳定编码”。
+        if contract.get('comparison_dimensions') and contract.get('comparison_periods'):
             from app.analysis.period_comparison import compare
             return compare(self, request, columns, rows)
         object_scope = explicit_object_comparison_scope(request)

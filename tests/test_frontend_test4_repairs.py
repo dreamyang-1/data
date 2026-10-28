@@ -169,7 +169,9 @@ def test_invalid_grouped_comparison_does_not_guess_or_emit_invalid_numbers(defec
     _, request = context()
     request.primary_intent = I.COMPARISON_ANALYSIS
     request.metrics = [MetricRef(input=METRIC)]
-    request._analysis_contract = {'comparison_dimensions': ['渠道业态']}
+    request._analysis_contract = {'comparison_dimensions': ['渠道业态'], 'comparison_periods': [
+        {'role': 'BASE', 'start': '2025-11-01', 'end_exclusive': '2025-12-01'},
+        {'role': 'CURRENT', 'start': '2025-12-01', 'end_exclusive': '2026-01-01'}]}
     columns = ['渠道业态', '渠道业态（编码）', METRIC, '期间', 'period_role']
     rows = [{'渠道业态': '甲', '渠道业态（编码）': '1', METRIC: v, '期间': p, 'period_role': role}
         for v, p, role in [(100, '2025-11', '基期'), (150, '2025-12', '当前期')]]

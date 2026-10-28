@@ -794,6 +794,11 @@ def _one(
 ) -> list[ChartSpec]:
     if not label or not metric:
         return []
+    if chart_type == 'LINE':
+        from app.analysis.chain_tools.temporal_window import bucket_bounds
+        bounds = [bucket_bounds(str(row.get(label, ''))) for row in rows]
+        if bounds and all(bounds):
+            rows = [row for _, row in sorted(zip(bounds, rows), key=lambda item: item[0][0])]
     if chart_type in {'BAR', 'PIE'}:
         rows = _distinct_category_rows(label, rows)
         if rows is None:

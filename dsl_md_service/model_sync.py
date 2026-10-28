@@ -1,8 +1,8 @@
 """语义模型描述文件自更新。
 
-轮询平台库 semantic_model 表，发现模型 update_time 新于本地描述文件时，
-从库里拼装 YML（结构与平台导出一致），调抽取模型重新生成 md，原子覆盖
-files/semantic_model_{id}.md。抽取结果先写临时文件并做结构校验，异常时
+轮询平台库 semantic_model 表，模型 update_time 比本地描述文件新时，从库里
+拼装 YML（结构同平台导出），调抽取模型重新生成 md，覆盖
+files/semantic_model_{id}.md。结果先写临时文件并校验章节结构，不通过就
 保留旧文件。
 
 用法：
@@ -27,7 +27,6 @@ import yaml
 from main import FILES_DIR, _call_model, _fill_business_domain_columns
 
 SYNC_LOG = Path(__file__).resolve().parent / "sync.log"
-AGENT_LOCAL_DESCRIPTION = Path("/root/yyy/DataAnalysis_Agent/语义描述文件.md")
 
 LEVEL_LABEL = {1: "原子指标", 2: "派生指标", 3: "复合口径指标"}
 
@@ -59,7 +58,7 @@ def _fetchall(cur, sql: str, args) -> list[dict]:
 
 
 def _json_or_text(value):
-    """库里 JSON 列有的存字符串有的已解析，统一成对象；非 JSON 原样返回。"""
+    """JSON 列有些存的是字符串，有些已解析成对象，这里统一成对象；其他内容原样返回。"""
     if not isinstance(value, str):
         return value
     text = value.strip()
@@ -276,7 +275,7 @@ def dump_yml(data: dict) -> str:
 
 
 def _validate_md(md: str) -> None:
-    """抽取结果的基本结构校验，防止异常内容覆盖旧文件。"""
+    """检查抽取结果是否含必需章节，不通过就抛异常，不覆盖旧文件。"""
     if "业务语义规范" not in md or "指标" not in md or "维度" not in md:
         raise RuntimeError("抽取结果缺少基本章节，保留旧文件")
 
@@ -291,33 +290,47 @@ async def refresh_model(cur, model_id: int, name: str, force: bool = False) -> s
     tmp = target.with_suffix(".md.tmp")
     tmp.write_text(md, encoding="utf-8")
     os.replace(tmp, target)
-    # 同步刷新本地兜底描述文件：避免远程不可用时系统退回到陈旧的内置快照
-    _refresh_local_fallback(model_id, name, md)
     return f"model_id={model_id}（{name}）已更新"
 
 
-def _refresh_local_fallback(model_id: int, name: str, md: str) -> None:
-    """把本次模型描述追加或更新到本地兜底文件，按模型id分节，错域时不污染其他模型。"""
-    marker = f"<!-- semantic_model_id={model_id} name={name} -->"
-    section = f"\n\n{marker}\n\n{md}\n"
-    path = AGENT_LOCAL_DESCRIPTION
-    existing = ""
-    if path.exists():
-        existing = path.read_text(encoding="utf-8-sig").strip()
-    if marker in existing:
-        before, _, rest = existing.partition(marker)
-        _, _, after = rest.partition("\n<!-- semantic_model_id=")
-        after = f"\n<!-- semantic_model_id={after}" if after.strip() else ""
-        existing = before.strip() + section + after
-    else:
-        existing = (existing + section).strip()
-    tmp = path.with_suffix(".md.tmp")
-    tmp.write_text(existing, encoding="utf-8")
-    os.replace(tmp, path)
+def heal_registered_urls(cur) -> list[str]:
+    """登记地址指向不存在的文件时，改回按模型 id 固定的地址。
+
+    只处理本服务 /files/ 下的地址，且只在原文件确实缺失、固定文件已生成时
+    才改；指向其它存储或文件仍然存在的登记值一律不动。
+    """
+    cur.execute(
+        "SELECT id, semantic_desc_file_url FROM semantic_model WHERE is_deleted=0"
+    )
+    changed: list[str] = []
+    for model_id, url in cur.fetchall():
+        if not url or "/files/" not in url:
+            continue
+        current = url.rsplit("/", 1)[-1]
+        canonical = f"semantic_model_{model_id}.md"
+        if current == canonical:
+            continue
+        if (FILES_DIR / current).exists():
+            continue
+        if not (FILES_DIR / canonical).exists():
+            continue
+        new_url = url[: len(url) - len(current)] + canonical
+        cur.execute(
+            "UPDATE semantic_model SET semantic_desc_file_url=%s WHERE id=%s",
+            (new_url, model_id),
+        )
+        changed.append(f"model_id={model_id} 地址由 {current} 改为 {canonical}")
+    return changed
 
 
 async def run(model_id: int | None, force: bool) -> None:
     with _conn() as conn, conn.cursor() as cur:
+        try:
+            for message in heal_registered_urls(cur):
+                log("登记地址修正：" + message)
+        except Exception as exc:
+            # 修正失败不影响描述文件生成
+            log(f"登记地址修正失败：{type(exc).__name__} {exc}")
         if model_id is not None:
             cur.execute(
                 "SELECT id, name, update_time FROM semantic_model WHERE id=%s AND is_deleted=0",
@@ -338,7 +351,7 @@ async def run(model_id: int | None, force: bool) -> None:
                 continue
             try:
                 log(await refresh_model(cur, m["id"], m["name"], force))
-            except Exception as exc:  # 单个模型失败不影响其他模型
+            except Exception as exc:  # 一个模型失败只记录，接着处理下一个
                 log(f"model_id={m['id']}（{m['name']}）更新失败：{type(exc).__name__} {exc}")
 
 
@@ -347,7 +360,7 @@ if __name__ == "__main__":
     parser.add_argument("--model-id", type=int, default=None)
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
-    # 定时轮询与手动执行可能重叠，单实例运行，占不到锁就直接退出
+    # 定时任务和手动执行可能同时起来，用文件锁保证同一时间只跑一个实例
     import fcntl
 
     lock_fd = open(Path(__file__).resolve().parent / ".sync.lock", "w")

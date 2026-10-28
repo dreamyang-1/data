@@ -81,36 +81,6 @@ def render_prior_task_table_context(prior_task_table: Any, budget: int = 3500) -
     return text if len(text) <= budget else text[:budget]
 
 
-def recognized_planning_intent(judgment, fallback=None):
-    """Read an existing recognition verdict, without interpreting the question."""
-    from app.planning.task_dag import SingleQuestionPlanner
-    return SingleQuestionPlanner._sanitize_intent(getattr(judgment, 'intent', None)) or fallback
-
-
-def inherit_recognized_intent(intent, *, plan=None, extraction=None, judgment=None):
-    """Copy the recognition verdict; task execution bindings stay untouched."""
-    intent = recognized_planning_intent(judgment, intent)
-    from app.planning.task_dag import _PRIMARY_INTENT_LABELS
-    if extraction is not None and intent is not None:
-        extraction.intent = intent
-        if extraction.structured is not None:
-            extraction.structured = dict(extraction.structured,
-                意图=_PRIMARY_INTENT_LABELS.get(intent, intent.value))
-    if plan is not None:
-        intents = [intent] * len(plan.tasks)
-        if judgment is not None and getattr(judgment, 'is_compound', False):
-            for group, entry in zip(plan.question_groups, judgment.entries):
-                entry_intent = recognized_planning_intent(entry, intent)
-                for index in range(group.task_offset, min(len(intents), group.task_offset + group.task_count)):
-                    intents[index] = entry_intent
-        for task, task_intent in zip(plan.tasks, intents):
-            if task_intent is not None:
-                task.primary_intent = task_intent
-                if task.extraction is not None:
-                    task.extraction = dict(task.extraction,
-                        意图=_PRIMARY_INTENT_LABELS.get(task_intent, task_intent.value))
-
-
 async def plan_question(planner: Any, question: str, *, semantic_context: str,
                         semantic_model_id: int, prior_judgment: Any = None,
                         root_intent: Any = None, intents_locked: bool = False) -> PlanningResult:
@@ -119,7 +89,6 @@ async def plan_question(planner: Any, question: str, *, semantic_context: str,
     root_intent 是意图识别节点的根意图：规划器支持该参数时整轮规划
     直接复用它，不再对问题或任务做意图判断。
     """
-    root_intent = recognized_planning_intent(prior_judgment, root_intent)
     route_method = getattr(planner, 'route_and_plan', None)
     reuse = getattr(planner, 'plan_with_judgment', None)
     routed = callable(route_method)
@@ -138,7 +107,7 @@ async def plan_question(planner: Any, question: str, *, semantic_context: str,
     args = (prior_judgment, question) if reuse_judgment else (question,)
     outcome = await method(*args, **kwargs)
     single = outcome.single if routed else outcome
-    result = PlanningResult(plan=outcome.plan,
+    return PlanningResult(plan=outcome.plan,
                           single_extraction=single.single_extraction if single is not None else None,
                           judgment=outcome.judgment if routed else None,
                           single_task_name=(
@@ -147,9 +116,6 @@ async def plan_question(planner: Any, question: str, *, semantic_context: str,
                           single_task_question=(
                               single.single_task_question if single is not None else None
                           ))
-    inherit_recognized_intent(root_intent, plan=result.plan, extraction=result.single_extraction,
-        judgment=prior_judgment or result.judgment)
-    return result
 
 
 def prepare_execution(planner: Any, plan: TaskPlan):

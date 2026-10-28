@@ -196,7 +196,19 @@ def render_execution_question(
             if request.metrics
             else "主要业务指标"
         )
-        parts.append(f"排序要求：按{metric_name}{label}")
+        structured = getattr(request._planner_extraction, "structured", None) or {}
+        sorts = structured.get("排序") or []
+        if sorts:
+            rendered = []
+            for item in sorts:
+                field = item.get("field") or item.get("name")
+                if not field:
+                    continue
+                order = str(item.get("order") or direction).upper()
+                rendered.append(str(field) + ("从低到高" if order == "ASC" else "从高到低"))
+            parts.append("排序要求：按" + "、".join(rendered or [metric_name + label]))
+        else:
+            parts.append(f"排序要求：按{metric_name}{label}")
     if request.forecast_horizon_periods and request.forecast_granularity:
         parts.append(
             f"预测范围：未来{request.forecast_horizon_periods}个"
@@ -552,7 +564,8 @@ class RuleBasedIntentClassifier:
             and re.search(r"(?:按|各|每)?(?:日|周|月|季度|年)(?:度|份)?", normalized)
             and not explicit_object_comparison
             and not self._has_explicit_comparison_pair(normalized)
-            and not any(term in normalized for term in ("同比", "环比"))
+            and not causal_pattern
+            and PrimaryIntent.ANOMALY_ANALYSIS not in matched
         )
         explicit_file_delivery = bool(
             re.search(r"(?:导出|生成|下载).{0,24}(?:excel|xlsx|pdf|word|docx)", normalized)
@@ -566,6 +579,9 @@ class RuleBasedIntentClassifier:
         elif implicit_forecast:
             intent = PrimaryIntent.FORECAST_ANALYSIS
             matched = [PrimaryIntent.FORECAST_ANALYSIS] + [i for i in matched if i != PrimaryIntent.FORECAST_ANALYSIS]
+        elif not forecast_negated and re.search(r'预测|预估', normalized) and not planned_value_query:
+            intent = PrimaryIntent.FORECAST_ANALYSIS
+            matched = [intent] + [i for i in matched if i != intent]
         elif explicit_trend_series:
             intent = PrimaryIntent.TREND_ANALYSIS
             matched = [PrimaryIntent.TREND_ANALYSIS] + [
@@ -5178,7 +5194,7 @@ class RuleBasedIntentClassifier:
             if count is not None:
                 return count, unit_map[match.group(2)]
         fixed = (
-            (("下个月", "下月"), "month"),
+            (("下个月", "下月", "下一月", "下一个月"), "month"),
             (("下周", "下个星期"), "week"),
             (("明天", "次日"), "day"),
             (("下季度", "下个季度"), "quarter"),

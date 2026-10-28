@@ -430,6 +430,7 @@ class PlannerExtraction(StrictModel):
 
 
 class CanonicalAnalysisRequest(StrictModel):
+    _analysis_contract: dict[str, Any] | None = PrivateAttr(default=None)
     # 任务规划产出的提取结果，仅进程内可信传递，不接受传输层注入。
     _planner_extraction: PlannerExtraction | None = PrivateAttr(default=None)
     authorized_semantic_scope: AuthorizedSemanticScope | None = None
@@ -741,6 +742,7 @@ class AgentPromptConfig(StrictModel):
 
 
 class ChatRequest(StrictModel):
+    _analysis_reference_date: date | None = PrivateAttr(default=None)
     _general_rules_loaded: bool = PrivateAttr(default=False)
     _general_rules_scope: tuple = PrivateAttr(default=())
     _file_inspection: dict[str, Any] = PrivateAttr(default_factory=dict)

@@ -375,12 +375,15 @@ async def test_bridge_streams_context_progress_before_resolution(provider):
         )
 
     assert result.status == "COMPLETED"
-    assert events[0]["stage"] == "INTENT_RECOGNITION"
-    assert events[0]["status"] == "RUNNING"
-    assert events[0]["progress_phase"] == "V2_CONTEXT_START"
-    assert "正在判断本轮问题与会话上下文的关系，并补全问题" in events[0]["message"]
-    assert events[1]["progress_phase"] == "V2_SEMANTIC_CATALOG_READY"
-    assert events[1]["message"] == (
+    # 门控前的静默标记与门控未参与时的可见标记只是传输层开关，不是用户文案
+    assert events[0]["progress_phase"] == "V2_INTENT_SILENT"
+    assert events[1]["progress_phase"] == "V2_INTENT_VISIBLE"
+    assert events[2]["stage"] == "INTENT_RECOGNITION"
+    assert events[2]["status"] == "RUNNING"
+    assert events[2]["progress_phase"] == "V2_CONTEXT_START"
+    assert "正在判断本轮问题与会话上下文的关系，并补全问题" in events[2]["message"]
+    assert events[3]["progress_phase"] == "V2_SEMANTIC_CATALOG_READY"
+    assert events[3]["message"] == (
         "业务域语义目录已加载，正在提取当前问题的查询要素。"
     )
     resolved_context = next(

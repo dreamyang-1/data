@@ -151,6 +151,9 @@ def derive_operands(step, row):
     for role in operator_roles(step.get('operator')):
         field_key = 'field' if role=='input' else role+'_field'
         value_key = 'value' if role=='input' else role+'_value'
+        if field_key in step and step[field_key] not in row:
+            raise NumericOperationError('计算缺少输入字段：' + str(step[field_key])
+                + '；实际字段：' + '、'.join(str(key) for key in row if not str(key).startswith('_')))
         values.append(number(row.get(step[field_key])) if field_key in step else literal(step[value_key]))
     return values
 
