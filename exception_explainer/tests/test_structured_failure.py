@@ -72,6 +72,18 @@ async def test_recovered_blocker_does_not_explain_success(monkeypatch):
         end(state, token)
 
 
+@pytest.mark.asyncio
+async def test_long_original_explanation_is_preserved_when_model_unavailable():
+    state = integration.Diagnostics('问题', scope=SCOPE)
+    state.blockers.append({'structured': True})
+    answer = '系统没有提取出销售额指标。' * 60
+    response = AgentResponse(request_id=uuid4(), conversation_id='test', status='NEEDS_CLARIFICATION',
+                             intent=PrimaryIntent.DETAIL_QUERY, answer=answer)
+    settings = SimpleNamespace(intent_model_enabled=False, intent_model_api_key=None)
+    result = await integration.explain_response(state, settings, response)
+    assert result is response and result.answer == answer
+
+
 def test_other_model_blocker_is_not_collected():
     state, token = begin('问题', scope=SCOPE)
     try:

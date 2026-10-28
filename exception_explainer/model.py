@@ -26,7 +26,7 @@ async def explain(state: Diagnostics, config: ModelConfig | None, *,
     if state.explanation is not None:
         return state.explanation
     state.explaining = True
-    state.explanation = redact(fallback, 500)
+    state.explanation = redact(fallback, None)
     if config is None:
         return state.explanation
     payload = state.payload(outcome)
@@ -37,7 +37,7 @@ async def explain(state: Diagnostics, config: ModelConfig | None, *,
             result = await client.post(config.base_url.rstrip('/') + '/chat/completions',
                 headers={'Authorization': 'Bearer ' + config.api_key},
                 json={'model': config.model, 'messages': messages, 'temperature': 0,
-                      'max_tokens': 700, 'response_format': {'type': 'json_object'},
+                      'response_format': {'type': 'json_object'},
                       'enable_thinking': False})
         result.raise_for_status()
         response = result.json()
@@ -47,10 +47,10 @@ async def explain(state: Diagnostics, config: ModelConfig | None, *,
         refs = content.get('evidence_ids')
         valid = {e['id'] for e in payload['evidence']}
         explanation = content.get('explanation')
-        if (isinstance(explanation, str) and 4 <= len(explanation) <= 500
+        if (isinstance(explanation, str) and explanation.strip()
                 and isinstance(refs, list) and refs and all(isinstance(r, str) and r in valid for r in refs)
                 and content.get('certainty') in ('confirmed', 'limited')):
-            state.explanation = redact(explanation, 500)
+            state.explanation = redact(explanation, None)
     except Exception as exc:
         # A model outage cannot replace the original failure with another error.
         logging.getLogger(__name__).warning('exception explanation unavailable: %s', type(exc).__name__)

@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-def redact(value: Any, limit: int = 1200) -> str:
+def redact(value: Any, limit: int | None = 1200) -> str:
     text = str(value)
     # Redact before truncation, including quoted JSON and credential URLs.
     text = re.sub(r'(?i)([\w-]*(?:password|passwd|secret|token|authorization|cookie|api[_-]?key)[\w-]*[\s\"\x27]*[:=]\s*)("[^"]*"|\x27[^\x27]*\x27|[^\s,;}]+)', r'\1[已隐藏]', text)
@@ -21,7 +21,7 @@ def redact(value: Any, limit: int = 1200) -> str:
     text = re.sub(r'(?:[A-Za-z]:[\\/]|/(?:root|home|etc|tmp|var|opt)/)[^\s\"\x27]+', '[路径]', text)
     text = re.sub(r'(?is)\b(?:SELECT|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM)\s+.*', '[查询文本已隐藏]', text)
     text = re.sub(r'(?is)[\"\x27]?(?:rows|records|data_rows|sample_rows|preview_rows)[\"\x27]?\s*[:=]\s*\[.*', '[数据行已隐藏]', text)
-    return text[:limit]
+    return text if limit is None else text[:limit]
 
 
 def bounded_detail(value: Any, depth: int = 0) -> Any:
