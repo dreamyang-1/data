@@ -1,7 +1,7 @@
 """结构化参数提取的提示词。
 
-三段提示词按调用顺序拼成参数提取阶段的系统提示：
-参数提取规则（含输出schema） + 解析器规范（输出键与判定规则、示例）+ 计算参数规范。
+两段提示词按调用顺序拼成参数提取阶段的系统提示：
+参数提取规则（含输出schema） + 解析器规范（输出键与判定规则、示例）。计算执行方案在规划阶段确定。
 业务语义规范不写在这里，由调用方按 semantic_model_id 注入；已识别任务意图、
 通用规则与语义规范段由调用方拼接到系统提示末尾。
 """
@@ -26,16 +26,16 @@ PARAMETER_PROMPT = """任务边界已经确定。请为给定任务逐项提取e
 不得新增、删除、合并任务，不得修改任务问题、依赖和交付物；按task_index对应原任务。
 任务意图沿用已识别意图，结合任务职责给出执行路由，不另做一次识别调用。
 
-你是结构化参数的唯一生成阶段；指标、维度、展示字段、筛选、时间约束、排序、限制和计算参数均在本阶段确定，后续不会用规划字段补齐或覆盖，空列表也保留其原意。
+你只提取已规划查询任务的指标、维度、展示字段、筛选、时间约束、查询排序和限制；不决定任务、公式、计算输入输出或依赖传递。calculation_task_indices中的计算任务直接输出extraction:null，执行参数由规划器直接交付，不得生成、补充或修改计算绑定、结果操作。查询任务的空列表保留原意。
 
-规划只提供自然语言任务与依赖，内部附带的登记指标成分、粒度和样本口径仅用于理解语义文件，不能把业务对象或筛选字段直接当成维度。只有用户要求的分组或登记指标计算确实需要的样本粒度才提取为维度。例：“看看骨科那边卖得怎么样”提取骨科筛选，不因这一筛选自动添加“适用科室”维度。
+规划已确定任务、依赖和计算执行方案；查询任务内部附带的登记指标成分、粒度和样本口径仅用于理解语义文件，不能把业务对象或筛选字段直接当成维度。只有用户要求的分组或登记指标计算确实需要的样本粒度才提取为维度。例：“看看骨科那边卖得怎么样”提取骨科筛选，不因这一筛选自动添加“适用科室”维度。
 
 前序名单的数据依赖由任务计划dependency_bindings确定，不生成或修改依赖绑定；按计划交付物保留所需对象键及展示字段。
 每个任务的参数以该任务范围为准，原问题只用于解释共享上下文；不可把其他独立任务的筛选条件混入。
 提取完成前逐项对照任务question：日期范围必须进入时间粒度，医院/地域/商品等限定进入过滤条件，明确的排名指标、方向及Top N进入排序和限制；不能只在输出要求中描述这些约束。前序选出的对象通过已有依赖机制传递，不能编造尚未查询出的姓名或编码，也不能省略入选对象限定。用户问“金额最多的销售员”时，前置查询必须保留按金额降序取第1名；后续“销售了哪些产品”保留相同时间、医院和前序入选销售员，不沿用产品Top1。没有要求排名、时间分组或新增过滤时不要自行添加。
 definition_only=true的任务只解释口径，意图固定为“解释口径”，是否查询数据库为“否”；保留指标名称，不提取实际取数、计算绑定或结果操作。指标已经登记不影响解释意图。
 逐对象样本需要保留任务指定的分组和唯一业务键；指标登记的聚合后有效样本条件不能改成逐行过滤。
-expected_output是必须完成的交付物，把分析目标保留在输出要求。计算任务必须给出当前规范支持的公式及前序任务输入，不得只写“根据结果计算”。
+expected_output是必须完成的交付物，把查询交付要求保留在输出要求。计算任务的公式及前序输入由规划器提供，不在本阶段提取。
 sample_requirements是父复合指标登记的有效样本口径，必须在每个成分任务中保留，按相同分组聚合后筛选，不能只约束其中一份输入或改成逐行剔除负数。
 component_input=true表示复合指标的成分统计取数，按指标查询提取；指标及分组按计划保留，不能改成原始金额/数量明细。成分统计不提前排序取前N，最终排名由计算任务完成；明确的前置入选范围仍通过任务依赖传递。
 先选对象再汇总完整对象的任务，只沿用前序完整对象名单，不继承用来筛选入选对象的商品等明细条件。按订单号汇总全部商品时，查询维度和展示字段只保留订单号，不能再按商品分组；时间范围在前置名单中落实，不把整单拆成时间内的部分明细。
@@ -233,27 +233,11 @@ EXTRACTION_PARSER_PROMPT = """你是数据智能体的语义解析器，专门�
 # 当前提示词不再内置快照，业务语义一律由调用方按 semantic_model_id 注入。
 EXTRACTION_EMBEDDED_SPEC = ""
 
-CALCULATION_PARAMETER_PROMPT = """计算执行合同（仅为extraction的内部执行参数，不改变数据库字段绑定）：
-每个纯计算任务必须明确实际运算，不能只写“根据结果计算”。
-两个指标加减乘除使用extraction.计算绑定：{"operation":"add或subtract或multiply或divide","left":{"source_task_index":0,"column":"左操作数指标登记名"},"right":{"source_task_index":1,"column":"右操作数指标登记名"},"result_field":"结果指标名","format":"number或percent"}。原有除法也兼容operation=divide配合numerator和denominator操作数。
-同一查询结果逐行运算时，两操作数引用同一个前序任务；跨任务运算时分别引用各自来源。source_task_index为本问题从0开始的任务下标，必须在depends_on中；不能引用自身或猜测数据集ID。左右操作数或分子、分母顺序严格依据当前规范中的公式，不能按依赖指标列的排列顺序猜测。多步公式拆成有依赖的计算任务，后一步可以引用前一步的结果字段。即使复合指标尚未拆分，也在其extraction里给出上述计算绑定的column、operation、result_field和format，此时不填source_task_index，拆分器负责关联成分任务。
-其他计算可使用extraction.结果操作：{"source_task_index":0,"operation":{"type":"pipeline","operations":[...]}}。支持derive、aggregate、filter、select、sort、sort_limit、limit；不得输出SQL、Python或任意表达式。
-derive双操作数为left_field/right_field，也可用left_value/right_value显式数值常量，字段与常量每侧只能选一种。常量不得冒充业务字段。单操作数使用field，或明确的value数值常量；结果字段为result_field。
-单操作数支持square平方、cube立方、sqrt平方根、cbrt立方根、abs绝对值、negate取负、reciprocal倒数、sign符号、exp/exp2/expm1指数、ln自然对数、log10/log2/log1p、floor向下取整、ceil向上取整、trunc截断、round四舍五入（digits默认0，可为-15至15）、factorial阶乘、sin/cos/tan/asin/acos/atan/sinh/cosh/tanh/asinh/acosh/atanh、degrees/radians角度转换、bit_not按位取反。三角函数默认弧度，角度须先radians转换。
-双操作数除四则运算外支持power乘方、root开右侧指定次数的根、modulo取余、floor_divide向下整除、log指定右侧底数、hypot、atan2、minimum/maximum逐行较小/较大值、gcd/lcm、combination组合数、permutation排列数、bit_and/bit_or/bit_xor/shift_left/shift_right整数位运算。
-计算绑定也支持以上运算，双操作数沿用left/right；单操作数用input:{"source_task_index":0,"column":"实际结果列"}，或input:{"value":9}；二元常量也是{"value":数值}。数据必须引用当前依赖任务结果；纯数字计算可以没有查询依赖。
-aggregate按group_by分组、aggregations逐项计算。每项field/function/alias；支持count/sum/avg/min/max、count_distinct、median、quantile（q为0至1，默认0.5）、percentile（percentile为0至100，默认50）、variance_population/variance_sample、stddev_population/stddev_sample、range、product、sum_squares、rms、geometric_mean、harmonic_mean、covariance_population/covariance_sample/correlation（成对字段另填other_field）。未指定的variance/stddev默认总体口径（除以n），样本口径除以n-1，输出中说明所用口径；分位数用(n-1)*q线性插值。
-方差、标准差等样本统计必须先取得完整所需粒度的样本（例如逐订单金额），再aggregate；不能先查询总金额再把单个总数当样本。多步按依赖或最多5步pipeline组合，例如平方→分组平均→开根得到均方根，禁止把表达式写在字段名里。
-排序操作格式为{"type":"sort","field":"实际结果列名","descending":true}；取前N格式为{"type":"limit","count":N}；合并排序取前N格式为{"type":"sort_limit","field":"实际结果列名","descending":true,"count":N}。最终按计算结果排名时，成分取数任务不得先按其他指标取前N；只在用户明确先选定对象范围时保留该范围限制。
-排名必须保留最终计算字段的排序方向和限制人数；按人或组织计算时，所有相应取数任务都保留对象分组及必要展示字段，不能变成全局总计；共用分母按规范保留原有范围。公式或字段依据不明时不要编造计算绑定。
-同比、环比、趋势、占比、异常、归因、预测等分析类计算不属于“结果操作”，也不是“计算绑定”：这类问题只输出取数任务与正确意图（如趋势分析），不得为分析计算输出任何结果操作类型（包括自造的“同比”“环比”“增长率”等），分析由系统专门的分析工具完成。
-"""
 
-# 参数提取阶段的完整系统提示：规则 + 解析器规范 + 计算参数规范
+
+# 参数提取阶段只保留查询参数规则和解析器规范。
 EXTRACTION_SYSTEM_PROMPT = (
     PARAMETER_PROMPT
     + '\n结构化提取规范：\n'
     + EXTRACTION_PARSER_PROMPT
-    + '\n'
-    + CALCULATION_PARAMETER_PROMPT
 )

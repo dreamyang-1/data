@@ -13,7 +13,6 @@ from app.structured_extraction.extractor import (
     strip_prose_placeholder_filters,
 )
 from app.structured_extraction.prompts import (
-    CALCULATION_PARAMETER_PROMPT,
     EXTRACTION_EMBEDDED_SPEC,
     EXTRACTION_PARSER_PROMPT,
     EXTRACTION_SYSTEM_PROMPT,
@@ -21,7 +20,6 @@ from app.structured_extraction.prompts import (
 )
 
 __all__ = [
-    "CALCULATION_PARAMETER_PROMPT",
     "EXTRACTION_EMBEDDED_SPEC",
     "EXTRACTION_INTENT_KEY",
     "EXTRACTION_PARSER_PROMPT",

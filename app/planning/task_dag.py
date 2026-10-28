@@ -1571,8 +1571,13 @@ class SingleQuestionPlanner:
                     target_contract.validate(boundaries, metric_catalog, boundary_targets)
                 except ValueError as exc:
                     raise TaskInputBindingError(str(exc)) from exc
+            from app.planning.calculation_plan import plan_calculations
+            calculations = await plan_calculations(boundaries, question=question,
+                system_content=system_content, spec=spec_for_catalog, catalog=metric_catalog,
+                dependencies=dependencies, request_model=self._task_model_json)
             parameter_request = json.dumps({
                 'original_question': question,
+                'calculation_task_indices': list(calculations),
                 'analysis_plan': model_tool_plan.model_dump(mode='json') if model_tool_plan else None,
                 'tasks': [dict(task_index=index, **task.model_dump(exclude_none=True))
                           for index, task in enumerate(boundaries)],
@@ -1585,7 +1590,7 @@ class SingleQuestionPlanner:
 
             )
         try:
-            parameters = parameter_items(extracted, boundaries)
+            parameters = parameter_items(extracted, boundaries, calculation_indices=calculations)
         except ValueError as exc:
             raise TaskInputBindingError(str(exc)) from exc
         if root_intent is not None:
@@ -1598,8 +1603,15 @@ class SingleQuestionPlanner:
             from app.analysis.intents import resolve_analysis_intent
             question_intent = resolve_analysis_intent(question_intent, question)
         raw_tasks = []
-        for boundary, parameters_for_task in zip(boundaries, parameters):
+        from app.planning.calculation_plan import planned_calculation_parameters
+        for index, (boundary, parameters_for_task) in enumerate(zip(boundaries, parameters)):
             value = copy.deepcopy(parameters_for_task)
+            if index in calculations:
+                value = planned_calculation_parameters(boundary, calculations[index])
+            elif isinstance(value, dict):
+                # Extraction cannot introduce a calculator task or override planning.
+                value.pop('计算绑定', None)
+                value.pop('结果操作', None)
             if boundary.definition_only:
                 value = value if isinstance(value, dict) else {}
                 value['意图'] = '解释口径'
@@ -1719,111 +1731,6 @@ class SingleQuestionPlanner:
                     else None
                 ),
             ))
-        dependencies = _parse_metric_dependencies(spec_for_catalog)
-        from app.planning.task_plan_stages import targets_in_text
-
-        def declared_compound_targets(task):
-            """登记目标不依赖模型把名称放进某一个提取字段。"""
-            structured = task.structured if isinstance(task.structured, dict) else {}
-            names = [
-                item.get('name') if isinstance(item, dict) else item
-                for item in structured.get('指标') or []
-            ]
-            # Executable metric selection comes only from extraction.
-            return list(dict.fromkeys(name for name in names if name in dependencies))
-
-        # 任务在复合指标展开后可能已与原始边界错位，不能按位置回读
-        # boundary.metric_targets；展开后的任务文本和结构化指标才是当前合同。
-        declared_by_task = [declared_compound_targets(task) for task in tasks]
-        required = list(dict.fromkeys(
-            name for task, names in zip(tasks, declared_by_task)
-            if task.intent not in _METADATA_INTENTS
-            and not (task.structured or {}).get('计算绑定')
-            and not (task.structured or {}).get('结果操作')
-            for name in names))
-        if required:
-            from app.planning.calculation_bindings import resolve_compound_formulas
-            from app.planning.task_plan_stages import canonical_formula_spec
-            try:
-                formulas = await resolve_compound_formulas(self.settings, self._transport,
-                    canonical_formula_spec(spec_for_catalog, metric_catalog), dependencies, required)
-            except (ValueError, KeyError, RuntimeError) as exc:
-                raise TaskInputBindingError('登记复合指标未形成完整计算公式：' + str(exc)) from exc
-            for task, names in zip(tasks, declared_by_task):
-                structured = task.structured
-                local = (isinstance(structured, dict) and database_query_choice(structured) is False) \
-                    or '不再查询数据库' in task.question
-                for name in names:
-                    if name not in formulas or (isinstance(structured, dict) and structured.get('计算绑定')):
-                        continue
-                    if not isinstance(structured, dict):
-                        if local:
-                            raise TaskInputBindingError(f'登记复合指标{name}缺少计算参数结构')
-                        continue
-                    binding = copy.deepcopy(formulas[name])
-                    if local:
-                        from app.planning.calculation_bindings import arithmetic_roles
-                        for role in arithmetic_roles(binding):
-                            if set(binding[role])=={'value'}:
-                                continue
-                            column = binding[role]['column']
-                            sources = [index for index in task.depends_on
-                                if any((metric.get('name') if isinstance(metric, dict) else metric) == column
-                                       for metric in (tasks[index].structured or {}).get('指标') or [])]
-                            if len(sources) != 1:
-                                raise TaskInputBindingError(f'登记复合指标{name}的计算公式无法唯一绑定成分任务')
-                            binding[role]['source_task_index'] = sources[0]
-                    structured['计算绑定'] = binding
-                    structured['计算绑定来源'] = 'REGISTERED_COMPOUND'
-                    if not any((item.get('name') if isinstance(item, dict) else item) == name
-                               for item in structured.get('指标') or []):
-                        structured.setdefault('指标', []).append({'name': name})
-        # 2026-10-21 用户要求：语义层已发布的复合指标公式是计算任务的公式来源。
-        # 已有模型计算绑定的任务也解析登记公式；发布公式能唯一绑定成分任务时
-        # 以登记公式为准（确定性业务定义优先于模型推断），绑定不了保留原绑定。
-        bound_names = list(dict.fromkeys(
-            item.get('name') if isinstance(item, dict) else item
-            for task in tasks if task.intent not in _METADATA_INTENTS
-            and (task.structured or {}).get('计算绑定')
-            and not (task.structured or {}).get('结果操作')
-            for item in (task.structured or {}).get('指标') or []
-            if (item.get('name') if isinstance(item, dict) else item) in dependencies))
-        if bound_names:
-            from app.planning.calculation_bindings import arithmetic_roles, resolve_compound_formulas
-            from app.planning.task_plan_stages import canonical_formula_spec
-            try:
-                published = await resolve_compound_formulas(self.settings, self._transport,
-                    canonical_formula_spec(spec_for_catalog, metric_catalog), dependencies, bound_names)
-            except Exception as exc:  # 2026-10-21 用户裁决：解析失败不拦停规划
-                logger.warning('登记复合指标公式覆盖解析失败，保留模型计算绑定：%s', exc)
-                published = {}
-            for task in tasks:
-                structured = task.structured or {}
-                if not structured.get('计算绑定') or structured.get('结果操作'):
-                    continue
-                if database_query_choice(structured) is not False and '不再查询数据库' not in task.question:
-                    continue
-                names = [item.get('name') if isinstance(item, dict) else item
-                         for item in structured.get('指标') or []]
-                name = next((value for value in names if value in published), None)
-                if name is None:
-                    continue
-                binding = copy.deepcopy(published[name])
-                bound = True
-                for role in arithmetic_roles(binding):
-                    if set(binding[role]) == {'value'}:
-                        continue
-                    column = binding[role]['column']
-                    sources = [index for index in task.depends_on
-                        if any((metric.get('name') if isinstance(metric, dict) else metric) == column
-                               for metric in (tasks[index].structured or {}).get('指标') or [])]
-                    if len(sources) != 1:
-                        bound = False
-                        break
-                    binding[role]['source_task_index'] = sources[0]
-                if bound:
-                    structured['计算绑定'] = binding
-                    structured['计算绑定来源'] = 'REGISTERED_COMPOUND'
         return QuestionDecomposition(
             intent=question_intent,
             tasks=tuple(tasks),

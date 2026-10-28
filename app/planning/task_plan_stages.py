@@ -53,7 +53,7 @@ class TaskBoundaries(BaseModel):
 
 
 PLANNING_PROMPT = '''你是任务规划器。先确定完成原问题所需的业务任务、输入依赖和交付物，只输出JSON任务计划。
-每个任务只输出question、name、depends_on、expected_output、definition_only、dependency_bindings。不生成任何结构化查询或计算参数，包括extraction、metric_targets、grain、实体、指标、维度、展示字段、过滤条件、时间粒度、排序、限制、计算绑定、postprocess或结果操作；不生成ASL或SQL。具体参数全部由后续提取阶段结合任务问题、已识别意图与语义文件生成。
+每个任务只输出question、name、depends_on、expected_output、definition_only、dependency_bindings。不生成任何结构化查询或计算参数，包括extraction、metric_targets、grain、实体、指标、维度、展示字段、过滤条件、时间粒度、排序、限制、计算绑定、postprocess或结果操作；不生成ASL或SQL。查询参数由后续提取阶段生成；计算方式、指标输入、输出、依赖及排名由规划器负责，在任务边界展开后、查询参数提取前完成计算执行方案。
 任务question用完整自然语言描述要做什么，保留实际业务条件。交付物是属性、名单或明细（如“主要销售什么产品”“有哪些客户”）时，不得擅自改成指标统计。需要度量、分组或计算时，在question里说明业务目标及依据，不提前选择结构化字段。
 筛选对象不等于分组维度。例如“看看骨科那边卖得怎么样”中骨科是查询范围，未要求按科室比较时，不得改写成“按适用科室分组”；也不能因为有日期范围就增加按日期分组。
 
@@ -73,7 +73,7 @@ PLANNING_PROMPT = '''你是任务规划器。先确定完成原问题所需的�
 8. 不把ASL、SQL、取数、校验、洞察等内部技术步骤拆成业务任务；不重复或遗漏用户要求交付的结果。分析可以由最后的计算任务交付，不为流程名称增加空任务。
 9. name是动词加业务目标的陈述句，expected_output写明可验收结果。提到登记指标时使用规范原名；解释口径、血缘或闲聊任务不展开指标依赖。
 10. 若已有上一轮完整结果可提供参数，不重复原查询；采样不能当成完整名单。仅在完整性已确认时复用具体参数。
-11. 计算任务用自然语言写清输入来源、运算目标、统计口径及最终排名要求，实际计算绑定和结果操作由参数提取阶段生成。普通分布描述并入最终计算任务的交付物，不增加空分析任务。不能只写“分析前序结果”而省略要算什么；禁止输出操作JSON、数据库字段、编程代码或未给出的业务条件。
+11. 计算任务用自然语言写清输入来源、运算目标、统计口径及最终排名要求，规划器在查询参数提取前完成计算绑定和结果操作，参数提取不得重新判断或修改。多步公式需在本阶段确定计算步骤和依赖。最终按计算结果排名时，成分取数不能提前按其他指标取前N；保留对象粒度及唯一编码，共用分母按登记口径保留原范围。普通分布描述并入最终计算任务的交付物，不增加空分析任务。不能只写“分析前序结果”而省略要算什么；禁止输出操作JSON、数据库字段、编程代码或未给出的业务条件。
 12. 区分入选对象的条件和对象内部的计算范围。若登记口径要求“该订单下全部商品”，原问题又按采购商品选择订单，必须先查询包含指定商品且满足医院、时间等条件的完整去重订单号名单，再依赖该名单统计每张订单全部商品的金额、数量，最后计算分布。商品条件仅用于入选名单，不可继续限制整单成分；不能把商品均价当成整单均价。其他客户/合同等对象同理。后续问题明确写“根据上述任务返回的完整名单”，不得把预览采样当名单。
 13. 平方、开根、对数、取余等数值计算使用后续本地计算任务，保留原始登记指标或字段作为输入，不把“平方金额”等临时结果名当成未登记数据库指标。方差、标准差、中位数、分位数、相关系数等先取得完整样本并保留正确粒度，再用aggregate；不能对已经求和的一个总数假装完成样本统计。总体与样本口径按原问题明确要求保留。纯数字运算可用无数据库依赖的计算任务。
 14. 只问指标含义、统计口径、公式或如何计算而未要求实际数值时，是说明交付，任务设置definition_only:true；保留用户要解释的指标，question写成“解释…的统计口径”。即使指标已登记或存在成分依赖，也不拆取数、计算或分析任务。查询数值并解释口径的组合请求分别保留数据任务和definition_only任务，不能把数据请求整体改成解释。
@@ -353,7 +353,7 @@ def _bind_local_calculations(boundaries, *, spec, catalog, dependencies):
                 # from a predecessor that only promises object identities.
                 task.postprocess = None
                 postprocess = {}
-        # Local operation parameters are supplied later by extraction.
+        # Calculator contracts are finalized after boundary expansion, before extraction.
         available = set().union(*(targets(result[dep]) for dep in task.depends_on)) if task.depends_on else set()
         formula_ready = bool(compound_targets) and all(
             set(dependencies[name]).issubset(available) for name in compound_targets)
@@ -615,7 +615,7 @@ def complete_boundaries(boundaries: list[TaskBoundary], *, spec: str, catalog, d
     return result
 
 
-def parameter_items(payload: dict, boundaries: list[TaskBoundary]) -> list[dict | None]:
+def parameter_items(payload: dict, boundaries: list[TaskBoundary], *, calculation_indices=()) -> list[dict | None]:
     """Join extraction by stable task index; text cannot replace a planned task."""
     items = payload.get('tasks')
     if len(boundaries) == 1 and items == [] and payload.get('intent') in {
@@ -633,6 +633,8 @@ def parameter_items(payload: dict, boundaries: list[TaskBoundary]) -> list[dict 
         if type(index) is not int or not 0 <= index < len(boundaries) or index in result:
             raise ValueError('任务参数下标缺失或重复')
         result[index] = copy.deepcopy(item.get('extraction'))
+    for index in calculation_indices:
+        result[index] = None  # Calculation parameters come only from the plan.
     if set(result) != set(range(len(boundaries))):
         raise ValueError('参数提取遗漏已规划任务')
     return [result[index] for index in range(len(boundaries))]
