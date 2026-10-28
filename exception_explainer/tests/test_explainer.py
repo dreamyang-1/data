@@ -102,6 +102,7 @@ async def test_long_model_explanation_is_not_discarded_or_truncated(monkeypatch)
     result = await explain(state, ModelConfig('https://model.invalid', 'key', 'model'), fallback='原错误')
     assert result == text
     assert 'max_tokens' not in captured[0]
+    assert '逐一写出每个名称' in captured[0]['messages'][0]['content']
 
 
 @pytest.mark.asyncio
