@@ -125,19 +125,20 @@ def test_top_level_entities_only_break_a_real_same_name_tie():
     assert not ast['ambiguity'] and ast['filters'][0]['field'] == 'dealer.level'
 
 
-def test_wrong_attribute_role_can_still_recover_same_owner_model_number():
+def test_bound_name_does_not_borrow_same_owner_model_number():
     e, k, p = fixture()
     e['过滤条件'][0].update(field='名称', value=['TDC-3'])
     ast, _ = run(e, k, p)
     assert not ast['ambiguity']
-    assert ast['filters'] == [{'field': 'dealer.model', 'operator': '=', 'value': 'TDC-3'}]
+    assert ast['filters'] == [{'field': 'dealer.name', 'operator': '=', 'value': 'TDC-3'}]
 
 
-def test_no_explicit_slot_owner_keeps_unique_cross_entity_value_recovery():
+def test_bound_field_without_explicit_owner_does_not_borrow_another_entity_value():
     e, k, p = fixture()
     e['过滤条件'] = [{'field': '商品名称', 'op': '=', 'value': ['TDC-3']}]
     ast, _ = run(e, k, p)
-    assert not ast['ambiguity'] and ast['filters'][0]['field'] == 'dealer.model'
+    assert not ast['ambiguity']
+    assert ast['filters'] == [{'field': 'hospital.level', 'operator': '=', 'value': 'TDC-3'}]
 
 
 @pytest.mark.parametrize('fault', ['owner', 'unknown_owner', 'attribute'])

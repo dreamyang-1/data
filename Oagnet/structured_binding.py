@@ -7,7 +7,7 @@ from query_binding_review import _metadata, _object, _field
 from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields, normalize_unit, time_anchor
 
 logger = logging.getLogger(__name__)
-from binding_ownership import (entity_label_candidates, field_owners, matching_dimensions, matching_fields,
+from binding_ownership import (bound_filter_catalog, entity_label_candidates, field_owners, matching_dimensions, matching_fields,
                                normalized, parameter_catalog, registered_terms, resolve_entities, value_allowed)
 from binding_errors import invoke_binding_object
 
@@ -548,10 +548,10 @@ def _vector_locate_value(values, catalog):
 def _vector_correct_filter(key, values, catalog, operator):
     """Return a unique vector-grounded field/value repair.
 
-    The structured planner's field is a hypothesis for short model/spec
-    literals. Try it first, then all value-bearing fields in this scoped
-    catalog. Cross-field repair is accepted only when every literal resolves
-    to one unique field; ties remain unresolved instead of guessing.
+    The caller supplies the current candidate scope. After field binding this
+    contains only the selected field and its published dictionary fields.
+    Before field binding it may contain several unresolved candidates. Every
+    literal must resolve to one field; ties remain unresolved.
     """
     if operator not in {'=', '!=', 'IN', 'NOT IN'} or not values:
         return None
@@ -1024,6 +1024,10 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     ast['dimensions'].append(dict(name=key, attr=choice.get('attr') if target=='dimensions' and '.' not in key else None,
                                                   level=None, granularity=granularity))
             elif target == 'filters':
+                # Field selection is complete. Every value-binding path below
+                # uses that field and its published dictionary, never siblings
+                # left over from the broader pre-binding candidate pool.
+                slot_catalog = bound_filter_catalog(slot_catalog, key)
                 if not isinstance(original, dict):
                     ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '条件必须包含 field/op/value'));continue
                 operator = str(original.get('op') or original.get('operator') or '').upper()
@@ -1048,7 +1052,7 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 ids = [] if vector_repaired else (choice.get('value_ids') or [])
                 # A model-provided value_id can point at a nearby value from
                 # the wrong field. Discard that hint for explicit codes/model
-                # literals so the widened catalog pass can resolve the value.
+                # literals; any further lookup stays in the bound field scope.
                 if ids and isinstance(ids, list) and len(ids) == len(vals) \
                         and all(type(i) is int and 0 <= i < len(catalog['values']) for i in ids) \
                         and all(isinstance(v, str) for v in vals):
@@ -1163,8 +1167,7 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 elif operator in {'=','!=','IN','NOT IN'} and any(
                     isinstance(v,str) and re.search(r'[\u4e00-\u9fff]',v) for v in vals
                 ) and not all(any(value_allowed(c, slot_catalog) and c['field']==key and c['value']==v for c in catalog['values']) for v in vals):
-                    # 模型没给 ids 时先在同表名称字段找值（省份id挂省份名），
-                    # 再退到全字段唯一定位
+                    # 模型没给 ids 时，仅在已绑定字段及其登记字典内找标准值。
                     located = (_vector_correct_filter(key, vals, slot_catalog, operator)
                                or _declared_field_locate(original.get('field') if isinstance(original, dict) else None, vals, slot_catalog)
                                or _vector_locate_value(vals, slot_catalog))
