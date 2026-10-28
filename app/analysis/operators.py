@@ -8,7 +8,7 @@ from app.analysis.multidimensional_attribution import (
     MultiDimensionalAttributionError,
     analyze_multidimensional_attribution,
 )
-from app.analysis.chain_tools.temporal_window import month_bucket_index
+from app.analysis.chain_tools.temporal_window import month_bucket_index, bucket_bounds
 
 
 class OperatorInputError(ValueError):
@@ -156,12 +156,31 @@ class FunnelAnalysisOperator:
 class StructuralShiftOperator:
     name = "structural_share_shift"
 
-    def run(self, columns, rows) -> OperatorResult:
+    def run(
+        self, columns, rows, *, metric: str | None = None,
+        dimension: str | None = None,
+    ) -> OperatorResult:
         role = _one_column(columns, ("period_role", "期间角色", "对比角色"), "期间角色")
-        value = _one_column(columns, ("金额", "销售额", "value", "metric"), "指标值")
+        if metric is None:
+            value = _one_column(columns, ("金额", "销售额", "value", "metric"), "指标值")
+        elif metric in columns:
+            value = metric
+        else:
+            raise OperatorInputError("结构变化的绑定指标列未返回")
         candidates = [column for column in columns if column not in {role, value}]
+        if dimension is not None:
+            if dimension not in candidates:
+                raise OperatorInputError("结构变化的绑定维度列未返回")
+            candidates = [dimension]
         if len(candidates) != 1:
-            raise OperatorInputError("结构变化必须返回唯一维度列")
+            display_columns = [
+                column for column in candidates
+                if not any(token in column.casefold() for token in ("编码", "代码", "编号", "标识"))
+                and not column.casefold().endswith("id")
+            ]
+            if len(display_columns) != 1:
+                raise OperatorInputError("结构变化必须返回唯一维度列")
+            candidates = display_columns
         dimension = candidates[0]
         grouped: dict[str, dict[str, float]] = {}
         for row in rows:
@@ -172,8 +191,18 @@ class StructuralShiftOperator:
             if not label or not normalized or number is None or number < 0 or normalized in grouped.setdefault(label, {}):
                 raise OperatorInputError("每个维度必须且只能包含一条基期和当前期非负数值")
             grouped[label][normalized] = number
-        if not grouped or any(set(values) != {"base", "current"} for values in grouped.values()):
-            raise OperatorInputError("所有维度必须同时具备基期和当前期")
+        if not grouped or not any("base" in values for values in grouped.values()) or not any(
+            "current" in values for values in grouped.values()
+        ):
+            raise OperatorInputError("结构变化必须同时包含基期和当前期数据")
+        missing_members = [
+            {"label": label, "missing_period": period}
+            for label, values in grouped.items()
+            for period in ("base", "current") if period not in values
+        ]
+        for values in grouped.values():
+            values.setdefault("base", 0.0)
+            values.setdefault("current", 0.0)
         base_total = sum(item["base"] for item in grouped.values())
         current_total = sum(item["current"] for item in grouped.values())
         if base_total <= 0 or current_total <= 0:
@@ -188,7 +217,11 @@ class StructuralShiftOperator:
             "base_total": base_total, "current_total": current_total,
             "shifts": shifts,
             "share_change_residual": sum(item["share_change"] for item in shifts),
-        })
+            "missing_period_members": missing_members,
+        }, ([
+            "完整分组结果中未出现的分组按该期0计入："
+            + "、".join(item["label"] for item in missing_members)
+        ] if missing_members else []))
 
 
 class MultiDimensionalAttributionOperator:
@@ -261,7 +294,12 @@ class PeriodOverPeriodOperator:
             series.append((label, float(value)))
         changes = []
         zero_base_periods = []
+        skipped_gaps = []
         for (base_label, base), (current_label, current) in zip(series, series[1:]):
+            left, right = bucket_bounds(base_label), bucket_bounds(current_label)
+            if left and right and left[1] != right[0]:
+                skipped_gaps.append(current_label)
+                continue
             rate = None if base == 0 else (current - base) / abs(base)
             if base == 0:
                 zero_base_periods.append(current_label)
@@ -279,6 +317,8 @@ class PeriodOverPeriodOperator:
             "changes": changes,
         }
         warnings = []
+        if skipped_gaps:
+            warnings.append("非相邻周期未计算环比：" + "、".join(skipped_gaps))
         if zero_base_periods:
             warnings.append(
                 "以下期间基期为0，变化率不可计算，仅提供绝对差额："
@@ -371,7 +411,9 @@ class CumulativeContributionOperator:
 
     name = "cumulative_contribution"
 
-    def run(self, columns, rows, *, threshold: float = 0.8) -> OperatorResult:
+    def run(
+        self, columns, rows, *, threshold: float = 0.8, metric: str | None = None,
+    ) -> OperatorResult:
         if not 0 < threshold < 1:
             raise OperatorInputError("累计贡献阈值必须是0到1之间的比例")
         if len(rows) < 1:
@@ -380,12 +422,22 @@ class CumulativeContributionOperator:
             column for column in columns
             if all(_number(row.get(column)) is not None for row in rows)
         ]
-        if len(numeric_columns) != 1:
-            raise OperatorInputError("累计贡献结果必须且只能包含一个数值指标列")
-        metric = numeric_columns[0]
+        if metric is None:
+            if len(numeric_columns) != 1:
+                raise OperatorInputError("累计贡献结果必须且只能包含一个数值指标列")
+            metric = numeric_columns[0]
+        elif metric not in numeric_columns:
+            raise OperatorInputError("累计贡献的绑定指标列必须包含完整数值")
         label_columns = [column for column in columns if column != metric]
         if len(label_columns) != 1:
-            raise OperatorInputError("累计贡献结果必须且只能包含一个分组标签列")
+            display_columns = [
+                column for column in label_columns
+                if not any(token in column.casefold() for token in ("编码", "代码", "编号", "标识"))
+                and not column.casefold().endswith("id")
+            ]
+            if len(display_columns) != 1:
+                raise OperatorInputError("累计贡献结果必须且只能包含一个分组标签列")
+            label_columns = display_columns
         label = label_columns[0]
         items: list[tuple[str, float]] = []
         seen: set[str] = set()

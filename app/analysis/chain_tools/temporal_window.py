@@ -10,13 +10,21 @@ import re
 from datetime import date, timedelta
 from typing import Any
 
-# 触发环比/同比计算的提问词表；编排器、规划器与引擎共用同一份定义，
-# 避免各处词表漂移后行为不一致。
-POP_SIGNALS = ("环比", "比上月", "较上月", "上月相比", "逐期环比")
-YOY_SIGNALS = ("同比", "比去年同期", "去年同期相比", "较上年同期", "比上年同期")
+# Time parsing and calendar validation remain deterministic. Analysis capability
+# selection belongs to the model plan, never to these date utilities.
+
+
+def _model_plan_required(*args, **kwargs):
+    from app.analysis.tools.plans import AnalysisToolPlanRequired
+    raise AnalysisToolPlanRequired('ANALYSIS_TOOL_PLAN_REQUIRED')
+
+
+# Compatibility names fail explicitly; none inspects question text.
+period_change_series_question = _model_plan_required
+two_period_change_question = _model_plan_required
 
 _ROLLING_TOKEN = re.compile(
-    r"(?:最近|近|过去)\s*([\d一二两三四五六七八九十]+)\s*个?\s*(半月|年|月|季度|季|周|星期)"
+    r"(?:最近|近|过去)\s*([\d一二两三四五六七八九十]+)\s*个?\s*(半月|年|季度|季|月|周|星期|天|日)"
 )
 _RANGE_SPLIT = re.compile(r"\s*(?:至|到|[~～])\s*")
 _ABSOLUTE_PERIOD = re.compile(
@@ -48,22 +56,8 @@ def normalize_grain(unit: Any) -> str | None:
     return _GRAIN_ALIASES.get(str(unit).strip().casefold())
 
 
-def has_pop_signal(question: str) -> bool:
-    return _has_comparison_signal(question, POP_SIGNALS)
-
-
-def has_yoy_signal(question: str) -> bool:
-    return _has_comparison_signal(question, YOY_SIGNALS)
-
-
-def _has_comparison_signal(question: str, signals) -> bool:
-    compact = str(question or "").replace(" ", "")
-    for token in signals:
-        for match in re.finditer(re.escape(token), compact):
-            prefix = compact[max(0, match.start() - 12):match.start()]
-            if not re.search(r"(?:不要|不用|无需|不需要|不做|不计算|不看)(?:进行|计算|分析|查看|做)?$", prefix):
-                return True
-    return False
+has_pop_signal = _model_plan_required
+has_yoy_signal = _model_plan_required
 
 
 def _cn_number(text: str) -> int | None:
@@ -98,10 +92,10 @@ def _shift_months(value: date, months: int) -> date:
 
 
 def _rolling_window_spec(time_range: str) -> tuple[int, str] | None:
-    """把“最近N个月/季/年/周”换算成 (数量, 单位)。
+    """把“最近N个月/季/年/周/天”换算成 (数量, 单位)。
 
-    月类单位统一折算成总月数；周单位返回周数，由调用方按周对齐。
-    非滚动表述返回 None。
+    月类单位统一折算成总月数；周单位返回周数，由调用方按周对齐；
+    天单位原样返回天数。非滚动表述返回 None。
     """
     match = _ROLLING_TOKEN.fullmatch(str(time_range or "").strip())
     if match is None:
@@ -110,6 +104,8 @@ def _rolling_window_spec(time_range: str) -> tuple[int, str] | None:
     if amount is None or amount <= 0:
         return None
     unit_word = match.group(2)
+    if unit_word in {"天", "日"}:
+        return amount, "day"
     if unit_word in {"周", "星期"}:
         return amount, "week"
     return amount * _RANGE_UNIT_MONTHS[unit_word], "month"
@@ -302,7 +298,12 @@ def resolve_target_window(text: str, grain: str | None, *, today: date) -> tuple
     if complete:
         if unit == "week":
             return _align_full_weeks(amount, today)
+        if unit == "day":
+            # 完整天数窗口没有可对齐的日历桶，保持原表述不改写
+            return None
         return _align_full_buckets(amount, grain or "month", today)
+    if unit == "day":
+        return today - timedelta(days=amount), today
     if unit == "week":
         return today - timedelta(weeks=amount), today
     return shift_calendar_months(today, -amount), today

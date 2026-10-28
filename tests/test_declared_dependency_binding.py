@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from app.domain.models import AgentResponse, AtomicTask, PrimaryIntent, TaskPlan
-from app.planning.calculation_bindings import materialize_computation_binding
+from app.planning.query_dependency_bindings import materialize_dependency_inputs
 from app.planning.compound_question import deduplicate_plan
 from app.planning.query_dependency_bindings import select_dependency_column
 from app.planning.task_dag import SingleQuestionPlanner, TaskInputBindingError
@@ -31,9 +31,9 @@ async def test_both_observed_wordings_pass_the_exact_declared_code(question):
         '医院':'hospital.hospital_id'})
     response=AgentResponse(request_id=uuid4(),conversation_id=chat.conversation_id,
         status='COMPLETED',intent=PrimaryIntent.DETAIL_QUERY,answer='不提供任何对象线索',dataset_id=ref.dataset_id)
-    extraction=materialize_computation_binding({'依赖绑定':[{'source_task_index':0,'source_column':'业务员'}]},
+    extraction=materialize_dependency_inputs([{'source_task_index':0,'source_column':'业务员'}],
         task_index=1,dependencies=['task-1'])
-    task=AtomicTask(task_id='task-2',question=question,depends_on=['task-1'],extraction=extraction)
+    task=AtomicTask(task_id='task-2',question=question,depends_on=['task-1'],dependency_bindings=extraction)
     result=await agent._compile_dependency_constraints(task,chat,IDENTITY,
         {'task-1':response},{'task-1':chat.conversation_id})
     assert result[0].source_column=='salesperson.salesperson_code'
@@ -43,9 +43,9 @@ async def test_both_observed_wordings_pass_the_exact_declared_code(question):
 @pytest.mark.asyncio
 async def test_order_only_dependency_is_explicit_and_missing_binding_cannot_drop_filter():
     agent=service();chat,_=context()
-    task=AtomicTask(task_id='task-2',question='任何描述',depends_on=['task-1'],extraction={'依赖绑定':[]})
+    task=AtomicTask(task_id='task-2',question='任何描述',depends_on=['task-1'],dependency_bindings=[])
     assert await agent._compile_dependency_constraints(task,chat,IDENTITY,{}, {})==[]
-    task.extraction={}
+    task.dependency_bindings=None
     with pytest.raises(DependencyConstraintError,match='BINDING_MISSING'):
         await agent._compile_dependency_constraints(task,chat,IDENTITY,{}, {})
 
@@ -62,33 +62,32 @@ def test_identical_values_or_similar_labels_do_not_merge_distinct_field_identiti
 
 
 def test_indices_resolve_once_and_deduplication_remaps_declared_query_sources():
-    extraction={'依赖绑定':[{'source_task_index':0,'source_column':'编码'}]}
+    extraction=[{'source_task_index':0,'source_column':'编码'}]
     before=copy.deepcopy(extraction)
-    resolved=materialize_computation_binding(extraction,task_index=1,task_offset=3,dependencies=['task-4'])
+    resolved=materialize_dependency_inputs(extraction,task_index=1,task_offset=3,dependencies=['task-4'])
     assert extraction==before
-    assert resolved=={'依赖绑定':[{'source_task_id':'task-4','source_column':'编码'}]}
+    assert resolved==[{'source_task_id':'task-4','source_column':'编码'}]
     plan=TaskPlan(planner='STRUCTURED_MODEL',tasks=[
         AtomicTask(task_id='task-1',question='查询对象'),
         AtomicTask(task_id='task-2',question='查询对象'),
-        AtomicTask(task_id='task-3',question='查询公司',depends_on=['task-2'],extraction={
-            '依赖绑定':[{'source_task_id':'task-2','source_column':'编码'}]})])
+        AtomicTask(task_id='task-3',question='查询公司',depends_on=['task-2'],dependency_bindings=[{'source_task_id':'task-2','source_column':'编码'}])])
     new,aliases=deduplicate_plan(plan)
     assert aliases=={'task-2':'task-1'}
-    assert new.tasks[-1].extraction['依赖绑定'][0]['source_task_id']=='task-1'
-    assert plan.tasks[-1].extraction['依赖绑定'][0]['source_task_id']=='task-2'
+    assert new.tasks[-1].dependency_bindings[0]['source_task_id']=='task-1'
+    assert plan.tasks[-1].dependency_bindings[0]['source_task_id']=='task-2'
 
 
 @pytest.mark.parametrize('index',[True,2,-1,'0'])
 def test_binding_never_creates_a_new_dependency(index):
     with pytest.raises(TaskInputBindingError):
-        materialize_computation_binding({'依赖绑定':[{'source_task_index':index,'source_column':'编码'}]},
+        materialize_dependency_inputs([{'source_task_index':index,'source_column':'编码'}],
             task_index=1,dependencies=['task-1'])
 
 
-def test_parameter_sanitization_preserves_binding_and_explicit_empty_list():
+def test_parameter_extraction_cannot_supply_dependency_inputs():
     for bindings in [[],[{'source_task_index':0,'source_column':'业务员'}]]:
         result=SingleQuestionPlanner._sanitize_extraction({'依赖绑定':bindings},intent=PrimaryIntent.DETAIL_QUERY)
-        assert result['依赖绑定']==bindings
+        assert '依赖绑定' not in result
 
 
 def test_display_label_resolves_only_through_executed_physical_field():
@@ -123,8 +122,9 @@ def test_same_display_name_on_distinct_fields_stays_ambiguous():
 def test_outer_question_binding_is_resolved_after_group_dependencies_are_attached():
     from app.planning.calculation_bindings import validate_computation_column_lineage
     from app.planning.task_dag import DecomposedTask,QuestionDecomposition
-    structured={'依赖绑定':[{'source_column':'经销商编码'}], '展示字段':[{'entity':'商品','field':'商品名称'}]}
+    structured={'展示字段':[{'entity':'商品','field':'商品名称'}]}
+    inputs=[{'source_column':'经销商编码'}]
     validate_computation_column_lineage(QuestionDecomposition(tasks=(DecomposedTask(
         question='查询前一个子问题选出的经销商销售的产品',structured=structured),)))
-    resolved=materialize_computation_binding(structured,task_index=0,task_offset=2,dependencies=['task-2'])
-    assert resolved['依赖绑定']==[{'source_task_id':'task-2','source_column':'经销商编码'}]
+    resolved=materialize_dependency_inputs(inputs,task_index=0,task_offset=2,dependencies=['task-2'])
+    assert resolved==[{'source_task_id':'task-2','source_column':'经销商编码'}]

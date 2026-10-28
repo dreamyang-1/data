@@ -3586,41 +3586,21 @@ class SQLTranslatorProd:
         return list(dict.fromkeys(starts))
 
     def _aggregate_display_dimensions(self, ast: Dict, model_id: str) -> List[Dict]:
-        """Project to-one related attributes without changing the declared grain.
-
-        GROUP BY the dependent attribute satisfies ONLY_FULL_GROUP_BY. The
-        declared to-one path means it cannot split an identity group. Unknown
-        and to-many relationships are not guessed or reduced with MIN/MAX.
-        """
+        """Project registered display fields; joins resolve through the catalog."""
         displays = ast.get('display_fields') or []
         if not isinstance(displays, list):
             raise ValueError('display_fields必须是数组')
         if not displays:
             return []
-        if not ast.get('metrics'):
-            raise ValueError('明细展示字段继续由dimensions承载')
-        starts = self._aggregate_group_entities(ast.get('dimensions') or [], model_id)
         result = []
         for item in displays:
             field = item.get('name') if isinstance(item, dict) else None
             if not isinstance(field, str) or not re.fullmatch(r'[A-Za-z_]\w*\.[A-Za-z_]\w*', field):
                 raise ValueError('展示字段必须使用已注册的表.字段')
-            table = field.split('.')[0]
             owners = [e for e in self.loader.iter_entities(model_id)
                       if any(a.get('field_mapping') == field for a in e.get('attributes') or [])]
             if not owners:
                 raise ValueError(f'展示字段未注册: {field}')
-            safe = False
-            for source in starts:
-                if self._get_entity_base_table(source, model_id) == table:
-                    continue
-                path = self._relation_path(source, table, model_id, to_one_only=True)
-                if path and all(RedisDSLLoader._canonical_cardinality(r.get('relation_type'))
-                                in {'ONE_TO_ONE', 'MANY_TO_ONE'} for r in path):
-                    safe = True
-                    break
-            if not safe:
-                raise ValueError(f'展示字段与分组实体没有唯一的N:1/1:1关联: {field}')
             if field not in {d.get('name') for d in result}:
                 result.append(dict(item))
         return result
@@ -3852,7 +3832,8 @@ class SQLTranslatorProd:
             raise ValueError(str(exc))
 
         metrics = ast.get('metrics', [])
-        dimensions = [*ast.get('dimensions', []), *self._aggregate_display_dimensions(ast, model_id)]
+        display_fields = self._aggregate_display_dimensions(ast, model_id)
+        dimensions = [*ast.get('dimensions', []), *display_fields]
         filters = ast.get('filters', [])
         time_context = ast.get('time_context')
         subject = ast.get('subject', {})
@@ -3954,6 +3935,10 @@ class SQLTranslatorProd:
             entity_code, metrics, existing_tables, model_id,
             preferred_entities=global_filter_anchors)
         include_joins(calc_formula_joins)
+        for display in display_fields:
+            table = display['name'].split('.', 1)[0]
+            if table not in existing_tables:
+                raise ValueError(f'无法找到从{main_table}到{table}的关联路径')
         if joins.fragments:
             from_clause += ' ' + ' '.join(joins.fragments)
 
@@ -4945,7 +4930,6 @@ class SQLTranslatorProd:
     def _semantic_validation_error_code(cls, message: str) -> str:
         mappings = (
             (r'^SQL_JOIN_INVALID:', 'SQL_JOIN_INVALID'),
-            (r'^展示字段与分组实体没有唯一的N:1/1:1关联:', 'AGGREGATE_DISPLAY_RELATION_UNSAFE'),
             (r'^展示字段未注册:', 'SEMANTIC_ASSET_NOT_FOUND'),
             (r'不存在(实体|指标|维度|维度字段|过滤字段)', 'SEMANTIC_ASSET_NOT_FOUND'),
             (r'Join基数未配置', 'JOIN_CARDINALITY_MISSING'),
@@ -5007,7 +4991,7 @@ class SQLTranslatorProd:
             if match is not None:
                 identity = f'不存在{match.group(1)}: {match.group(2)}'
             display_match = re.fullmatch(
-                r'展示字段(?:未注册|与分组实体没有唯一的N:1/1:1关联):\s*([A-Za-z_]\w*\.[A-Za-z_]\w*)', raw)
+                r'展示字段未注册:\s*([A-Za-z_]\w*\.[A-Za-z_]\w*)', raw)
             if display_match is not None and len(display_match.group(1)) <= 128:
                 identity = f'展示字段: {display_match.group(1)}'
         category_messages = {
@@ -5016,7 +5000,6 @@ class SQLTranslatorProd:
             'RELATIONSHIP_PATH_NOT_FOUND': '无法在已发布语义关系中找到所需的关联路径',
             'JOIN_CARDINALITY_MISSING': '关系基数未配置，已阻止可能重复累计的Join',
             'AGGREGATION_FANOUT_RISK': '一对多Join会导致指标重复累计，已阻止生成SQL',
-            'AGGREGATE_DISPLAY_RELATION_UNSAFE': '展示字段与分组对象之间缺少可确认的单一归属关系，不能安全加入汇总结果，请检查已发布的关联配置',
             'SEMANTIC_AMBIGUITY': 'DSL存在未解决的歧义',
             'QUERY_SHAPE_INVALID': '查询形态不符合语义层约束',
             'ASL_SYNTAX_INVALID': 'ASL结构不合法',

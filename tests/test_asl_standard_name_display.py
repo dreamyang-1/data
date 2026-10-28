@@ -21,74 +21,27 @@ def displayed(text):
     return json.loads(text.split("```json\n", 1)[1].split("\n```", 1)[0])
 
 
-def test_canonical_name_view_preserves_execution_ast_and_discloses_binding():
-    ast, repair = case()
-    before = deepcopy((ast, repair))
-    text = render_asl_extraction_json(ast, [repair])
-    result = displayed(text)
-    assert result["filters"] == [repair["previous_filter"]]
-    assert "P001" not in text and "P002" not in text
-    assert "标准名称展示视图" in text and "实际 SQL 保留已绑定的编码条件" in text
-    assert "`product.product_name` → `sales_order.product_code`" in text
-    assert "display_fields（展示字段）" in text
-    assert (ast, repair) == before
-    result["filters"][0]["value"] = "changed"
-    assert (ast, repair) == before
-
-
-@pytest.mark.parametrize("operator,values,bound_operator", [
-    ("IN", ["标准商品甲", "标准商品乙"], "IN"),
-    ("!=", "标准商品甲", "NOT IN"),
-    ("NOT IN", ["标准商品甲", "标准商品乙"], "NOT IN"),
+@pytest.mark.parametrize("predicate", [
+    {"field": "hospital.province_id", "operator": "=", "value": "310000"},
+    {"field": "sales_order.product_code", "operator": "IN", "value": ["P001", "P002"]},
+    {"field": "sales_order.product_code", "operator": "NOT IN", "value": ["P001"]},
+    {"field": "dealer.code", "operator": "!=", "value": "00123"},
+    {"field": "sales_order.amount_with_tax", "operator": ">", "value": 1000},
 ])
-def test_names_preserve_original_set_and_exclusion_semantics(operator, values, bound_operator):
-    ast, repair = case()
-    repair["previous_filter"].update(operator=operator, value=values)
-    ast["filters"][0]["operator"] = repair["resolved_filter"]["operator"] = bound_operator
-    assert displayed(render_asl_extraction_json(ast, [repair]))["filters"] == [repair["previous_filter"]]
-
-
-@pytest.mark.parametrize("problem", ["missing", "stale", "untrusted", "conflicting", "malformed", "bad_operator", "null_label"])
-def test_missing_or_nonmatching_mapping_keeps_actual_codes_without_guessing(problem):
-    ast, repair = case()
-    repairs = [repair]
-    if problem == "missing":
-        repairs = None
-    elif problem == "stale":
-        repair["resolved_filter"]["value"] = ["DIFFERENT"]
-    elif problem == "untrusted":
-        repair["source"] = "USER_QUESTION"
-    elif problem == "conflicting":
-        other = deepcopy(repair)
-        other["previous_filter"]["value"] = "不同的商品"
-        repairs.append(other)
-    elif problem == "bad_operator":
-        repair["previous_filter"]["operator"] = []
-    elif problem == "null_label":
-        repair["previous_filter"]["value"] = None
-    else:
-        repair["previous_filter"] = {"value": "没有字段身份"}
-    text = render_asl_extraction_json(ast, repairs)
-    expected = deepcopy(ast)
-    expected["dimensions / display_fields"] = expected.pop("dimensions")
-    assert displayed(text) == expected
-    assert "标准名称展示视图" not in text
-
-
-def test_other_literals_and_filters_are_not_rewritten_or_deduplicated():
-    ast, repair = case()
-    literals = [{"field": "sales_order.amount_with_tax", "operator": ">", "value": 1000},
-                {"field": "product.model", "operator": "=", "value": "M60 set"},
-                {"field": "dealer.code", "operator": "=", "value": "00123"}]
-    ast["filters"].extend(deepcopy(literals))
-    text = render_asl_extraction_json(ast, [repair, deepcopy(repair)])
-    assert displayed(text)["filters"] == [repair["previous_filter"], *literals]
-    assert text.count("`product.product_name` → `sales_order.product_code`") == 1
+def test_display_preserves_exact_execution_asl(predicate):
+    ast, _ = case()
+    ast["filters"] = [deepcopy(predicate), deepcopy(predicate)]
+    before = deepcopy(ast)
+    text = render_asl_extraction_json(ast)
+    assert displayed(text) == before
+    assert ast == before
+    assert "????????" not in text
+    assert "??????" not in text
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("surface", [True, False])
-async def test_both_adapter_paths_show_names_but_send_original_codes_to_sql(surface):
+async def test_both_adapter_paths_display_exact_asl_sent_to_sql(surface):
     from app.adapters.http import HttpDataRetrievalAdapter
     from app.config import Settings
     from app.domain.models import CanonicalAnalysisRequest, PrimaryIntent, TrustedIdentity
@@ -130,15 +83,10 @@ async def test_both_adapter_paths_show_names_but_send_original_codes_to_sql(surf
         else:
             result = await adapter.query(request, identity, semantic_model_id=81, business_domain_id=205)
     parsing = next(e for e in events if e["stage"] == "ASL_GENERATION" and "```json" in e["message"])
-    assert displayed(parsing["message"])["filters"] == [repair["previous_filter"]]
     translated = json.loads(client.calls[1][2]["asl"])
-    assert translated["filters"] == ast["filters"] == result.asl["filters"]
-    assert displayed(parsing["message"])["dimensions / display_fields"] == ast["dimensions"]
+    assert translated == displayed(parsing["message"]) == result.asl
+    assert displayed(parsing["message"])["dimensions"] == ast["dimensions"]
     assert translated["dimensions"] == result.asl["dimensions"] == ast["dimensions"]
     assert "dimensions / display_fields" not in translated
-    trace = next(e["message"] for e in events if e["stage"] == "SEMANTIC_QUERY_PLANNING")
-    assert '"dimensions / display_fields":' in trace
-    assert '"字段用途":"display_fields"' in trace
-    assert '"分组维度":' not in trace
     assert next(i for i, e in enumerate(events) if e == parsing) < next(
         i for i, e in enumerate(events) if e["stage"] == "SEMANTIC_QUERY_PLANNING")

@@ -213,8 +213,7 @@ async def test_numbered_three_question_chain_passes_the_actual_cohort_before_fin
     plan=TaskPlan(planner='STRUCTURED_MODEL',tasks=[
         AtomicTask(task_id='task-1',question='问题一：查询前2位业务员',extraction={**common,'指标':[{'name':'订单笔数'}]}),
         AtomicTask(task_id='task-2',question='仅对问题一选出的业务员，查询2025年含税销售总额',depends_on=['task-1'],
-            extraction={**common,'指标':[{'name':'含税销售总额'}],
-                '依赖绑定':[{'source_task_id':'task-1','source_column':'业务员'}]}),
+            dependency_bindings=[{'source_task_id':'task-1','source_column':'业务员'}], extraction={**common, '指标':[{'name':'含税销售总额'}]}),
         AtomicTask(task_id='task-3',question='对问题二的销售总额求合计，不再查询数据库',depends_on=['task-2'],
             extraction={'是否查询数据库':'否','结果操作':{'source_task_id':'task-2','operation':{
                 'type':'aggregate','group_by':[],'aggregations':[{'field':'含税销售总额','function':'sum','alias':'合计'}]}}})])

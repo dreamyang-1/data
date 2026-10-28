@@ -302,7 +302,7 @@ async def test_unscoped_external_metadata_contract_fails_closed():
 
 @pytest.mark.asyncio
 async def test_explicit_display_endpoint_with_missing_domain_provenance_is_not_called():
-    searcher = HttpEntityAttributeSearcher(base_url='http://offline.invalid', path='/entity-search', timeout_seconds=1, top_k=5, score_threshold=0)
+    searcher = HttpEntityAttributeSearcher(base_url='http://offline.invalid', path='/entity-search', top_k=5, score_threshold=0)
     assert await searcher.resolve_display_slots([{'candidate_id':'x','slot':'field','value':'name'}],
         semantic_model_id=81, business_domain_ids=[205]) == []
 
@@ -318,7 +318,7 @@ async def test_entity_value_results_require_matching_domain(monkeypatch, foreign
             'matches':[{'business_domain_id':206 if foreign else 205, 'canonical_value':'candidate'}]})
     real_client = httpx.AsyncClient
     monkeypatch.setattr(httpx, 'AsyncClient', lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs))
-    searcher = HttpEntityAttributeSearcher(base_url='http://offline.invalid', path='/entity-search', timeout_seconds=1, top_k=5, score_threshold=0)
+    searcher = HttpEntityAttributeSearcher(base_url='http://offline.invalid', path='/entity-search', top_k=5, score_threshold=0)
     if foreign:
         with pytest.raises(ValueError, match='SEMANTIC_SCOPE_MISMATCH'):
             await searcher.search('candidate', semantic_model_id=81, business_domain_id=205, business_domain_ids=[205])

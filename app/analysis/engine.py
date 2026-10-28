@@ -13,17 +13,19 @@ from app.analysis.forecasting import DeterministicForecastSelector, ForecastMode
 from app.analysis.profiling import profile_dataset
 from app.analysis.visualization import build_chart_specs
 from app.analysis.operators import AnalysisOperatorRegistry, OperatorInputError
-from app.analysis.chain_tools.composition import cumulative_contribution_threshold
+from app.analysis.chain_tools.composition import (
+    cumulative_contribution_threshold,
+    group_share_threshold,
+)
 from app.analysis.chain_tools.temporal_window import (
+    bucket_bounds,
+    in_target_window,
     detect_edge_bucket_alignment,
-    has_pop_signal,
-    has_yoy_signal,
 )
 from app.analysis.insight_discovery import discover_insights
 from app.analysis.contracts import (
     ExplicitObjectComparisonScope,
     explicit_object_comparison_scope,
-    multidimensional_operator_for_question,
     ordered_entity_metric_ranking_request,
 )
 
@@ -105,6 +107,15 @@ class AnalysisEngine:
         rows: list[dict[str, Any]],
         knowledge: KnowledgeContext,
     ) -> AnalysisOutput:
+        group_spec = next(
+            (item.split("=", 1)[1] for item in request.assumptions
+             if item.startswith("GROUP_TOP_N=")),
+            None,
+        )
+        if group_spec:
+            import json as _json
+            self._validate_shape(columns, rows)
+            return self._group_top_n(request, columns, rows, _json.loads(group_spec))
         handlers = {
             PrimaryIntent.TREND_ANALYSIS: self._trend,
             PrimaryIntent.COMPARISON_ANALYSIS: self._comparison,
@@ -136,15 +147,24 @@ class AnalysisEngine:
             )
         else:
             self._validate_shape(columns, rows)
-            output = (
-                self._ranking(request, columns, rows, knowledge)
-                if ordered_entity_metric_ranking_request(request)
-                else self._decline_ranking(request, columns, rows)
-                if self._is_decline_ranking(request)
-                else self._composable_analysis(request, columns, rows)
-                or handler(request, columns, rows, knowledge)
-            )
+            from app.analysis.tool_selection import selected_for
+            try:
+                selected = selected_for(request)
+            except ValueError as exc:
+                raise AnalysisError(str(exc)) from exc
+            output = (self._catalog_analysis(request, columns, rows, knowledge)
+                if selected is not None else handler(request, columns, rows, knowledge))
         governed_facts = dict(output.facts)
+        from app.analysis.capabilities import enrich
+        enrich(request, columns, rows, governed_facts)
+        from app.analysis.tool_selection import selected_for
+        if selected_for(request) is not None:
+            output = AnalysisOutput('已按用户指定能力完成计算；详细方法和结果见下方。',
+                output.method, governed_facts, output.warnings)
+            if request.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS and 'comparison_difference' not in selected_for(request):
+                for key in ('absolute_change', 'change_rate'):
+                    governed_facts.pop(key, None)
+            governed_facts['tool_selection'] = sorted(selected_for(request))
         governed_facts.update(
             {
                 "decision_source": "DETERMINISTIC_ALGORITHM",
@@ -153,18 +173,33 @@ class AnalysisEngine:
                 "data_profile": profile_dataset(columns, rows),
             }
         )
+        result_scope = governed_facts.get("result_scope")
+        if result_scope:
+            labels = set(result_scope["labels"])
+            rows = [row for row in rows if str(row.get(result_scope["time_column"], "")).strip() in labels]
+            governed_facts["data_profile"] = profile_dataset(columns, rows)
         governed_facts["chart_specs"] = [
             item.model_dump(mode="json")
             for item in build_chart_specs(
                 request.primary_intent, columns, rows, governed_facts
             )
         ]
+        from app.analysis.tools.execution import attach_execution_records, validate_finite_results
+        try:
+            validate_finite_results(governed_facts)
+            attach_execution_records(request, governed_facts)
+        except ValueError as exc:
+            raise AnalysisError(str(exc)) from exc
         return AnalysisOutput(
             answer=output.answer,
             method=output.method,
             facts=governed_facts,
             warnings=output.warnings,
         )
+
+    def _catalog_analysis(self, request, columns, rows, knowledge):
+        from app.analysis.tools.executors import execute
+        return execute(self, request, columns, rows, knowledge)
 
     @staticmethod
     def _is_decline_ranking(request: CanonicalAnalysisRequest) -> bool:
@@ -275,22 +310,18 @@ class AnalysisEngine:
     def _composable_analysis(
         self, request: CanonicalAnalysisRequest, columns: list[str], rows: list[dict[str, Any]]
     ) -> AnalysisOutput | None:
-        question = request.original_question.replace(" ", "")
-        operator_name = None
-        if request.primary_intent == PrimaryIntent.ROOT_CAUSE_ANALYSIS and "量价" in question:
-            operator_name = "price_volume_decomposition"
-        elif request.primary_intent == PrimaryIntent.ROOT_CAUSE_ANALYSIS:
-            operator_name = multidimensional_operator_for_question(question)
-        elif request.primary_intent == PrimaryIntent.COMPOSITION_ANALYSIS and "漏斗" in question:
-            operator_name = "funnel_conversion_analysis"
-        elif request.primary_intent == PrimaryIntent.COMPOSITION_ANALYSIS and any(
-            token in question for token in ("结构变化", "结构变动", "份额变化", "份额变动")
-        ):
-            operator_name = "structural_share_shift"
+        from app.analysis.tools.registry import registered_operator
+        selection = (getattr(request, '_analysis_contract', None) or {}).get('tool_selection')
+        operator_name = registered_operator(selection)
         if operator_name is None:
             return None
+        params = {}
+        if operator_name == "structural_share_shift":
+            params["metric"], _ = self._series(request, columns, rows)
+            if len(request.dimensions) == 1:
+                params["dimension"] = request.dimensions[0]
         try:
-            result = self.operator_registry.execute(operator_name, columns, rows)
+            result = self.operator_registry.execute(operator_name, columns, rows, **params)
         except OperatorInputError as exc:
             raise AnalysisError(str(exc)) from exc
         facts = result.facts
@@ -345,6 +376,11 @@ class AnalysisEngine:
             "algorithm_contract_version": "analysis-contract-v2",
             "data_profile": profile_dataset(columns, rows),
         })
+        result_scope = governed_facts.get("result_scope")
+        if result_scope:
+            labels = set(result_scope["labels"])
+            rows = [row for row in rows if str(row.get(result_scope["time_column"], "")).strip() in labels]
+            governed_facts["data_profile"] = profile_dataset(columns, rows)
         governed_facts["chart_specs"] = [
             item.model_dump(mode="json")
             for item in build_chart_specs(
@@ -448,7 +484,19 @@ class AnalysisEngine:
             normalized_values = reconciled
             coverage_reconciled = True
 
-        descending = AnalysisOperator.BOTTOM_N not in request.operators
+        # 结构化提取只把排序方向写入 SORT_DIRECTION，操作符里可能只有 SORT；
+        # 此时不能按“没有 BOTTOM_N 就是降序”推断，否则升序结果会被误判为乱序。
+        explicit_direction = next(
+            (value.partition("=")[2].strip().upper()
+             for value in request.assumptions
+             if value.startswith("SORT_DIRECTION=")),
+            "",
+        )
+        descending = (
+            explicit_direction == "DESC"
+            if explicit_direction in {"ASC", "DESC"}
+            else AnalysisOperator.BOTTOM_N not in request.operators
+        )
         paired = list(zip(labels, normalized_values, rows))
         expected_order = sorted(paired, key=lambda item: item[1], reverse=descending)
         if [item[0] for item in paired] != [item[0] for item in expected_order]:
@@ -709,13 +757,59 @@ class AnalysisEngine:
 
     @staticmethod
     def _labels(columns: list[str], rows: list[dict[str, Any]], metric_column: str) -> list[str]:
-        label_column = next((column for column in columns if column != metric_column), None)
-        if label_column is None:
+        candidates = [column for column in columns if column != metric_column]
+        if not candidates:
             raise AnalysisError("分析结果缺少分组或时间标签列，无法解释各行的业务含义")
+        label_column = candidates[0]
+        # 当第一列是编码型标签（如经销商ID）且另有一列可读名称时，
+        # 用名称作为分组标签，避免结果表只显示业务代码。
+        def code_like(values: list[str]) -> bool:
+            return bool(values) and all(
+                re.fullmatch(r"[A-Za-z0-9_\-]{4,}", value) and re.search(r"\d", value)
+                for value in values
+            )
+        current = [str(row.get(label_column, "")).strip() for row in rows]
+        if code_like(current):
+            for candidate in candidates[1:]:
+                values = [str(row.get(candidate, "")).strip() for row in rows]
+                if values and all(values) and not code_like(values):
+                    label_column = candidate
+                    break
         labels = [str(row.get(label_column, "")).strip() for row in rows]
         if any(not label for label in labels):
             raise AnalysisError(f"标签列“{label_column}”包含空值，无法可靠解释结果")
         return labels
+
+    @classmethod
+    def _sort_by_time_key(
+        cls, columns: list[str], rows: list[dict[str, Any]], metric: str,
+        values: list[Any],
+    ) -> tuple[list[dict[str, Any]], list[Any]]:
+        """Return rows/values ordered ascending by the time key.
+
+        Upstream SQL may legitimately order by a metric column instead of the
+        time column; trend/forecast math must not depend on that incidental
+        order. Rows whose time keys fail to parse or duplicate are returned
+        untouched so ``_temporal_labels`` still raises its precise error.
+        """
+        time_column = next(
+            (
+                column for column in columns if column != metric and any(
+                    token in column.lower()
+                    for token in ("日期", "时间", "月份", "季度", "年份", "周期", "周", "date", "time", "month", "year", "quarter", "period", "week")
+                )
+            ),
+            None,
+        )
+        if time_column is None or len(rows) != len(values):
+            return rows, values
+        keys = [cls._time_key(str(row.get(time_column, "")).strip()) for row in rows]
+        if any(key is None for key in keys) or len(keys) != len(set(keys)):
+            return rows, values
+        if keys == sorted(keys):
+            return rows, values
+        order = sorted(range(len(rows)), key=lambda index: keys[index])
+        return [rows[index] for index in order], [values[index] for index in order]
 
     @classmethod
     def _temporal_labels(
@@ -833,6 +927,89 @@ class AnalysisEngine:
         )
 
     def _trend(self, request, columns, rows, knowledge) -> AnalysisOutput:
+        contract = request._analysis_contract
+        if not contract or not contract.get("target_window"):
+            return self._trend_unscoped(request, columns, rows, knowledge)
+        target = contract["target_window"]
+        start, end = date.fromisoformat(target["start"]), date.fromisoformat(target["end_exclusive"])
+        metric, _ = self._series(request, columns, rows)
+        temporal = next((column for column in columns if column != metric and any(
+            token in column.lower() for token in ("日期", "时间", "月份", "季度", "年份", "周期", "周", "date", "time", "month", "year", "quarter", "period", "week")
+        )), None)
+        if temporal is None:
+            raise AnalysisError("趋势分析缺少时间列")
+        grain = contract.get("grain")
+        if any(bucket_bounds(str(row.get(temporal, "")), grain) is None for row in rows):
+            raise AnalysisError("时间标签与规划粒度不一致，不能静默裁剪目标范围")
+        ordered = sorted(rows, key=lambda row: bucket_bounds(str(row[temporal]), grain)[0])
+        comparison_rows = ordered
+        comparison_columns = columns
+        if len({str(row[temporal]).strip() for row in ordered}) != len(ordered):
+            totals = {}
+            for row in ordered:
+                label = str(row[temporal]).strip()
+                totals[label] = totals.get(label, 0.0) + float(self._number(row[metric]))
+            comparison_rows = [{temporal: label, metric: value} for label, value in totals.items()]
+            comparison_columns = [temporal, metric]
+        target_rows = [row for row in ordered if in_target_window(str(row[temporal]), start, end, grain)]
+        target_labels = list(dict.fromkeys(str(row[temporal]).strip() for row in target_rows))
+        target_edges = detect_edge_bucket_alignment(target_labels, start, end, grain or "month")
+        excluded = {target_edges[key] for key in ("first_partial_label", "last_partial_label") if target_edges.get(key)}
+        output = self._trend_unscoped(request, columns, target_rows, knowledge, run_comparisons=False, excluded_periods=excluded)
+        facts, warnings = dict(output.facts), list(output.warnings)
+        labels = list(dict.fromkeys(str(row[temporal]).strip() for row in target_rows))
+        facts["result_scope"] = {"target_window": target, "time_column": temporal,
+            "labels": labels, "excluded_baseline_count": len(rows) - len(target_rows)}
+        facts["display_window"] = {"start_label": labels[0], "end_label": labels[-1],
+            "start": facts["start"], "end": facts["end"], "absolute_change": facts["absolute_change"],
+            "change_rate": facts["change_rate"], "point_count": len(labels),
+            "baseline_labels": list(dict.fromkeys(str(row[temporal]) for row in ordered if row not in target_rows))}
+        total = sum(float(self._number(row[metric])) for row in target_rows)
+        facts["display_window"].update(total=total, mean=total / len(labels))
+        edge = facts["edge_bucket_integrity"]
+        partial = {edge[key] for key in ("first_partial_label", "last_partial_label") if edge.get(key)}
+        selected = set(contract.get("methods") or [])
+        for method, key in (("period_over_period_change", "period_over_period"), ("year_over_year_change", "year_over_year")):
+            if method not in selected:
+                continue
+            try:
+                computed = self.operator_registry.execute(method, comparison_columns, comparison_rows)
+            except OperatorInputError as exc:
+                warnings.append(f"{key}未计算：{exc}")
+                continue
+            result = dict(computed.facts)
+            changes = [item for item in result.get("changes", []) if item.get("to", item.get("label")) in labels]
+            comparable = []
+            for item in changes:
+                current = item.get("to", item.get("label"))
+                if current in partial or item.get("from") in partial:
+                    warnings.append(f"{current}包含不完整期间，未计算完整周期变化率")
+                    continue
+                comparable.append(item)
+            result["changes"] = comparable
+            if key == "period_over_period":
+                result["period_count"] = len(comparable)
+                warnings.extend(computed.warnings)
+                missing = set(labels) - partial - {item.get("to") for item in comparable}
+                if missing:
+                    warnings.append("以下目标期间缺少完整上期基期，环比未计算：" + "、".join(sorted(missing)))
+            else:
+                result["month_count"] = len(labels)
+                result["computable_count"] = sum(item.get("status") == "COMPUTABLE" for item in comparable)
+                missing = [item["label"] for item in comparable if item.get("status") == "NO_BASELINE"]
+                if missing:
+                    warnings.append("以下目标月份缺少上年同期基期：" + "、".join(missing))
+                if any(item.get("status") == "COMPUTABLE" and item.get("base") == 0 for item in comparable):
+                    warnings.append("同比基期为0的月份仅提供增减量，变化率不可计算")
+                if not result["computable_count"]:
+                    result.update(status="NOT_COMPUTABLE", reason="目标期没有可比较的完整上年同期基期")
+                else:
+                    result.pop("status", None)
+                    result.pop("reason", None)
+            facts[key] = result
+        return AnalysisOutput(output.answer, output.method, facts, list(dict.fromkeys(warnings)))
+
+    def _trend_unscoped(self, request, columns, rows, knowledge, *, run_comparisons=True, excluded_periods=None) -> AnalysisOutput:
         metric, values = self._series(request, columns, rows)
         aggregated_multidimensional = False
         time_column = next(
@@ -873,6 +1050,7 @@ class AnalysisEngine:
                 aggregated_multidimensional = True
         if len(values) < 2:
             raise AnalysisError("趋势分析至少需要两个有序时间点")
+        rows, values = self._sort_by_time_key(columns, rows, metric, values)
         labels = self._temporal_labels(columns, rows, metric)
         continuity = self._temporal_continuity(labels)
         edge_integrity = detect_edge_bucket_alignment(
@@ -896,7 +1074,14 @@ class AnalysisEngine:
             )
         change = values[-1] - values[0]
         pct = self._pct_change(values[0], values[-1])
-        trend_diagnostics = self._trend_diagnostics(values)
+        excluded_periods = excluded_periods or set()
+        comparable = [(label, value) for label, value in zip(labels, values) if label not in excluded_periods]
+        if len(comparable) >= 2:
+            trend_diagnostics = self._trend_diagnostics([value for _, value in comparable])
+            if excluded_periods:
+                trend_diagnostics["basis_labels"] = [label for label, _ in comparable]
+        else:
+            trend_diagnostics = {"status": "INSUFFICIENT_COMPLETE_PERIODS", "direction": "UNDETERMINED"}
         deltas = [values[index] - values[index - 1] for index in range(1, len(values))]
         change_points = [
             {
@@ -907,10 +1092,19 @@ class AnalysisEngine:
             }
             for index in range(1, len(deltas))
             if deltas[index - 1] * deltas[index] < 0
+            and not set(labels[index - 1:index + 2]).intersection(excluded_periods)
+            and all(bucket_bounds(labels[i]) and bucket_bounds(labels[i + 1])
+                    and bucket_bounds(labels[i])[1] == bucket_bounds(labels[i + 1])[0]
+                    for i in (index - 1, index))
         ]
         direction = "上升" if change > 0 else "下降" if change < 0 else "持平"
         period_changes = []
         for index in range(1, len(values)):
+            if {labels[index - 1], labels[index]}.intersection(excluded_periods):
+                continue
+            left_bucket, right_bucket = bucket_bounds(labels[index - 1]), bucket_bounds(labels[index])
+            if left_bucket and right_bucket and left_bucket[1] != right_bucket[0]:
+                continue
             delta = values[index] - values[index - 1]
             period_changes.append({
                 "from": labels[index - 1],
@@ -923,9 +1117,14 @@ class AnalysisEngine:
                     else {}
                 ),
             })
-        largest_rise = max(period_changes, key=lambda item: item["absolute_change"])
-        largest_drop = min(period_changes, key=lambda item: item["absolute_change"])
-        if all(item["absolute_change"] >= 0 for item in period_changes):
+        empty_change = {"from": None, "to": None, "absolute_change": 0, "change_rate": None}
+        largest_rise = max(period_changes, key=lambda item: item["absolute_change"], default=empty_change)
+        largest_drop = min(period_changes, key=lambda item: item["absolute_change"], default=empty_change)
+        if not period_changes:
+            pattern = "缺少连续期间"
+        elif all(item["absolute_change"] == 0 for item in period_changes):
+            pattern = "持平"
+        elif all(item["absolute_change"] >= 0 for item in period_changes):
             pattern = "持续上升"
         elif all(item["absolute_change"] <= 0 for item in period_changes):
             pattern = "持续下降"
@@ -963,11 +1162,13 @@ class AnalysisEngine:
             "UP": "上升",
             "DOWN": "下降",
             "FLAT": "基本持平",
+            "UNDETERMINED": "无法判断",
         }[trend_diagnostics["direction"]]
-        answer += (
-            f"稳健斜率判断为{robust_direction}，"
-            f"方向一致性{trend_diagnostics['direction_consistency']:.2%}。"
-        )
+        if trend_diagnostics.get("status") == "INSUFFICIENT_COMPLETE_PERIODS":
+            answer += "完整期间不足两个，未判断稳健趋势方向。"
+        else:
+            answer += (f"稳健斜率判断为{robust_direction}，"
+                       f"方向一致性{trend_diagnostics['direction_consistency']:.2%}。")
         if aggregated_multidimensional:
             answer = "按时间汇总各业务维度后，" + answer
         warnings = []
@@ -993,6 +1194,7 @@ class AnalysisEngine:
             "requested_granularity": requested_granularity,
             "actual_granularity": continuity["grain"],
             "change_points": change_points,
+            "continuous_runs": self._continuous_runs([label for label, _ in comparable], [value for _, value in comparable]),
             "multidimensional_time_aggregation": aggregated_multidimensional,
             "edge_bucket_integrity": edge_integrity,
         }
@@ -1051,7 +1253,10 @@ class AnalysisEngine:
                     "absolute_change": trimmed_values[-1] - trimmed_values[0],
                     "change_rate": self._pct_change(trimmed_values[0], trimmed_values[-1]),
                 }
-        if has_pop_signal(request.original_question):
+        if edge_integrity.get("last_bucket_partial"):
+            warnings.append(f"尾桶{edge_integrity['last_partial_label']}为不完整期间，不与完整期间直接比较")
+        from app.analysis.tool_selection import selected_for
+        if run_comparisons and 'period_over_period_change' in (selected_for(request) or set()):
             try:
                 pop_result = self.operator_registry.execute(
                     "period_over_period_change", columns, rows
@@ -1071,7 +1276,7 @@ class AnalysisEngine:
                 warnings.extend(pop_result.warnings)
             except OperatorInputError as exc:
                 warnings.append(f"环比序列未计算：{exc}")
-        if has_yoy_signal(request.original_question):
+        if run_comparisons and 'year_over_year_change' in (selected_for(request) or set()):
             try:
                 yoy_result = self.operator_registry.execute(
                     "year_over_year_change", columns, rows
@@ -1083,6 +1288,26 @@ class AnalysisEngine:
             except OperatorInputError as exc:
                 warnings.append(f"同比序列未计算：{exc}")
         return AnalysisOutput(answer, "robust_trend_diagnostics", facts, warnings)
+
+    @staticmethod
+    def _continuous_runs(labels, values):
+        runs = []
+        for index in range(1, len(values)):
+            left, right = bucket_bounds(labels[index - 1]), bucket_bounds(labels[index])
+            delta = values[index] - values[index - 1]
+            if not left or not right or left[1] != right[0] or delta == 0:
+                continue
+            direction = "UP" if delta > 0 else "DOWN"
+            if runs and runs[-1]["direction"] == direction and runs[-1]["end_label"] == labels[index - 1]:
+                run = runs[-1]
+                run.update(end_label=labels[index], end=values[index], period_count=run["period_count"] + 1)
+            else:
+                run = {"direction": direction, "start_label": labels[index - 1], "end_label": labels[index],
+                    "start": values[index - 1], "end": values[index], "period_count": 1}
+                runs.append(run)
+            run["absolute_change"] = run["end"] - run["start"]
+            run["change_rate"] = None if run["start"] == 0 else run["absolute_change"] / abs(run["start"])
+        return runs
 
     @staticmethod
     def _trend_diagnostics(values: list[float]) -> dict[str, Any]:
@@ -1129,6 +1354,9 @@ class AnalysisEngine:
         }
 
     def _comparison(self, request, columns, rows, knowledge) -> AnalysisOutput:
+        if (getattr(request, '_analysis_contract', None) or {}).get('comparison_dimensions'):
+            from app.analysis.period_comparison import compare
+            return compare(self, request, columns, rows)
         object_scope = explicit_object_comparison_scope(request)
         requested_names = [
             value
@@ -1198,6 +1426,10 @@ class AnalysisEngine:
                 "largest_change_metric": largest["metric_column"],
             })
 
+        if len(rows) > 2:
+            multi_entity = self._entity_period_growth_comparison(request, columns, rows)
+            if multi_entity is not None:
+                return multi_entity
         metric, values = self._series(request, columns, rows)
         if len(values) < 2:
             raise AnalysisError("对比分析至少需要两个可比对象或期间")
@@ -1219,6 +1451,360 @@ class AnalysisEngine:
             "base": base, "current": current, "absolute_change": change, "change_rate": pct,
             "period_order_source": order_source,
         })
+
+    def _entity_period_growth_comparison(
+        self,
+        request: CanonicalAnalysisRequest,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+    ) -> AnalysisOutput | None:
+        """Rank per-entity growth over the latest two periods of entity×period results.
+
+        “从全体对象中找出增长最快/变化最大的N个”类问题没有显式对象范围，查询结果
+        按对象×期间粒度返回多行；此时按对象聚合最新两期计算增长率并排序，而不是
+        拒绝多行结果。无法唯一确定对象列、期间列或指标列时返回 None，保留原有
+        两行对比契约的校验行为。
+        """
+        metric_column = self._growth_metric_column(request, columns, rows)
+        if metric_column is None:
+            return None
+        entity_column, period_column = self._entity_period_growth_columns(
+            request, columns, rows, metric_column
+        )
+        if entity_column is None or period_column is None:
+            return None
+        period_keys: dict[str, tuple[int, int, int]] = {}
+        for row in rows:
+            label = self._period_label(row.get(period_column))
+            key = self._period_sort_key(label) if label else None
+            if key is not None:
+                period_keys[label] = key
+        if len(period_keys) == 1:
+            return self._single_period_entity_ranking(
+                request, columns, rows, metric_column,
+                entity_column, period_column, next(iter(period_keys)),
+            )
+        if len(period_keys) < 2:
+            return None
+        ordered_periods = sorted(period_keys, key=lambda label: period_keys[label])
+        base_label, current_label = ordered_periods[-2], ordered_periods[-1]
+        values_by_entity: dict[str, dict[str, float]] = {}
+        for row in rows:
+            entity = str(row.get(entity_column, "")).strip()
+            if not entity:
+                continue
+            period = self._period_label(row.get(period_column))
+            if period not in period_keys:
+                continue
+            value = self._number(row.get(metric_column))
+            if value is None:
+                continue
+            existing = values_by_entity.setdefault(entity, {}).get(period)
+            if existing is not None and not math.isclose(
+                existing, float(value), rel_tol=1e-9, abs_tol=1e-9
+            ):
+                return None
+            values_by_entity[entity][period] = float(value)
+        if not values_by_entity:
+            return None
+        rankings: list[dict[str, Any]] = []
+        missing_base: list[str] = []
+        missing_current: list[str] = []
+        zero_base: list[str] = []
+        for entity, period_values in values_by_entity.items():
+            base = period_values.get(base_label)
+            current = period_values.get(current_label)
+            if base is None:
+                missing_base.append(entity)
+                continue
+            if current is None:
+                missing_current.append(entity)
+                continue
+            if base == 0:
+                zero_base.append(entity)
+                continue
+            rankings.append({
+                "label": entity,
+                "base_period": base_label,
+                "current_period": current_label,
+                "base": base,
+                "current": current,
+                "absolute_change": current - base,
+                "change_rate": self._pct_change(base, current),
+            })
+        rankings.sort(key=lambda item: item["change_rate"], reverse=True)
+        entity_name = self._display_column_name(entity_column)
+        metric_name = self._display_column_name(metric_column)
+        facts: dict[str, Any] = {
+            "metric_column": metric_column,
+            "label_column": entity_column,
+            "period_column": period_column,
+            "base_label": base_label,
+            "current_label": current_label,
+            "period_order_source": "period_value_order",
+            "entity_count": len(values_by_entity),
+            "ranked_entity_count": len(rankings),
+            "rankings": rankings,
+            "missing_base_entities": missing_base,
+            "missing_current_entities": missing_current,
+            "zero_base_entities": zero_base,
+            "comparison_mode": "ENTITY_PERIOD_GROWTH_RANKING",
+        }
+        warnings: list[str] = []
+        if missing_base:
+            warnings.append(
+                f"{len(missing_base)} 个对象缺少基期（{base_label}）数据，未参与增长率排名"
+            )
+        if missing_current:
+            warnings.append(
+                f"{len(missing_current)} 个对象缺少对比期（{current_label}）数据，未参与增长率排名"
+            )
+        if zero_base:
+            warnings.append(
+                f"{len(zero_base)} 个对象基期为0，无法计算变化率，未参与增长率排名"
+            )
+        if not rankings:
+            facts["selected_labels"] = []
+            return AnalysisOutput(
+                (
+                    f"结果包含 {len(values_by_entity)} 个{entity_name}，但没有对象能同时提供"
+                    f"基期（{base_label}）和对比期（{current_label}）的有效{metric_name}数值，"
+                    "无法计算增长率，已返回空排名结果。"
+                ),
+                "entity_period_growth_comparison",
+                facts,
+                warnings,
+            )
+        limit = request.ranking_limit or 10
+        shown = rankings[:limit]
+        facts["selected_labels"] = [item["label"] for item in shown]
+        headers = [
+            "排名", entity_name, "基期", "对比期", "基期值", "对比期值", "增长金额", "变化率",
+        ]
+        table_lines = [
+            "| " + " | ".join(headers) + " |",
+            "| " + " | ".join("---" for _ in headers) + " |",
+        ]
+        for index, item in enumerate(shown, 1):
+            table_lines.append("| " + " | ".join([
+                self._table_cell(index),
+                self._table_cell(item["label"]),
+                self._table_cell(item["base_period"], as_identifier=True),
+                self._table_cell(item["current_period"], as_identifier=True),
+                self._table_cell(item["base"]),
+                self._table_cell(item["current"]),
+                self._table_cell(item["absolute_change"]),
+                self._table_cell(item["change_rate"], percentage=True),
+            ]) + " |")
+        answer = (
+            f"按{entity_name}对比{metric_name}在{base_label}至{current_label}的变化，"
+            f"共 {len(rankings)} 个对象可计算增长率，按变化率从高到低排序。\n\n"
+            + "\n".join(table_lines)
+        )
+        if len(shown) < len(rankings):
+            answer += f"\n\n完整排序共 {len(rankings)} 个对象，此处仅展示前 {len(shown)} 个。"
+        return AnalysisOutput(
+            answer, "entity_period_growth_comparison", facts, warnings
+        )
+
+    def _single_period_entity_ranking(
+        self,
+        request: CanonicalAnalysisRequest,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+        metric_column: str,
+        entity_column: str,
+        period_column: str,
+        period_label: str,
+    ) -> AnalysisOutput | None:
+        """Graceful fallback when entity×period results contain only one period.
+
+        基期数据整体缺失（如同比/增长类问题中上一年无业务数据）时不再拒绝分析，
+        而是按唯一期间的指标值对对象从高到低排序输出，并如实说明无法计算增长率。
+        对象/期间/指标列无法唯一确定时不接管，保留原有校验行为。
+        """
+        totals: dict[str, float] = {}
+        for row in rows:
+            entity = str(row.get(entity_column, "")).strip()
+            if not entity:
+                continue
+            if self._period_label(row.get(period_column)) != period_label:
+                continue
+            value = self._number(row.get(metric_column))
+            if value is None:
+                continue
+            totals[entity] = totals.get(entity, 0.0) + float(value)
+        if not totals:
+            return None
+        rankings = [
+            {
+                "label": entity,
+                "period": period_label,
+                "value": value,
+                "absolute_change": None,
+                "change_rate": None,
+            }
+            for entity, value in sorted(
+                totals.items(), key=lambda item: item[1], reverse=True
+            )
+        ]
+        entity_name = self._display_column_name(entity_column)
+        metric_name = self._display_column_name(metric_column)
+        facts: dict[str, Any] = {
+            "metric_column": metric_column,
+            "label_column": entity_column,
+            "period_column": period_column,
+            "base_label": None,
+            "current_label": period_label,
+            "period_order_source": "period_value_order",
+            "entity_count": len(totals),
+            "ranked_entity_count": len(rankings),
+            "rankings": rankings,
+            "missing_base_entities": sorted(totals),
+            "missing_current_entities": [],
+            "zero_base_entities": [],
+            "comparison_mode": "ENTITY_PERIOD_SINGLE_PERIOD_RANKING",
+        }
+        warnings = [
+            f"结果中仅包含单一期间（{period_label}），缺少可对比的基期数据，"
+            "无法计算增长率；已按该期间数值从高到低排序。"
+        ]
+        limit = request.ranking_limit or 10
+        shown = rankings[:limit]
+        facts["selected_labels"] = [item["label"] for item in shown]
+        headers = ["排名", entity_name, "期间", metric_name]
+        table_lines = [
+            "| " + " | ".join(headers) + " |",
+            "| " + " | ".join("---" for _ in headers) + " |",
+        ]
+        for index, item in enumerate(shown, 1):
+            table_lines.append("| " + " | ".join([
+                self._table_cell(index),
+                self._table_cell(item["label"]),
+                self._table_cell(item["period"], as_identifier=True),
+                self._table_cell(item["value"]),
+            ]) + " |")
+        answer = (
+            f"结果中仅包含单一期间（{period_label}）的数据，缺少可对比的基期，"
+            f"无法计算增长率；已按{entity_name}的{metric_name}从高到低排序，"
+            f"共 {len(totals)} 个对象。\n\n" + "\n".join(table_lines)
+        )
+        if len(shown) < len(rankings):
+            answer += f"\n\n完整排序共 {len(rankings)} 个对象，此处仅展示前 {len(shown)} 个。"
+        return AnalysisOutput(
+            answer, "entity_period_single_period_ranking", facts, warnings
+        )
+
+    @classmethod
+    def _growth_metric_column(
+        cls,
+        request: CanonicalAnalysisRequest,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+    ) -> str | None:
+        preferred = [
+            value
+            for metric in request.metrics
+            for value in (metric.canonical_name, metric.input, metric.metric_id)
+            if value
+        ]
+        column = next((name for name in preferred if name in columns), None)
+        if column is not None:
+            return column
+        candidates = [
+            name for name in columns
+            if any(cls._number(row.get(name)) is not None for row in rows)
+            and not any(
+                token in name.lower()
+                for token in (
+                    "id", "编号", "序号", "排名", "日期", "时间", "月份",
+                    "季度", "年份", "year", "month", "date", "time", "period",
+                )
+            )
+        ]
+        return candidates[0] if len(candidates) == 1 else None
+
+    @classmethod
+    def _entity_period_growth_columns(
+        cls,
+        request: CanonicalAnalysisRequest,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+        metric_column: str,
+    ) -> tuple[str | None, str | None]:
+        non_metric = [column for column in columns if column != metric_column]
+        time_tokens = (
+            "日期", "时间", "月份", "季度", "年份", "周期", "周",
+            "date", "time", "month", "year", "quarter", "period", "week",
+        )
+        period_column = next(
+            (
+                column for column in non_metric
+                if any(token in column.lower() for token in time_tokens)
+            ),
+            None,
+        )
+        if period_column is None:
+            period_column = next(
+                (
+                    column for column in non_metric
+                    if len({
+                        label for label in (
+                            cls._period_label(row.get(column)) for row in rows
+                        ) if label
+                    }) >= 2
+                    and all(
+                        cls._period_sort_key(label) is not None
+                        for label in {
+                            cls._period_label(row.get(column)) for row in rows
+                        } if label
+                    )
+                ),
+                None,
+            )
+        candidates = [column for column in non_metric if column != period_column]
+        entity_column = None
+        for token in ("名称", "name", "编码", "code"):
+            entity_column = next(
+                (column for column in candidates if token in column.lower()), None
+            )
+            if entity_column is not None:
+                break
+        if entity_column is None:
+            dimensions = [
+                str(dimension).strip() for dimension in request.dimensions if dimension
+            ]
+            entity_column = next(
+                (
+                    column for column in candidates
+                    if column in dimensions
+                    or any(dimension and dimension in column for dimension in dimensions)
+                    or column.lower().endswith("_name")
+                ),
+                None,
+            )
+        return entity_column, period_column
+
+    @staticmethod
+    def _period_label(value: Any) -> str:
+        number = AnalysisEngine._number(value)
+        if (
+            number is not None
+            and number == number.to_integral_value()
+            and 0 < number < 100000
+        ):
+            return str(int(number))
+        return str(value).strip() if value is not None else ""
+
+    @classmethod
+    def _period_sort_key(cls, label: str) -> tuple[int, int, int] | None:
+        """Order period labels, tolerating bare 4-digit years like "2024"."""
+        key = cls._time_key(label)
+        if key is not None:
+            return key
+        if re.fullmatch(r"(?:19|20)\d{2}", label):
+            return int(label), 1, 1
+        return None
 
     def _explicit_object_comparison(
         self,
@@ -1467,8 +2053,57 @@ class AnalysisEngine:
             "对比结果无法确认基期与当前期；请查询服务返回 period_role，或返回可排序的两个时间标签"
         )
 
+    def _group_top_n(self, request, columns, rows, spec: dict[str, Any]) -> AnalysisOutput:
+        """每个分组各取指标最高的前N个对象，而不是全局前N行。"""
+        metric, values = self._series(request, columns, rows)
+        label_columns = [column for column in columns if column != metric]
+        if len(label_columns) < 2:
+            raise AnalysisError("分组TopN需要分组维度和排名对象两个标签列")
+        group_column, item_column = label_columns[0], label_columns[1]
+        limit = int(spec.get("limit") or 0)
+        if limit <= 0:
+            raise AnalysisError("分组TopN缺少有效的排名数量")
+        grouped: dict[str, list[tuple[float, str]]] = {}
+        for row, value in zip(rows, values):
+            group = str(row.get(group_column, "")).strip()
+            item = str(row.get(item_column, "")).strip()
+            if not group or not item:
+                continue
+            grouped.setdefault(group, []).append((float(value), item))
+        selected: list[dict[str, Any]] = []
+        for group in sorted(grouped):
+            ranked = sorted(grouped[group], key=lambda pair: (-pair[0], pair[1]))[:limit]
+            selected.extend(
+                {group_column: group, item_column: item, metric: value}
+                for value, item in ranked
+            )
+        table = "\n".join([
+            f"| {group_column} | {item_column} | {metric} |",
+            "| --- | --- | --- |",
+            *(
+                f"| {item[group_column]} | {item[item_column]} | "
+                f"{self._display_number(item[metric])} |"
+                for item in selected
+            ),
+        ])
+        answer = (
+            f"共 {len(grouped)} 个{group_column}，每个分组按{metric}降序取前 {limit} 个"
+            f"{item_column}。\n\n{table}"
+        )
+        facts = {
+            "grouped_top_n": selected,
+            "group_count": len(grouped),
+            "limit": limit,
+            "metric_column": metric,
+            "group_column": group_column,
+            "item_column": item_column,
+        }
+        return AnalysisOutput(answer, "grouped_top_n", facts)
+
     def _composition(self, request, columns, rows, knowledge) -> AnalysisOutput:
-        threshold = cumulative_contribution_threshold(request.original_question)
+        selection=(getattr(request,'_analysis_contract',None) or {}).get('tool_selection') or {}
+        threshold=(selection.get('parameters',{}).get('cumulative_contribution',{}).get('threshold',.8)
+            if 'cumulative_contribution' in selection.get('capabilities',[]) else None)
         if threshold is not None:
             if (
                 AnalysisOperator.TOP_N in request.operators
@@ -1477,8 +2112,9 @@ class AnalysisEngine:
                 raise AnalysisError(
                     "累计贡献要求完整分组结果，TopN预览的合计不能充当总体分母"
                 )
+            metric, _ = self._series(request, columns, rows)
             result = self.operator_registry.execute(
-                "cumulative_contribution", columns, rows, threshold=threshold
+                "cumulative_contribution", columns, rows, threshold=threshold, metric=metric,
             )
             facts = result.facts
             number = self._display_number
@@ -1511,50 +2147,55 @@ class AnalysisEngine:
         answer = f"{metric}合计 {self._display_number(total)}。" + "；".join(
             f"{item['label']}占 {item['share']:.2%}" for item in top
         ) + "。"
-        return AnalysisOutput(answer, "share_of_total", {
+        facts = {
             "metric_column": metric, "total": total, "shares": shares, "group_count": len(shares),
-        })
+        }
+        share_rule = group_share_threshold(selection.get('parameters',{}).get('composition_share'))
+        if share_rule is not None:
+            limit, inclusive = share_rule
+            qualified = [
+                item for item in shares
+                if (item["share"] >= limit if inclusive else item["share"] > limit)
+            ]
+            operator_text = "不低于" if inclusive else "超过"
+            if qualified:
+                answer += (
+                    f"占比{operator_text}{limit:.0%}的分组共 {len(qualified)} 个。"
+                )
+            else:
+                highest = shares[0] if shares else None
+                answer += (
+                    f"没有任何分组占比{operator_text}{limit:.0%}；"
+                    + (
+                        f"最高为{highest['label']}的{highest['share']:.2%}。"
+                        if highest else ""
+                    )
+                )
+            facts.update({
+                "share_threshold": limit,
+                "share_threshold_inclusive": inclusive,
+                "qualified_shares": qualified,
+                "qualified_count": len(qualified),
+            })
+        return AnalysisOutput(answer, "share_of_total", facts)
 
     def _anomaly(self, request, columns, rows, knowledge) -> AnalysisOutput:
         metric, values = self._series(request, columns, rows)
         if len(values) < 5:
             raise AnalysisError("异常检测至少需要5个有效观测点")
+        rows, values = self._sort_by_time_key(columns, rows, metric, values)
         labels = self._labels(columns, rows, metric)
-        median = statistics.median(values)
-        deviations = [abs(value - median) for value in values]
-        mad = statistics.median(deviations)
-        if mad == 0:
-            relative_floor = max(abs(median) * 0.5, 1e-9)
-            candidates = [
-                {"label": label, "value": value}
-                for label, value in zip(labels, values)
-                if abs(value - median) >= relative_floor
-            ]
-            method = "median_relative_deviation_fallback"
-        else:
-            candidates = [
-                {"label": label, "value": value, "robust_z": 0.6745 * (value - median) / mad}
-                for label, value in zip(labels, values)
-                if abs(0.6745 * (value - median) / mad) >= 3.5
-            ]
-            method = "median_absolute_deviation"
-        answer = "未发现达到稳健阈值的异常点。" if not candidates else (
-            f"发现 {len(candidates)} 个异常候选：" + "；".join(
-                f"{item['label']}={self._display_number(item['value'])}" for item in candidates[:10]
-            ) + "。异常只代表统计偏离，仍需结合业务事件核实。"
-        )
-        knowledge_candidates = [doc.content[:300] for doc in knowledge.documents[:3]]
-        if candidates and knowledge_candidates:
-            answer += (
-                "知识库中的待核实背景包括："
-                + "；".join(knowledge_candidates)
-                + "。这些背景不能单独证明异常原因。"
-            )
-        return AnalysisOutput(answer, method, {
-            "metric_column": metric, "median": median, "mad": mad,
-            "candidate_count": len(candidates), "candidates": candidates[:50],
-            "point_count": len(values), "knowledge_candidates": knowledge_candidates,
-        })
+        self._unique_labels(labels)
+        from app.analysis.anomaly_detection import detect
+        from app.analysis.tool_selection import selected_for
+        facts = detect(labels, values, selected=selected_for(request))
+        facts['metric_column'] = metric
+        candidates = facts['candidates']
+        answer = (f"多方法检测发现{len(candidates)}个异常候选。" if candidates else "所有已完成方法均未发现异常候选。")
+        answer += "异常表示统计偏离，需核实业务事件；命中方法数不代表概率。"
+        method = 'median_absolute_deviation' if facts['mad'] else 'median_relative_deviation_fallback'
+        warnings = [] if facts['time_axis']['regular'] else ['时间轴缺期或不规则，单期跳变检测未执行']
+        return AnalysisOutput(answer, method, facts, warnings)
 
     def _root_cause(self, request, columns, rows, knowledge) -> AnalysisOutput:
         contribution_columns = [
@@ -1591,7 +2232,7 @@ class AnalysisEngine:
         self._unique_labels(labels)
         absolute_total = sum(abs(value) for value in values)
         if absolute_total == 0:
-            raise AnalysisError("所有维度贡献均为0，无法形成归因排序")
+            absolute_total = 1.0  # All shares stay zero; no invented ranking effect.
         ranked = sorted(zip(labels, values), key=lambda item: abs(item[1]), reverse=True)
         drags = [(label, value) for label, value in ranked if value < 0]
         lifts = [(label, value) for label, value in ranked if value > 0]
@@ -1747,6 +2388,7 @@ class AnalysisEngine:
                 )],
             )
         try:
+            rows, values = self._sort_by_time_key(columns, rows, metric, values)
             labels = self._temporal_labels(columns, rows, metric)
         except AnalysisError as exc:
             raise AnalysisError(
@@ -1779,10 +2421,13 @@ class AnalysisEngine:
                     action="请按预测目标粒度重新聚合历史数据，或明确修改预测目标粒度。",
                 )],
             )
+        from app.analysis.tool_selection import selected_for
         try:
             result = DeterministicForecastSelector().fit_predict(
                 values,
                 non_negative=all(value >= 0 for value in values),
+                model_names=[key.split(':', 1)[1] for key in (selected_for(request) or []) if key.startswith('model:')] or None,
+                predict_next=selected_for(request) != {'forecast_backtest'},
             )
         except ForecastModelError as exc:
             raise AnalysisError(str(exc)) from exc
@@ -1792,22 +2437,32 @@ class AnalysisEngine:
             if result.validation_mape is None
             else f"{result.validation_mape:.2%}"
         )
-        answer = (
+        answer = ("已按用户要求仅完成历史模型回测，未执行下一期预测。" if result.forecast is None else (
             f"算法基于 {len(values)} 个有序历史点进行滚动回测，选择 "
             f"{result.model_name} 模型。下一期 {metric} 预测值为 "
             f"{result.forecast:g}，回测残差区间为 {result.lower:g} 至 "
             f"{result.upper:g}；验证MAE={result.validation_mae:g}，"
             f"MAPE={mape_text}。"
-        )
+        ))
         if result.diagnostics["linear_r_squared_reference"] is None:
             answer += "历史序列为常数，线性参考R²不适用。"
+        if len(values) < 12:
+            answer += "历史不足12期，本次仅为探索性预测，无法评估年度季节性，不能作为可靠经营承诺。"
         answer += "正式预测应由算法模型复核；大模型只负责总结，不参与预测决策。"
+        last_bucket = bucket_bounds(labels[-1], inferred_granularity)
+        next_start = last_bucket[1] if last_bucket else None
+        forecast_period = next_start.isoformat() if next_start else None
+        if next_start and inferred_granularity == 'month':
+            forecast_period = forecast_period[:7]
+        answer += f"预测目标期间：{forecast_period}。"
         return AnalysisOutput(
             answer=answer,
             method="deterministic_backtest_model_selection",
             facts={
                 "metric_column": metric,
                 "history_points": len(values),
+                "history_granularity": inferred_granularity,
+                "forecast_period": forecast_period,
                 "history_start": labels[0],
                 "history_end": labels[-1],
                 "forecast_horizon": 1,
@@ -1820,6 +2475,9 @@ class AnalysisEngine:
                 "validation_mape": result.validation_mape,
                 "validation_points": result.validation_points,
                 "candidate_scores": result.candidate_scores,
+                "backtests": result.backtests,
+                "forecast_quality": "EXPLORATORY" if result.validation_points < 4 or len(values) < 12
+                    or (result.validation_mape is not None and result.validation_mape > .3) else "BACKTESTED_REFERENCE",
                 "diagnostics": result.diagnostics,
                 "r_squared": result.diagnostics["linear_r_squared_reference"],
                 "slope": result.diagnostics["linear_slope_reference"],
@@ -1831,6 +2489,7 @@ class AnalysisEngine:
         metric, values = self._series(request, columns, rows)
         if len(values) < 6:
             raise AnalysisError("基线预测至少需要6个连续历史观测点")
+        rows, values = self._sort_by_time_key(columns, rows, metric, values)
         self._temporal_labels(columns, rows, metric)
         x_values = list(range(len(values)))
         x_mean, y_mean = statistics.mean(x_values), statistics.mean(values)

@@ -171,7 +171,7 @@ async def test_truncated_source_is_not_a_complete_dependency_constraint():
     response = AgentResponse(request_id=uuid4(), conversation_id="root", status="PARTIAL_SUCCESS",
                              intent=PrimaryIntent.DETAIL_QUERY, answer="预览", dataset_id=reference.dataset_id)
     task = AtomicTask(task_id="task-2", question="根据上述供应商查询商品", depends_on=["task-1"],
-        extraction={'依赖绑定':[{'source_task_id':'task-1','source_column':'supplier_code'}]})
+        dependency_bindings=[{'source_task_id':'task-1','source_column':'supplier_code'}], extraction={})
     with pytest.raises(DependencyConstraintError, match="INCOMPLETE"):
         await agent._compile_dependency_constraints(task, chat, IDENTITY,
             {"task-1": response}, {"task-1": "root"})

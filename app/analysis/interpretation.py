@@ -44,6 +44,21 @@ class StructuredAnalysisResult(BaseModel):
     internal_diagnostics: dict[str, Any] = Field(default_factory=dict)
 
 
+def _compact_lines(items: list[object], limit: int = 0) -> list[str]:
+    """按原文去重、合并换行并限制条数；不做改写，只压缩排版。"""
+    kept: list[str] = []
+    for item in items:
+        text = " ".join(str(item or "").split()).rstrip("。；;")
+        if not text:
+            continue
+        if any(text in existing or existing in text for existing in kept):
+            continue
+        kept.append(text)
+        if limit and len(kept) >= limit:
+            break
+    return kept
+
+
 class AnswerPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -79,13 +94,18 @@ class AnswerPlan(BaseModel):
         headings and no placeholder filler when there is nothing to add.
         """
         summary = "\n\n".join(item.strip() for item in (self.headline, table) if item.strip())
-        extras = list(dict.fromkeys(
-            str(item).strip()
-            for item in [*self.key_facts, *self.interpretations,
-                         *self.priorities, *self.limitations, *(notes or [])]
-            if str(item).strip()
-        ))
-        sections = [summary, "\n\n".join(extras), chart.strip()]
+        # 表格后的说明合并成两段：结论要点一段，口径与边界一段。逐条分行
+        # 会把同义提示铺成很多段，读起来重复；合并不丢内容。
+        findings = _compact_lines(
+            [*self.key_facts, *self.interpretations, *self.priorities], limit=4
+        )
+        limits = _compact_lines([*self.limitations, *(notes or [])], limit=3)
+        sections = [summary]
+        if findings:
+            sections.append("；".join(findings) + "。")
+        if limits:
+            sections.append("说明：" + "；".join(limits) + "。")
+        sections.append(chart.strip())
         return result_introduction(question, analysis=analysis) + "\n\n" + "\n\n".join(
             section for section in sections if section)
 

@@ -280,9 +280,19 @@ async def test_model_plan_without_a_formula_gets_a_bound_three_task_plan(monkeyp
     calls=[]
     async def respond(request):
         body=json.loads(request.content);calls.append(body)
-        content=({'bindings':[{'metric':'平均每单销售金额','operation':'divide','numerator':'含税销售总额',
-            'denominator':'订单笔数','format':'number'}]} if '只绑定给定规范' in body['messages'][0]['content']
-            else {'intent':'METRIC_QUERY','tasks':[{'question':ORIGINAL,'extraction':raw}]})
+        prompt = body['messages'][0]['content']
+        if '计算规划输入JSON：\n' in prompt:
+            fixed = json.loads(prompt.split('计算规划输入JSON：\n', 1)[1])
+            content = {'tasks': [{'task_index': i, 'calculation': {'排序': [], '限制': 5}}
+                                 for i in fixed['calculation_task_indices']]}
+        elif '已规划任务JSON：\n' in prompt:
+            fixed = json.loads(prompt.split('已规划任务JSON：\n', 1)[1])
+            content = {'intent': 'METRIC_QUERY', 'tasks': [{'task_index': t['task_index'],
+                'extraction': {**raw, '指标': [{'name': name} for name in t['metric_targets']],
+                               '排序': [], '限制': None}} for t in fixed['tasks']]}
+        else:
+            content = {'tasks': [{'question': ORIGINAL + '，计算平均每单销售金额',
+                                  'expected_output': '平均每单销售金额排名及人员所属公司'}]}
         return httpx.Response(200,json={'choices':[{'message':{'content':json.dumps(content,ensure_ascii=False)}}]})
     agent=service();settings=agent.settings.model_copy(update={'intent_model_enabled':True,
         'multi_question_model_enabled':True,'intent_model_api_key':SecretStr('fixture')})
@@ -294,7 +304,7 @@ async def test_model_plan_without_a_formula_gets_a_bound_three_task_plan(monkeyp
     binding=outcome.plan.tasks[-1].extraction['计算绑定']
     assert binding['numerator']['source_task_id']=='task-1'
     assert binding['denominator']['source_task_id']=='task-2'
-    assert len(calls)==2
+    assert len(calls)==3
 
 
 @pytest.mark.asyncio
