@@ -27,3 +27,17 @@
 | shanghai_pharma_company_details | NEEDS_CLARIFICATION；行数 [] | COMPLETED；行数 [0] | 未通过：基线需补充，候选返回0行，默认日期范围与首次订单日期不符 |
 
 原始上下文或授权范围缺失的其他条目仍列在回归清单的 `unresolved_context`，未计为通过。结果和日志仅保存在隔离验证环境，不提交业务数据。
+
+## 扩大测试中修改前后均失败的用例
+
+以下为用例名称；失败不等同于本次日志改动引入了对应业务问题。
+
+- `tests/test_http_adapters.py::test_semantic_entity_mention_rejects_missing_source_binding_proof`
+- `tests/test_http_adapters.py::test_ranked_partner_sales_record_range_uses_transaction_time_scope`
+- `tests/test_http_adapters.py::test_dealer_recommendation_uses_relationship_aware_retrieval_scope`
+- `tests/test_http_adapters.py::test_precomputed_metric_window_cannot_add_fact_time_scope`
+- `tests/test_http_adapters.py::test_comparison_query_requires_grouped_asl_and_adds_deterministic_hint`
+- `tests/test_http_adapters.py::test_unbounded_entity_sort_requires_metric_order_without_limit`
+- `tests/test_http_adapters.py::test_unbounded_entity_sort_rejects_hidden_limit_before_sql`
+- `tests/test_http_adapters.py::test_comparison_aggregate_without_group_dimension_fails_before_sql`
+- `tests/test_http_adapters.py::test_confirmed_metric_ignores_repeated_asl_metric_ambiguity`
