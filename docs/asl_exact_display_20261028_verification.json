@@ -1,0 +1,134 @@
+{
+  "original_display_execution_filters_equal": true,
+  "new_tests_passed": 7,
+  "critical_tests_passed": 30,
+  "full_baseline": {
+    "passed": 6125,
+    "failed": 635,
+    "errors": 8
+  },
+  "full_final": {
+    "passed": 6132,
+    "failed": 635,
+    "errors": 8
+  },
+  "old_pass_to_new_fail": [],
+  "history": [
+    {
+      "id": "shanghai_fresenius_exact_asl_display",
+      "before_status": "COMPLETED",
+      "after_status": "COMPLETED",
+      "before_rows": [
+        1
+      ],
+      "after_rows": [
+        1
+      ],
+      "same_result_fingerprint": false
+    },
+    {
+      "id": "two_brands_tier_two_enum_display_overlap",
+      "before_status": "COMPLETED",
+      "after_status": "COMPLETED",
+      "before_rows": [
+        2
+      ],
+      "after_rows": [
+        2
+      ],
+      "same_result_fingerprint": false
+    },
+    {
+      "id": "tier_three_hospital_count",
+      "before_status": "COMPLETED",
+      "after_status": "COMPLETED",
+      "before_rows": [
+        1
+      ],
+      "after_rows": [
+        1
+      ],
+      "same_result_fingerprint": false
+    },
+    {
+      "id": "unbilled_shipped_amount",
+      "before_status": "COMPLETED",
+      "after_status": "COMPLETED",
+      "before_rows": [
+        1
+      ],
+      "after_rows": [
+        1
+      ],
+      "same_result_fingerprint": false
+    },
+    {
+      "id": "two_brands_manufacturers_multirow",
+      "before_status": "COMPLETED",
+      "after_status": "COMPLETED",
+      "before_rows": [
+        12
+      ],
+      "after_rows": [
+        12
+      ],
+      "same_result_fingerprint": false
+    },
+    {
+      "id": "two_brands_tier_two_hospitals",
+      "before_status": "COMPLETED",
+      "after_status": "COMPLETED",
+      "before_rows": [
+        2
+      ],
+      "after_rows": [
+        2
+      ],
+      "same_result_fingerprint": false
+    },
+    {
+      "id": "shanghai_dealer_sales_total_threshold",
+      "before_status": "COMPLETED",
+      "after_status": "COMPLETED",
+      "before_rows": [
+        1
+      ],
+      "after_rows": [
+        32
+      ],
+      "same_result_fingerprint": false
+    },
+    {
+      "id": "shanghai_pharma_company_details",
+      "before_status": "NEEDS_CLARIFICATION",
+      "after_status": "NEEDS_CLARIFICATION",
+      "before_rows": [],
+      "after_rows": [],
+      "same_result_fingerprint": true
+    }
+  ],
+  "unverified_ids": [
+    "huashan_sales_products",
+    "shanghai_three_dealers_products",
+    "company_top5",
+    "shanghai_coverage",
+    "hospital_sales_products",
+    "semantic_entities",
+    "orthopedics",
+    "longest_cooperation",
+    "cooperation_over_three_months",
+    "dealer_duration_exact",
+    "dealer_duration_recent",
+    "supplier_first_cooperation",
+    "metric_filter_empty_metric_list_20261027",
+    "structured_stop_after_pending_20261026",
+    "earliest_dealer_amount_20261027",
+    "largest_order_after_pending_20261027",
+    "department_hospital_relation",
+    "relation_model122",
+    "city_province_relation",
+    "company_salesperson_relation",
+    "publication_error"
+  ],
+  "all_history_accepted": false
+}
