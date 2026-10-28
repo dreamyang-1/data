@@ -14,7 +14,8 @@
     {"id":"dealer_duration_exact","question":"查询筛选合作时长超3个月的经销商","expected":"同表行级合作时长公式与名称编码正常返回，超过3个月条件完整执行，不误报展示字段无唯一关联"},
     {"id":"dealer_duration_recent","question":"查询合作时间长大与3个月的经销商","expected":"保留用户实际措辞；正确识别超过3个月，返回经销商及合作时长"},
     {"id":"supplier_first_cooperation","question":"合作时长最长的供应商有哪些?第一次合作是什么时间?","expected":"选出合作时长最长的对象，并返回这些对象首次合作日期；不遗漏后续交付"},
-    {"id":"shanghai_dealer_sales_total_threshold","question":"统计上海市的含税销售总额大于100万的经销商","semantic_model_id":130,"business_domain_ids":[],"expected":"按经销商汇总含税销售总额后筛选大于100万元，不按单笔订单金额筛选；保留上海条件"}
+    {"id":"shanghai_dealer_sales_total_threshold","question":"统计上海市的含税销售总额大于100万的经销商","semantic_model_id":130,"business_domain_ids":[],"expected":"按经销商汇总含税销售总额后筛选大于100万元，不按单笔订单金额筛选；保留上海条件"},
+    {"id":"shanghai_pharma_company_details","question":"查询上药医疗器械(上海)有限公司明细数据","semantic_model_id":130,"business_domain_ids":[],"expected":"正确识别经销商实体并按经销商名称查询；销售公司名称字段没有该值时清楚说明，不冒用其他公司"}
   ],
   "unresolved_context": [
     {"id":"metric_filter_empty_metric_list_20261027","request":"过滤条件有指标字段，但是指标字段为空，没有值","missing":"用户描述的是失败形态，尚未取得与该次失败对应的完整原始业务提问、授权范围和多轮上下文；近期日志有同类指标筛选拦停，但不能用构造参数测试代替原问题端到端验收","expected":"明确说明筛选引用的指标漏提；分别说明条件值缺失、位置错误及已提取但匹配失败，不补参、不猜语义配置缺失"},
