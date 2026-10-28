@@ -595,7 +595,9 @@ def test_http_error_code_uses_stable_status_fallback() -> None:
 
 
 @pytest.mark.asyncio
-async def test_report_retrieval_preserves_original_sales_semantics_only():
+async def test_report_retrieval_preserves_original_sales_semantics_only(caplog):
+    import logging
+    caplog.set_level(logging.INFO, logger='app.observability.query_diagnostics')
     report = CanonicalAnalysisRequest(
         conversation_id="generic-sales-report",
         tenant_id="t1",
@@ -624,6 +626,10 @@ async def test_report_retrieval_preserves_original_sales_semantics_only():
         ).query(report, IDENTITY, semantic_model_id=81, business_domain_id=205)
 
     assert exc.value.code == "ASL_GENERATION_FAILED"
+    diagnostics = [json.loads(item.message.split('query_diagnostic ', 1)[1])
+                   for item in caplog.records if item.message.startswith('query_diagnostic ')]
+    assert diagnostics[-1]['stage'] == 'ASL_RECEIVED'
+    assert diagnostics[-1]['status'] == 'FAILED' and diagnostics[-1]['error_code'] == 'ASL_GENERATION_FAILED'
     payload = client.calls[0][2]
     assert report.original_question in payload["retrieval_query"]
     assert report.original_question not in payload["query"]
@@ -823,7 +829,9 @@ async def test_dependency_constraint_rejects_unfiltered_asl_before_sql_translati
 
 
 @pytest.mark.asyncio
-async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
+async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql(caplog):
+    import logging
+    caplog.set_level(logging.INFO, logger='app.observability.query_diagnostics')
     constraint = dependency_constraint()
     constrained = request().model_copy(update={
         "primary_intent": PrimaryIntent.DETAIL_QUERY,
@@ -882,6 +890,15 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
         )
 
     assert result.dataset.row_count == 1
+    diagnostics = [json.loads(item.message.split('query_diagnostic ', 1)[1])
+                   for item in caplog.records if item.message.startswith('query_diagnostic ')]
+    assert [item['stage'] for item in diagnostics] == [
+        'STRUCTURED_EXTRACTION', 'ASL_RECEIVED', 'ASL_TO_SQL', 'SQL_TRANSLATION',
+        'SQL_EXECUTION', 'SQL_EXECUTION']
+    assert diagnostics[-2]['status'] == 'STARTED'
+    assert diagnostics[-1]['status'] == 'COMPLETED' and diagnostics[-1]['row_count'] == 1
+    assert all(item['request_id'] == str(constrained.request_id) for item in diagnostics)
+    assert '经销商A' not in json.dumps(diagnostics, ensure_ascii=False)
     assert [call[1] for call in client.calls] == ["/agent/query", "/api/translate", "/api/execute"]
     assert "dept_name" in client.calls[0][2]["retrieval_query"]
     assert "Internal DAG semantic retrieval requirement" in client.calls[0][2]["retrieval_query"]

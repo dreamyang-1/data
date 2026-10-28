@@ -28,7 +28,9 @@ def blocked_request(*, model=130, kind='context', phrase='时间字段'):
 
 
 @pytest.mark.asyncio
-async def test_structured_pending_gets_model_reason_and_reference_without_changing_choices(monkeypatch):
+async def test_structured_pending_gets_model_reason_and_reference_without_changing_choices(monkeypatch, caplog):
+    import logging
+    caplog.set_level(logging.INFO, logger='app.observability.query_diagnostics')
     captured = mock_model(monkeypatch)
     async def reference(settings, scope):
         assert scope == SCOPE
@@ -56,6 +58,11 @@ async def test_structured_pending_gets_model_reason_and_reference_without_changi
     assert result.answer != response.answer and response.answer not in result.answer
     assert '前后两次' in result.answer
     assert result.model_dump(exclude={'answer'}) == response.model_dump(exclude={'answer'})
+    records = [json.loads(item.message.split('query_diagnostic ', 1)[1])
+               for item in caplog.records if item.message.startswith('query_diagnostic ')]
+    assert records[0]['stage'] == 'STRUCTURED_BLOCKER'
+    assert records[0]['asl']['ambiguity'][0]['type'] == 'context'
+    assert 'private-result' not in json.dumps(records)
 
 
 @pytest.mark.asyncio

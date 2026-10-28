@@ -33,7 +33,9 @@ def request(stale=False):
 @pytest.mark.parametrize("stale", [False, True])
 @pytest.mark.parametrize("dimensions", [[], [{"name": "hospital.hospital_name"}], [{"name": "city"}]])
 @pytest.mark.asyncio
-async def test_surface_progress_uses_final_metrics_without_mutating_execution(monkeypatch, metrics, stale, dimensions):
+async def test_surface_progress_uses_final_metrics_without_mutating_execution(monkeypatch, caplog, metrics, stale, dimensions):
+    import logging
+    caplog.set_level(logging.INFO, logger='app.observability.query_diagnostics')
     asl = {"version": "2.0", "subject": {"entity": "hospital"},
            "metrics": metrics, "dimensions": dimensions, "filters": [], "ambiguity": []}
     async def generate(*args, **kwargs):
@@ -53,6 +55,13 @@ async def test_surface_progress_uses_final_metrics_without_mutating_execution(mo
     assert original.model_dump() == before
     assert result.asl == asl == json.loads(client.calls[0][2]["asl"])
     assert client.calls[1][2]["sql"] == "SELECT 1 AS result"
+    diagnostics = [json.loads(item.message.split('query_diagnostic ', 1)[1])
+                   for item in caplog.records if item.message.startswith('query_diagnostic ')]
+    assert [item['stage'] for item in diagnostics] == [
+        'STRUCTURED_EXTRACTION', 'ASL_RECEIVED', 'ASL_TO_SQL', 'SQL_TRANSLATION',
+        'SQL_EXECUTION', 'SQL_EXECUTION']
+    assert diagnostics[0]['extraction']['present'] is False
+    assert diagnostics[1]['asl']['dimensions'] == dimensions
     message = next(e["message"] for e in events if e["stage"] == "SEMANTIC_QUERY_PLANNING")
     assert "指标绑定=" not in message
     assert "旧指标" not in message and "stale_metric" not in message
