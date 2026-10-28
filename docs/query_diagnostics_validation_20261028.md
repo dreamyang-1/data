@@ -1,0 +1,29 @@
+# 查询诊断日志隔离回归（2026-10-28）
+
+新增日志的专项测试 24 项通过；扩大范围基线 155 通过、9 失败，修改后 158 通过、相同 9 失败，无新增失败或收集错误。按发布约定，存在测试失败时暂不部署。
+
+隔离环境从正常请求入口执行真实问题：销售总额案例的日志依次显示结构化维度为空、ASL 维度为空、SQL 无 GROUP BY 但有 HAVING、返回 1 行；另一次同问题返回 32 行。公司明细的一次结果为 0 行，日志记录了默认时间范围被绑定到经销商首次订单日期；该日期此前查得为 2022 年，不在默认窗口内。这些是独立的业务问题，本次只补日志，不修改查询。
+
+历史问题在相同语义模型和业务域下使用独立会话、有界并发执行；部署前基线使用同日已有线上回归。以下状态和行数不能代替完整业务核验。
+
+| 问题标识（原文及授权范围见回归清单） | 线上基线 | 隔离候选 | 核验状态 |
+| --- | --- | --- | --- |
+| two_brands_manufacturers_multirow | COMPLETED；行数 [7] | COMPLETED；行数 [7] | 已执行；业务内容未逐项核验 |
+| two_brands_tier_two_hospitals | COMPLETED；行数 [2] | COMPLETED；行数 [2] | 已执行；业务内容未逐项核验 |
+| huashan_sales_products | COMPLETED；行数 [1, 926] | COMPLETED；行数 [1, 926] | 已执行；业务内容未逐项核验 |
+| shanghai_three_dealers_products-turn1 | COMPLETED；行数 [3] | COMPLETED；行数 [3] | 已执行；业务内容未逐项核验 |
+| shanghai_three_dealers_products-turn2 | COMPLETED；行数 [396] | COMPLETED；行数 [396] | 未完全核验：需确认是否按三家分别返回 |
+| company_top5 | COMPLETED；行数 [89, 89, 5, 5] | COMPLETED；行数 [89, 89, 5, 5] | 已执行；业务内容未逐项核验 |
+| shanghai_coverage | COMPLETED；行数 [589, 1, 589] | COMPLETED；行数 [589, 1, 589] | 已执行；业务内容未逐项核验 |
+| hospital_sales_products | COMPLETED；行数 [1, 5] | COMPLETED；行数 [1, 5] | 已执行；业务内容未逐项核验 |
+| semantic_entities | COMPLETED；行数 [] | COMPLETED；行数 [] | 已执行；业务内容未逐项核验 |
+| orthopedics | COMPLETED；行数 [1] | COMPLETED；行数 [1] | 已执行；业务内容未逐项核验 |
+| longest_cooperation | NEEDS_CLARIFICATION；行数 [] | COMPLETED；行数 [1] | 执行不稳定：基线需补充，候选完成；单独拦停案例日志已核验 |
+| cooperation_over_three_months | COMPLETED；行数 [1000] | COMPLETED；行数 [2154] | 部分：基线或候选结果受1000条上限/对象口径影响 |
+| dealer_duration_exact | COMPLETED；行数 [1000] | COMPLETED；行数 [1000] | 部分：基线或候选结果受1000条上限/对象口径影响 |
+| dealer_duration_recent | COMPLETED；行数 [1000] | COMPLETED；行数 [1000] | 部分：基线或候选结果受1000条上限/对象口径影响 |
+| supplier_first_cooperation | COMPLETED；行数 [1000] | COMPLETED；行数 [1000] | 部分：基线或候选结果受1000条上限/对象口径影响 |
+| shanghai_dealer_sales_total_threshold | COMPLETED；行数 [1] | COMPLETED；行数 [32] | 未完全通过：独立复测出现未分组及正确分组两种结果 |
+| shanghai_pharma_company_details | NEEDS_CLARIFICATION；行数 [] | COMPLETED；行数 [0] | 未通过：基线需补充，候选返回0行，默认日期范围与首次订单日期不符 |
+
+原始上下文或授权范围缺失的其他条目仍列在回归清单的 `unresolved_context`，未计为通过。结果和日志仅保存在隔离验证环境，不提交业务数据。
