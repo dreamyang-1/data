@@ -80,25 +80,56 @@ def test_value_id_from_other_dictionary_cannot_override_resolved_field():
     assert not ast['ambiguity'] and ast['filters'][0]['field'] == name_field
 
 
-def test_bound_text_field_cannot_borrow_a_sibling_fields_value():
+@pytest.mark.parametrize('current_has_value', [False, True])
+def test_text_field_expands_only_when_current_field_has_no_value(current_has_value):
     extraction, knowledge, decision, *_ = case()
     extraction['过滤条件'][0].update(field='名称', value=['正常'])
     knowledge['entity_attribute_values'].append(Obj(metadata={'entity_code': 'hospital',
         'attr_code': 'status', 'source_field': 'hospital.status', 'attr_value': '正常'}))
     decision['filters'][0]['key'] = 'hospital.name'
+    if current_has_value:
+        knowledge['entity_attribute_values'].append(Obj(metadata={'entity_code': 'hospital',
+            'attr_code': 'name', 'source_field': 'hospital.name', 'attr_value': '正常'}))
     ast = run(extraction, knowledge, decision)
-    assert ast['ambiguity'] and not ast['filters']
+    assert not ast['ambiguity']
+    assert ast['filters'] == [{'field': 'hospital.name' if current_has_value else 'hospital.status',
+                               'operator': '=', 'value': '正常'}]
 
 
 @pytest.mark.parametrize('missing', ['relation', 'authorized_field', 'value'])
-def test_missing_bound_dictionary_evidence_cannot_use_other_dictionary(missing):
-    extraction, knowledge, decision, _, name_field, _ = case()
+def test_empty_bound_dictionary_can_expand_within_authorized_scope(missing):
+    extraction, knowledge, decision, _, name_field, other = case()
     if missing == 'relation':
         knowledge['relations'] = knowledge['relations'][1:]
     elif missing == 'authorized_field':
         knowledge['_vector_authorized_fields'].remove(name_field)
     else:
         knowledge['entity_attribute_values'] = knowledge['entity_attribute_values'][1:]
+    ast = run(extraction, knowledge, decision)
+    assert not ast['ambiguity']
+    assert ast['filters'] == [{'field': other, 'operator': '=', 'value': '上海市'}]
+
+
+def test_partial_in_match_does_not_switch_to_another_dictionary():
+    extraction, knowledge, decision, _, _, other = case()
+    extraction['过滤条件'][0].update(op='IN', value=['上海', '北京'])
+    knowledge['entity_attribute_values'].append(Obj(metadata={'entity_code': 'city',
+        'attr_code': 'name', 'source_field': other, 'attr_value': '北京市'}))
+    ast = run(extraction, knowledge, decision)
+    assert ast['ambiguity'] and not ast['filters']
+
+
+@pytest.mark.parametrize('fault', ['unauthorized', 'unrelated_owner', 'ambiguous'])
+def test_expansion_still_requires_unique_authorized_owner_scoped_evidence(fault):
+    extraction, knowledge, decision, _, _, other = case()
+    knowledge['entity_attribute_values'] = knowledge['entity_attribute_values'][1:]
+    if fault == 'unauthorized':
+        knowledge['_vector_authorized_fields'].remove(other)
+    elif fault == 'unrelated_owner':
+        knowledge['relations'] = knowledge['relations'][:1]
+    else:
+        knowledge['entity_attribute_values'].append(Obj(metadata={'entity_code': 'hospital',
+            'attr_code': 'status', 'source_field': 'hospital.status', 'attr_value': '上海市'}))
     ast = run(extraction, knowledge, decision)
     assert ast['ambiguity'] and not ast['filters']
 
@@ -111,10 +142,12 @@ def test_two_values_within_same_bound_field_remain_ambiguous():
     assert ast['ambiguity'] and not ast['filters']
 
 
-@pytest.mark.parametrize('surface,expected', [(37, 37), ('003100', '003100')])
+@pytest.mark.parametrize('surface,expected', [(37, 37), ('003100', '003100'), ('K1', 'K1')])
 def test_bound_field_keeps_numeric_thresholds_and_explicit_codes(surface, expected):
-    extraction, knowledge, decision, source, *_ = case()
+    extraction, knowledge, decision, source, _, other = case()
     extraction['过滤条件'][0]['value'] = [surface]
+    knowledge['entity_attribute_values'].append(Obj(metadata={'entity_code': 'city',
+        'attr_code': 'name', 'source_field': other, 'attr_value': str(surface)}))
     ast = run(extraction, knowledge, decision)
     assert not ast['ambiguity']
     assert ast['filters'] == [{'field': source, 'operator': '=', 'value': expected}]

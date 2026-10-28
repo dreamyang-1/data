@@ -383,8 +383,8 @@ def _test_enum_labels_are_available_to_vector_binding():
     assert ast['filters'][0]['value'] == ['3', '5']
 
 
-def test_alphanumeric_literal_keeps_bound_field_when_model_id_belongs_elsewhere():
-    """A bound field cannot be replaced merely because a sibling contains the value."""
+def test_alphanumeric_literal_can_expand_when_bound_field_has_no_value_match():
+    """A complete miss permits a unique match in the original authorized pool."""
     extraction, knowledge, plan = dealer_list_fixture()
     product = next(
         entity for entity in knowledge['entities']
@@ -416,9 +416,9 @@ def test_alphanumeric_literal_keeps_bound_field_when_model_id_belongs_elsewhere(
 
     assert not any(item.get('type') == 'filter' for item in ast['ambiguity'])
     assert ast['filters'] == [{
-        'field': 'product.product_name', 'operator': '=', 'value': 'TDC-3',
+        'field': 'product.product_model', 'operator': '=', 'value': 'TDC-3',
     }]
-    assert not any(item['type'] == 'VECTOR_FILTER_VALUE_CORRECTED' for item in repairs)
+    assert any(item['type'] == 'VECTOR_FILTER_VALUE_CORRECTED' for item in repairs)
 
 
 def test_structured_time_unit_overrides_model_temporal_grain():

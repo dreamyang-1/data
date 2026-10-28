@@ -528,6 +528,20 @@ def _vector_matches(field, surface, catalog):
     return matches
 
 
+def _filter_value_catalog(key, values, catalog, operator):
+    """Prefer the resolved field; expand only when its value domain has no hits."""
+    bound = bound_filter_catalog(catalog, key)
+    if (operator not in {'=', '!=', 'IN', 'NOT IN'} or not values
+            or any(not isinstance(value, str) or _temporal_bounds(value) for value in values)):
+        return bound
+    if _field_is_identifier(key, catalog['fields'].get(key)) and all(
+            re.fullmatch(r'[0-9A-Za-z][0-9A-Za-z\-/\.]*', value or '') for value in values):
+        return bound  # Explicit identifiers stay on the selected field.
+    if any(_vector_matches(field, value, bound) for field in bound['fields'] for value in values):
+        return bound  # Partial matches and ambiguity are not an empty domain.
+    return catalog  # Only the original authorized, owner-scoped candidate pool.
+
+
 def _vector_locate_value(values, catalog):
     """字段没绑上时，过滤值在授权字段上唯一命中即视为字段+值可代绑定；多义维持澄清。"""
     selected, corrected = None, []
@@ -548,10 +562,9 @@ def _vector_locate_value(values, catalog):
 def _vector_correct_filter(key, values, catalog, operator):
     """Return a unique vector-grounded field/value repair.
 
-    The caller supplies the current candidate scope. After field binding this
-    contains only the selected field and its published dictionary fields.
-    Before field binding it may contain several unresolved candidates. Every
-    literal must resolve to one field; ties remain unresolved.
+    The caller first checks the selected field and its published dictionary.
+    Only an empty match permits expansion to the original authorized scope.
+    Every literal must resolve to one field; ties remain unresolved.
     """
     if operator not in {'=', '!=', 'IN', 'NOT IN'} or not values:
         return None
@@ -1024,16 +1037,14 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     ast['dimensions'].append(dict(name=key, attr=choice.get('attr') if target=='dimensions' and '.' not in key else None,
                                                   level=None, granularity=granularity))
             elif target == 'filters':
-                # Field selection is complete. Every value-binding path below
-                # uses that field and its published dictionary, never siblings
-                # left over from the broader pre-binding candidate pool.
-                slot_catalog = bound_filter_catalog(slot_catalog, key)
                 if not isinstance(original, dict):
                     ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '条件必须包含 field/op/value'));continue
                 operator = str(original.get('op') or original.get('operator') or '').upper()
                 value = original.get('value'); vals = value if isinstance(value, list) else [value]
                 if operator not in OPERATORS or not vals or any(v is None or isinstance(v, (dict,list,bool)) or v == '' for v in vals):
                     ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '运算符或条件值缺失/不支持'));continue
+                # Prefer this field; only a complete miss permits expansion.
+                slot_catalog = _filter_value_catalog(key, vals, slot_catalog, operator)
                 corrected = _vector_correct_filter(key, vals, slot_catalog, operator)
                 vector_repaired = False
                 if corrected is not None:
@@ -1052,7 +1063,7 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 ids = [] if vector_repaired else (choice.get('value_ids') or [])
                 # A model-provided value_id can point at a nearby value from
                 # the wrong field. Discard that hint for explicit codes/model
-                # literals; any further lookup stays in the bound field scope.
+                # literals; any further lookup stays in the selected scope.
                 if ids and isinstance(ids, list) and len(ids) == len(vals) \
                         and all(type(i) is int and 0 <= i < len(catalog['values']) for i in ids) \
                         and all(isinstance(v, str) for v in vals):
@@ -1167,7 +1178,7 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 elif operator in {'=','!=','IN','NOT IN'} and any(
                     isinstance(v,str) and re.search(r'[\u4e00-\u9fff]',v) for v in vals
                 ) and not all(any(value_allowed(c, slot_catalog) and c['field']==key and c['value']==v for c in catalog['values']) for v in vals):
-                    # 模型没给 ids 时，仅在已绑定字段及其登记字典内找标准值。
+                    # 沿用前面选定的范围；当前字段有候选时不得扩大范围。
                     located = (_vector_correct_filter(key, vals, slot_catalog, operator)
                                or _declared_field_locate(original.get('field') if isinstance(original, dict) else None, vals, slot_catalog)
                                or _vector_locate_value(vals, slot_catalog))
