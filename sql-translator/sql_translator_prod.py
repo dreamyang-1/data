@@ -46,6 +46,14 @@ MAX_JOIN_PATH_SEGMENTS = 10_000
 load_workspace_env()
 
 
+class ProjectionAliasConflict(ValueError):
+    """A known output-column conflict, distinct from arbitrary internal errors."""
+
+    def __init__(self, alias):
+        self.alias = alias
+        super().__init__(f"列别名重复: {alias}")
+
+
 def _positive_int(value: Any, field_name: str = "semantic_model_id") -> int:
     """Parse an externally supplied identifier without accepting bool/floats/globs."""
     if isinstance(value, bool):
@@ -2477,16 +2485,19 @@ class SQLTranslatorProd:
         return (dialect or sql_dialects.mysql_dialect()).time_bucket(field_ref, granularity)
 
 
-    def _build_select_clause(self, metrics: List[Dict], dimensions: List[Dict], entity_code: str, model_id: Optional[str] = None, dialect=None) -> str:
+    def _build_select_clause(self, metrics: List[Dict], dimensions: List[Dict], entity_code: str, model_id: Optional[str] = None, dialect=None, display_fields=None) -> str:
         """构建 SELECT 子句"""
         effective_dialect = dialect or sql_dialects.mysql_dialect()
         select_parts = []
         output_aliases = set()
         projected_expressions = set()
+        grouped_outputs = set()
         main_table = self._get_entity_base_table(entity_code, model_id) if entity_code else entity_code
 
         # 先添加维度字段
-        for dim in dimensions:
+        projections = [(dim, False) for dim in dimensions]
+        projections.extend((field, True) for field in (display_fields or []))
+        for dim, is_display in projections:
             dim_code = dim['name']
             dim_def = self._get_dimension(dim_code, model_id)
             dim_alias = self._dimension_alias(
@@ -2522,21 +2533,30 @@ class SQLTranslatorProd:
 
             field_ref = self._apply_time_granularity(field_ref, granularity, effective_dialect)
             expr, alias = self._build_dim_expression(dim_code, field_ref, dim_alias, model_id)
+            # An enum's label expression differs from its physical display field.
+            # Share that output only when both source (including time grain) and
+            # alias match; different fields with the same alias remain an error.
+            if is_display and (field_ref, alias) in grouped_outputs:
+                continue
             if expr in projected_expressions:
                 continue
             projected_expressions.add(expr)
             if alias in output_aliases:
-                raise ValueError(f"列别名重复: {alias}")
+                raise ProjectionAliasConflict(alias)
             output_aliases.add(alias)
             select_parts.append(effective_dialect.select_alias(expr, alias))
+            if not is_display:
+                grouped_outputs.add((field_ref, alias))
             if dim_def and dim_def.get('dim_type') == '枚举维度' and dim_def.get('enum_list'):
                 # Keep the registered grouping identity beside its display
                 # label, as for existing entity display companions.
                 identity_alias = f'{dim_alias}（编码）'
                 if identity_alias in output_aliases:
-                    raise ValueError(f'列别名重复: {identity_alias}')
+                    raise ProjectionAliasConflict(identity_alias)
                 output_aliases.add(identity_alias)
                 select_parts.append(effective_dialect.select_alias(field_ref, identity_alias))
+                if not is_display:
+                    grouped_outputs.add((field_ref, identity_alias))
 
 
         # 再添加指标
@@ -2552,7 +2572,7 @@ class SQLTranslatorProd:
             if not formula:
                 raise ValueError(f"指标缺少计算公式: {metric_code}")
             if alias in output_aliases:
-                raise ValueError(f"列别名重复: {alias}")
+                raise ProjectionAliasConflict(alias)
             output_aliases.add(alias)
 
             # 参数占位符替换
@@ -4022,7 +4042,10 @@ class SQLTranslatorProd:
         if joins.fragments:
             from_clause += ' ' + ' '.join(joins.fragments)
 
-        select_clause = self._build_select_clause(metrics, dimensions, entity_code, model_id, dialect)
+        select_clause = self._build_select_clause(
+            metrics, group_dimensions, entity_code, model_id, dialect,
+            display_fields=display_fields,
+        )
 
         # 时间条件
         time_conditions = []
@@ -5065,6 +5088,9 @@ class SQLTranslatorProd:
         raw = str(exc)
         code = cls._semantic_validation_error_code(raw)
         identity: Optional[str] = None
+        alias_conflict = isinstance(exc, ProjectionAliasConflict)
+        if alias_conflict:
+            code = 'DUPLICATE_OUTPUT_COLUMN'
         confirmed = isinstance(exc, ValueError) and code != 'SEMANTIC_VALIDATION_FAILED'
         if confirmed:
             # Keep the unresolved catalog identifier only when the full message is
@@ -5092,7 +5118,17 @@ class SQLTranslatorProd:
             'ASL_SYNTAX_INVALID': 'ASL结构不合法',
             'SEMANTIC_VALIDATION_FAILED': '语义校验失败',
         }
-        if confirmed:
+        if alias_conflict:
+            safe_alias = (exc.alias if isinstance(exc.alias, str) and
+                          re.fullmatch(r'[\w（）()·]{1,80}', exc.alias) else None)
+            column = f'都叫“{safe_alias}”' if safe_alias else '名称相同'
+            public_message = (f'结果中有两列{column}，生成查询时无法区分，查询尚未执行。'
+                              '需要系统维护人员处理重复的结果列。')
+            report = cls._failed_semantic_validation_report(public_message)
+            report['errors'][0].update(code=code, layer='BUSINESS')
+            for name, details in report['layers'].items():
+                details['status'] = 'FAIL' if name == 'business' else 'NOT_RUN'
+        elif confirmed:
             category = category_messages.get(code, '语义校验失败')
             if identity is not None:
                 public_message = f'SQL生成失败: {category}（{identity}）'
@@ -5124,6 +5160,8 @@ class SQLTranslatorProd:
         }
         if confirmed:
             payload['semantic_validation_report'] = report
+        if alias_conflict:
+            payload['business_query_submitted'] = False
         return payload
 
     def _execution_defaults(
