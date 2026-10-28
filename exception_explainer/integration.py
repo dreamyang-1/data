@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 
 from app.observability.langfuse_client import trace_generation
+from app.observability.query_diagnostics import record as record_query_diagnostic
 from app.services.error_explanations import explain_unexpected_failure
 
 from .diagnostics import Diagnostics, begin, end, redact, bounded_detail, _current
@@ -38,6 +39,10 @@ def record_parameter_blocker(request, *, source_stage: str) -> None:
         'metrics': list(request.metrics), 'dimensions': list(request.dimensions),
         'filters': list(request.filters),
     }))
+    record_query_diagnostic('STRUCTURED_BLOCKER', request,
+                            extraction=getattr(extraction, 'structured', None),
+                            asl={'ambiguity': ambiguities}, status='BLOCKED',
+                            error_code=source_stage)
 
 
 def _config(settings):

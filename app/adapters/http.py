@@ -44,6 +44,7 @@ from app.services.knowledge_retrieval import (
 )
 from app.services.progress import emit_progress
 from app.observability.call_timing import track_operation
+from app.observability.query_diagnostics import record as record_query_diagnostic
 from app.presentation import (
     SEMANTIC_QUERY_TOOL_NAME,
     SQL_EXECUTION_TOOL_NAME,
@@ -2164,6 +2165,11 @@ class HttpDataRetrievalAdapter:
                 "result entity: "
                 + ", ".join(dependency_fields)
             )
+        record_query_diagnostic(
+            'STRUCTURED_EXTRACTION', request,
+            extraction=request._planner_extraction.structured if request._planner_extraction else None,
+            status='READY',
+        )
         asl_cache_key: str | None = None
         cacheable_asl = (
             not request.dependency_constraints
@@ -2218,61 +2224,72 @@ class HttpDataRetrievalAdapter:
                 if expires_at > time.monotonic():
                     asl = copy.deepcopy(cached_asl)
                     asl_repairs = copy.deepcopy(cached_repairs)
+                    record_query_diagnostic('ASL_RECEIVED', request, asl=asl,
+                                            extraction=request._planner_extraction.structured if request._planner_extraction else None,
+                                            repairs=asl_repairs, status='CACHE_HIT')
                     intent_contract_confirmed = intent_asl_contract is not None
                 else:
                     self._asl_plan_cache.pop(asl_cache_key, None)
         if asl is None:
-            with track_operation(
-                "UPSTREAM",
-                "upstream.oagnet.asl_generation",
-                attributes={"retryable": True},
-            ) as timing:
-                generated = await self.client.post(
-                    self.settings.asl_generator_base_url,
-                    self.settings.asl_generator_path,
-                    {
-                    "query": asl_query,
-                    "completed_question": semantic_query,
-                    "retrieval_query": retrieval_query,
-                    "structured_reference": self._structured_asl_reference(request),
-                    "structured_extraction": (request._planner_extraction.structured
-                        if request._planner_extraction else None),
-                    "semantic_model_id": semantic_model_id,
-                    **oagent_execution_scope,
-                    "metric_ids": [
-                        metric.metric_id
-                        for metric in request.metrics
-                        if metric.metric_id is not None
-                    ],
-                    "metricless_projection": bool(
-                        request.execution_contract_transform
-                        == "RELATIONSHIP_COUNT_TO_DISTINCT_PROJECTION"
-                    ),
-                    "intent_asl_contract": intent_asl_contract,
-                    "analysis_operator": (
-                        analysis_contract.operator if analysis_contract is not None else None
-                    ),
-                    "result_contract": (
-                        analysis_contract.model_dump(mode="json")
-                        if analysis_contract is not None else None
-                    ),
-                    "exploration_requirements": (
-                        exploration_requirements.model_dump(mode="json")
-                        if exploration_requirements is not None else None
-                    ),
-                    },
-                    identity=identity,
-                    application_id=request.application_id,
-                    idempotency_key=f"{request.request_id}:asl",
-                    # ASL generation is read-only and guarded by a stable
-                    # idempotency key. Transient connection resets are therefore
-                    # safe to retry; disabling retries made a single upstream TCP
-                    # reset surface directly as a failed user turn.
-                    retryable=True,
-                    timeout=0,
-                )
-                timing.mark_first_result()
+            try:
+                with track_operation(
+                    "UPSTREAM",
+                    "upstream.oagnet.asl_generation",
+                    attributes={"retryable": True},
+                ) as timing:
+                    generated = await self.client.post(
+                        self.settings.asl_generator_base_url,
+                        self.settings.asl_generator_path,
+                        {
+                        "query": asl_query,
+                        "completed_question": semantic_query,
+                        "retrieval_query": retrieval_query,
+                        "structured_reference": self._structured_asl_reference(request),
+                        "structured_extraction": (request._planner_extraction.structured
+                            if request._planner_extraction else None),
+                        "semantic_model_id": semantic_model_id,
+                        **oagent_execution_scope,
+                        "metric_ids": [
+                            metric.metric_id
+                            for metric in request.metrics
+                            if metric.metric_id is not None
+                        ],
+                        "metricless_projection": bool(
+                            request.execution_contract_transform
+                            == "RELATIONSHIP_COUNT_TO_DISTINCT_PROJECTION"
+                        ),
+                        "intent_asl_contract": intent_asl_contract,
+                        "analysis_operator": (
+                            analysis_contract.operator if analysis_contract is not None else None
+                        ),
+                        "result_contract": (
+                            analysis_contract.model_dump(mode="json")
+                            if analysis_contract is not None else None
+                        ),
+                        "exploration_requirements": (
+                            exploration_requirements.model_dump(mode="json")
+                            if exploration_requirements is not None else None
+                        ),
+                        },
+                        identity=identity,
+                        application_id=request.application_id,
+                        idempotency_key=f"{request.request_id}:asl",
+                        # ASL generation is read-only and guarded by a stable
+                        # idempotency key. Transient connection resets are therefore
+                        # safe to retry; disabling retries made a single upstream TCP
+                        # reset surface directly as a failed user turn.
+                        retryable=True,
+                        timeout=0,
+                    )
+                    timing.mark_first_result()
+            except Exception as exc:
+                record_query_diagnostic('ASL_GENERATION', request, status='FAILED',
+                                        error_code=getattr(exc, 'code', type(exc).__name__), reason=str(exc))
+                raise
             if generated.get("success") is not True:
+                record_query_diagnostic('ASL_RECEIVED', request, status='FAILED',
+                                        error_code=generated.get('error_code') or 'ASL_GENERATION_FAILED',
+                                        reason=generated.get('error'))
                 raise AdapterError("ASL_GENERATION_FAILED", "ASL generator rejected request")
             self._confirm_generated_scope(
                 request,
@@ -2282,6 +2299,11 @@ class HttpDataRetrievalAdapter:
             # Completeness is decided by ASL before contract acknowledgements
             # or any legacy adapter normalization can hide a concrete issue.
             asl = self._json_object(generated.get('result'), 'ASL_RESPONSE_INVALID')
+            record_query_diagnostic(
+                'ASL_RECEIVED', request, asl=asl, repairs=generated.get('asl_repair'),
+                extraction=request._planner_extraction.structured if request._planner_extraction else None,
+                status='BLOCKED' if asl.get('ambiguity') else 'READY',
+            )
             if asl.get('ambiguity'):
                 raise AdapterError('ASL_AMBIGUOUS', 'ASL requires clarification', details=asl['ambiguity'])
             contract_acknowledged = (
@@ -2530,22 +2552,31 @@ class HttpDataRetrievalAdapter:
             if any(isinstance(item, dict) and item.get('entity') == '医院'
                    and item.get('field') in {'城市', '省份'} for item in conditions):
                 completed_question += '，地区按医院所在地筛选'
-        plan = await generate_surface_asl(
-            self.client, self.settings,
-            completed_question=completed_question,
-            mentions=mentions, authorized_scope=scope, identity=identity,
-            application_id=request.application_id, request_id=request.request_id,
-            time_range=request.time_range,
-            structured_extraction=structured_extraction,
-            confirmed_metrics=tuple(
-                metric for metric in request.metrics if metric.metric_id
-            ),
-            resolved_business_domain_ids=tuple(
-                request.resolved_business_domain_ids
-            ),
-            structured_reference=self._structured_asl_reference(request),
-        )
+        record_query_diagnostic('STRUCTURED_EXTRACTION', request,
+                                extraction=structured_extraction, status='READY')
+        try:
+            plan = await generate_surface_asl(
+                self.client, self.settings,
+                completed_question=completed_question,
+                mentions=mentions, authorized_scope=scope, identity=identity,
+                application_id=request.application_id, request_id=request.request_id,
+                time_range=request.time_range,
+                structured_extraction=structured_extraction,
+                confirmed_metrics=tuple(
+                    metric for metric in request.metrics if metric.metric_id
+                ),
+                resolved_business_domain_ids=tuple(
+                    request.resolved_business_domain_ids
+                ),
+                structured_reference=self._structured_asl_reference(request),
+            )
+        except Exception as exc:
+            record_query_diagnostic('ASL_GENERATION', request, status='FAILED',
+                                    error_code=getattr(exc, 'code', type(exc).__name__), reason=str(exc))
+            raise
         asl = plan["asl"]
+        record_query_diagnostic('ASL_RECEIVED', request, asl=asl, extraction=structured_extraction,
+                                repairs=plan.get('asl_repair'), status='READY')
         # Execution metadata is derived from this ASL, not the upstream role
         # guesses. Keep the caller's request untouched for provenance.
         execution = request.model_copy(deep=True)
@@ -2582,6 +2613,7 @@ class HttpDataRetrievalAdapter:
 
         Scope, read-only SQL and data-source checks apply to every planner.
         """
+        record_query_diagnostic('ASL_TO_SQL', request, asl=asl, status='STARTED')
         try:
             with track_operation(
                 "UPSTREAM",
@@ -2613,6 +2645,7 @@ class HttpDataRetrievalAdapter:
                 )
                 timing.mark_first_result()
         except AdapterError as exc:
+            record_query_diagnostic('SQL_TRANSLATION', request, status='FAILED', error_code=exc.code, reason=str(exc))
             if exc.status_code == 404:
                 raise AdapterError(
                     "SQL_TRANSLATION_ENDPOINT_UNAVAILABLE",
@@ -2631,6 +2664,9 @@ class HttpDataRetrievalAdapter:
             raise
         translated = self._unwrap_sql_response(translated)
         if translated.get("success") is not True:
+            record_query_diagnostic('SQL_TRANSLATION', request, status='FAILED',
+                                    error_code=translated.get('code') or translated.get('error_code') or 'SQL_TRANSLATION_FAILED',
+                                    reason=translated.get('error'))
             ambiguity = translated.get("ambiguity")
             if ambiguity:
                 raise AdapterError(
@@ -2685,6 +2721,7 @@ class HttpDataRetrievalAdapter:
             business_domain_id=business_domain_id,
         )
         self._validate_read_only_sql(sql)
+        record_query_diagnostic('SQL_TRANSLATION', request, sql=sql, status='READY')
         from app.presentation.execution_trace import executed_asl_metrics, render_sql_execution_defaults
 
         selected_metrics = [
@@ -2761,6 +2798,8 @@ class HttpDataRetrievalAdapter:
             f"调用工具：{SQL_EXECUTION_TOOL_NAME}。\n"
             f"输入：{_compact_progress_value(execute_payload, 1200)}。",
         )
+        record_query_diagnostic('SQL_EXECUTION', request, sql=sql, status='STARTED',
+                                source_id=selected_data_source_id or translated_data_source_id)
         try:
             with track_operation(
                 "UPSTREAM",
@@ -2780,6 +2819,7 @@ class HttpDataRetrievalAdapter:
                 )
                 timing.mark_first_result()
         except AdapterError as exc:
+            record_query_diagnostic('SQL_EXECUTION', request, sql=sql, status='FAILED', error_code=exc.code, reason=str(exc))
             if exc.status_code == 404:
                 raise AdapterError(
                     "SQL_EXECUTION_ENDPOINT_UNAVAILABLE",
@@ -2799,6 +2839,9 @@ class HttpDataRetrievalAdapter:
         raw = self._unwrap_sql_response(executed)
         self._confirm_translator_scope(request, raw)
         if raw.get("success") is not True:
+            record_query_diagnostic('SQL_EXECUTION', request, sql=sql, status='FAILED',
+                                    error_code=raw.get('error_code') or raw.get('code') or 'SQL_EXECUTION_FAILED',
+                                    reason=raw.get('error'))
             raise AdapterError(
                 "SQL_EXECUTION_FAILED",
                 str(raw.get("error") or "query execution failed"),
@@ -2844,6 +2887,8 @@ class HttpDataRetrievalAdapter:
                     "actual_data_source_id": actual_data_source_id,
                 },
             )
+        record_query_diagnostic('SQL_EXECUTION', request, sql=sql, status='COMPLETED',
+                                row_count=raw.get('row_count'), source_id=actual_data_source_id)
         result_file_url = self._result_file_url(raw)
         export_error = self._result_export_error(raw)
         dataset = self._dataset(

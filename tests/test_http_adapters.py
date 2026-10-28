@@ -595,7 +595,9 @@ def test_http_error_code_uses_stable_status_fallback() -> None:
 
 
 @pytest.mark.asyncio
-async def test_report_retrieval_preserves_original_sales_semantics_only():
+async def test_report_retrieval_preserves_original_sales_semantics_only(caplog):
+    import logging
+    caplog.set_level(logging.INFO, logger='app.observability.query_diagnostics')
     report = CanonicalAnalysisRequest(
         conversation_id="generic-sales-report",
         tenant_id="t1",
@@ -624,6 +626,10 @@ async def test_report_retrieval_preserves_original_sales_semantics_only():
         ).query(report, IDENTITY, semantic_model_id=81, business_domain_id=205)
 
     assert exc.value.code == "ASL_GENERATION_FAILED"
+    diagnostics = [json.loads(item.message.split('query_diagnostic ', 1)[1])
+                   for item in caplog.records if item.message.startswith('query_diagnostic ')]
+    assert diagnostics[-1]['stage'] == 'ASL_RECEIVED'
+    assert diagnostics[-1]['status'] == 'FAILED' and diagnostics[-1]['error_code'] == 'ASL_GENERATION_FAILED'
     payload = client.calls[0][2]
     assert report.original_question in payload["retrieval_query"]
     assert report.original_question not in payload["query"]
@@ -677,17 +683,15 @@ def test_semantic_entity_mention_accepts_whitespace_variant_of_bound_filter():
     )
 
 
-def test_semantic_entity_mention_rejects_missing_source_binding_proof():
-    req = request().model_copy(update={
-        "semantic_entity_mentions": ["费森尤斯"],
-    })
+def test_unbound_semantic_entity_mention_is_recorded_without_creating_filter():
+    req = request().model_copy(update={"semantic_entity_mentions": ["费森尤斯"]})
+    asl = {"filters": []}
+    repairs = []
 
-    with pytest.raises(AdapterError) as exc:
-        HttpDataRetrievalAdapter._validate_semantic_entity_mentions(
-            {"filters": []}, req, [],
-        )
+    HttpDataRetrievalAdapter._validate_semantic_entity_mentions(asl, req, repairs)
 
-    assert exc.value.code == "ASL_ENTITY_MENTION_UNRESOLVED"
+    assert asl["filters"] == []
+    assert repairs == [{"type": "UNRESOLVED_ENTITY_MENTION_SKIPPED", "mentions": ["费森尤斯"]}]
 
 
 def test_typed_filter_value_is_not_sent_again_as_untyped_mention():
@@ -823,7 +827,9 @@ async def test_dependency_constraint_rejects_unfiltered_asl_before_sql_translati
 
 
 @pytest.mark.asyncio
-async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
+async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql(caplog):
+    import logging
+    caplog.set_level(logging.INFO, logger='app.observability.query_diagnostics')
     constraint = dependency_constraint()
     constrained = request().model_copy(update={
         "primary_intent": PrimaryIntent.DETAIL_QUERY,
@@ -882,6 +888,15 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
         )
 
     assert result.dataset.row_count == 1
+    diagnostics = [json.loads(item.message.split('query_diagnostic ', 1)[1])
+                   for item in caplog.records if item.message.startswith('query_diagnostic ')]
+    assert [item['stage'] for item in diagnostics] == [
+        'STRUCTURED_EXTRACTION', 'ASL_RECEIVED', 'ASL_TO_SQL', 'SQL_TRANSLATION',
+        'SQL_EXECUTION', 'SQL_EXECUTION']
+    assert diagnostics[-2]['status'] == 'STARTED'
+    assert diagnostics[-1]['status'] == 'COMPLETED' and diagnostics[-1]['row_count'] == 1
+    assert all(item['request_id'] == str(constrained.request_id) for item in diagnostics)
+    assert '经销商A' not in json.dumps(diagnostics, ensure_ascii=False)
     assert [call[1] for call in client.calls] == ["/agent/query", "/api/translate", "/api/execute"]
     assert "dept_name" in client.calls[0][2]["retrieval_query"]
     assert "Internal DAG semantic retrieval requirement" in client.calls[0][2]["retrieval_query"]
@@ -1346,6 +1361,8 @@ async def test_ranked_partner_sales_record_range_uses_transaction_time_scope():
     )
     client = StubClient([{"success": False}])
 
+    ranked._analysis_contract = {"tool_selection": {"mode": "SELECTED", "capabilities": ["group_comparison"]}}
+
     with pytest.raises(AdapterError) as exc:
         await HttpDataRetrievalAdapter(
             Settings(adapter_mode="http"), client
@@ -1437,6 +1454,8 @@ async def test_dealer_recommendation_uses_relationship_aware_retrieval_scope():
             }],
         }, ensure_ascii=False),
     }])
+
+    recommendation._analysis_contract = {"tool_selection": {"mode": "SELECTED", "capabilities": ["group_comparison"]}}
 
     with pytest.raises(AdapterError) as exc:
         await HttpDataRetrievalAdapter(
@@ -1727,7 +1746,7 @@ def test_named_dealer_product_lookup_is_set_shaped() -> None:
 
 
 @pytest.mark.asyncio
-async def test_precomputed_metric_window_cannot_add_fact_time_scope():
+async def test_precomputed_metric_window_preserves_structured_asl_without_fact_time_scope():
     metric_request = request().model_copy(update={
         "primary_intent": PrimaryIntent.COMPARISON_ANALYSIS,
         "comparison_type": "对象间比较",
@@ -1753,22 +1772,11 @@ async def test_precomputed_metric_window_cannot_add_fact_time_scope():
         ],
         "dimensions": [
             {"name": "dealer.dealer_name"},
-            {"name": "sales_order.created_date", "granularity": "hour"},
         ],
         "filters": [
             {"field": "dealer.province", "operator": "=", "value": "上海"},
-            {
-                "field": "sales_order.created_date",
-                "operator": ">=",
-                "value": "2026-05-28",
-            },
         ],
-        "time_context": {
-            "type": "range",
-            "start": "2026-05-28",
-            "end": "2026-08-28",
-            "anchor": "sales_order.created_date",
-        },
+        "time_context": None,
         "ambiguity": [],
     }
     client = StubClient([
@@ -1788,6 +1796,8 @@ async def test_precomputed_metric_window_cannot_add_fact_time_scope():
             "row_count": 2,
         },
     ])
+
+    metric_request._analysis_contract = {"tool_selection": {"mode": "SELECTED", "capabilities": ["group_comparison"]}}
 
     result = await HttpDataRetrievalAdapter(
         Settings(adapter_mode="http"), client
@@ -2740,6 +2750,8 @@ async def test_comparison_query_requires_grouped_asl_and_adds_deterministic_hint
         "comparison_type": "指定时段对比",
     })
 
+    req._analysis_contract = {"tool_selection": {"mode": "SELECTED", "capabilities": ["group_comparison"]}}
+
     result = await HttpDataRetrievalAdapter(
         Settings(adapter_mode="http"), client
     ).query(req, IDENTITY, semantic_model_id=6, business_domain_id=7)
@@ -2787,6 +2799,8 @@ async def test_unbounded_entity_sort_requires_metric_order_without_limit():
         ],
     })
 
+    req._analysis_contract = {"tool_selection": {"mode": "SELECTED", "capabilities": ["group_comparison"]}}
+
     result = await HttpDataRetrievalAdapter(
         Settings(adapter_mode="http"), client
     ).query(req, IDENTITY, semantic_model_id=81, business_domain_id=205)
@@ -2820,6 +2834,8 @@ async def test_unbounded_entity_sort_rejects_hidden_limit_before_sql():
         ],
     })
 
+    req._analysis_contract = {"tool_selection": {"mode": "SELECTED", "capabilities": ["group_comparison"]}}
+
     with pytest.raises(AdapterError, match="must not add") as exc:
         await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
             req, IDENTITY, semantic_model_id=81, business_domain_id=205
@@ -2842,6 +2858,8 @@ async def test_comparison_aggregate_without_group_dimension_fails_before_sql():
         "primary_intent": PrimaryIntent.COMPARISON_ANALYSIS,
         "comparison_type": "指定时段对比",
     })
+
+    req._analysis_contract = {"tool_selection": {"mode": "SELECTED", "capabilities": ["group_comparison"]}}
 
     with pytest.raises(AdapterError) as exc:
         await HttpDataRetrievalAdapter(
@@ -3128,7 +3146,7 @@ async def test_asl_ambiguity_stops_before_sql_execution():
 
 
 @pytest.mark.asyncio
-async def test_confirmed_metric_ignores_repeated_asl_metric_ambiguity():
+async def test_confirmed_metric_does_not_suppress_asl_ambiguity():
     bound = request().model_copy(update={
         "metrics": [MetricRef(
             input="sales_total_including_tax",
@@ -3152,12 +3170,13 @@ async def test_confirmed_metric_ignores_repeated_asl_metric_ambiguity():
         {"success": True, "sql": "SELECT 1", "data": [{"x": 1}], "columns": ["x"]},
     ])
 
-    result = await HttpDataRetrievalAdapter(
-        Settings(adapter_mode="http"), client
-    ).query(bound, IDENTITY, semantic_model_id=8, business_domain_id=13)
+    with pytest.raises(AdapterError) as exc:
+        await HttpDataRetrievalAdapter(
+            Settings(adapter_mode="http"), client
+        ).query(bound, IDENTITY, semantic_model_id=8, business_domain_id=13)
 
-    assert result.dataset.rows == [{"x": 1}]
-    assert len(client.calls) == 3
+    assert exc.value.code == "ASL_AMBIGUOUS"
+    assert len(client.calls) == 1
 
 @pytest.mark.asyncio
 async def test_row_count_mismatch_returns_database_rows():
