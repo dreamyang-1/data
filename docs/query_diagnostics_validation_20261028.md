@@ -32,6 +32,10 @@
 
 以下为用例名称；失败不等同于本次日志改动引入了对应业务问题。
 
+2026-10-28 后续核对：7 项测试请求缺少分析工具选择。补齐注册工具后，6 项原断言通过；第 7 项原本要求适配器删除 ASL 中的时间条件，与当前禁止事后改写 ASL 的合同冲突，改为检查结构化结果向下传递时不增添时间范围。上游结构化绑定测试 51 项通过，其中已有无时间范围及显式时间范围的覆盖；这不代表所有异常上游响应都会被下游重新校验。
+
+另两项是过时断言：未绑定的语义提及按现行合同记录而不创建过滤条件；ASL 已报告的指标歧义应停止而不能被适配器忽略。该记录并不证明忽略提及后业务结果完整。上述调整后，本次日志相关测试范围 167 项通过，原有业务问题及历史回归的未验证项仍按本报告标识。
+
 - `tests/test_http_adapters.py::test_semantic_entity_mention_rejects_missing_source_binding_proof`
 - `tests/test_http_adapters.py::test_ranked_partner_sales_record_range_uses_transaction_time_scope`
 - `tests/test_http_adapters.py::test_dealer_recommendation_uses_relationship_aware_retrieval_scope`
