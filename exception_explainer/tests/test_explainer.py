@@ -93,6 +93,33 @@ async def test_exception_chain_logs_and_one_model_call(monkeypatch, caplog):
     assert '前后两次' in answer
 
 
+@pytest.mark.asyncio
+async def test_long_model_explanation_is_not_discarded_or_truncated(monkeypatch):
+    text = '系统没有提取出销售总额指标，因此无法按销售总额筛选。' * 35
+    captured = mock_model(monkeypatch, content={
+        'explanation': text, 'evidence_ids': ['E1'], 'certainty': 'confirmed'})
+    state = Diagnostics('查询问题'); state.exception(ValueError('销售总额指标没有提取出来'))
+    result = await explain(state, ModelConfig('https://model.invalid', 'key', 'model'), fallback='原错误')
+    assert result == text
+    assert 'max_tokens' not in captured[0]
+
+
+@pytest.mark.asyncio
+async def test_long_fallback_is_not_truncated_when_model_is_unavailable():
+    text = '没有提取出销售总额指标。' * 60
+    state = Diagnostics('查询问题')
+    assert await explain(state, None, fallback=text) == text
+
+
+@pytest.mark.asyncio
+async def test_long_explanation_still_redacts_sensitive_content(monkeypatch):
+    text = '系统没有提取出销售总额指标。' * 40 + ' password=credential123'
+    mock_model(monkeypatch, content={'explanation': text, 'evidence_ids': ['E1'], 'certainty': 'confirmed'})
+    state = Diagnostics('问题'); state.exception(ValueError('指标缺失'))
+    answer = await explain(state, ModelConfig('https://model.invalid', 'key', 'model'), fallback='失败')
+    assert len(answer) > 500 and 'credential123' not in answer
+
+
 @pytest.mark.parametrize('kind', ['connection', 'invalid_refs', 'invalid_json'])
 @pytest.mark.asyncio
 async def test_model_failure_preserves_original_error(monkeypatch, kind):

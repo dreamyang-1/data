@@ -94,7 +94,7 @@ async def explain_response(state: Diagnostics, settings, response):
     }
     fallback = response.answer or '本次任务未完成，现有错误记录还不足以确定具体原因。'
     message = await _explain(state, settings, fallback, outcome)
-    if message == redact(fallback, 500):
+    if message == redact(fallback, None):
         return response
     updated = response.model_copy(deep=True)
     # Partial data, tables, files and status stay intact; explanation is only presentation.
