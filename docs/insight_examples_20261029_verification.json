@@ -1,0 +1,465 @@
+{
+  "date": "2026-10-29",
+  "scope": "Replace three business-specific synthesis examples only",
+  "tests": {
+    "before": {
+      "passed": 6132,
+      "failed": 635,
+      "error": 8,
+      "skipped": 0
+    },
+    "after": {
+      "passed": 6132,
+      "failed": 635,
+      "error": 8,
+      "skipped": 0
+    },
+    "old_pass_to_new_fail": [],
+    "old_fail_to_new_pass": []
+  },
+  "model_probes": {
+    "versions": [
+      "before",
+      "candidate"
+    ],
+    "cases_per_version": 4,
+    "selection_checks_passed": true,
+    "unsupported_raise_and_performance_claims_rejected": true,
+    "repeatability_not_established": true
+  },
+  "stream_contract": {
+    "status": "COMPLETED",
+    "display_matches_execution": true,
+    "old_name_view_present": false,
+    "stages": [
+      "意图识别",
+      "任务拆分与规划",
+      "解析校验",
+      "调度执行",
+      "结果校验",
+      "数据洞察分析"
+    ],
+    "final_complete_event": true
+  },
+  "historical_questions": [
+    {
+      "id": "shanghai_fresenius_exact_asl_display",
+      "question": "查询上海地区费森尤斯产品最近一年销售额",
+      "expected": "Display exact generated ASL sent to SQL translation; retain filters and original request; complete final output and disclose data watermark limitation.",
+      "before": {
+        "id": "shanghai_fresenius_exact_asl_display",
+        "phase": "before",
+        "status": "COMPLETED",
+        "rows": [
+          1
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "candidate": {
+        "id": "shanghai_fresenius_exact_asl_display",
+        "phase": "after",
+        "status": "COMPLETED",
+        "rows": [
+          1
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "status": "EXECUTION_COMPLETE_CONTENT_REVIEWED"
+    },
+    {
+      "id": "two_brands_tier_two_enum_display_overlap",
+      "question": "统计美敦力、波士顿科学在二级医院的销售额",
+      "expected": "从正常入口提取并绑定两个母厂牌、二级医院和销售额，完成SQL查询及最终输出；医院等级同时出现在维度和展示字段时只输出一列标签，保留枚举编码及原统计粒度，不报列别名重复。",
+      "before": {
+        "id": "two_brands_tier_two_enum_display_overlap",
+        "phase": "before",
+        "status": "COMPLETED",
+        "rows": [
+          2
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "candidate": {
+        "id": "two_brands_tier_two_enum_display_overlap",
+        "phase": "after",
+        "status": "COMPLETED",
+        "rows": [
+          2
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "status": "EXECUTION_COMPLETE_CONTENT_REVIEWED"
+    },
+    {
+      "id": "tier_three_hospital_count",
+      "question": "统计三级医院数量",
+      "expected": "保留三级医院筛选并明确医院计数，不以缺指标为由误导用户新建指标；若尚未完成必须如实记录",
+      "before": {
+        "id": "tier_three_hospital_count",
+        "phase": "before",
+        "status": "COMPLETED",
+        "rows": [
+          1
+        ],
+        "metrics": [
+          "total_hospitals_in_region"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "candidate": {
+        "id": "tier_three_hospital_count",
+        "phase": "after",
+        "status": "COMPLETED",
+        "rows": [
+          1
+        ],
+        "metrics": [
+          "total_hospitals_in_region"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "status": "UPSTREAM_RESULT_CHANGED",
+      "reason": "Query scope/returned data changed before synthesis; not an equivalent-input comparison."
+    },
+    {
+      "id": "unbilled_shipped_amount",
+      "question": "统计已发货未开票金额",
+      "expected": "按当前语义目录统计并返回金额；目录仍无效时记录原有阻塞，不能伪报通过",
+      "before": {
+        "id": "unbilled_shipped_amount",
+        "phase": "before",
+        "status": "COMPLETED",
+        "rows": [
+          1
+        ],
+        "metrics": [
+          "invoiced_amount"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "candidate": {
+        "id": "unbilled_shipped_amount",
+        "phase": "after",
+        "status": "COMPLETED",
+        "rows": [
+          1
+        ],
+        "metrics": [
+          "invoiced_amount"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "status": "EXECUTION_COMPLETE_CONTENT_REVIEWED"
+    },
+    {
+      "id": "two_brands_manufacturers_multirow",
+      "question": "统计美敦力、波士顿科学两个品牌在二级医院的销售额，按品牌分组展示厂家名称",
+      "expected": "根据已授权品牌和医院等级筛选，展示品牌、厂家和销售额；同一品牌可按厂家分多行。",
+      "before": {
+        "id": "two_brands_manufacturers_multirow",
+        "phase": "before",
+        "status": "COMPLETED",
+        "rows": [
+          12
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "candidate": {
+        "id": "two_brands_manufacturers_multirow",
+        "phase": "after",
+        "status": "COMPLETED",
+        "rows": [
+          12
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "status": "CONTENT_FAILED",
+      "reason": "Candidate narrative grouped total differs from unchanged detail rows; baseline narrative total was correct. Causation by prompt change is not established."
+    },
+    {
+      "id": "two_brands_tier_two_hospitals",
+      "question": "统计美敦力、波士顿科学两个品牌在二级医院的销售额",
+      "expected": "保留两个品牌与二级医院筛选，按已登记品牌维度展示对应母厂牌并输出销售额；不因展示字段与分组维度未证明唯一对应而停止。",
+      "before": {
+        "id": "two_brands_tier_two_hospitals",
+        "phase": "before",
+        "status": "COMPLETED",
+        "rows": [
+          2
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "candidate": {
+        "id": "two_brands_tier_two_hospitals",
+        "phase": "after",
+        "status": "COMPLETED",
+        "rows": [
+          2
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "status": "EXECUTION_COMPLETE_CONTENT_REVIEWED"
+    },
+    {
+      "id": "huashan_sales_products",
+      "question": "2025年复旦大学附属华山医院销售订单金额最多的销售员是谁？销售了哪些产品？",
+      "expected": "先选销售员，再用真实销售员编码查询同医院2025年全部产品；句式变化不能导致依赖字段误选；附件无报告说明页",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "shanghai_three_dealers_products",
+      "question": "2025年10月份销售给上海地区医院销售订单总金额排名前三的经销商",
+      "expected": "追问保留前三家经销商、上海医院及2025年10月范围，返回各家产品",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "company_top5",
+      "question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+      "expected": "前五位人员、平均金额、所属公司全部返回；依赖完成后查询公司；金额单位取当前语义文件",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "shanghai_coverage",
+      "question": "统计上海市区域医院覆盖率",
+      "expected": "上海筛选保留；分子分母到齐后计算；返回覆盖率",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "hospital_sales_products",
+      "question": "2025年9月到12月期间针对上海交通大学医学院附属新华医院销售订单金额最多的销售员是谁?销售了哪些产品?",
+      "expected": "保留医院及月份；产品限定为入选销售员在同医院同期间销售的产品",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "semantic_entities",
+      "question": "当前语义模型中建立了哪些实体",
+      "expected": "解释口径直接按当前模型语义文件回答，不追问指标，不执行SQL",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "orthopedics",
+      "question": "看看骨科那边卖得怎么样",
+      "expected": "骨科业务值绑定正确，能够查询并输出结果",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "longest_cooperation",
+      "question": "合作时间最长的销售商是哪家?",
+      "expected": "按合作时间降序返回销售商，字段角色绑定正确",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "cooperation_over_three_months",
+      "question": "合作时长大于3个月的经销商有哪些",
+      "expected": "大于3个月的条件保留并正确换算，返回经销商名称",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "dealer_duration_exact",
+      "question": "查询筛选合作时长超3个月的经销商",
+      "expected": "同表行级合作时长公式与名称编码正常返回，超过3个月条件完整执行，不误报展示字段无唯一关联",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "dealer_duration_recent",
+      "question": "查询合作时间长大与3个月的经销商",
+      "expected": "保留用户实际措辞；正确识别超过3个月，返回经销商及合作时长",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "supplier_first_cooperation",
+      "question": "合作时长最长的供应商有哪些?第一次合作是什么时间?",
+      "expected": "选出合作时长最长的对象，并返回这些对象首次合作日期；不遗漏后续交付",
+      "status": "UNVERIFIED",
+      "reason": "Original complete request scope not recovered; prior replay scripts hardcoded defaults. Do not infer root scope from resolved downstream domain."
+    },
+    {
+      "id": "shanghai_dealer_sales_total_threshold",
+      "question": "统计上海市的含税销售总额大于100万的经销商",
+      "expected": "按经销商汇总含税销售总额后筛选大于100万元，不按单笔订单金额筛选；保留上海条件",
+      "before": {
+        "id": "shanghai_dealer_sales_total_threshold",
+        "phase": "before",
+        "status": "COMPLETED",
+        "rows": [
+          1
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "candidate": {
+        "id": "shanghai_dealer_sales_total_threshold",
+        "phase": "after",
+        "status": "COMPLETED",
+        "rows": [
+          1
+        ],
+        "metrics": [
+          "sales_total_including_tax"
+        ],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "status": "EXECUTION_COMPLETE_CONTENT_REVIEWED"
+    },
+    {
+      "id": "shanghai_pharma_company_details",
+      "question": "查询上药医疗器械(上海)有限公司明细数据",
+      "expected": "正确识别经销商实体并按经销商名称查询；销售公司名称字段没有该值时清楚说明，不冒用其他公司",
+      "before": {
+        "id": "shanghai_pharma_company_details",
+        "phase": "before",
+        "status": "COMPLETED",
+        "rows": [
+          1000
+        ],
+        "metrics": [],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 1
+      },
+      "candidate": {
+        "id": "shanghai_pharma_company_details",
+        "phase": "after",
+        "status": "COMPLETED",
+        "rows": [
+          1
+        ],
+        "metrics": [],
+        "example_leakage_terms": [],
+        "answer_present": true,
+        "file_count": 0
+      },
+      "status": "UPSTREAM_RESULT_CHANGED",
+      "reason": "Query scope/returned data changed before synthesis; not an equivalent-input comparison."
+    },
+    {
+      "id": "metric_filter_empty_metric_list_20261027",
+      "question": "过滤条件有指标字段，但是指标字段为空，没有值",
+      "status": "UNVERIFIED",
+      "reason": "用户描述的是失败形态，尚未取得与该次失败对应的完整原始业务提问、授权范围和多轮上下文；近期日志有同类指标筛选拦停，但不能用构造参数测试代替原问题端到端验收"
+    },
+    {
+      "id": "structured_stop_after_pending_20261026",
+      "question": "2025年10月份销售给上海地区医院销售订单总金额排名前三的经销商",
+      "status": "UNVERIFIED",
+      "reason": "日志可追溯本轮新问题被带回合作时长旧任务并产生结构化参数null；原会话记录已过期，缺少完整前序澄清及原请求授权范围，不能以独立新会话代替该场景验收"
+    },
+    {
+      "id": "earliest_dealer_amount_20261027",
+      "question": "合作最早的经销商，它的订单总金额是多少？",
+      "status": "UNVERIFIED",
+      "reason": "日志可追溯依赖任务在fields槽位停止；原会话记录已过期，尚未恢复原请求完整授权范围与上下文"
+    },
+    {
+      "id": "largest_order_after_pending_20261027",
+      "question": "全部历史订单金额最大的一笔订单是哪一笔?",
+      "status": "UNVERIFIED",
+      "reason": "日志可追溯本轮被带回旧经销商统计任务，名称和编码展示字段关系校验失败；原会话记录已过期，缺少完整前序澄清及原请求授权范围"
+    },
+    {
+      "id": "department_hospital_relation",
+      "question": "医院与科室多对多判断",
+      "status": "UNVERIFIED",
+      "reason": "原文实体ID已省略，缺少完整实体ID及模型范围"
+    },
+    {
+      "id": "relation_model122",
+      "question": "实体关系推荐返回空数组",
+      "status": "UNVERIFIED",
+      "reason": "Required original relation endpoint arguments are incomplete; chat is not a substitute."
+    },
+    {
+      "id": "city_province_relation",
+      "question": "城市跟省份为什么没有推荐关系",
+      "status": "UNVERIFIED",
+      "reason": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "company_salesperson_relation",
+      "question": "国药公司和销售员这两个表有相同字段，为什么没有推荐",
+      "status": "UNVERIFIED",
+      "reason": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "publication_error",
+      "question": "发布失败报错中文化",
+      "status": "UNVERIFIED",
+      "reason": "发布操作的完整原始参数；不在本轮只读查询回归范围内"
+    }
+  ],
+  "all_historical_questions_passed": false,
+  "publication": {
+    "candidate_tested_online": true,
+    "candidate_accepted": false,
+    "rolled_back": true,
+    "restored_sha256": "4e76a4ceef4486502567c17c9979b2ca99128e0beb3d3792f9666377efe25c3a",
+    "live": 200,
+    "ready": 200
+  },
+  "known_issue": "A candidate narrative group total was wrong despite unchanged query rows. Candidate remains local/Draft only."
+}
