@@ -131,6 +131,12 @@ class AgentPromptStore:
             "concise_instruct": "",
         }
 
+    async def resolve_node_examples(self, application_id, semantic_model_id):
+        from app.services.node_examples import lookup_examples
+        return await asyncio.to_thread(
+            lookup_examples, self._connection_factory, application_id, semantic_model_id
+        )
+
     async def resolve_general_rules(self, semantic_model_id, business_domain_ids=()):
         """No TTL cache: an add/edit/delete/disable applies on the next turn."""
         if type(semantic_model_id) is not int or semantic_model_id <= 0:

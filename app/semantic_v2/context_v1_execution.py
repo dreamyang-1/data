@@ -37,6 +37,7 @@ from app.domain.models import (
 )
 from app.services.progress import emit_progress
 from app.services.general_rules import attach_general_rules
+from app.services.node_examples import attach_node_examples, planner_examples
 from app.services.orchestrator import danger_keyword_hits
 from app.observability.call_timing import track_operation
 from app.planning import (
@@ -1266,6 +1267,7 @@ class V2ContextV1ExecutionBridge:
     async def handle(
         self, chat: ChatRequest, identity: TrustedIdentity
     ) -> AgentResponse:
+        chat = await attach_node_examples(chat, self.agent_prompt_store)
         if chat.prompt is None and self.agent_prompt_store is not None:
             latest = await self.agent_prompt_store.resolve(
                 chat.application_id,
@@ -1870,6 +1872,7 @@ class V2ContextV1ExecutionBridge:
                     and semantic_decision.status == "REQUIRES_V1_FALLBACK"
                 ):
                     judge_semantic_context = "\n".join(filter(None, (
+                        planner_examples(chat),
                         extract_semantic_spec_section(chat.prompt.render())
                         if chat.prompt is not None
                         else "",

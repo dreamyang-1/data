@@ -764,9 +764,11 @@ class RawTurnPlanner:
     ):
         # Platform user prompt is read from the original request before the
         # defensive session copy (private/excluded fields do not survive it).
+        from app.services.node_examples import render_example
         _original_prompt = getattr(request, "prompt", None)
         agent_prompt_text = (
-            _original_prompt.render() if _original_prompt is not None else ""
+            (_original_prompt.render() if _original_prompt is not None else "")
+            + render_example(getattr(request, "_node_examples", {}), "intent_recognition")
         )
         # 上一轮任务表同样只能在拷贝前读，私有字段过不了 session 防御性拷贝
         prior_task_table = getattr(request, "_prior_task_table", None)

@@ -36,6 +36,7 @@ from app.analysis.intents import normalize_locked_root_intent
 from app.analysis.visualization import render_chart_svg, requested_chart_specs, suggested_chart_specs
 from app.analysis.units import header_with_unit, load_metric_units, unit_for_column
 from app.services.general_rules import attach_general_rules
+from app.services.node_examples import attach_node_examples, planner_examples, render_example
 from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
@@ -675,6 +676,7 @@ class DataAnalysisOrchestrator:
     async def _with_platform_agent_prompt(self, chat: ChatRequest) -> ChatRequest:
         """Attach the latest platform user prompt to one request snapshot."""
 
+        chat = await attach_node_examples(chat, getattr(self, "agent_prompt_store", None))
         if chat.prompt is not None:
             return await attach_general_rules(chat, getattr(self, "agent_prompt_store", None))
         store = getattr(self, "agent_prompt_store", None)
@@ -1809,6 +1811,7 @@ class DataAnalysisOrchestrator:
                             # 追问轮把上一轮任务表一起给规划器：拆分时知道
                             # 上轮已有什么结果，避免为已查过的口径重复拆任务
                             planner_semantic_context = "\n".join(filter(None, (
+                                planner_examples(chat),
                                 extract_semantic_spec_section(
                                     await self._agent_prompt_text(chat)
                                 ),
@@ -6074,7 +6077,7 @@ class DataAnalysisOrchestrator:
                 identity,
                 chat.conversation_id,
                 pre_resolved=True,
-                agent_prompt=await self._agent_prompt_text(chat),
+                agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                 planner_extraction=chat._planner_extraction,
             )
             # surface 直通没走通时主链路会按同样输入再分类一次，留一份
@@ -6833,7 +6836,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=chat._completed_question_execution,
-                    agent_prompt=await self._agent_prompt_text(chat),
+                    agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                 )
             )
             if (
@@ -6877,7 +6880,7 @@ class DataAnalysisOrchestrator:
                         identity,
                         chat.conversation_id,
                         pre_resolved=chat._completed_question_execution,
-                        agent_prompt=await self._agent_prompt_text(chat),
+                        agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                     )
                 )
                 rounds = 1
@@ -6978,7 +6981,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=chat._completed_question_execution,
-                    agent_prompt=await self._agent_prompt_text(chat),
+                    agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                     planner_extraction=chat._planner_extraction,
                 )
             )
@@ -11942,7 +11945,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=True,
-                    agent_prompt=await self._agent_prompt_text(chat),
+                    agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                     planner_extraction=PlannerExtraction(
                         intent=task.primary_intent,
                         parameters=list(task.parameters),

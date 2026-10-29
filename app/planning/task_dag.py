@@ -1461,6 +1461,8 @@ class SingleQuestionPlanner:
         from app.domain.semantic_description import load_semantic_description
 
         from app.services.general_rules import rule_section, without_rule_section
+        from app.services.node_examples import split_planner_examples, render_example
+        semantic_context, node_examples = split_planner_examples(semantic_context)
         general_rules = rule_section(semantic_context)
         semantic_context = without_rule_section(semantic_context)
         # 上一轮任务表块不是业务语义规范：远程规范存在时上面会跳过
@@ -1540,7 +1542,7 @@ class SingleQuestionPlanner:
         with structural_child("task_planning", as_type="span", name="子问题规划：" + str(question)[:24]):
             planned = await self._task_model_json(
                 "single-question-task-plan",
-                PLANNING_PROMPT + system_content + "\nJSON Schema："
+                PLANNING_PROMPT + system_content + render_example(node_examples, "task_decomposition") + "\nJSON Schema："
                 + json.dumps(planning_schema, ensure_ascii=False),
                 planning_question,
             )
@@ -1585,7 +1587,7 @@ class SingleQuestionPlanner:
             # Intent is returned with extraction; no separate intent model call.
             extracted = await self._task_model_json(
                 "single-question-task-parameters",
-                _SINGLE_SYSTEM_PROMPT + system_content + '\n已规划任务JSON：\n' + parameter_request,
+                _SINGLE_SYSTEM_PROMPT + system_content + render_example(node_examples, 'parameter_extraction') + '\n已规划任务JSON：\n' + parameter_request,
                 question,
 
             )

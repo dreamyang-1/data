@@ -741,6 +741,8 @@ class AgentPromptConfig(StrictModel):
 
 
 class ChatRequest(StrictModel):
+    _node_examples: dict[str, str] = PrivateAttr(default_factory=dict)
+    _node_examples_scope: tuple = PrivateAttr(default=())
     _general_rules_loaded: bool = PrivateAttr(default=False)
     _general_rules_scope: tuple = PrivateAttr(default=())
     _file_inspection: dict[str, Any] = PrivateAttr(default_factory=dict)

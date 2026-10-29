@@ -1285,6 +1285,8 @@ class CompoundQuestionJudge:
         from app.domain.semantic_description import load_semantic_description
 
         from app.services.general_rules import rule_section, without_rule_section
+        from app.services.node_examples import split_planner_examples, render_example
+        semantic_context, node_examples = split_planner_examples(semantic_context)
         general_rules = rule_section(semantic_context)
         semantic_context = without_rule_section(semantic_context)
         # 上一轮任务表块不是业务语义规范：远程规范存在时不能跟着
@@ -1298,7 +1300,7 @@ class CompoundQuestionJudge:
 
         schema = _JudgeResult.model_json_schema()
         from app.analysis.coverage import GUIDANCE
-        system_content = _JUDGE_SYSTEM_PROMPT + '\n' + GUIDANCE
+        system_content = _JUDGE_SYSTEM_PROMPT + '\n' + GUIDANCE + render_example(node_examples, "task_decomposition")
         if analysis_routes is None:
             from app.analysis.tools.registry import recognition_directory, ROUTING_INSTRUCTION
             system_content += '\n分析链路与工具名称：' + json.dumps(recognition_directory(), ensure_ascii=False)
