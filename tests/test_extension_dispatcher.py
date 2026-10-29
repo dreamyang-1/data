@@ -26,7 +26,7 @@ def chat(**updates):
 
 
 @pytest.mark.asyncio
-async def test_bounded_mcp_discovery_keeps_tools_from_responsive_servers(
+async def test_mcp_discovery_waits_for_all_servers_without_deadline(
     monkeypatch,
 ):
     dispatcher = ExtensionDispatcher()
@@ -40,8 +40,8 @@ async def test_bounded_mcp_discovery_keeps_tools_from_responsive_servers(
         return [fast_tool]
 
     async def slow_server(_url, _headers):
-        await asyncio.sleep(1)
-        return []
+        await asyncio.sleep(.03)
+        return [fast_tool.model_copy(update={"name": "slow_tool"})]
 
     monkeypatch.setattr(dispatcher, "_list_mcp_server", fast_server)
     monkeypatch.setattr(dispatcher, "_list_sse_mcp_server", slow_server)
@@ -61,7 +61,7 @@ async def test_bounded_mcp_discovery_keeps_tools_from_responsive_servers(
         timeout_seconds=0.02,
     )
 
-    assert discovered == [fast_tool]
+    assert {tool.name for tool in discovered} == {fast_tool.name, "slow_tool"}
 
 
 @pytest.mark.asyncio

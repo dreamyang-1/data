@@ -86,7 +86,7 @@ class PymysqlMetadataReader:
             database=database,
             charset="utf8mb4",
             connect_timeout=connect_timeout,
-            read_timeout=read_timeout,
+            read_timeout=None,
         )
 
     def _fetch(self, sql: str, params: tuple) -> list[dict[str, Any]]:
@@ -188,12 +188,10 @@ class WorkflowChatGateway:
 
     def __init__(
         self, *, base_url: str, api_key: str | None, model_name: str,
-        timeout_seconds: float = 15.0,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
         self._model_name = model_name
-        self._timeout_seconds = timeout_seconds
 
     def complete(self, query: str, prompt: str) -> str | None:
         import httpx
@@ -213,7 +211,7 @@ class WorkflowChatGateway:
                 self._base_url + "/chat/workflow_chat",
                 json=payload,
                 headers=headers,
-                timeout=self._timeout_seconds,
+                timeout=None,
             )
             if response.status_code != 200:
                 logger.warning(
@@ -1573,7 +1571,6 @@ def from_settings(settings: Any) -> SemanticRecommendService:
                 if settings.model_gateway_api_key else None
             ),
             model_name=settings.model_gateway_model_name,
-            timeout_seconds=settings.model_gateway_timeout_seconds,
         )
     return SemanticRecommendService(
         PymysqlMetadataReader(
@@ -1586,7 +1583,7 @@ def from_settings(settings: Any) -> SemanticRecommendService:
             ),
             database=settings.metadata_mysql_database,
             connect_timeout=settings.metadata_mysql_connect_timeout_seconds,
-            read_timeout=settings.metadata_mysql_read_timeout_seconds,
+            read_timeout=None,
         ),
         gateway,
         llm_enabled=settings.semantic_recommend_llm_enabled,

@@ -54,7 +54,7 @@ def freeze_versions(catalog, *, commit,settings,candidate_snapshot,split_manifes
         'model':settings.intent_model_name,'thinking_mode':settings.intent_model_enable_thinking,
         'temperature':0,'top_p':'NOT_SENT_PROVIDER_DEFAULT','seed':'NOT_SENT_SUPPORT_UNVERIFIED',
         'randomness':'PROVIDER_DETERMINISM_NOT_ESTABLISHED','retry_policy':{'max_retries':0},
-        'timeout_seconds':settings.intent_model_timeout_seconds,'max_tokens':'NOT_SENT_PROVIDER_DEFAULT',
+        'timeout_seconds':None,'max_tokens':'NOT_SENT_PROVIDER_DEFAULT',
         'api_provider':'CONFIGURED_COMPATIBLE_GATEWAY','endpoint_hash':digest(settings.intent_model_base_url),
         'formal_model_benchmark_allowed':False,'semantic_candidate_baseline_id':None,
         'baseline_status':'HARNESS_CANDIDATE_NOT_SEMANTIC_FREEZE_CANDIDATE'}

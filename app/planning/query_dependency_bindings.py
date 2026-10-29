@@ -1,6 +1,47 @@
 """Read the declared predecessor column, preserving its executed field identity."""
 from __future__ import annotations
 
+import copy
+
+
+def remap_dependency_inputs(inputs, mapping):
+    """Keep input provenance attached when planning inserts/removes tasks."""
+    result = copy.deepcopy(inputs)
+    for source in result or []:
+        if 'source_task_index' not in source:
+            continue
+        old = source['source_task_index']
+        if type(old) is not int or old not in mapping:
+            raise ValueError('依赖输入必须引用已规划的前序任务')
+        target = mapping[old]
+        if isinstance(target, list):
+            if len(target) != 1:
+                raise ValueError('依赖输入无法唯一对应前序任务交付物')
+            target = target[0]
+        source['source_task_index'] = target
+    return result
+
+
+def materialize_dependency_inputs(inputs, *, task_index, dependencies, task_offset=0):
+    """Freeze planned inputs into task state, independently of extraction."""
+    from app.planning.task_dag import TaskInputBindingError
+    if inputs is None:
+        return None
+    result = copy.deepcopy(inputs)
+    for source in result:
+        if not isinstance(source, dict) or not isinstance(source.get('source_column'), str) or not source['source_column'].strip():
+            raise TaskInputBindingError('任务依赖输入缺少前序交付字段')
+        if 'source_task_index' in source:
+            index = source.pop('source_task_index')
+            if type(index) is not int or not 0 <= index < task_index:
+                raise TaskInputBindingError('任务依赖输入必须引用前序任务')
+            source['source_task_id'] = f'task-{task_offset + index + 1}'
+        elif 'source_task_id' not in source and len(dependencies) == 1:
+            source['source_task_id'] = dependencies[0]
+        if source.get('source_task_id') not in dependencies:
+            raise TaskInputBindingError('任务依赖输入必须属于已声明依赖')
+    return result
+
 
 def select_dependency_column(source_column: str, columns, column_bindings: dict[str, str],
                              projection_bindings: dict[str, str] | None = None) -> str:

@@ -182,7 +182,7 @@ async def test_exact_planned_top_one_can_bind_a_new_query_without_claiming_popul
         intent=PrimaryIntent.METRIC_QUERY,answer='selected',dataset_id=result.reference.dataset_id)
     constraints=await agent._compile_dependency_constraints(AtomicTask(task_id='task-3',
         question='查询上述经销商合作的医院名单',depends_on=['task-2'],
-        extraction={'依赖绑定':[{'source_task_id':'task-2','source_column':'经销商编码'}]}),chat,IDENTITY,
+        dependency_bindings=[{'source_task_id':'task-2','source_column':'经销商编码'}], extraction={}),chat,IDENTITY,
         {'task-2':response},{'task-2':chat.conversation_id},{'task-2':planned})
     assert constraints[0].source_column=='dealer.dealer_code'
     assert constraints[0].values==['SYNTH-B']

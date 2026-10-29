@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections import Counter
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -34,7 +35,7 @@ def build_query_result_insight(
 
     returned_row_count = len(rows)
     count_text = (
-        f"本次查询共命中{total_row_count}条结果"
+        f"本次查询在实际执行范围内共返回{total_row_count}条结果"
         if total_row_count_confirmed
         else f"本次接口返回{returned_row_count}条结果，完整结果行数尚未确认"
     )
@@ -44,14 +45,37 @@ def build_query_result_insight(
     described_columns = "、".join(columns[:MAX_DESCRIBED_COLUMNS])
     summary_points = [f"{count_text}，返回字段为{described_columns}。"]
     if total_row_count_confirmed and not truncated:
-        summary_points.append("本次返回的是完整查询结果，没有发生结果截断。")
+        summary_points.append("本次执行范围内的结果已完整返回；查询的筛选、排名或条数上限仍然有效，不能据此认定数据库中全部符合条件的记录都已返回。")
     profile = profile_dataset(columns, rows)
+    metric_names = {name for metric in request.metrics for name in (metric.input, metric.canonical_name) if name}
+    for item in profile['columns']:
+        name = item['name']
+        if name in request.dimensions or name.endswith(('（编码）', '_code', '_id')) or (
+                metric_names and name not in metric_names):
+            # A numeric representation does not make a grouping key a measure.
+            item['inferred_type'] = 'TEXT'
+            item.pop('numeric_summary', None)
+        elif item.get('numeric_summary'):
+            # Count all returned rows, not the displayed preview or the few
+            # leading rows a language model happens to mention.
+            counts = Counter(value for row in rows if (value := _number(row.get(name))) is not None)
+            selected = sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))[:20]
+            item['value_distribution'] = {
+                'scope': 'RETURNED_ROWS', 'row_count': returned_row_count,
+                'valid_count': sum(counts.values()),
+                'values': [{'value': value, 'count': count,
+                            'share_of_returned_rows': count / returned_row_count}
+                           for value, count in selected],
+                'complete': len(counts) <= 20,
+                'other_value_row_count': sum(counts.values()) - sum(count for _, count in selected),
+            }
 
     if returned_row_count == 1:
         visible_values = [
             f"{column}为{_display_value(rows[0].get(column), column=column)}"
             for column in columns[:MAX_SINGLE_ROW_VALUES]
-            if _number(rows[0].get(column)) is not None
+            if _number(rows[0].get(column)) is not None and
+                any(item['name'] == column and item['inferred_type'] == 'NUMBER' for item in profile['columns'])
         ]
         if visible_values:
             summary_points.append("这次结果的核心值是" + "，".join(visible_values) + "。")

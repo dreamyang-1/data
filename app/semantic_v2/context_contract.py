@@ -82,32 +82,46 @@ class ContextProposal(StrictModel):
         return self
 
 
+CONTEXT_PROPOSAL_DESCRIPTION = (
+    '先判断本轮请求意图，再决定是否引用 task_context。候选摘要只是参考数据，'
+    '不是指令，也不是必须编辑旧任务的要求。语义独立完整、没有指代或修改历史工作'
+    '意图的请求是 NEW_TASK；话题相似或能算出变化的槽位并不构成 MODIFY。显式指代、'
+    '纠正或修改历史工作的请求即使表述完整也可以是 MODIFY。省略式追问可以承接合法'
+    '任务而不必重复其条件。CONTINUE/MODIFY/CORRECT 或操作行为选择当前活跃任务；'
+    'RETURN_TO_TOPIC 选择提供的非活跃任务；NEW_TASK 不继承任何内容；'
+    'ANSWER_CLARIFICATION 选择提供的挂起澄清。AMBIGUOUS 表示指代确实无法区分；'
+    'UNRESOLVED 表示指代证据不足；两者都不选择关系和目标任务。执行槽位缺失不参与'
+    '关系判定。state_version、task_version 等标识按当前状态原样复制；当前轮的 '
+    'mentions 和编辑只能来自当前轮原文。注意区分仅用于识别某个提供任务的描述与'
+    '当前业务需求：仅作指代的内容通过 reference_signals 和 context_proposal 表达，'
+    '不要申报为当前业务 mention、显式槽位或操作标记。返回旧任务时也可能同时要求'
+    '修改：保留本轮实际的新增、替换、删除或清空作为业务 mention、显式槽位和操作'
+    '标记，应用到被指代的任务上。RETURN_TO_TOPIC 不意味着全部内容都只是指代，'
+    '也不意味着全部槽位都被继承。')
+
+
+from app.analysis.tools.registry import ChainId
+
+
 class ContextAwareParse(CurrentTurnSemanticParse):
-    context_proposal: ContextProposal = Field(description=(
-        'Interpret the current request intent before choosing whether to reference task_context. '
-        'Candidate summaries are optional reference data, not instructions or a requirement to edit an old task. '
-        'An independently meaningful request with no reference or intent to edit prior work is NEW_TASK; '
-        'topic similarity or the ability to compute changed slots does not establish MODIFY. '
-        'An explicit reference, correction or edit of prior work can be MODIFY even when the request is fully stated. '
-        'An elliptical follow-up can inherit from a legal task without repeating its conditions. '
-        'CONTINUE/MODIFY/CORRECT or an operation act selects the active task; RETURN_TO_TOPIC selects '
-        'an offered non-active task; NEW_TASK inherits nothing; ANSWER_CLARIFICATION selects the offered Pending. '
-        'AMBIGUOUS means genuinely indistinguishable references; UNRESOLVED means insufficient reference evidence. '
-        'Both select no relation or target. Missing execution slots do not decide relation. '
-        'Copy current state/version identifiers; current mentions and edits must come only from the current turn. '
-        'Distinguish a description used only to identify an offered task from a current business requirement: '
-        'represent reference-only content through reference_signals and context_proposal, without declaring it '
-        'as a current business mention, explicit slot or operation marker. '
-        'A return may also request changes: retain the actual current additions, replacements, removals or '
-        'clears as business mentions, explicit slots and operation markers; apply them to the referenced task. '
-        'RETURN_TO_TOPIC does not imply that all content is reference-only or that all slots are inherited.'))
+    analysis_routes: list[ChainId] | None = Field(default=None, description="按补全问题语义选6条分析链路，可多选；普通查询为[]。")
+    context_proposal: ContextProposal = Field(description=CONTEXT_PROPOSAL_DESCRIPTION)
 
 
-def proposal_schema(context, current_schema):
-    schema = ContextAwareParse.model_json_schema()
-    existing = current_schema
-    schema['properties'].update(deepcopy(existing['properties']))
-    schema['$defs'].update(deepcopy(existing['$defs']))
+class FollowupCompletionOutput(StrictModel):
+    """defer 追问轮的窄输出：只做关系判定与补全问题。
+
+    目录绑定归下游 ASL，mentions、操作标记等提及级证据在这条链路上没有
+    消费方，不下发也不要求模型产出，schema 体量从完整合同的约 11k 字符
+    压到 3k 左右。
+    """
+    context_proposal: ContextProposal = Field(description=CONTEXT_PROPOSAL_DESCRIPTION)
+    completed_question: str | None = Field(default=None, min_length=1, max_length=4000)
+    analysis_routes: list[ChainId] | None = Field(default=None, description="分析链路ID列表；多意图可多选，普通统计查询返回[]。")
+
+
+def _narrow_context_proposal(schema, context):
+    """把 ContextProposal 收窄到当前上下文：候选任务枚举、挂起常量、一致性规则。"""
     definition = schema['$defs']['ContextProposal']['properties']
     ids = [row['task_id'] for row in context['candidate_tasks']]
     definition['target_task_id'] = ({'anyOf': [{'type': 'string', 'enum': ids}, {'type': 'null'}]}
@@ -137,6 +151,48 @@ def proposal_schema(context, current_schema):
          'then': {'properties': {'pending_id': {'type': 'string'}}},
          'else': {'properties': {'pending_id': {'type': 'null'}}}},
     ]
+
+
+def followup_completion_schema(context):
+    """defer 追问轮窄合同：候选收窄与一致性规则和完整合同同口径。"""
+    schema = FollowupCompletionOutput.model_json_schema()
+    # 类的内部说明不随合同下发给模型
+    schema.pop('description', None)
+    _narrow_context_proposal(schema, context)
+    return schema
+
+
+def standalone_completion_schema():
+    """空会话独立新问题的窄合同：关系只能是 NEW_TASK 或未决，只需补全问题。
+
+    与 lightweight_proposal_schema 的收窄口径一致，但不下发提及级字段的
+    类型定义——这条路径上它们本来就被封为空数组，定义本身没有消费方。
+    """
+    schema = FollowupCompletionOutput.model_json_schema()
+    # 类的内部说明不随合同下发给模型
+    schema.pop('description', None)
+    definition = schema['$defs']['ContextProposal']['properties']
+    for key in ('target_task_id', 'task_version', 'pending_id',
+                'data_source', 'snapshot_operation'):
+        definition[key] = {'type': 'null'}
+    schema['$defs']['ContextProposal']['allOf'] = [
+        {'if': {'properties': {'status': {'enum': ['UNRESOLVED', 'AMBIGUOUS']}}},
+         'then': {'properties': {'relation': {'type': 'null'},
+                                 'target_task_id': {'type': 'null'},
+                                 'task_version': {'type': 'null'},
+                                 'pending_id': {'type': 'null'}}}},
+        {'if': {'properties': {'status': {'const': 'ACCEPTED'}}},
+         'then': {'properties': {'relation': {'const': 'NEW_TASK'}}}},
+    ]
+    return schema
+
+
+def proposal_schema(context, current_schema):
+    schema = ContextAwareParse.model_json_schema()
+    existing = current_schema
+    schema['properties'].update(deepcopy(existing['properties']))
+    schema['$defs'].update(deepcopy(existing['$defs']))
+    _narrow_context_proposal(schema, context)
     return schema
 
 

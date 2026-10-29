@@ -187,6 +187,9 @@ def build_canonical_analysis_request(
     operators = [AnalysisOperator.AGGREGATE]
     if filters:
         operators.append(AnalysisOperator.FILTER)
+    from app.semantic_v2.semantic_decision import _PAYLOAD_INTENTS
+    primary_intent = _PAYLOAD_INTENTS.get(plan.payload.payload_type)
+    require(primary_intent is not None, "EXECUTION_INTENT_CONTRACT_MISSING")
     request = CanonicalAnalysisRequest(
         authorized_semantic_scope=chat.authorized_semantic_scope,
         conversation_id=chat.conversation_id,
@@ -199,7 +202,7 @@ def build_canonical_analysis_request(
         original_question=chat.question,
         rewritten_question=display.completed_question,
         rewrite_context_applied=(display.relation != "NEW_TASK"),
-        primary_intent=PrimaryIntent.METRIC_QUERY,
+        primary_intent=primary_intent,
         conversation_control=control,
         operators=operators,
         metrics=metrics,

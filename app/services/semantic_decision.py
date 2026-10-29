@@ -11,6 +11,7 @@ from app.domain.models import (
     ConversationControl,
     IntentCandidate,
     MetricRef,
+    PrimaryIntent,
     SemanticDimensionBinding,
     SemanticFilterBinding,
     TimeRange,
@@ -28,6 +29,34 @@ from app.domain.semantic_decision import (
 )
 from app.intent.classifier import RuleBasedIntentClassifier
 from app.services.authorized_scope import bind_authorized_scope
+
+
+def completed_turn_planning_intent(
+    chat: ChatRequest, *, required: bool = False,
+) -> PrimaryIntent | None:
+    """Return the intent already confirmed by context completion.
+
+    A compound judgment carries one intent per branch and therefore deliberately
+    has no single root value. Missing single-goal intent is a contract error, not
+    a reason to reopen intent classification during task planning.
+    """
+    from app.analysis.intents import primary_intent_from_label
+
+    judgment = getattr(chat, "_compound_judgment", None)
+    if judgment is not None and judgment.is_compound:
+        return None
+    if judgment is not None:
+        intent = primary_intent_from_label(judgment.intent)
+        if intent is not None:
+            return intent
+    decision = getattr(chat, "_semantic_decision", None)
+    tasks = getattr(decision, "tasks", ()) or ()
+    if len(tasks) == 1 and tasks[0].intent is not None:
+        return tasks[0].intent
+    if required and chat._completed_question_execution:
+        from app.planning.task_dag import TaskPlanningError
+        raise TaskPlanningError("问题补全阶段缺少可执行的用户意图合同")
+    return None
 
 
 _GRAIN_ASSUMPTIONS = {

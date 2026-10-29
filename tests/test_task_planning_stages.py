@@ -27,7 +27,7 @@ SPEC = '''| 指标 | 同义词 | 业务口径 | 单位 | 指标层级 | 依赖�
 QUESTION = '分析医院A采购商品B的订单级均价分布'
 
 
-def setup_planner(monkeypatch, plan, *, extract=None):
+def setup_planner(monkeypatch, plan, *, extract=None, calculate=None):
     monkeypatch.setattr(semantic_description, 'load_semantic_description', AsyncMock(return_value={
         'available': True, 'source': 'semantic_model_130.md', 'content': SPEC}))
     calls = []
@@ -35,7 +35,21 @@ def setup_planner(monkeypatch, plan, *, extract=None):
     async def model(request):
         body = json.loads(request.content)
         calls.append(body)
-        if '你是任务规划器' in body['messages'][0]['content']:
+        if '计算规划输入JSON：\n' in body['messages'][0]['content']:
+            fixed = json.loads(body['messages'][0]['content'].split('计算规划输入JSON：\n', 1)[1])
+            if calculate:
+                payload = calculate(fixed)
+            else:
+                # Existing scenarios provide their calculator fixture through
+                # extract; deliver it at the planner stage under the new contract.
+                supplied = extract(fixed)['tasks'] if extract else []
+                by_index = {item.get('task_index', i): item.get('extraction') or {}
+                            for i, item in enumerate(supplied)}
+                payload = {'tasks': [{'task_index': index, 'calculation': {
+                    key: value for key, value in by_index.get(index, {}).items()
+                    if key in {'计算绑定', '结果操作', '排序', '限制'}}}
+                    for index in fixed['calculation_task_indices']]}
+        elif '你是任务规划器' in body['messages'][0]['content']:
             # Planning has no query parameter schema or intent classification.
             schema = json.loads(body['messages'][0]['content'].split('JSON Schema：', 1)[1])
             assert 'extraction' not in str(schema) and 'intent' not in str(schema)
@@ -64,8 +78,8 @@ async def test_component_plan_is_expanded_before_parameters_are_extracted(monkey
     planner, calls = setup_planner(monkeypatch, {'tasks': [{'question': QUESTION,
         'metric_targets': ['订单级均价'], 'expected_output': '逐订单均价样本及价格分布'}]})
     result = await planner.plan_question(QUESTION, semantic_model_id=130)
-    assert len(calls) == 2  # plan, then one batched extraction; no intent-only call
-    fixed = json.loads(calls[1]['messages'][0]['content'].split('已规划任务JSON：\n',1)[1])['tasks']
+    assert len(calls) == 3  # boundaries, calculator plan, query extraction
+    fixed = json.loads(calls[-1]['messages'][0]['content'].split('已规划任务JSON：\n',1)[1])['tasks']
     assert len(fixed) == len(result.tasks) == 3
     assert [task['metric_targets'] for task in fixed] == [['销售总数量'], ['含税销售总额'], ['订单级均价']]
     assert all(task['grain'] == ['订单号'] for task in fixed)
@@ -109,7 +123,7 @@ async def test_multiple_requested_measures_survive_pre_extraction_expansion(monk
     planner, calls = setup_planner(monkeypatch, {'tasks':[{'question':question,
         'metric_targets':['订单级均价','平均每单销售金额','订单笔数'],'grain':['经销商编码']}]})
     result = await planner.plan_question(question, semantic_model_id=130)
-    assert len(calls) == 2 and len(result.tasks) == 6
+    assert len(calls) == 3 and len(result.tasks) == 6
     outputs = [task.structured['指标'][0]['name'] for task in result.tasks]
     assert set(outputs) == {'订单级均价','平均每单销售金额','订单笔数','含税销售总额','销售总数量'}
     assert outputs.count('含税销售总额') == 2  # distinct registered sample grains
@@ -143,7 +157,7 @@ async def test_component_titles_keep_year_grain_and_related_display_before_final
     planner, calls = setup_planner(monkeypatch, {'tasks':[{'question':question + '，交付平均每单销售金额排名',
         'metric_targets':['平均每单销售金额'], 'grain':['业务员']}]}, extract=extract)
     result = await planner.plan_question(question, semantic_model_id=130)
-    assert len(calls) == 2 and len(result.tasks) == 3
+    assert len(calls) == 3 and len(result.tasks) == 3
     for task, metric in zip(result.tasks[:2], ['含税销售总额','订单笔数']):
         assert all(word in task.name for word in ['2025年','业务员',metric,'国药公司名称'])
         assert task.structured['限制'] is None and task.structured['排序'] == []
@@ -215,7 +229,7 @@ async def test_narrative_distribution_is_delivered_with_final_calculation_not_in
          'postprocess':{'source_task_index':0,'operation':{'type':'aggregate','metrics':['median']}}}]}
     planner, calls = setup_planner(monkeypatch, plan)
     result = await planner.plan_question(QUESTION, semantic_model_id=130)
-    assert len(calls) == 2 and len(result.tasks) == 3
+    assert len(calls) == 3 and len(result.tasks) == 3
     assert '分布分析' in result.tasks[-1].structured['输出要求']
     assert all(not task.structured.get('结果操作') for task in result.tasks)
 
@@ -231,7 +245,7 @@ def test_executable_dependent_filter_is_not_folded_into_narrative():
 
 
 @pytest.mark.asyncio
-async def test_local_result_operation_is_extracted_after_task_boundaries(monkeypatch):
+async def test_local_result_operation_is_planned_before_query_extraction(monkeypatch):
     plan={'tasks':[{'question':'统计各经销商订单笔数'},
         {'question':'根据前序结果按订单笔数降序取前3，不再查询数据库', 'depends_on':[0]}]}
     def extract(request):
@@ -241,7 +255,7 @@ async def test_local_result_operation_is_extracted_after_task_boundaries(monkeyp
              '结果操作':{'source_task_index':0,'operation':{'type':'sort_limit','field':'订单笔数','descending':True,'count':3}}}}]}
     planner,calls=setup_planner(monkeypatch,plan,extract=extract)
     result=await planner.plan_question(plan['tasks'][0]['question'],semantic_model_id=130)
-    fixed=json.loads(calls[1]['messages'][0]['content'].split('已规划任务JSON：\n',1)[1])['tasks']
+    fixed=json.loads(calls[-1]['messages'][0]['content'].split('已规划任务JSON：\n',1)[1])['tasks']
     assert len(fixed)==len(result.tasks)==2
     assert result.tasks[-1].depends_on==(0,)
     assert result.tasks[-1].structured['结果操作']['source_task_index']==0
@@ -311,7 +325,7 @@ async def test_registered_sample_scope_reaches_each_component_before_parameter_e
         '先按订单号汇总，含税销售总额 ÷ 销售总数量。销售总数量大于0')
     semantic_description.load_semantic_description.return_value['content']=scoped
     result=await planner.plan_question(QUESTION,semantic_model_id=130)
-    fixed=json.loads(calls[1]['messages'][0]['content'].split('已规划任务JSON：\n',1)[1])['tasks']
+    fixed=json.loads(calls[-1]['messages'][0]['content'].split('已规划任务JSON：\n',1)[1])['tasks']
     assert all('销售总数量大于0' in item['sample_requirements'][0] for item in fixed[:2])
     assert result.boundary_plan_complete
 
@@ -360,7 +374,7 @@ async def test_component_names_cannot_replace_a_composite_delivery_goal(monkeypa
         '\n| 实体 | 明细查询输出属性 |\n| --- | --- |\n| 经销商 | 经销商名称, 经销商编码 |\n'
         '\n| 维度 | 说明 |\n| --- | --- |\n| 城市 | 医院所在地 |')
     result=await planner.plan_question(question,semantic_model_id=130)
-    assert len(result.tasks)==3 and len(calls)==2
+    assert len(result.tasks)==3 and len(calls)==3
     assert result.tasks[-1].structured['指标']==[{'name':'平均每单销售金额'}]
     assert result.tasks[-1].depends_on==(0,1)
     assert all('上海市' not in task.structured['维度'] for task in result.tasks)
@@ -398,7 +412,7 @@ async def test_joint_component_input_is_followed_by_local_calculation_without_a_
              {'op':'derive','expression':'amount / quantity'}]}}}]}
     planner,calls=setup_planner(monkeypatch,plan)
     result=await planner.plan_question(QUESTION,semantic_model_id=130)
-    assert len(result.tasks)==2 and len(calls)==2
+    assert len(result.tasks)==2 and len(calls)==3
     assert result.tasks[0].intent==PrimaryIntent.METRIC_QUERY
     assert '订单号' in result.tasks[0].structured['维度']
     assert result.tasks[-1].depends_on==(0,) and result.tasks[-1].structured['是否查询数据库']=='否'

@@ -55,15 +55,11 @@ class AnalysisRuntime:
         self,
         *,
         max_parallel: int = 4,
-        max_duration_seconds: float = 120,
         tool_runtime: ToolRuntime | None = None,
     ):
         if not 1 <= max_parallel <= 16:
             raise ValueError("max_parallel must be between 1 and 16")
-        if not 0 < max_duration_seconds <= 900:
-            raise ValueError("max_duration_seconds must be between 0 and 900")
         self.max_parallel = max_parallel
-        self.max_duration_seconds = max_duration_seconds
         self.tool_runtime = tool_runtime or ToolRuntime()
 
     async def execute(
@@ -76,7 +72,6 @@ class AnalysisRuntime:
         layers = self.execution_layers(plan.steps)
         semaphore = asyncio.Semaphore(self.max_parallel)
         results: dict[str, AnalysisStepResult] = {}
-        budget_exhausted = False
 
         async def run(step: AnalysisStep) -> AnalysisStepResult:
             failed_dependencies = [
@@ -117,7 +112,6 @@ class AnalysisRuntime:
                     tool_name=step.tool,
                     kind="INTERNAL_TOOL",
                     arguments=step.inputs,
-                    timeout_seconds=step.timeout_seconds,
                     max_attempts=step.max_attempts,
                     idempotent=True,
                 ),
@@ -144,32 +138,9 @@ class AnalysisRuntime:
                 },
             )
 
-        for layer_index, layer in enumerate(layers):
-            elapsed = time.perf_counter() - started
-            remaining = self.max_duration_seconds - elapsed
-            if remaining <= 0:
-                budget_exhausted = True
-                self._mark_budget_exhausted(
-                    results,
-                    [step for pending in layers[layer_index:] for step in pending],
-                    running=False,
-                )
-                break
-            try:
-                completed = await asyncio.wait_for(
-                    asyncio.gather(*(run(step) for step in layer)),
-                    timeout=remaining,
-                )
-                results.update((item.step_id, item) for item in completed)
-            except asyncio.TimeoutError:
-                budget_exhausted = True
-                self._mark_budget_exhausted(results, layer, running=True)
-                self._mark_budget_exhausted(
-                    results,
-                    [step for pending in layers[layer_index + 1:] for step in pending],
-                    running=False,
-                )
-                break
+        for layer in layers:
+            completed = await asyncio.gather(*(run(step) for step in layer))
+            results.update((item.step_id, item) for item in completed)
 
         ordered = [results[step.id] for step in plan.steps]
         failed = [item.step_id for item in ordered if item.status == "FAILED"]
@@ -196,36 +167,7 @@ class AnalysisRuntime:
             failed_step_ids=failed,
             skipped_step_ids=skipped,
             latency_ms=max(0, round((time.perf_counter() - started) * 1000)),
-            budget_exhausted=budget_exhausted,
-            budget_seconds=self.max_duration_seconds,
         )
-
-    @staticmethod
-    def _mark_budget_exhausted(
-        results: dict[str, AnalysisStepResult],
-        steps: list[AnalysisStep],
-        *,
-        running: bool,
-    ) -> None:
-        for step in steps:
-            if step.id in results:
-                continue
-            results[step.id] = AnalysisStepResult(
-                step_id=step.id,
-                action=step.action,
-                tool=step.tool,
-                status="FAILED" if running else "SKIPPED",
-                error_code="ANALYSIS_BUDGET_EXHAUSTED",
-                error_message=(
-                    "分析总执行时间预算已耗尽，当前步骤已取消"
-                    if running else "分析总执行时间预算已耗尽，步骤未启动"
-                ),
-                metadata={
-                    "parallel_group": step.parallel_group,
-                    "expected_output": step.expected_output,
-                    "required": step.required,
-                },
-            )
 
     @staticmethod
     def execution_layers(steps: list[AnalysisStep]) -> list[list[AnalysisStep]]:

@@ -82,7 +82,7 @@ async def test_guidance_keeps_task_data_interface_and_report_unchanged(
     assert payload["facts"] == original
     assert payload["completed_question"] == question
     assert body["response_format"] == {"type": "json_object"}
-    assert "tools" not in body
+    assert [tool["function"]["name"] for tool in body["tools"]] == ["insight_calculator"]
     prompt = body["messages"][0]["content"]
     assert "不仅凭意图标签或某个词判断" in prompt
     assert "即使全是数字也不是可计算指标" in prompt

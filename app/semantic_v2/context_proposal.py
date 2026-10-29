@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 import json
 
 from .authorized_contract import contract_digest
+from app.clarification.context_builder import build_question_chain_section
 from .pipeline import AuthorizedLogicalPlan, CurrentTurnSemanticParse
 from .state_machine import ConversationState
 from .structured_edits import _labels
@@ -12,8 +13,22 @@ from .context_contract import ContextProposal
 from .recognition_client import RecognitionFailure
 
 # Bounded exposure policy, not a calibrated semantic ranking.
-MAX_CONTEXT_TASK_CANDIDATES = 4
+MAX_CONTEXT_TASK_CANDIDATES = 6
 MAX_CONTEXT_CHARACTERS = 24000
+# 问题链进识别上下文的字符预算：超了从最老轮次丢起，保最近几轮
+QUESTION_CHAIN_BUDGET = 4000
+
+
+def _trim_question_chain(question_log) -> str:
+    """问题链瘦身：预算内原样渲染，超了从最老轮次开始丢，保最近几轮。"""
+    entries = list(question_log or [])
+    while entries:
+        text = build_question_chain_section(entries)
+        if len(text) <= QUESTION_CHAIN_BUDGET:
+            return text
+        # 存储侧新头在前，丢尾部即丢最老轮次
+        entries = entries[:-1]
+    return ""
 
 
 class ContextProposalFailure(RecognitionFailure):
@@ -73,7 +88,8 @@ def _trim_prior_task_table(table, budget=6000):
     return trimmed
 
 
-def discover_context(session, *, state=None, plans=(), pending=None, prior_task_table=None):
+def discover_context(session, *, state=None, plans=(), pending=None, prior_task_table=None,
+                     question_log=None):
     """Scope restoration precedes exposure; no text/parse/relation argument."""
     current = restored_state(session, state)
     prior_plans = {}
@@ -152,6 +168,15 @@ def discover_context(session, *, state=None, plans=(), pending=None, prior_task_
         trimmed = _trim_prior_task_table(prior_task_table)
         if trimmed is not None:
             context['prior_task_table'] = trimmed
+    if question_log:
+        # 会话问题链：多轮用户问题、系统反问与回答摘要。澄清回复轮的
+        # 识别要靠它结合最新补全参数和历史轮次补全问题；放不下预算就
+        # 整体不塞，不能挤掉候选任务等主干上下文
+        chain_text = _trim_question_chain(question_log)
+        if chain_text:
+            context['question_chain'] = chain_text
+            if len(json.dumps(context, ensure_ascii=False)) > MAX_CONTEXT_CHARACTERS:
+                context.pop('question_chain')
     if len(json.dumps(context, ensure_ascii=False)) > MAX_CONTEXT_CHARACTERS:
         raise ValueError('CONTEXT_SUMMARY_BUDGET_EXCEEDED')
     return DiscoveredContext(context, contract_digest(context), contract_digest(current.model_dump(mode='json')),

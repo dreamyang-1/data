@@ -169,6 +169,24 @@ def parameter_catalog(catalog, original, extraction, target):
     return result
 
 
+def bound_filter_catalog(catalog, field):
+    """Use the resolved field and its published dictionary edges for values.
+
+    The pre-binding pool may contain several attributes of the same entity.
+    Once a field is selected, sibling attributes are no longer alternatives.
+    Keep global value IDs stable so existing model selections can be checked.
+    """
+    owners = catalog.get('_parameter_owners') or set()
+    allowed = {field}
+    for name, choices in catalog.get('_dictionary_choices', {}).items():
+        if any(choice.get('field') == field
+               and (not owners or choice.get('owner_entity') in owners)
+               for choice in choices):
+            allowed.add(name)
+    return dict(catalog, fields={key: meta for key, meta in catalog['fields'].items()
+                                 if key in allowed})
+
+
 def value_allowed(record, catalog):
     """Keep stable global IDs while checking the selected logical parent."""
     owners = catalog.get('_parameter_owners') or set()

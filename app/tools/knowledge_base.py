@@ -140,7 +140,7 @@ class KnowledgeBaseSearchTool:
         )
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(
-            timeout=self._settings.knowledge_base_timeout_seconds
+            timeout=None
         )
         try:
             response = await client.post(url, headers=headers, json=payload)

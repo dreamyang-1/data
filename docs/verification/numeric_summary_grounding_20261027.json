@@ -1,0 +1,369 @@
+{
+  "request": "汇总数字与表格不一致，查明原因并优化",
+  "root_cause_status": "PROVEN",
+  "root_cause": [
+    "原查询已返回1000条；模型漏掉三个中间合作时长取值，错误地用1000减4得到996。",
+    "统计摘要原先只有极值和均值，未提供频数；证据复核按关键词挑句，遗漏该数字句。",
+    "旧完整查询表述没有区分本次LIMIT范围与数据库全部符合条件记录。"
+  ],
+  "changes": [
+    "按实际返回行计算数值频数及占比，保留任务和列的来源。",
+    "汇总模型直接使用程序统计，明确返回范围。",
+    "有频数证据的报告逐句进入既有证据复核，删除不支持句子；不增加业务查询校验。"
+  ],
+  "offline": {
+    "baseline": {
+      "FAIL": 567,
+      "PASS": 6204,
+      "ERROR": 7
+    },
+    "current": {
+      "FAIL": 567,
+      "PASS": 6208,
+      "ERROR": 7
+    },
+    "new_failures": []
+  },
+  "focused_tests": {
+    "local_passed": 70,
+    "remote_merged_passed": 70
+  },
+  "deployment": {
+    "status": "DEPLOYED",
+    "service_restarted": true,
+    "ready": true,
+    "config_preserved": true,
+    "own_five_files_match_release_after_external_restart": true
+  },
+  "original_numeric_acceptance": [
+    {
+      "case": "cooperation_over_three_months",
+      "message_id": "error-e2e-955b99eaa5c641c0a9d4863e65c40b11",
+      "status": "COMPLETED",
+      "attachment_rows": 1000,
+      "duration_375_rows": 993,
+      "other_rows": 7,
+      "share": 0.993,
+      "old_wrong_counts_absent": true,
+      "primary_correct_share_present": true
+    },
+    {
+      "case": "dealer_duration_exact",
+      "message_id": "error-e2e-9ab9b2aa312040bdabd0132e02fc6110",
+      "status": "COMPLETED",
+      "attachment_rows": 1000,
+      "duration_375_rows": 993,
+      "other_rows": 7,
+      "share": 0.993,
+      "old_wrong_counts_absent": true,
+      "primary_correct_share_present": false
+    },
+    {
+      "case": "dealer_duration_recent",
+      "message_id": "error-e2e-a395b032433a4e3ba47cd514ac98527b",
+      "status": "COMPLETED",
+      "attachment_rows": 1000,
+      "duration_375_rows": 993,
+      "other_rows": 7,
+      "share": 0.993,
+      "old_wrong_counts_absent": true,
+      "primary_correct_share_present": false
+    }
+  ],
+  "company_acceptance": {
+    "original_question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+    "status": "COMPLETED",
+    "all_four_tasks_completed": true,
+    "company_rows": 5,
+    "same_person_codes_and_names": true,
+    "descending_average": true,
+    "units_present": true,
+    "attachments": [
+      {
+        "readable": true,
+        "sheets": 2,
+        "no_notes_sheet": true
+      }
+    ]
+  },
+  "history": {
+    "bounded_concurrency": 2,
+    "independent_sessions": true,
+    "groups": 12,
+    "turns": 13,
+    "all_business_passed": false,
+    "results": [
+      {
+        "id": "cooperation_over_three_months",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 857
+          }
+        ],
+        "elapsed": 63.5,
+        "business_review": "PASS_CURRENT_FIX",
+        "review_detail": "原问题正常执行；下载附件独立统计993/1000，与汇总99.3%一致。"
+      },
+      {
+        "id": "dealer_duration_exact",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 788
+          }
+        ],
+        "elapsed": 59.0,
+        "business_review": "PASS_NUMERIC_FIX_WITH_LIMITATION",
+        "review_detail": "原错算未复现，附件993条375天；说明仍提及未返回的91至374天记录，未取得其实际存在的证据，不把全部表述标为通过。"
+      },
+      {
+        "id": "dealer_duration_recent",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 724
+          }
+        ],
+        "elapsed": 55.2,
+        "business_review": "PASS_CURRENT_FIX",
+        "review_detail": "原错算未复现；返回1000条与附件一致。"
+      },
+      {
+        "id": "company_top5",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-3",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-4",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1445
+          }
+        ],
+        "elapsed": 117.9,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "4任务完成，5人公司关联、编码姓名、降序、单位、附件通过专项验收；不表示所有自由发挥的洞察已逐句证明。"
+      },
+      {
+        "id": "huashan_sales_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1503
+          }
+        ],
+        "elapsed": 112.1,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "两任务完成，销售员金额及926条产品明细返回。"
+      },
+      {
+        "id": "shanghai_three_dealers_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 3009
+          },
+          {
+            "status": "NEEDS_CLARIFICATION",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 335
+          }
+        ],
+        "elapsed": 154.4,
+        "business_review": "FAIL_EXISTING_RECURRENT",
+        "review_detail": "第二轮再次因展示字段关联停在解析校验；前一轮回归曾通过。本改动只涉及查询完成后的汇总，未修改该阶段；不能声称全部历史回归通过。"
+      },
+      {
+        "id": "shanghai_coverage",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-3",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1451
+          }
+        ],
+        "elapsed": 78.3,
+        "business_review": "FAIL_EXISTING",
+        "review_detail": "仍按经销商返回589条而非整体，且缺少有限数值的说明与百分比表格矛盾；本次频数修复未覆盖该计算结果展示路径。"
+      },
+      {
+        "id": "hospital_sales_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1112
+          }
+        ],
+        "elapsed": 103.6,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "两任务完成，同医院同时间入选销售员及5个商品编码返回。"
+      },
+      {
+        "id": "semantic_entities",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 587
+          }
+        ],
+        "elapsed": 17.3,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "当前模型14个实体直接解释返回。"
+      },
+      {
+        "id": "orthopedics",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 282
+          }
+        ],
+        "elapsed": 72.6,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "返回金额、数量、订单数及单位。"
+      },
+      {
+        "id": "longest_cooperation",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 211
+          }
+        ],
+        "elapsed": 51.5,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "Top1名称和合作时长返回，并说明并列情况未确认。"
+      },
+      {
+        "id": "supplier_first_cooperation",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1190
+          }
+        ],
+        "elapsed": 56.6,
+        "business_review": "UNVERIFIED_SEMANTICS",
+        "review_detail": "日期与时长可返回，但供应商被映射为经销商且返回1000条；对象语义和结果范围仍需独立核实。"
+      }
+    ],
+    "transport_retry": "其他操作在17:21:45重启服务造成9组连接拒绝；健康恢复后从正常入口补跑，保留多轮顺序。",
+    "unverified_context": [
+      {
+        "id": "department_hospital_relation",
+        "request": "医院与科室多对多判断",
+        "missing": "原文实体ID已省略，缺少完整实体ID及模型范围"
+      },
+      {
+        "id": "relation_model122",
+        "request": "实体关系推荐返回空数组",
+        "semantic_model_id": 122,
+        "business_domain_id": 307,
+        "entity_type_id": "45eae41b-82d6-4bf7-b608-8e341b77d0f8",
+        "expected": "直接同名字段关系推荐，不推荐中间表"
+      },
+      {
+        "id": "city_province_relation",
+        "request": "城市跟省份为什么没有推荐关系",
+        "missing": "原请求模型、业务域和实体ID"
+      },
+      {
+        "id": "company_salesperson_relation",
+        "request": "国药公司和销售员这两个表有相同字段，为什么没有推荐",
+        "missing": "原请求模型、业务域和实体ID"
+      },
+      {
+        "id": "publication_error",
+        "request": "发布失败报错中文化",
+        "missing": "发布操作的完整原始参数；不在本轮只读查询回归范围内"
+      }
+    ]
+  },
+  "limitations": [
+    "频数确定性计算，但自然语言生成和复核仍由模型执行，不保证任意文本绝不出错。",
+    "未修改任务规划、实体绑定、SQL、数据源、语义库或业务筛选。",
+    "上海相关旧问题及供应商语义问题仍未解决。"
+  ]
+}

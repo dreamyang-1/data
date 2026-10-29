@@ -152,7 +152,7 @@ class OptionalToolSelector:
             ) as generation:
                 async with httpx.AsyncClient(
                     base_url=self.settings.intent_model_base_url.rstrip("/"),
-                    timeout=self.settings.intent_model_timeout_seconds,
+                    timeout=None,
                     transport=self.transport,
                 ) as client:
                     for attempt in range(self.settings.intent_model_max_retries + 1):

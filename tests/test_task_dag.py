@@ -502,7 +502,7 @@ async def test_dependent_new_entity_does_not_reuse_predecessor_dataset() -> None
             # values; exact dependency-result filtering is covered separately.
             task_id="task-2", question="另外查询供应商名单",
             depends_on=["task-1"],
-            extraction={"依赖绑定": []},
+            dependency_bindings=[], extraction={},
         ),
     ])
     await service._handle_task_plan(
@@ -1033,28 +1033,16 @@ def _yoy_decomposition(compute_question: str, time_range: str = '2025年'):
     ('对比2025年各经销商销售额与上一年销售额计算增长率，不再查询数据库', '2024年'),
     ('基于2025年11月和去年同期各经销商的销售额计算同比增长率，不再查询数据库', '2024年11月'),
 ])
-def test_collapse_synthesizes_base_period_retrieval_for_yoy_computation(
+def test_collapse_defers_baseline_retrieval_to_structured_requirements(
         compute_question, expected_label) -> None:
-    # 折叠"基于2025年和2024年计算同比增长率"类计算任务时，必须为现有取数
-    # 未覆盖的基期合成独立取数任务：基期查询即使返回空也如实呈现"基期无
-    # 数据"，而不是基期从未被查询。
+    # 折叠只形成取数候选，不再从可能混合目标期、基期和预测期的任务文本
+    # 合成查询；规范分析模板随后按requirements补齐expected_label基期。
     from app.planning.task_dag import _collapse_analysis_computation_tasks
 
     result = _collapse_analysis_computation_tasks(
         _yoy_decomposition(compute_question))
 
-    assert [task.question for task in result.tasks] == [
-        '查询2025年各经销商的销售额',
-        f'查询{expected_label}各经销商的销售额',
-    ]
-    baseline = result.tasks[1]
-    assert baseline.structured['时间粒度']['time_range'] == expected_label
-    assert baseline.structured['指标'] == [{'name': '销售额'}]
-    assert baseline.structured['维度'] == ['经销商']
-    assert f'{expected_label}（时间范围）' in baseline.parameters
-    assert baseline.depends_on == ()
-    assert baseline.structured is not result.tasks[0].structured
-    # 当前期间取数任务保持原样
+    assert [task.question for task in result.tasks] == ['查询2025年各经销商的销售额']
     assert result.tasks[0].structured['时间粒度']['time_range'] == '2025年'
     assert result.intent == PrimaryIntent.COMPARISON_ANALYSIS
 
@@ -1113,11 +1101,21 @@ async def test_plan_question_keeps_base_period_retrieval_after_collapse(monkeypa
     monkeypatch.setattr(planner, '_model_decompose', decompose)
     result = await planner.plan_question('2025年各经销商的销售额同比增长率是多少？')
 
-    assert len(result.tasks) == 2
+    assert len(result.tasks) == 1
     assert result.tasks[0].structured['时间粒度']['time_range'] == '2025年'
-    assert result.tasks[1].structured['时间粒度']['time_range'] == '2024年'
-    assert result.tasks[1].depends_on == ()
     assert result.intent == PrimaryIntent.COMPARISON_ANALYSIS
+
+    from app.domain.models import PlannerExtraction
+    from app.planning.analysis_task_planner import build_analysis_task_plan
+    first = result.tasks[0]
+    canonical = build_analysis_task_plan(
+        '2025年各经销商的销售额同比增长率是多少？',
+        PlannerExtraction(intent=result.intent, parameters=list(first.parameters),
+                          structured=first.structured),
+    )
+    assert canonical is not None and len(canonical.tasks) == 3
+    assert canonical.tasks[1].extraction['时间粒度']['time_range'].startswith('2024-')
+    assert canonical.tasks[-1].depends_on == ['task-1', 'task-2']
 
 
 @pytest.mark.asyncio
@@ -1666,7 +1664,7 @@ async def test_dependent_new_entity_query_inherits_bounded_upstream_dimension_va
             task_id="task-2",
             question="根据适用科室筛选出经销商",
             depends_on=["task-1"],
-            extraction={"依赖绑定": [{"source_task_id": "task-1", "source_column": "department.dept_code"}]},
+            dependency_bindings=[{"source_task_id": "task-1", "source_column": "department.dept_code"}], extraction={},
         ),
     ])
 
@@ -2809,8 +2807,65 @@ async def test_root_intent_replaces_model_intent_in_planning(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_root_intent_also_governs_computation_tasks(monkeypatch):
-    """计算路由使用查库标记，意图必须沿用识别节点。"""
+@pytest.mark.parametrize('question', [
+    '2025年上海市，平均每单销售金额是多少？',
+    '2025年上海市平均每单销售金额是多少？',
+])
+async def test_registered_compound_text_without_metric_array_still_binds_formula(monkeypatch, question):
+    from unittest.mock import AsyncMock
+    from app.domain import semantic_description
+    from test_task_planning_stages import setup_planner
+    from app.planning.compound_question import CompoundQuestionRouter, CompoundJudgment
+
+    fixed = {'tasks': [
+        {'question': '统计2025年上海市含税销售总额和订单笔数，用于计算平均每单销售金额',
+         'metric_targets': ['含税销售总额', '订单笔数']},
+        {'question': '根据前序结果计算平均每单销售金额，不再查询数据库',
+         'depends_on': [0], 'metric_targets': [], 'expected_output': '平均每单销售金额'},
+    ]}
+
+    def extract(boundaries):
+        items = []
+        for task in boundaries['tasks']:
+            local = '不再查询数据库' in task['question']
+            items.append({'task_index': task['task_index'], 'extraction': {
+                '意图': '指标计算' if local else '指标查询',
+                '指标': [] if local else [{'name': name} for name in task.get('metric_targets') or []],
+                '维度': [], '展示字段': [], '过滤条件': [],
+                '是否查询数据库': '否' if local else '是',
+                '输出要求': '计算平均每单销售金额' if local else None,
+            }})
+        return {'tasks': items}
+
+    planner, _ = setup_planner(monkeypatch, fixed, extract=extract)
+    spec = ('| 指标 | 同义词 | 业务口径 | 单位 | 依赖指标 |\n'
+            '| 平均每单销售金额 | 订单均价 | 含税销售总额÷订单笔数 | 元/笔 | 含税销售总额,订单笔数 |\n'
+            '| 含税销售总额 | 无 | 含税金额合计 | 元 | 无 |\n'
+            '| 订单笔数 | 订单数 | 订单号去重数 | 笔 | 无 |')
+    monkeypatch.setattr(semantic_description, 'load_semantic_description', AsyncMock(return_value={
+        'available': True, 'source': 'semantic_model_130.md', 'content': spec}))
+    router = CompoundQuestionRouter(planner.settings)
+    router._single = planner
+    outcome = await router.plan_with_judgment(
+        CompoundJudgment(is_compound=False), question,
+        semantic_model_id=130, root_intent=PrimaryIntent.METRIC_QUERY,
+    )
+    assert outcome.plan is not None and len(outcome.plan.tasks) >= 2
+    calculation = outcome.plan.tasks[-1]
+    binding = calculation.extraction['计算绑定']
+    assert binding['operation'] == 'divide'
+    assert binding['result_field'] == '平均每单销售金额'
+    assert calculation.extraction['指标'] == [{'name': '平均每单销售金额'}]
+    assert calculation.extraction['计算绑定来源'] == 'REGISTERED_COMPOUND'
+    assert calculation.primary_intent is PrimaryIntent.METRIC_QUERY
+    assert all(task.primary_intent is not PrimaryIntent.COMPARISON_ANALYSIS
+               for task in outcome.plan.tasks)
+    assert all('计算绑定' not in (task.extraction or {}) for task in outcome.plan.tasks[:-1])
+
+
+@pytest.mark.asyncio
+async def test_root_intent_keeps_computation_task_deterministic_override(monkeypatch):
+    """根意图下沉到本地计算节点，执行方式不再篡改业务意图。"""
     from unittest.mock import AsyncMock
 
     from app.domain import semantic_description
@@ -2834,9 +2889,7 @@ async def test_root_intent_also_governs_computation_tasks(monkeypatch):
             '输出要求': None, '是否去重': None, '是否查询数据库': '是'}},
         {'task_index': 1, 'extraction': {'意图': '明细查询', '指标': [], '维度': [],
             '展示字段': [], '过滤条件': [], '时间粒度': None, '排序': [], '限制': None,
-            '输出要求': None, '是否去重': None, '是否查询数据库': '否',
-            '结果操作': {'source_task_index': 0, 'operation': {'type': 'aggregate', 'group_by': [],
-                'aggregations': [{'field': '订单数量', 'function': 'avg', 'alias': '平均值'}]}}}},
+            '输出要求': None, '是否去重': None, '是否查询数据库': '否'}},
     ]}, ensure_ascii=False)
 
     async def model(request):
@@ -2856,7 +2909,109 @@ async def test_root_intent_also_governs_computation_tasks(monkeypatch):
     assert root.intent is PrimaryIntent.DETAIL_QUERY
     assert root.tasks[0].intent is PrimaryIntent.DETAIL_QUERY
     assert root.tasks[0].structured['意图'] == '明细查询'
+    # 本地计算仍使用指标计算参数合同，但不再被误标为对比分析。
     assert root.tasks[1].intent is PrimaryIntent.DETAIL_QUERY
-    assert root.tasks[1].structured['意图'] == '明细查询'
-    assert root.tasks[1].structured['是否查询数据库'] == '否'
-    assert root.tasks[1].structured['结果操作']['operation']['type'] == 'aggregate'
+    assert root.tasks[1].structured['意图'] == '指标计算'
+
+
+# 复合问题判断的字段覆盖度结论：提示词章节已并入判断器，
+# schema_coverage 归一为中文枚举，口径未定义必须带具体字段名
+def _judge_settings() -> Settings:
+    return Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        intent_model_base_url="https://judge.mock/v1",
+        multi_question_model_enabled=True,
+    )
+
+
+def _judge_response(payload: dict) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={"choices": [{"message": {"content": json.dumps(payload, ensure_ascii=False)}}]},
+    )
+
+
+@pytest.mark.asyncio
+async def test_judge_returns_coverage_undefined_with_fields() -> None:
+    from app.planning.compound_question import CompoundQuestionJudge
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return _judge_response({
+            "split": False,
+            "intent": "明细查询",
+            "business_domain": "医药销售域",
+            "sub_questions": [],
+            "schema_coverage": "口径未定义",
+            "unsupported_fields": ["手机号", "邮箱"],
+        })
+
+    judge = CompoundQuestionJudge(
+        _judge_settings(), transport=httpx.MockTransport(handler)
+    )
+    judgment = await judge.judge("查询业务员的手机号和邮箱")
+
+    assert judgment.is_compound is False
+    assert judgment.schema_coverage == "口径未定义"
+    assert judgment.unsupported_fields == ("手机号", "邮箱")
+
+
+@pytest.mark.asyncio
+async def test_judge_normalizes_english_coverage_value() -> None:
+    from app.planning.compound_question import CompoundQuestionJudge
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return _judge_response({
+            "split": False,
+            "intent": "明细查询",
+            "sub_questions": [],
+            "schema_coverage": "not_covered",
+            "unsupported_fields": ["注册资本"],
+        })
+
+    judge = CompoundQuestionJudge(
+        _judge_settings(), transport=httpx.MockTransport(handler)
+    )
+    judgment = await judge.judge("查询经销商的注册资本")
+
+    assert judgment.schema_coverage == "口径未定义"
+    assert judgment.unsupported_fields == ("注册资本",)
+
+
+@pytest.mark.asyncio
+async def test_judge_coverage_undefined_without_fields_degrades_to_defined() -> None:
+    from app.planning.compound_question import CompoundQuestionJudge
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return _judge_response({
+            "split": False,
+            "intent": "明细查询",
+            "sub_questions": [],
+            "schema_coverage": "口径未定义",
+            "unsupported_fields": [],
+        })
+
+    judge = CompoundQuestionJudge(
+        _judge_settings(), transport=httpx.MockTransport(handler)
+    )
+    judgment = await judge.judge("查询经销商的注册资本")
+
+    assert judgment.schema_coverage == "口径已定义"
+    assert judgment.unsupported_fields == ()
+
+
+@pytest.mark.asyncio
+async def test_judge_coverage_defaults_to_defined_when_missing() -> None:
+    from app.planning.compound_question import CompoundQuestionJudge
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return _judge_response({"split": False, "intent": "指标查询", "sub_questions": []})
+
+    judge = CompoundQuestionJudge(
+        _judge_settings(), transport=httpx.MockTransport(handler)
+    )
+    judgment = await judge.judge("查询本月销售额")
+
+    assert judgment.schema_coverage == "口径已定义"
+    assert judgment.unsupported_fields == ()

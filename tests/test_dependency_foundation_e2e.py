@@ -33,10 +33,8 @@ async def test_ranked_question_feeds_two_queries_then_key_aligned_calculation(so
                 structured={**common,'是否查询数据库':'否','结果操作':selection}),
         )),
         second: QuestionDecomposition(tasks=(
-            DecomposedTask(question='查询上述经销商2025年含税销售总额', structured={**common,'指标':[{'name':'含税销售总额'}],
-                '依赖绑定':[{'source_column':'经销商编码'}]}),
-            DecomposedTask(question='查询上述经销商2025年订单笔数', structured={**common,'指标':[{'name':'订单笔数'}],
-                '依赖绑定':[{'source_column':'经销商编码'}]}),
+            DecomposedTask(question='查询上述经销商2025年含税销售总额', dependency_bindings=[{'source_column':'经销商编码'}], structured={**common, '指标':[{'name':'含税销售总额'}]}),
+            DecomposedTask(question='查询上述经销商2025年订单笔数', dependency_bindings=[{'source_column':'经销商编码'}], structured={**common, '指标':[{'name':'订单笔数'}]}),
             DecomposedTask(question='根据上述任务结果计算平均每单销售金额，不再查询数据库',depends_on=(0,1),
                 structured={'意图':'指标计算','是否查询数据库':'否','指标':[{'name':'平均每单销售金额'}],
                     '维度':['经销商编码'],'计算绑定':{'operation':'divide',
