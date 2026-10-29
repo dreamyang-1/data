@@ -324,9 +324,8 @@ def test_cross_task_divide_with_single_bound_spec_still_computes():
     assert values == {'D1': 25.0, 'D2': 20.0} and quality == 'PASS'
 
 
-def test_unbound_result_operation_passthrough_instead_of_failure():
-    # 2026-10-21 用户裁决：结果操作解析不出公式时透传依赖数据集并告警，
-    # 不再把计算任务打成执行失败。
+def test_unbound_result_operation_fails_instead_of_false_success():
+    # 核心结果操作未绑定唯一输入时必须失败，不能透传前序数据冒充完成。
     sales = reference('sales', ('经销商（编码）', '含税销售总额'),
                       [{'经销商（编码）': 'D1', '含税销售总额': 100}])
     hospitals = reference('hospitals', ('经销商（编码）', '有效订单去重医院数'),
@@ -335,12 +334,11 @@ def test_unbound_result_operation_passthrough_instead_of_failure():
         depends_on=['sales', 'hospitals'],
         extraction={'是否查询数据库': '否',
                     '结果操作': {'source_task_id': 'ghost', 'operation': {'type': 'select'}}})
-    columns, result, operation, evidence, quality = calculate(
-        task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100}]),
-               'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4}])},
-        lambda *args, **kwargs: None)
-    assert result and quality == 'PASS'
-    assert operation['type'] == 'select'
+    with pytest.raises(ValueError, match='核心计算未完成'):
+        calculate(
+            task, {'sales': (sales, [{'经销商（编码）': 'D1', '含税销售总额': 100}]),
+                   'hospitals': (hospitals, [{'经销商（编码）': 'D1', '有效订单去重医院数': 4}])},
+            lambda *args, **kwargs: None)
 
 
 def test_degenerate_divide_binding_is_rederived_not_output_as_one():

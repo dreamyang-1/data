@@ -49,7 +49,7 @@ from app.services.upload_file_resolver import (
     UploadReferenceResolutionError,
 )
 from app.services.orchestrator import DataAnalysisOrchestrator
-from app.services.error_explanations import explain_unexpected_failure
+from exception_explainer import integration as exception_explainer
 from app.services import semantic_recommend
 from app.services.progress import _progress_callback, progress_scope
 from app.logging_config import set_log_trace_id, reset_log_trace_id
@@ -220,8 +220,11 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
     timing_terminal_status = "FAILED"
     existing_progress = _progress_callback.get()
     trace_token = set_log_trace_id(chat.message_id)
+    diagnostics, diagnostics_token = exception_explainer.begin(chat.question)
+    failure_message = None
 
     async def trace_progress(event: dict[str, Any]) -> None:
+        diagnostics.record_progress(event)
         if performance_tracker is not None:
             performance_tracker.record_progress(event)
         await _forward_traced_progress(
@@ -276,6 +279,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                         if isolated_handler is not None
                         else result["response"]
                     )
+                    response = await exception_explainer.explain_response(diagnostics, settings, response)
                     trace_response = response
                     timing_terminal_status = response.status
                     if performance_tracker is not None:
@@ -296,8 +300,9 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                         "chart_count": len(response.chart_specs),
                     })
                     return response
-                except TimeoutError:
+                except TimeoutError as exc:
                     timing_terminal_status = "TIMEOUT"
+                    failure_message = await exception_explainer.exception_message(diagnostics, settings, exc)
                     root_span.update(
                         output={"status": "TIMEOUT"},
                         level="ERROR",
@@ -314,6 +319,8 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                     raise
                 except Exception as exc:
                     timing_terminal_status = "FAILED"
+                    if not isinstance(exc, HTTPException) or exc.status_code >= 500:
+                        failure_message = await exception_explainer.exception_message(diagnostics, settings, exc)
                     root_span.update(
                         output={"status": "FAILED", "error_type": type(exc).__name__},
                         level="ERROR",
@@ -331,20 +338,27 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
 
                     await asyncio.to_thread(finish_trace)
     except TimeoutError as exc:
-        raise HTTPException(status_code=504, detail={"code": "DEPENDENCY_TIMEOUT", "message": explain_unexpected_failure(exc)}) from exc
+        failure_message = failure_message or await exception_explainer.exception_message(diagnostics, settings, exc)
+        raise HTTPException(status_code=504, detail={"code": "DEPENDENCY_TIMEOUT", "message": failure_message}) from exc
     except MessageIdReuseConflictError as exc:
         raise HTTPException(
             status_code=409,
             detail={"code": exc.code, "message": str(exc)},
         ) from exc
-    except HTTPException:
+    except HTTPException as exc:
+        if failure_message and exc.status_code >= 500:
+            detail = dict(exc.detail) if isinstance(exc.detail, dict) else {"code": "INTERNAL_ERROR"}
+            detail["message"] = failure_message
+            raise HTTPException(status_code=exc.status_code, detail=detail, headers=exc.headers) from exc
         raise
     except Exception as exc:
         logger.exception("unhandled data-analysis execution failure")
+        failure_message = failure_message or await exception_explainer.exception_message(diagnostics, settings, exc)
         raise HTTPException(status_code=500, detail={
-            "code": "INTERNAL_ERROR", "message": explain_unexpected_failure(exc),
+            "code": "INTERNAL_ERROR", "message": failure_message,
         }) from exc
     finally:
+        exception_explainer.end(diagnostics, diagnostics_token)
         reset_log_trace_id(trace_token)
         if performance_tracker is not None and not performance_trace_logged:
             log_performance_trace(
@@ -1201,7 +1215,10 @@ async def chat_stream(
                 # Completeness is expressed inside the document-defined intent
                 # and planning blocks; do not render an extra unlabeled line.
                 return ordered
-            if _thinking_section(stage) in {"parsing", "execution"} and deferred_planning:
+            if (
+                _thinking_section(stage) in {"parsing", "execution"}
+                or stage == "TASK_STATUS"
+            ) and deferred_planning:
                 # Public analytic sections have a fixed order. Some execution
                 # adapters emit ASL/SQL milestones before DATA_RETRIEVAL; release
                 # the completed planning block before the first such milestone
@@ -1407,17 +1424,24 @@ async def chat_stream(
             execution.cancel()
             raise
         except HTTPException as exc:
-            yield _event("error", _stream_error_payload(exc))
+            error = _stream_error_payload(exc)
+            if exc.status_code >= 500:
+                for name, data in exception_explainer.stream_failure_events(error):
+                    yield _event(name, data)
+            else:
+                yield _event("error", error)
         except Exception as exc:
             logger.exception("unhandled data-analysis SSE execution failure")
-            yield _event(
-                "error",
-                {
-                    "code": "INTERNAL_ERROR",
-                    "message": explain_unexpected_failure(exc),
-                    "retryable": True,
-                },
-            )
+            diagnostics, diagnostics_token = exception_explainer.begin(payload.question)
+            try:
+                diagnostics.record_progress({'stage': latest_progress_stage, 'status': 'FAILED'})
+                message = await exception_explainer.exception_message(diagnostics, settings, exc)
+            finally:
+                exception_explainer.end(diagnostics, diagnostics_token)
+            for name, data in exception_explainer.stream_failure_events({
+                "code": "INTERNAL_ERROR", "message": message, "retryable": True,
+            }):
+                yield _event(name, data)
         finally:
             if not execution.done():
                 execution.cancel()

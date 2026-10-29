@@ -1,0 +1,13 @@
+This component adapts evidence-handling prompt principles from HolmesGPT.
+Source: https://github.com/HolmesGPT/holmesgpt
+Pinned revision: 49804bde566633d4e945952e01c6bf99df6df7ab
+Source file: holmes/plugins/prompts/generic_ask.jinja2
+License: Apache License 2.0, included in LICENSE-HolmesGPT.txt.
+
+Modifications: selected principles were translated and adapted for Chinese
+business-query failure explanations: distinguish observed facts from hypotheses;
+correlate actual error evidence rather than coincident events; constrain impact
+claims to observed entities. No HolmesGPT executable runtime is bundled.
+The remaining request isolation, redaction, model client and API adapter are
+implemented for this project. This notice was created for the adaptation;
+the source repository had no root NOTICE file at the pinned revision.

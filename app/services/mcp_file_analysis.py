@@ -101,9 +101,6 @@ class McpFileAnalysisRunner:
         try:
             tools = await self.dispatcher.discover_mcp_tools(
                 chat,
-                timeout_seconds=(
-                    self.settings.mcp_file_analysis_discovery_timeout_seconds
-                ),
             )
         except asyncio.CancelledError:
             raise
@@ -126,14 +123,9 @@ class McpFileAnalysisRunner:
             tools=[tool.name.removeprefix("mcp:") for tool in tools],
         )
         try:
-            return await asyncio.wait_for(
-                self._tool_loop(chat, tools, warnings),
-                timeout=self.settings.mcp_file_analysis_total_budget_seconds,
-            )
+            return await self._tool_loop(chat, tools, warnings)
         except asyncio.CancelledError:
             raise
-        except TimeoutError:
-            warnings.append("MCP文件分析超过本轮时间预算")
         except Exception as exc:
             logger.warning("MCP file analysis failed: %s", type(exc).__name__)
             warnings.append(f"MCP文件分析失败：{type(exc).__name__}")
@@ -200,14 +192,11 @@ class McpFileAnalysisRunner:
                         )
                     else:
                         try:
-                            execution = await asyncio.wait_for(
-                                self.dispatcher.call_discovered_mcp_tool(
+                            execution = await self.dispatcher.call_discovered_mcp_tool(
                                     chat=chat,
                                     tool=descriptor,
                                     arguments=prepared,
-                                ),
-                                timeout=self.settings.mcp_file_analysis_tool_timeout_seconds,
-                            )
+                                )
                         except asyncio.CancelledError:
                             raise
                         except TimeoutError:
@@ -327,7 +316,7 @@ class McpFileAnalysisRunner:
         ) as generation:
             async with httpx.AsyncClient(
                 base_url=self.settings.intent_model_base_url.rstrip("/"),
-                timeout=self.settings.mcp_file_analysis_model_timeout_seconds,
+                timeout=None,
                 transport=self.model_transport,
             ) as client:
                 for attempt in range(self.settings.intent_model_max_retries + 1):

@@ -414,8 +414,8 @@ class MySQLLongTermMemoryStore:
                 cursorclass=pymysql.cursors.DictCursor,
                 autocommit=False,
                 connect_timeout=connect_timeout,
-                read_timeout=read_timeout,
-                write_timeout=write_timeout,
+                read_timeout=None,
+                write_timeout=None,
             )
 
         return cls(connect, logical_key_lock_timeout=logical_key_lock_timeout)

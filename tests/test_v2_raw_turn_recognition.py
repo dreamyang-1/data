@@ -72,7 +72,9 @@ class ScriptedTransport:
         self.steps=steps;self.calls=[];self.next=0
         self.before_semantic_edits=None
     def __call__(self,req):
-        body=json.loads(req.content);context=json.loads(body['messages'][1]['content'])
+        body=json.loads(req.content)
+        # defer 路径数据在前、合同在后，按角色取数据消息，不依赖固定下标
+        context=json.loads(next(m['content'] for m in body['messages'] if m['role']=='user'))
         self.calls.append(body)
         if 'mention' in context and 'candidates' in context:
             # This legacy fixture has no alias ground truth. A bounded probe
@@ -95,15 +97,13 @@ class ScriptedTransport:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('operation', ['SET', 'ADD'])
-async def test_surface_handoff_does_not_bind_a_complete_new_question(catalog, monkeypatch, operation):
-    step = metric_step('销售额')
-    step[1]['operation_markers'][0]['operation_hint'] = operation
-    # Deferred empty-context recognition now emits only context completion.
-    # The downstream planner/ASL owns mention and operation extraction.
-    step[1]['mentions'] = []
-    step[1]['operation_markers'] = []
-    step[1]['explicit_slot_mentions'] = {}
+async def test_surface_handoff_does_not_bind_a_complete_new_question(catalog, monkeypatch):
+    # 空会话独立新问题走窄合同：录制回包只需关系判定与补全问题两个字段
+    def new_task_proposal(context):
+        return dict(status='ACCEPTED', relation='NEW_TASK', target_task_id=None,
+            state_version=context['task_context']['state_version'],
+            task_version=None, pending_id=None)
+    step = ('销售额', {'context_proposal': new_task_proposal, 'completed_question': '销售额'}, None)
     engine, transport = planner(catalog, [step])
     engine.defer_new_task_binding = True
 
@@ -136,15 +136,26 @@ async def test_surface_context_completion_uses_offered_question_without_catalog_
     from app.semantic_v2.context_question import publish_context_task
     from app.semantic_v2.models import ContextQuestionState
     first = request(question='查看2025年安徽省各城市每月销售额', message_id='surface-first')
-    engine, _ = planner(catalog, [(first.question, parse(first.question), {})])
+    def new_task_proposal(context):
+        return dict(status='ACCEPTED', relation='NEW_TASK', target_task_id=None,
+            state_version=context['task_context']['state_version'],
+            task_version=None, pending_id=None)
+    engine, _ = planner(catalog, [(first.question,
+        {'context_proposal': new_task_proposal, 'completed_question': first.question}, {})])
     engine.defer_new_task_binding = True
     result = await engine.run(first, IDENTITY, allow_standalone_new_task_passthrough=True)
     state = publish_context_task(result.next_state, chat=first, created_at=NOW,
         frame=ContextQuestionState(original_question=first.question,
             execution_question=first.question, source_message_id=first.message_id))
     completed = '查看2025年上海市各城市每月销售额'
-    current = parse('上海市的', [('上海市','FILTER_VALUE','filter_expression','REPLACE')], follow=True)
-    current['completed_question'] = completed
+    # defer 追问轮走窄合同：录制回包只需关系判定与补全问题两个字段
+    def supplied_proposal(context):
+        ctx = context['task_context']
+        target = next(r for r in ctx['candidate_tasks'] if r['task_id'] == ctx['active_task_id'])
+        return dict(status='ACCEPTED', relation='MODIFY', target_task_id=target['task_id'],
+            state_version=ctx['state_version'], task_version=target['task_version'],
+            pending_id=None, data_source='NEW_QUERY')
+    current = {'context_proposal': supplied_proposal, 'completed_question': completed}
     engine, transport = planner(catalog, [('上海市的', current, {})])
     engine.defer_new_task_binding = True
     def no_binding(*args, **kwargs):
@@ -155,7 +166,7 @@ async def test_surface_context_completion_uses_offered_question_without_catalog_
     assert result.completed_question == completed
     assert result.fallback_reason == 'ASL_OWNS_CONTEXT_BINDING'
     assert len(transport.calls) == 1
-    sent = json.loads(transport.calls[0]['messages'][1]['content'])
+    sent = json.loads(transport.calls[0]['messages'][0]['content'])
     assert sent['task_context']['candidate_tasks'][0]['context_question']['execution_question'] == first.question
 
 
@@ -173,7 +184,6 @@ async def test_raw_input_reaches_model_catalog_and_plan(catalog):
     progress=[]
     def assert_candidate_progress_precedes_semantic_edits():
         assert [item['progress_phase'] for item in progress] == [
-            'V2_CONVERSATION_STATE_READY',
             'V2_SEMANTIC_CANDIDATES_READY',
         ]
     transport.before_semantic_edits = assert_candidate_progress_precedes_semantic_edits
@@ -186,13 +196,8 @@ async def test_raw_input_reaches_model_catalog_and_plan(catalog):
     assert 'tasks' not in json.loads(transport.calls[0]['messages'][1]['content'])
     assert result.next_state.context.authorized_scope.business_domain_ids==(205,)
     assert [item['progress_phase'] for item in progress] == [
-        'V2_CONVERSATION_STATE_READY',
         'V2_SEMANTIC_CANDIDATES_READY',
     ]
-    assert progress[0]['message'] == '对话状态识别：新问题。'
-    assert progress[0]['resolution_source'] == 'DETERMINISTIC_EMPTY_CONTEXT'
-    assert '正在匹配指标、维度、筛选条件和时间' not in progress[0]['message']
-    assert '语义提取字段：' not in progress[0]['message']
     assert current_turn_extraction_items(result.parse) == ({
         'surface': '销售额',
         'normalized_surface': '销售额',
@@ -1087,3 +1092,77 @@ async def test_handle_membership_does_not_override_slot_role(catalog,slot):
         return dict(payload_type='DETAIL_ROWS',edits=[edit(slot,value)])
     step=(text,parsed,draft);engine,_=planner(catalog,[step])
     with pytest.raises(RecognitionFailure,match='V2_SLOT_ROLE_CONFLICT'):await turns(engine,[step])
+
+
+def test_completion_key_terms_keep_business_words():
+    from app.semantic_v2.recognition import _completion_key_terms
+    assert _completion_key_terms('查询华东区域2025年的销售额') == ['华东区域', '2025', '销售额']
+    assert _completion_key_terms('帮我看一下OTC事业部T47合同的投入产出率') == [
+        'OTC', '事业部', 'T47', '合同', '投入产出率']
+    # 指代短语与动作词不构成必须保留的词条
+    assert _completion_key_terms('那这三家公司的回款情况呢') == ['回款']
+    assert _completion_key_terms('查询明细') == []
+    # 数字切断中文串时残尾不带进词条
+    assert _completion_key_terms('华东区域销售额前3名') == ['华东区域销售额']
+
+
+def test_completion_missing_terms_reports_only_absent_words():
+    from app.semantic_v2.recognition import _completion_missing_terms
+    assert _completion_missing_terms('那华东呢', '查询明细') == ['华东']
+    assert _completion_missing_terms('那华东呢', '查询华东区域销售额') == []
+
+
+class _RepairStubModel:
+    def __init__(self, reply=None, error=None):
+        self.calls = []
+        self.reply = reply
+        self.error = error
+
+    async def complete(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.error is not None:
+            raise self.error
+        from app.semantic_v2.recognition import CompletionRepairOutput
+        return CompletionRepairOutput(completed_question=self.reply)
+
+
+@pytest.mark.asyncio
+async def test_completion_guard_retries_once_and_accepts_repaired(catalog):
+    engine, _ = planner(catalog, [])
+    stub = _RepairStubModel(reply='查看2025年上海市各城市每月销售额')
+    engine.model = stub
+    req = request(question='上海市的', message_id='guard-retry')
+    result = await engine._ensure_completion_terms(req, '查询明细')
+    assert result == '查看2025年上海市各城市每月销售额'
+    assert len(stub.calls) == 1
+    assert stub.calls[0]['stage'] == 'v2_completion_repair'
+    assert stub.calls[0]['context']['missing_terms'] == ['上海市']
+
+
+@pytest.mark.asyncio
+async def test_completion_guard_falls_back_to_original_when_repair_still_missing(catalog):
+    engine, _ = planner(catalog, [])
+    stub = _RepairStubModel(reply='查询销售明细')
+    engine.model = stub
+    req = request(question='上海市的', message_id='guard-fallback')
+    result = await engine._ensure_completion_terms(req, '查询明细')
+    assert result == '上海市的'
+    assert len(stub.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_completion_guard_falls_back_when_repair_transport_fails(catalog):
+    engine, _ = planner(catalog, [])
+    engine.model = _RepairStubModel(error=RuntimeError('transport down'))
+    req = request(question='上海市的', message_id='guard-error')
+    result = await engine._ensure_completion_terms(req, '查询明细')
+    assert result == '上海市的'
+
+
+@pytest.mark.asyncio
+async def test_completion_guard_passes_through_when_terms_kept(catalog):
+    engine, _ = planner(catalog, [])
+    engine.model = _RepairStubModel(error=AssertionError('must not be called'))
+    req = request(question='上海市的', message_id='guard-ok')
+    completed = '查看2025年上海市各城市每月销售额'
+    assert await engine._ensure_completion_terms(req, completed) == completed

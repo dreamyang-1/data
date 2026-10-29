@@ -31,7 +31,8 @@ def test_scalar_duration_preserves_names_codes_threshold_and_sort_without_groupi
     extraction,knowledge,plan=fixture()
     ast,_=bind(extraction,knowledge,Obj(invoke=lambda _:Obj(content=json.dumps(plan))),row_level_detail=True)
     assert not ast['ambiguity']
-    assert {d['name'] for d in ast['dimensions']} == {'dealer.dealer_name','dealer.dealer_code'}
+    assert {d['name'] for d in ast['display_fields']} == {'dealer.dealer_name','dealer.dealer_code'}
+    assert ast['dimensions'] == []
     assert ast['having'] == ['DATEDIFF(CURRENT_DATE, dealer.first_order_date) > 90']
     assert ast['sort']['field']=='duration'
     assert ast['time_context'] is None
@@ -41,7 +42,9 @@ def test_aggregate_without_grouping_does_not_invent_detail_grain():
     extraction,knowledge,plan=fixture()
     knowledge['metrics'][0].metadata['calculation_rule']['calc_formula']='duration=COUNT(dealer.dealer_code)'
     ast,_=bind(extraction,knowledge,Obj(invoke=lambda _:Obj(content=json.dumps(plan))),row_level_detail=True)
-    assert any('唯一关联' in i['question'] for i in ast['ambiguity'])
+    assert not ast['ambiguity']
+    assert ast['dimensions'] == []
+    assert {d['name'] for d in ast['display_fields']} == {'dealer.dealer_name', 'dealer.dealer_code'}
 
 
 @pytest.mark.parametrize('formula',[

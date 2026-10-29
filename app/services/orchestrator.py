@@ -32,9 +32,11 @@ from app.analysis import (
     build_query_result_insight,
 )
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
+from app.analysis.intents import normalize_locked_root_intent
 from app.analysis.visualization import render_chart_svg, requested_chart_specs, suggested_chart_specs
 from app.analysis.units import header_with_unit, load_metric_units, unit_for_column
 from app.services.general_rules import attach_general_rules
+from app.services.node_examples import attach_node_examples, planner_examples, render_example
 from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
@@ -45,7 +47,11 @@ from app.analysis.chain_tools.temporal_window import (
 from app.config import Settings
 from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChartSpec, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
-from app.planning.analysis_task_planner import build_analysis_task_plan
+from app.planning.analysis_task_planner import (
+    build_analysis_task_plan,
+    normalize_analysis_task_plan,
+    validate_task_plan_execution_contract,
+)
 from app.planning.compat import (
     PlanningResult,
     plan_question,
@@ -93,10 +99,6 @@ from app.clarification import (
     build_question_chain_section,
     decide,
 )
-from app.decision.intent_sidecar import (
-    finish_intent_sidecar,
-    start_intent_sidecar,
-)
 from app.services.clarification_policy import (
     decide_clarification,
     restore_clarification_keys,
@@ -111,6 +113,7 @@ from app.planning.dependency_contract import (
 from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
 from app.services.semantic_decision import (
     canonical_request_from_semantic_decision,
+    completed_turn_planning_intent,
     semantic_decision_for_task_plan,
     semantic_decision_with_v1_fallback,
 )
@@ -673,6 +676,7 @@ class DataAnalysisOrchestrator:
     async def _with_platform_agent_prompt(self, chat: ChatRequest) -> ChatRequest:
         """Attach the latest platform user prompt to one request snapshot."""
 
+        chat = await attach_node_examples(chat, getattr(self, "agent_prompt_store", None))
         if chat.prompt is not None:
             return await attach_general_rules(chat, getattr(self, "agent_prompt_store", None))
         store = getattr(self, "agent_prompt_store", None)
@@ -1067,7 +1071,7 @@ class DataAnalysisOrchestrator:
                 if client is None or client.is_closed:
                     client = httpx.AsyncClient(
                         base_url=settings.intent_model_base_url.rstrip("/"),
-                        timeout=settings.pending_triage_timeout_seconds,
+                        timeout=None,
                     )
                     self._triage_http_client = client
                 resp = await client.post(
@@ -1302,7 +1306,7 @@ class DataAnalysisOrchestrator:
         if client is None or client.is_closed:
             client = httpx.AsyncClient(
                 base_url=settings.intent_model_base_url.rstrip("/"),
-                timeout=settings.intent_model_timeout_seconds,
+                timeout=None,
             )
             self._triage_http_client = client
         try:
@@ -1504,6 +1508,7 @@ class DataAnalysisOrchestrator:
                 )
                 if cached is not None:
                     return cached
+        single_task_execution = False
         try:
             request_started = time.perf_counter()
             # Recheck after acquiring the lease: the previous owner may have
@@ -1535,6 +1540,31 @@ class DataAnalysisOrchestrator:
             raw_request = self._classify_with_rules(
                 chat.question, identity, chat.conversation_id
             )
+            completed_intent = completed_turn_planning_intent(chat)
+            if completed_intent is not None:
+                raw_request = raw_request.model_copy(update={
+                    "primary_intent": completed_intent,
+                    "intent_source": "V2_CONTEXT_COMPLETION",
+                })
+                logger.info(
+                    "planning intent inherited: message_id=%s intent=%s",
+                    chat.message_id, completed_intent.value,
+                )
+            # 根意图锁定后多期序列环比/同比先归一到趋势意图再进规划：
+            # 识别按“环比”字面判成对比分析时，两期引擎承载不了逐期计算，
+            # 规划展开与合同校验会因意图与分析绑定不一致直接拒算
+            planning_root_intent = normalize_locked_root_intent(
+                raw_request.primary_intent, chat.question
+            )
+            if planning_root_intent is not raw_request.primary_intent:
+                logger.info(
+                    "root intent normalized before planning: message_id=%s intent=%s question=%s",
+                    chat.message_id, planning_root_intent.value,
+                    str(chat.question)[:120],
+                )
+                raw_request = raw_request.model_copy(update={
+                    "primary_intent": planning_root_intent,
+                })
             # 同一轮 _handle 内部还会对（可能归一化过的）同一问题再算一次，
             # 文本一致时直接复用这份确定性结果
             chat._rules_classification_cache = (chat.question, raw_request)
@@ -1763,11 +1793,6 @@ class DataAnalysisOrchestrator:
                                     chat.message_id,
                                     module_decision.questions,
                                 )
-                                await emit_progress(
-                                    "INTENT_RECOGNITION",
-                                    "RUNNING",
-                                    "对话状态识别：澄清问题。",
-                                )
                             elif module_decision.relation == "COMPLETE":
                                 planning_question = module_decision.completed_question
                                 logger.info(
@@ -1786,6 +1811,7 @@ class DataAnalysisOrchestrator:
                             # 追问轮把上一轮任务表一起给规划器：拆分时知道
                             # 上轮已有什么结果，避免为已查过的口径重复拆任务
                             planner_semantic_context = "\n".join(filter(None, (
+                                planner_examples(chat),
                                 extract_semantic_spec_section(
                                     await self._agent_prompt_text(chat)
                                 ),
@@ -1806,11 +1832,14 @@ class DataAnalysisOrchestrator:
                                     chat.message_id, planning_question[:120],
                                 )
                                 task_planning_started = time.perf_counter()
+                                if chat._completed_question_execution:
+                                    completed_turn_planning_intent(chat, required=True)
                                 outcome = await plan_question(
                                     self.task_planner, planning_question,
                                     semantic_context=planner_semantic_context,
                                     semantic_model_id=chat.semantic_model_id,
                                     prior_judgment=getattr(chat, '_compound_judgment', None),
+                                    intents_locked=chat._completed_question_execution,
                                     # 意图识别节点的根意图直接作为整轮规划的
                                     # 唯一意图来源：任务拆分与规划节点不再做
                                     # 意图判断（2026-10-23 用户要求）
@@ -1843,6 +1872,18 @@ class DataAnalysisOrchestrator:
                                         "analysis task expansion skipped: %s", exc,
                                     )
                                     plan = None
+                            if plan is not None:
+                                compound_plan = bool(
+                                    getattr(chat._compound_judgment, "is_compound", False)
+                                )
+                                if not compound_plan:
+                                    plan = normalize_analysis_task_plan(
+                                        planning_question, plan, raw_request.primary_intent,
+                                    )
+                                validate_task_plan_execution_contract(
+                                    plan,
+                                    None if compound_plan else raw_request.primary_intent,
+                                )
                             logger.info(
                                 "node=task_planning status=COMPLETED elapsed=%.2fs plan=%s tasks=%s",
                                 time.perf_counter() - task_planning_started,
@@ -1880,6 +1921,46 @@ class DataAnalysisOrchestrator:
                             # 整拆分作废转单一），以规划后的最终结论为准
                             if outcome.judgment is not None:
                                 chat._compound_judgment = outcome.judgment
+                            # 承接/V1直达轮不在桥内判断，覆盖度结论随执行层的
+                            # 判断产出；判出口径未定义在此中断，不进任务执行。
+                            # 桥内已判断过的轮次不会走到这里（未定义已提前返回）
+                            coverage_judgment = outcome.judgment
+                            if (
+                                coverage_judgment is not None
+                                and getattr(coverage_judgment, "schema_coverage", "口径已定义") == "口径未定义"
+                                and self.settings is not None
+                                and getattr(self.settings, "gate_enabled", False)
+                            ):
+                                undefined_fields = [
+                                    str(field).strip()
+                                    for field in (getattr(coverage_judgment, "unsupported_fields", ()) or ())
+                                    if str(field).strip()
+                                ]
+                                fields_text = "、".join(undefined_fields)
+                                target = f"「{fields_text}」" if fields_text else ""
+                                logger.info(
+                                    "coverage short-circuit at execution: fields=%s conversation_id=%s",
+                                    undefined_fields, chat.conversation_id,
+                                )
+                                await emit_progress(
+                                    "INTENT_RECOGNITION",
+                                    "RUNNING",
+                                    "判定思考：用户问题涉及字段" + target
+                                    + "未在语义规范中定义，无法按规范口径查询。系统中断本次查询并提示。",
+                                    off_topic=True,
+                                )
+                                return AgentResponse(
+                                    request_id=uuid4(),
+                                    conversation_id=chat.conversation_id,
+                                    status="COMPLETED",
+                                    intent=PrimaryIntent.OUT_OF_SCOPE,
+                                    intent_source="SCHEMA_COVERAGE_GUARD",
+                                    intent_confidence=1.0,
+                                    answer=(
+                                        f"您的问题涉及的字段{target}未在语义规范中定义，"
+                                        "无法按规范口径查询。如需支持该字段，请联系管理员补充语义定义。"
+                                    ),
+                                )
                             if plan is None and outcome.single_extraction is not None:
                                 chat._planner_extraction = outcome.single_extraction
                                 # 单任务展示名用拆解模型生成的陈述句名称，
@@ -2440,6 +2521,9 @@ class DataAnalysisOrchestrator:
                                 task_count=len(plan.tasks) if plan is not None else 1,
                                 task_table=task_table,
                             )
+                            single_task_execution = plan is None
+                if single_task_execution:
+                    await self._set_single_task_status(chat, "执行中")
                 if (confirmed_pending_choice is not None and plan is None
                         and self.settings.surface_asl_execution_enabled
                         and chat._planner_extraction is not None
@@ -2481,6 +2565,21 @@ class DataAnalysisOrchestrator:
                         else await self._handle(chat, identity)
                     )
             await self._ensure_clarification_trace(response, chat)
+            if single_task_execution:
+                analysis_incomplete = (
+                    response.reliability is not None
+                    and response.reliability.gates.get("analysis_completed") is False
+                )
+                status_text = {
+                    "COMPLETED": "已完成",
+                    "PARTIAL_SUCCESS": "分析未完成" if analysis_incomplete else "部分完成",
+                    "NEEDS_CLARIFICATION": "待补充条件",
+                    "SAFE_FALLBACK": "执行失败",
+                    "FAILED": "执行失败",
+                    "SKIPPED": "已跳过",
+                    "CANCELLED": "已取消",
+                }.get(response.status, response.status)
+                await self._set_single_task_status(chat, status_text)
             # Echo the effective routing contract on every outcome, including
             # clarification and safe-fallback responses which are not terminalized
             # through _finish_terminal.
@@ -2532,7 +2631,15 @@ class DataAnalysisOrchestrator:
                 time.perf_counter() - request_started,
             )
             return stored
+        except asyncio.CancelledError:
+            if single_task_execution:
+                await self._set_single_task_status(chat, "已取消")
+                await self._persist_conversation_task_table(chat, identity)
+            raise
         except Exception:
+            if single_task_execution:
+                await self._set_single_task_status(chat, "执行失败")
+                await self._persist_conversation_task_table(chat, identity)
             logger.exception(
                 "orchestration request failed message_id=%s conversation_id=%s elapsed=%.2fs",
                 chat.message_id, chat.conversation_id,
@@ -3060,7 +3167,7 @@ class DataAnalysisOrchestrator:
         source_extractions: dict[str, dict | None] | None = None,
     ) -> list[DependencyConstraint]:
         from app.planning.query_dependency_bindings import select_dependency_column
-        declared = (task.extraction or {}).get('依赖绑定')
+        declared = task.dependency_bindings
         if not isinstance(declared, list):
             raise DependencyConstraintError("DEPENDENCY_BINDING_MISSING")
         if not declared:
@@ -3212,9 +3319,56 @@ class DataAnalysisOrchestrator:
     def _task_missing_output(task: AtomicTask, response: AgentResponse) -> list[str]:
         if not task.depends_on or response.status not in {"COMPLETED", "PARTIAL_SUCCESS"}:
             return []
+        extraction = task.extraction or {}
+        analysis_binding = extraction.get("分析绑定")
+        if isinstance(analysis_binding, dict):
+            for item in response.evidence:
+                if item.kind != "ANALYSIS_RESULT":
+                    continue
+                facts = item.payload.get("facts")
+                if (
+                    item.payload.get("tool") == analysis_binding.get("tool")
+                    and item.payload.get("analysis_type") == analysis_binding.get("analysis_type")
+                    and isinstance(facts, dict) and facts
+                ):
+                    from app.analysis.tool_selection import selected_capability_errors
+                    requirements = analysis_binding.get("requirements") or {}
+                    intent = task.primary_intent or PrimaryIntent(
+                        str(analysis_binding.get("intent") or PrimaryIntent.METRIC_QUERY.value)
+                    )
+                    missing_capabilities = selected_capability_errors(
+                        intent, requirements.get("tool_selection"), facts,
+                    )
+                    return missing_capabilities or []
+            return [str(analysis_binding.get("tool") or "分析工具") + "的有效分析事实"]
+        calculation = extraction.get("计算绑定")
+        if isinstance(calculation, dict):
+            result_field = str(calculation.get("result_field") or "").strip()
+            for item in response.evidence:
+                if item.kind != "ANALYSIS_RESULT":
+                    continue
+                operation = item.payload.get("operation") or {}
+                preview = item.payload.get("preview") or []
+                steps = (
+                    operation.get("operations") or operation.get("steps") or [operation]
+                    if isinstance(operation, dict) else []
+                )
+                operation_matches = any(
+                    isinstance(step, dict)
+                    and step.get("type") == "derive"
+                    and step.get("operator") == calculation.get("operation")
+                    and step.get("result_field") == result_field
+                    for step in steps
+                )
+                if (
+                    operation_matches and result_field
+                    and any(result_field in row for row in preview if isinstance(row, dict))
+                ):
+                    return []
+            return [result_field or "计算结果"]
         query_items = [item for item in response.evidence if item.kind == "QUERY_RESULT"]
         columns = [str(column) for item in query_items for column in item.payload.get("columns", [])]
-        return missing_display_fields(task.extraction, columns) if query_items else []
+        return missing_display_fields(extraction, columns) if query_items else []
 
     @classmethod
     def _validate_task_output(cls, task: AtomicTask, response: AgentResponse) -> AgentResponse:
@@ -3647,6 +3801,7 @@ class DataAnalysisOrchestrator:
                 source_ref=f"deterministic:{analysis_output.method}",
                 payload={
                     "task_id": task.task_id, "tool": tool,
+                    "analysis_type": binding.get("analysis_type"),
                     "method": analysis_output.method, "facts": facts,
                     "warnings": list(analysis_output.warnings or []),
                 },
@@ -3831,6 +3986,11 @@ class DataAnalysisOrchestrator:
             name = item.get("name") if isinstance(item, dict) else item
             if isinstance(name, str) and name.strip():
                 metrics.append(MetricRef(input=name.strip(), canonical_name=name.strip()))
+        dimensions = []
+        for item in (task.extraction or {}).get("维度") or []:
+            name = item.get("name") if isinstance(item, dict) else item
+            if isinstance(name, str) and name.strip():
+                dimensions.append(name.strip())
         source_question = str(binding.get("source_question") or "").strip()
         original = source_question or str(chat.question or task.question)
         signal_question = original
@@ -3847,6 +4007,7 @@ class DataAnalysisOrchestrator:
             intent_source="ANALYSIS_TASK_PLANNER",
             intent_confidence=1.0,
             metrics=metrics,
+            dimensions=dimensions,
             semantic_model_id=chat.semantic_model_id,
             knowledge_base_names=list(chat.knowledge_base_names or []),
         )
@@ -3856,12 +4017,16 @@ class DataAnalysisOrchestrator:
             request.assumptions.append("GROUP_TOP_N=" + json.dumps(group_top_n, ensure_ascii=False))
         if isinstance(requirements, dict):
             request._analysis_contract = copy.deepcopy(requirements)
+            request._analysis_contract['source_task_ids'] = list(task.depends_on)
             target = requirements.get("target_window")
             if target:
                 from app.domain.models import TimeRange
                 request.time_range = TimeRange(start=date.fromisoformat(target["start"]), end_exclusive=date.fromisoformat(target["end_exclusive"]))
             if intent == PrimaryIntent.FORECAST_ANALYSIS:
-                horizon, target_grain = RuleBasedIntentClassifier._forecast_target(re.sub(r'\s+', '', original))
+                if (requirements.get('tool_selection') or {}).get('source') == 'MODEL_CATALOG':
+                    horizon, target_grain = 1, requirements.get('grain')
+                else:
+                    horizon, target_grain = RuleBasedIntentClassifier._forecast_target(re.sub(r'\s+', '', original))
                 request.forecast_horizon_periods = horizon
                 request.forecast_granularity = target_grain or requirements.get('grain')
         display_window_start = str(binding.get("display_window_start") or "").strip()
@@ -3954,6 +4119,11 @@ class DataAnalysisOrchestrator:
                     raise AnalysisError("归因输入的指标列无法唯一确定")
                 metric_column = numeric[0]
             base_label, current_label = periods
+            from app.analysis.tools.inputs import align_period_roles,require_observed_pair
+            contract=getattr(request,'_analysis_contract',None) or {}
+            strict_model_plan=(contract.get('tool_selection') or {}).get('source')=='MODEL_CATALOG'
+            if strict_model_plan:
+                base_label,current_label=align_period_roles(periods,contract.get('comparison_periods'),contract.get('grain'))
             if index == 0:
                 # 第一个依赖是总体取数：只取总体变化做对账
                 by_period = self._sum_by_period(dep_rows, time_column, metric_column, periods)
@@ -3967,9 +4137,14 @@ class DataAnalysisOrchestrator:
             if member_column is None:
                 continue
             label_column = label_column or member_column
+            identity_column = member_column + '（编码）'
+            if identity_column not in reference.columns:
+                identity_column = member_column  # legacy closed-group inputs
             grouped: dict[str, dict[str, float]] = {}
+            member_labels = {}
             for row in dep_rows:
-                member = str(row.get(member_column) or "").strip()
+                member = str(row.get(identity_column) if row.get(identity_column) is not None else '').strip()
+                member_labels[member] = str(row.get(member_column) or member)
                 period = str(row.get(time_column) or "").strip()
                 value = row.get(metric_column)
                 if not member or period not in periods:
@@ -3977,11 +4152,15 @@ class DataAnalysisOrchestrator:
                 number = AnalysisEngine._number(value)
                 if number is None:
                     raise AnalysisError(f"归因输入{member}/{period}的{metric_column}不是有限数值，不能当作0")
-                grouped.setdefault(member, {base_label: 0.0, current_label: 0.0})
+                grouped.setdefault(member, {} if strict_model_plan else {base_label: 0.0, current_label: 0.0})
                 grouped[member][period] = grouped[member].get(period, 0.0) + float(number)
             for member, values in grouped.items():
+                if strict_model_plan:require_observed_pair(member,values,base_label,current_label)
+                label = member_labels[member]
+                if sum(value == label for value in member_labels.values()) > 1:
+                    label += f'（{member}）'
                 contribution_rows.append({
-                    member_column: member,
+                    member_column: label,
                     change_column: values.get(current_label, 0.0) - values.get(base_label, 0.0),
                     '基期值': values.get(base_label, 0.0), '本期值': values.get(current_label, 0.0),
                 })
@@ -4478,24 +4657,26 @@ class DataAnalysisOrchestrator:
             # Internal task history is contextual evidence, not a source of
             # ordering timestamps. Remove timestamps consistently so ChatRequest
             # cannot receive a mixed timestamped/untimestamped history.
-            history = [
+            # Typed tasks consume dataset references and facts, never rendered
+            # dependency answers. Only legacy prose context needs bounded text.
+            history = [] if bound_structured_query else [
                 item.model_copy(update={"created_at": None}) for item in chat.history
             ]
-            for dependency_id in task.depends_on:
-                dependency = responses[dependency_id]
-                if isinstance(dependency, AgentResponse):
-                    dependency_task = next(
-                        item for item in plan.tasks if item.task_id == dependency_id
-                    )
-                    history.extend([
-                        HistoryMessage(role="user", content=dependency_task.question),
-                        HistoryMessage(role="assistant", content=dependency.answer),
-                    ])
-            # The typed child already carries its year/hospital/output and exact
-            # predecessor values. Prose history is not an execution input: the
-            # legacy history-recovery fallback can otherwise rebuild the parent
-            # ranking even when the completed-question boundary is set.
-            history = [] if bound_structured_query else compact_history(history)
+            if not bound_structured_query:
+                for dependency_id in task.depends_on:
+                    dependency = responses[dependency_id]
+                    if isinstance(dependency, AgentResponse):
+                        dependency_task = next(
+                            item for item in plan.tasks if item.task_id == dependency_id
+                        )
+                        dependency_answer = dependency.answer
+                        if len(dependency_answer) > 7000:
+                            dependency_answer = dependency_answer[:7000] + "\n[历史展示摘要已截断]"
+                        history.extend([
+                            HistoryMessage(role="user", content=dependency_task.question),
+                            HistoryMessage(role="assistant", content=dependency_answer),
+                        ])
+                history = compact_history(history)
             child = ChatRequest(
                 conversation_id=conversation_id,
                 message_id=(
@@ -4693,10 +4874,14 @@ class DataAnalysisOrchestrator:
             status = value.status if isinstance(value, AgentResponse) else (
                 "SKIPPED" if isinstance(value, TaskDependencySkipped) else "FAILED"
             )
+            analysis_incomplete = bool(isinstance(value, AgentResponse) and value.reliability
+                and value.reliability.gates.get('analysis_completed') is False)
             if status == "NEEDS_CLARIFICATION":
                 message = "本任务需要补充条件，暂未完成；其他独立任务不受影响。"
                 if value.clarification_questions:
                     message += "\n" + "；".join(value.clarification_questions)
+            elif analysis_incomplete:
+                message = "本任务分析未完成，已保留前序查询结果。"
             elif status in {"COMPLETED", "PARTIAL_SUCCESS"}:
                 message = "本任务处理完成。"
             elif status == "SKIPPED":
@@ -4704,13 +4889,13 @@ class DataAnalysisOrchestrator:
             else:
                 message = "本任务未完成，请查看本任务最终输出；其他独立任务不受影响。"
             progress_status = (
-                "COMPLETED" if status in {"COMPLETED", "PARTIAL_SUCCESS"}
+                "DEGRADED" if analysis_incomplete else "COMPLETED" if status in {"COMPLETED", "PARTIAL_SUCCESS"}
                 else "SKIPPED" if status in {"NEEDS_CLARIFICATION", "SKIPPED"}
                 else "FAILED"
             )
             status_text = {
                 "COMPLETED": "已完成",
-                "PARTIAL_SUCCESS": "已完成",
+                "PARTIAL_SUCCESS": "分析未完成" if analysis_incomplete else "部分完成",
                 "FAILED": "执行失败",
                 "SKIPPED": "已跳过",
                 "NEEDS_CLARIFICATION": "待补充条件",
@@ -5089,7 +5274,7 @@ class DataAnalysisOrchestrator:
                     )
                 try:
                     merged_insight, synthesis = await deliver_root_insight(
-                        materials, generate_insight, timeout=self.settings.analysis_synthesis_timeout_seconds)
+                        materials, generate_insight)
                     final_plan = getattr(synthesis, "final_answer", {}) or {}
                     if synthesis is None:
                         insight_degraded = True
@@ -5892,7 +6077,7 @@ class DataAnalysisOrchestrator:
                 identity,
                 chat.conversation_id,
                 pre_resolved=True,
-                agent_prompt=await self._agent_prompt_text(chat),
+                agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                 planner_extraction=chat._planner_extraction,
             )
             # surface 直通没走通时主链路会按同样输入再分类一次，留一份
@@ -6651,7 +6836,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=chat._completed_question_execution,
-                    agent_prompt=await self._agent_prompt_text(chat),
+                    agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                 )
             )
             if (
@@ -6695,7 +6880,7 @@ class DataAnalysisOrchestrator:
                         identity,
                         chat.conversation_id,
                         pre_resolved=chat._completed_question_execution,
-                        agent_prompt=await self._agent_prompt_text(chat),
+                        agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                     )
                 )
                 rounds = 1
@@ -6796,7 +6981,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=chat._completed_question_execution,
-                    agent_prompt=await self._agent_prompt_text(chat),
+                    agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                     planner_extraction=chat._planner_extraction,
                 )
             )
@@ -11760,7 +11945,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=True,
-                    agent_prompt=await self._agent_prompt_text(chat),
+                    agent_prompt=(await self._agent_prompt_text(chat) + render_example(chat._node_examples, "intent_recognition")),
                     planner_extraction=PlannerExtraction(
                         intent=task.primary_intent,
                         parameters=list(task.parameters),
@@ -11831,6 +12016,24 @@ class DataAnalysisOrchestrator:
                     if not str(key).startswith('_'))
         )
         return summary
+
+    @staticmethod
+    async def _set_single_task_status(chat: ChatRequest, status_text: str) -> None:
+        # DAG task states belong to the scheduler; never update an inherited table.
+        table = chat._task_table
+        if (
+            getattr(chat, "_dag_task_card", None) is not None
+            or chat._task_table_message_id != chat.message_id
+            or not table
+            or len(table) != 1
+            or table[0].get("执行状态") == status_text
+        ):
+            return
+        table[0]["执行状态"] = status_text
+        await emit_progress(
+            "TASK_STATUS", "RUNNING", "",
+            heading_only=True, task_table=copy.deepcopy(table),
+        )
 
     async def _persist_conversation_task_table(
         self, chat: ChatRequest, identity: TrustedIdentity
@@ -12074,13 +12277,6 @@ class DataAnalysisOrchestrator:
             or planner_extraction.parameters
             or planner_extraction.structured is not None
         )
-        # 问题意图判断节点全轮共享：主问题与各个子任务的 jev 终审都挂到
-        # 同一个节点下，不再每次分类各开一个 span
-        intent_verdict_span = ensure_structural_span(
-            "intent_verdict",
-            name="问题意图判断",
-            parent_key=("intent_judge", "comprehension"),
-        )
         with track_operation(
             "V1_ORCHESTRATION",
             "v1.intent_recognition",
@@ -12090,12 +12286,6 @@ class DataAnalysisOrchestrator:
                 pre_resolved, use_extraction, question[:120],
             )
             timing_started = time.perf_counter()
-            # jev 意图边车与分类/规划链路并行，对所有意图来源做终审；
-            # 失败或低置信时保持原判定，原链路即兜底，主链路不受隧道波动影响
-            inherited_intent = planner_extraction.intent if use_extraction else None
-            jev_task = (start_intent_sidecar(
-                self.settings, question, parent=intent_verdict_span
-            ) if inherited_intent is None else None)
             classify = self.classifier.classify
             signature = inspect.signature(classify).parameters
             supports_pre_resolved = "pre_resolved" in signature
@@ -12140,19 +12330,7 @@ class DataAnalysisOrchestrator:
                 self._apply_explicit_projection_mode(result, planner_extraction)
                 self._apply_dag_structured_query_shape(result, planner_extraction)
                 self._apply_planned_temporal_shape(result, planner_extraction)
-            if inherited_intent is None:
-                await finish_intent_sidecar(
-                    jev_task, result, self.settings, conversation_id
-                )
             self._apply_platform_metric_vocabulary(result, agent_prompt)
-            # 步骤层只归拢展示，qwen 分类与 jev 终审各自以子节点呈现
-            try:
-                intent_verdict_span.update(output={
-                    "intent": str(result.primary_intent),
-                    "intent_source": result.intent_source,
-                })
-            except Exception:
-                logger.debug("Langfuse span update failed", exc_info=True)
             timing.mark_first_result()
             timing.set_attribute("intent_source", result.intent_source)
             logger.info(
@@ -12836,6 +13014,22 @@ class DataAnalysisOrchestrator:
         ambiguity: SemanticAmbiguity = choice["ambiguity"]
         detail = choice.get("detail") or {}
         completed = pending.rewritten_question or pending.original_question
+        missing_values: list[str] = []
+        for item in pending.filters:
+            raw = item.get("value") if isinstance(item, dict) else None
+            values = raw if isinstance(raw, list) else [raw]
+            for value in values:
+                text = str(value or "").strip()
+                if text and text not in completed and text not in missing_values:
+                    missing_values.append(text)
+        if missing_values:
+            completed = completed.rstrip("。.!！") + "，范围：" + "、".join(missing_values) + "。"
+        missing_outputs = [
+            str(value).strip() for value in pending.fields
+            if str(value).strip() and str(value).strip() not in completed
+        ]
+        if missing_outputs:
+            completed = completed.rstrip("。.!！") + "，返回：" + "、".join(missing_outputs) + "。"
         selected = str(
             detail.get("canonical_value")
             or detail.get("value")
@@ -12858,22 +13052,6 @@ class DataAnalysisOrchestrator:
                 phrase = literal
         elif isinstance(slot, str):
             phrase = slot
-        missing_values: list[str] = []
-        for item in pending.filters:
-            raw = item.get("value") if isinstance(item, dict) else None
-            values = raw if isinstance(raw, list) else [raw]
-            for value in values:
-                text = str(value or "").strip()
-                if text and text not in completed and text not in missing_values:
-                    missing_values.append(text)
-        if missing_values:
-            completed = completed.rstrip("。.!！") + "，范围：" + "、".join(missing_values) + "。"
-        missing_outputs = [
-            str(value).strip() for value in pending.fields
-            if str(value).strip() and str(value).strip() not in completed
-        ]
-        if missing_outputs:
-            completed = completed.rstrip("。.!！") + "，返回：" + "、".join(missing_outputs) + "。"
         if phrase and selected and phrase in completed:
             return completed.replace(phrase, selected, 1)
         if selected and selected not in completed:

@@ -40,8 +40,7 @@ async def consume(question, *, consume_values=True):
                               column_bindings={'对象编码':'dealer.code'})
     source = AgentResponse(request_id=uuid4(), conversation_id=chat.conversation_id,
         status='COMPLETED', intent=PrimaryIntent.DETAIL_QUERY, answer='', dataset_id=reference.dataset_id)
-    task = AtomicTask(task_id='task-2', question=question, depends_on=['task-1'], extraction={
-        '依赖绑定':[{'source_task_id':'task-1','source_column':'对象编码'}] if consume_values else []})
+    task = AtomicTask(task_id='task-2', question=question, depends_on=['task-1'], dependency_bindings=[{'source_task_id':'task-1','source_column':'对象编码'}] if consume_values else [], extraction={})
     constraints = await agent._compile_dependency_constraints(task,chat,IDENTITY,
         {'task-1':source}, {'task-1':chat.conversation_id})
     if consume_values:

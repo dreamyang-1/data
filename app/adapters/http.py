@@ -249,22 +249,15 @@ class PlatformHttpClient:
         last_error: Exception | None = None
         last_adapter_error: AdapterError | None = None
         request_started = time.perf_counter()
-        # Explicit zero disables this dependency's deadline (ASL generation).
-        # None still means the normal per-dependency budget for all other callers.
-        deadline = None if timeout == 0 else request_started + (
-            timeout if timeout is not None else self.settings.http_dependency_timeout_seconds)
         # 不打印 payload：请求体可能含业务问题文本与凭证相关字段
         logger.debug("upstream request method=%s base_url=%s path=%s attempts=%s", method, base_url, path, attempts)
         for attempt in range(attempts):
-            remaining = None if deadline is None else deadline - time.perf_counter()
-            if remaining is not None and remaining <= 0:
-                break
             try:
                 async with httpx.AsyncClient(
                     base_url=base_url.rstrip("/"),
-                    timeout=remaining,
+                    timeout=timeout or None,
                 ) as client:
-                    response = await asyncio.wait_for(client.request(
+                    response = await client.request(
                         method,
                         path,
                         json=payload if method != "GET" else None,
@@ -274,7 +267,7 @@ class PlatformHttpClient:
                             idempotency_key=idempotency_key,
                             bearer_token=bearer_token,
                         ),
-                    ), timeout=remaining)
+                    )
                 if response.status_code in {401, 403}:
                     raise AdapterError(
                         "DEPENDENCY_FORBIDDEN",
@@ -316,8 +309,6 @@ class PlatformHttpClient:
                         )
                         delay = max(self.settings.http_retry_backoff_seconds * (2**attempt),
                                     self._retry_after(response))
-                        if deadline is not None and delay >= deadline - time.perf_counter():
-                            break
                         await asyncio.sleep(delay)
                         continue
                     logger.error(
@@ -351,8 +342,6 @@ class PlatformHttpClient:
                         time.perf_counter() - request_started,
                     )
                     delay = self.settings.http_retry_backoff_seconds * (2**attempt)
-                    if deadline is not None and delay >= deadline - time.perf_counter():
-                        break
                     await asyncio.sleep(delay)
                 else:
                     logger.error(
@@ -623,7 +612,7 @@ class HttpKnowledgeAdapter:
                 upstream_payload,
                 identity=identity,
                 application_id=application_id,
-                timeout=self.settings.knowledge_base_timeout_seconds,
+                timeout=None,
                 bearer_token=(
                     self.settings.knowledge_base_api_key.get_secret_value()
                     if self.settings.knowledge_base_api_key

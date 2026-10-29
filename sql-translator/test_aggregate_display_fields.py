@@ -45,10 +45,24 @@ def test_related_display_sql_returns_company_without_splitting_people():
 
 
 @pytest.mark.parametrize('card',['1:N','N:M','UNKNOWN',''])
-def test_nonunique_display_relation_not_silently_reduced(card):
+def test_related_display_does_not_require_unique_cardinality(card):
     value,ast=fixture(card)
-    with pytest.raises(ValueError,match='唯一'):
-        value.translate(json.dumps(ast),'81')
+    sql=value.translate(json.dumps(ast),'81')
+    assert 'JOIN company' in sql and 'company.name AS `所属公司`' in sql
+
+
+def test_one_to_many_display_returns_each_related_value():
+    value,ast=fixture('1:N')
+    sql=value.translate(json.dumps(ast),'81')
+    with sqlite3.connect(':memory:') as database:
+        database.executescript('CREATE TABLE staff (code TEXT, name TEXT, company TEXT);'
+            'CREATE TABLE company (code TEXT, name TEXT);'
+            'CREATE TABLE orders (staff TEXT, amount REAL);'
+            "INSERT INTO staff VALUES ('1','张','C1');"
+            "INSERT INTO company VALUES ('C1','公司甲'),('C1','公司乙');"
+            "INSERT INTO orders VALUES ('1',30),('1',20);")
+        rows=database.execute(sql).fetchall()
+    assert sorted(rows)==[('1','公司乙',50),('1','公司甲',50)]
 
 
 def test_display_cannot_reference_unregistered_attribute():
@@ -73,13 +87,13 @@ def test_parent_only_relation_is_reversed_for_aggregate_display(card):
 
 
 @pytest.mark.parametrize('card', ['N:1', 'MANY_TO_ONE', 'N:M', 'UNKNOWN', ''])
-def test_reverse_relation_that_fans_out_is_not_allowed(card):
+def test_reverse_related_display_does_not_require_unique_cardinality(card):
     value, ast = fixture()
     value.loader.entities['staff']['relations'] = value.loader.entities['staff']['relations'][1:]
     value.loader.entities['company']['relations'] = [{
         'target_entity': 'staff', 'join_key': 'company.code = staff.company', 'relation_type': card}]
-    with pytest.raises(ValueError, match='唯一'):
-        value.translate(json.dumps(ast), '120')
+    sql = value.translate(json.dumps(ast), '120')
+    assert 'JOIN company' in sql and 'company.name AS `所属公司`' in sql
 
 
 def test_reverse_display_can_follow_multiple_to_one_hops():
@@ -103,8 +117,9 @@ def test_display_relation_uses_authoritative_graph_not_stale_loader_edges():
         'target_entity': 'staff', 'join_key': 'company.code = staff.company', 'relation_type': '1:N'}]
     value.catalog = SimpleNamespace(entity_relationship_metadata=lambda _model: {
         'company': {'base_table': 'company', 'relations': []}})
-    with pytest.raises(ValueError, match='唯一'):
-        value._aggregate_display_dimensions(ast, '120')
+    ast['metrics'][0]['alias'] = ''
+    with pytest.raises(ValueError, match='关联路径'):
+        value.translate(json.dumps(ast), '120')
 
 
 def test_broken_reverse_join_is_not_evidence_for_a_display_field():
@@ -112,28 +127,8 @@ def test_broken_reverse_join_is_not_evidence_for_a_display_field():
     value.loader.entities['staff']['relations'] = value.loader.entities['staff']['relations'][1:]
     value.loader.entities['company']['relations'] = [{
         'target_entity': 'staff', 'join_key': 'unregistered.code = staff.company', 'relation_type': '1:N'}]
-    with pytest.raises(ValueError, match='唯一'):
+    with pytest.raises(ValueError, match='关联路径'):
         value.translate(json.dumps(ast), '120')
-
-
-def test_unsafe_display_has_specific_sanitized_error_in_both_endpoints():
-    value, ast = fixture('1:N')
-    for endpoint in ['translate_only', 'execute_query']:
-        result = getattr(value, endpoint)(json.dumps(ast), '120')
-        assert result['success'] is False
-        assert result['semantic_validation_report']['errors'][0]['code'] == 'AGGREGATE_DISPLAY_RELATION_UNSAFE'
-        assert 'company.name' in result['error']
-        assert '单一归属关系' in result['error']
-        assert '主实体' not in result['error']
-
-
-def test_display_error_never_echoes_arbitrary_exception_suffix():
-    value, _ = fixture()
-    from sql_translator_prod import SQLTranslatorProd
-    result = SQLTranslatorProd._controlled_translation_failure(
-        ValueError('展示字段与分组实体没有唯一的N:1/1:1关联: company.name password=PRIVATE_SENTINEL'), False)
-    assert result['error_code'] == 'AGGREGATE_DISPLAY_RELATION_UNSAFE'
-    assert 'PRIVATE_SENTINEL' not in json.dumps(result)
 
 
 @pytest.mark.parametrize('legacy_dimensions', [False, True])

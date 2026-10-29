@@ -75,14 +75,12 @@ class HttpEntityAttributeSearcher:
         *,
         base_url: str,
         path: str,
-        timeout_seconds: float,
         top_k: int,
         score_threshold: float,
         display_resolve_path: str = "/vector/semantic-elements/resolve",
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.path = path
-        self.timeout_seconds = timeout_seconds
         self.top_k = top_k
         self.score_threshold = score_threshold
         self.display_resolve_path = display_resolve_path
@@ -95,7 +93,7 @@ class HttpEntityAttributeSearcher:
         business_domain_id: int | None,
         business_domain_ids: list[int] | None = None,
     ) -> list[dict[str, Any]]:
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout_seconds) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=None) as client:
             response = await client.post(
                 self.path,
                 json={
@@ -146,7 +144,7 @@ class HttpEntityAttributeSearcher:
         # candidate domain provenance. It cannot enforce an explicit grant.
         if not candidates or business_domain_ids:
             return []
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout_seconds) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=None) as client:
             response = await client.post(
                 self.display_resolve_path,
                 json={

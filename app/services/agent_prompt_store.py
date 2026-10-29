@@ -69,8 +69,8 @@ class AgentPromptStore:
                 cursorclass=pymysql.cursors.DictCursor,
                 autocommit=True,
                 connect_timeout=connect_timeout,
-                read_timeout=read_timeout,
-                write_timeout=read_timeout,
+                read_timeout=None,
+                write_timeout=None,
             )
 
         return cls(connect, cache_ttl_seconds=cache_ttl_seconds)
@@ -130,6 +130,12 @@ class AgentPromptStore:
             "Aagent_background": background,
             "concise_instruct": "",
         }
+
+    async def resolve_node_examples(self, application_id, semantic_model_id):
+        from app.services.node_examples import lookup_examples
+        return await asyncio.to_thread(
+            lookup_examples, self._connection_factory, application_id, semantic_model_id
+        )
 
     async def resolve_general_rules(self, semantic_model_id, business_domain_ids=()):
         """No TTL cache: an add/edit/delete/disable applies on the next turn."""

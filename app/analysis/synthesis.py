@@ -272,39 +272,35 @@ class QwenAnalysisSynthesizer:
         candidates = []
         review_finished = False
         try:
-            # The existing synthesis budget covers generation AND one targeted
-            # repair. A second attempt must not restart the stage's clock.
-            async with asyncio.timeout(self.settings.analysis_synthesis_timeout_seconds):
-                for attempt in range(self.settings.analysis_synthesis_validation_retries + 1):
-                    _, latest = await self._generate_once(
-                        system_prompt + REPORT_CONTRACT_PROMPT, data,
-                        name=name, source_ids=source_ids,
-                    )
-                    issues = output_issues(latest, contract)
-                    if not issues:
-                        break
-                    data = {**data, "report_corrections": issues,
-                            "previous_report": latest.model_dump(mode="json")}
-                latest = remove_unsupported_text(latest, contract)
-                # Ratio reports repeatedly paraphrased the same unsupported
-                # inference without trigger words. Review every sentence.
-                candidates = review_candidates(latest, review_all=bool(contract['executed_ratios']))
-                if candidates:
-                    raw = await self._request_content(EVIDENCE_REVIEW_PROMPT,
-                        {"evidence_context": {**prompt_input, "report_contract": contract}, "items": candidates},
-                        name="analysis-evidence-review")
-                    try:
-                        reviewed = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip()))
-                    except (ValueError, TypeError, AttributeError):
-                        reviewed = None
-                    latest = apply_evidence_review(latest, candidates, reviewed,
-                        allow_inference=contract['causality_established'])
-                    candidates = []
-                review_finished = True
+            for attempt in range(self.settings.analysis_synthesis_validation_retries + 1):
+                _, latest = await self._generate_once(
+                    system_prompt + REPORT_CONTRACT_PROMPT, data,
+                    name=name, source_ids=source_ids,
+                )
+                issues = output_issues(latest, contract)
+                if not issues:
+                    break
+                data = {**data, "report_corrections": issues,
+                        "previous_report": latest.model_dump(mode="json")}
+            latest = remove_unsupported_text(latest, contract)
+            # Ratio reports repeatedly paraphrased the same unsupported
+            # inference without trigger words. Review every sentence.
+            candidates = review_candidates(latest, review_all=bool(
+                contract['executed_ratios'] or contract['returned_value_distributions']))
+            if candidates:
+                raw = await self._request_content(EVIDENCE_REVIEW_PROMPT,
+                    {"evidence_context": {**prompt_input, "report_contract": contract}, "items": candidates},
+                    name="analysis-evidence-review")
+                try:
+                    reviewed = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip()))
+                except (ValueError, TypeError, AttributeError):
+                    reviewed = None
+                latest = apply_evidence_review(latest, candidates, reviewed,
+                    allow_inference=contract['causality_established'])
+                candidates = []
+            review_finished = True
         except (TimeoutError, httpx.HTTPError, SynthesisValidationError) as exc:
             if latest is None:
-                if isinstance(exc, TimeoutError):
-                    raise SynthesisValidationError("analysis synthesis deadline exceeded") from exc
                 raise
         clean = remove_unsupported_text(latest, contract)
         if not review_finished:
@@ -348,7 +344,7 @@ class QwenAnalysisSynthesizer:
         with trace_generation(name=name, model=body["model"], messages=body["messages"]) as generation:
             async with httpx.AsyncClient(
                 base_url=self.settings.intent_model_base_url.rstrip("/"),
-                timeout=self.settings.analysis_synthesis_timeout_seconds, transport=self._transport,
+                timeout=None, transport=self._transport,
             ) as client:
                 for attempt in range(self.settings.analysis_synthesis_max_retries + 1):
                     try:

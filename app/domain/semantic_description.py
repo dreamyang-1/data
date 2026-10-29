@@ -60,8 +60,8 @@ def _description_url(settings: Any, model_id: int) -> str:
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True,
         connect_timeout=getattr(settings, "mysql_connect_timeout_seconds", 5),
-        read_timeout=getattr(settings, "mysql_read_timeout_seconds", 10),
-        write_timeout=getattr(settings, "mysql_write_timeout_seconds", 10),
+        read_timeout=None,
+        write_timeout=None,
     )
     try:
         with connection.cursor() as cursor:
@@ -145,7 +145,7 @@ async def load_semantic_description(
             return reference
         maximum = getattr(settings, "semantic_description_max_bytes", 1024 * 1024)
         async with httpx.AsyncClient(
-            timeout=getattr(settings, "semantic_description_timeout_seconds", 3.0),
+            timeout=None,
             follow_redirects=False,
             trust_env=False,
         ) as client:

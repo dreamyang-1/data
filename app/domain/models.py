@@ -575,8 +575,9 @@ class ToolConfig(StrictModel):
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default="", max_length=1000)
     type: Literal["", "tool", "flow"] = ""
-    timeout: int = Field(
-        default=15,
+    # Legacy platform input is accepted, but does not impose an execution limit.
+    timeout: int | None = Field(
+        default=None,
         ge=1,
         le=180,
         validation_alias=AliasChoices("timeout", "time_out"),
@@ -740,6 +741,8 @@ class AgentPromptConfig(StrictModel):
 
 
 class ChatRequest(StrictModel):
+    _node_examples: dict[str, str] = PrivateAttr(default_factory=dict)
+    _node_examples_scope: tuple = PrivateAttr(default=())
     _general_rules_loaded: bool = PrivateAttr(default=False)
     _general_rules_scope: tuple = PrivateAttr(default=())
     _file_inspection: dict[str, Any] = PrivateAttr(default_factory=dict)
@@ -1312,7 +1315,7 @@ class AnalysisStep(StrictModel):
     parallel_group: str | None = Field(default=None, max_length=100)
     expected_output: str = Field(min_length=1, max_length=500)
     required: bool = True
-    timeout_seconds: float = Field(default=30, gt=0, le=300)
+    timeout_seconds: float | None = Field(default=None, gt=0, le=300, description="兼容历史输入，不作为执行时限")
     max_attempts: int = Field(default=1, ge=1, le=3)
 
 
@@ -1380,6 +1383,8 @@ class AtomicTask(StrictModel):
     depends_on: list[str] = Field(default_factory=list, max_length=11)
     expected_output: str | None = Field(default=None, max_length=300)
     parameters: list[str] = Field(default_factory=list, max_length=10)
+    # Planning-owned predecessor inputs; extraction cannot create/overwrite them.
+    dependency_bindings: list[dict[str, Any]] | None = None
     # 拆分模型产出的结构化提取JSON（国药语义解析规范格式）。
     extraction: dict[str, Any] | None = None
     primary_intent: PrimaryIntent | None = None

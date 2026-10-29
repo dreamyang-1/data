@@ -379,11 +379,8 @@ async def test_bridge_streams_context_progress_before_resolution(provider):
     assert events[0]["status"] == "RUNNING"
     assert events[0]["progress_phase"] == "V2_CONTEXT_START"
     assert "正在判断本轮问题与会话上下文的关系，并补全问题" in events[0]["message"]
-    assert events[1]["progress_phase"] == "V2_CONVERSATION_STATE_READY"
-    assert events[1]["message"] == "对话状态识别：新问题。"
-    assert events[1]["resolution_source"] == "DETERMINISTIC_EMPTY_CONTEXT"
-    assert events[2]["progress_phase"] == "V2_SEMANTIC_CATALOG_READY"
-    assert events[2]["message"] == (
+    assert events[1]["progress_phase"] == "V2_SEMANTIC_CATALOG_READY"
+    assert events[1]["message"] == (
         "业务域语义目录已加载，正在提取当前问题的查询要素。"
     )
     resolved_context = next(
@@ -396,6 +393,52 @@ async def test_bridge_streams_context_progress_before_resolution(provider):
     assert "补全后的问题：" in resolved_context["message"]
     assert "结构化参数提取：" not in resolved_context["message"]
     assert "业务域：" not in resolved_context["message"]
+
+
+@pytest.mark.asyncio
+async def test_gate_pass_status_line_replaces_conversation_state(provider, monkeypatch):
+    # 问题理解与补全节点的状态行展示前置门控分类，对话状态识别行不再出现
+    redis = DeploymentRedis()
+
+    async def v1(chat, _identity):
+        return response(chat)
+
+    bridge = handler(provider, redis, v1)
+    install_resolution(bridge, provider)
+    bridge.jev_settings = SimpleNamespace(gate_enabled=True)
+
+    from app.gate import GateDecision
+
+    async def fake_run_gate(*_args, **_kwargs):
+        return GateDecision(
+            gate_class="业务场景问题", confidence=0.99, judge="jev",
+        )
+
+    monkeypatch.setattr(
+        "app.semantic_v2.context_v1_execution.run_gate", fake_run_gate
+    )
+    events = []
+    with progress_scope(events.append):
+        result = await bridge.handle(
+            request(
+                question="查询去年江苏省订单笔数",
+                message_id="gate-status-line",
+            ),
+            IDENTITY,
+        )
+
+    assert result.status == "COMPLETED"
+    gate_events = [
+        event for event in events
+        if event.get("progress_phase") == "V2_GATE_PASSED"
+    ]
+    assert len(gate_events) == 1
+    assert gate_events[0]["stage"] == "INTENT_RECOGNITION"
+    assert gate_events[0]["message"] == "前置门控：业务场景问题。"
+    assert all(
+        "对话状态识别" not in str(event.get("message") or "")
+        for event in events
+    )
 
 
 @pytest.mark.asyncio
@@ -420,11 +463,13 @@ async def test_compound_judgment_is_shown_in_resolved_context_and_stashed(provid
         entries=(
             CompoundJudgmentEntry(
                 question="统计各经销商的订单笔数",
+                intent="指标查询",
                 business_domain="医药销售域",
                 expected_output="各经销商订单笔数",
             ),
             CompoundJudgmentEntry(
                 question="筛选订单笔数大于5笔的经销商名单",
+                intent="明细查询",
                 business_domain="医药销售域",
                 expected_output="经销商名单",
             ),
@@ -474,16 +519,14 @@ async def test_compound_judgment_is_shown_in_resolved_context_and_stashed(provid
         event for event in events
         if event.get("progress_phase") == "V2_COMPOUND_JUDGE_START"
     )
-    # STALE_TEST: 用户确认保留49的前置判断不再判定/展示意图；
-    # 子问题、业务域、判断先后及向执行层透传的断言保留。
-    assert judge_start["message"] == "正在判断问题类型，并识别各问题的业务域。"
+    assert judge_start["message"] == "正在判断问题类型，并识别各问题的意图与业务域。"
     assert events.index(judge_start) < events.index(resolved_context)
     assert "问题拆分为2个独立子问题：" in resolved_context["message"]
     assert (
-        "问题1：统计各经销商的订单笔数，业务域：医药销售域。"
+        "问题1：统计各经销商的订单笔数，意图：指标查询，业务域：医药销售域。"
     ) in resolved_context["message"]
     assert (
-        "问题2：筛选订单笔数大于5笔的经销商名单，业务域：医药销售域。"
+        "问题2：筛选订单笔数大于5笔的经销商名单，意图：明细查询，业务域：医药销售域。"
     ) in resolved_context["message"]
     # 执行层 chat 由 model_copy(deep=True) 派生，判断结论深拷贝透传，内容一致
     assert seen["judgment"] == judgment
@@ -4480,13 +4523,21 @@ async def test_pure_v1_and_bridge_passthrough_have_execution_contract_parity():
     )
 
     pure_response = await pure.handle(parity_chat(), IDENTITY)
+    bridged_chat = parity_chat()
+    # 生产桥接在调 V1 执行前已由补全阶段确认意图（单一问题判断结论），
+    # 直达调用要带上同样的前置合同，否则执行层按合同缺失拒算
+    bridged_chat._compound_judgment = CompoundJudgment(
+        is_compound=False, intent="明细查询"
+    )
     bridge_response = await bridged.execute_v1_from_completed_question(
-        parity_chat(), IDENTITY
+        bridged_chat, IDENTITY
     )
 
     assert pure_response.status == bridge_response.status == "COMPLETED"
     assert pure_classifier.calls > 0 and bridged_classifier.calls > 0
-    assert pure_planner.calls == bridged_planner.calls == 1
+    # 桥接轮复用补全阶段的判断结论，拆分判断不再二次调用；V1 直达轮自行判断一次
+    assert pure_planner.calls == 1
+    assert bridged_planner.calls == 0
     assert len(pure_query.requests) == len(bridged_query.requests) == 1
     left, right = pure_query.requests[0], bridged_query.requests[0]
     for field in (

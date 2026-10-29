@@ -32,11 +32,11 @@ def test_query_result_insight_describes_scale_and_numeric_distribution() -> None
 
     assert output is not None
     assert output.method == "validated_query_result_summary"
-    assert "共命中3条结果" in output.answer
+    assert "实际执行范围内共返回3条结果" in output.answer
     assert "0.00%至100.00%" in output.answer
     assert "平均值为50.00%" in output.answer
     assert "经销商包含3个不同值" in output.answer
-    assert "完整查询结果" in output.answer
+    assert "执行范围内的结果已完整返回" in output.answer
     assert output.facts["llm_role"] == "PRESENTATION_ONLY"
     assert output.warnings == []
 

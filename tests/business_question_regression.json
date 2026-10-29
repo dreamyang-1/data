@@ -2,6 +2,10 @@
   "version": 1,
   "note": "原文来自用户会话。运行时必须核实原请求范围；不得用本清单创建或扩大授权。推荐接口缺少实体ID的项目不能改写成聊天查询代替验收。",
   "questions": [
+    {"id":"tier_three_hospital_count","question":"统计三级医院数量","semantic_model_id":135,"business_domain_ids":[306],"scope_evidence":"用户提供的原问题及语义模型135、业务域306说明","expected":"保留三级医院筛选并明确医院计数，不以缺指标为由误导用户新建指标；若尚未完成必须如实记录"},
+    {"id":"unbilled_shipped_amount","question":"统计已发货未开票金额","semantic_model_id":133,"business_domain_ids":[],"scope_evidence":"用户截图注明语义模型133、当前模型范围","expected":"按当前语义目录统计并返回金额；目录仍无效时记录原有阻塞，不能伪报通过"},
+    {"id":"two_brands_manufacturers_multirow","question":"统计美敦力、波士顿科学两个品牌在二级医院的销售额，按品牌分组展示厂家名称","semantic_model_id":130,"business_domain_ids":[296],"expected":"根据已授权品牌和医院等级筛选，展示品牌、厂家和销售额；同一品牌可按厂家分多行。","note":"根据用户补充要求构造的额外回归；原始问题另行原样测试。"},
+    {"id":"two_brands_tier_two_hospitals","question":"统计美敦力、波士顿科学两个品牌在二级医院的销售额","semantic_model_id":130,"business_domain_ids":[296],"expected":"保留两个品牌与二级医院筛选，按已登记品牌维度展示对应母厂牌并输出销售额；不因展示字段与分组维度未证明唯一对应而停止。"},
     {"id":"huashan_sales_products","question":"2025年复旦大学附属华山医院销售订单金额最多的销售员是谁？销售了哪些产品？","expected":"先选销售员，再用真实销售员编码查询同医院2025年全部产品；句式变化不能导致依赖字段误选；附件无报告说明页"},
     {"id":"shanghai_three_dealers_products","question":"2025年10月份销售给上海地区医院销售订单总金额排名前三的经销商","turns":["这三家每家主要销售什么产品？"],"expected":"追问保留前三家经销商、上海医院及2025年10月范围，返回各家产品"},
     {"id":"company_top5","question":"给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司","expected":"前五位人员、平均金额、所属公司全部返回；依赖完成后查询公司；金额单位取当前语义文件"},
