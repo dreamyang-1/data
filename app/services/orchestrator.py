@@ -1506,6 +1506,7 @@ class DataAnalysisOrchestrator:
                 )
                 if cached is not None:
                     return cached
+        single_task_execution = False
         try:
             request_started = time.perf_counter()
             # Recheck after acquiring the lease: the previous owner may have
@@ -2517,6 +2518,9 @@ class DataAnalysisOrchestrator:
                                 task_count=len(plan.tasks) if plan is not None else 1,
                                 task_table=task_table,
                             )
+                            single_task_execution = plan is None
+                if single_task_execution:
+                    await self._set_single_task_status(chat, "执行中")
                 if (confirmed_pending_choice is not None and plan is None
                         and self.settings.surface_asl_execution_enabled
                         and chat._planner_extraction is not None
@@ -2558,6 +2562,21 @@ class DataAnalysisOrchestrator:
                         else await self._handle(chat, identity)
                     )
             await self._ensure_clarification_trace(response, chat)
+            if single_task_execution:
+                analysis_incomplete = (
+                    response.reliability is not None
+                    and response.reliability.gates.get("analysis_completed") is False
+                )
+                status_text = {
+                    "COMPLETED": "已完成",
+                    "PARTIAL_SUCCESS": "分析未完成" if analysis_incomplete else "部分完成",
+                    "NEEDS_CLARIFICATION": "待补充条件",
+                    "SAFE_FALLBACK": "执行失败",
+                    "FAILED": "执行失败",
+                    "SKIPPED": "已跳过",
+                    "CANCELLED": "已取消",
+                }.get(response.status, response.status)
+                await self._set_single_task_status(chat, status_text)
             # Echo the effective routing contract on every outcome, including
             # clarification and safe-fallback responses which are not terminalized
             # through _finish_terminal.
@@ -2609,7 +2628,15 @@ class DataAnalysisOrchestrator:
                 time.perf_counter() - request_started,
             )
             return stored
+        except asyncio.CancelledError:
+            if single_task_execution:
+                await self._set_single_task_status(chat, "已取消")
+                await self._persist_conversation_task_table(chat, identity)
+            raise
         except Exception:
+            if single_task_execution:
+                await self._set_single_task_status(chat, "执行失败")
+                await self._persist_conversation_task_table(chat, identity)
             logger.exception(
                 "orchestration request failed message_id=%s conversation_id=%s elapsed=%.2fs",
                 chat.message_id, chat.conversation_id,
@@ -11986,6 +12013,24 @@ class DataAnalysisOrchestrator:
                     if not str(key).startswith('_'))
         )
         return summary
+
+    @staticmethod
+    async def _set_single_task_status(chat: ChatRequest, status_text: str) -> None:
+        # DAG task states belong to the scheduler; never update an inherited table.
+        table = chat._task_table
+        if (
+            getattr(chat, "_dag_task_card", None) is not None
+            or chat._task_table_message_id != chat.message_id
+            or not table
+            or len(table) != 1
+            or table[0].get("执行状态") == status_text
+        ):
+            return
+        table[0]["执行状态"] = status_text
+        await emit_progress(
+            "TASK_STATUS", "RUNNING", "",
+            heading_only=True, task_table=copy.deepcopy(table),
+        )
 
     async def _persist_conversation_task_table(
         self, chat: ChatRequest, identity: TrustedIdentity
