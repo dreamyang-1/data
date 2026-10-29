@@ -1,11 +1,14 @@
 """Compile declared catalog metric thresholds to bounded dataset filters."""
 from __future__ import annotations
 
+import calendar
 import copy
 from dataclasses import replace
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 import math
 import re
+from zoneinfo import ZoneInfo
 
 
 OPERATORS = {'>':'gt', '>=':'gte', '<':'lt', '<=':'lte', '=':'eq', '!=':'ne'}
@@ -41,6 +44,80 @@ _CN_DIGITS = {
     '一': 1, '二': 2, '两': 2, '三': 3, '四': 4, '五': 5,
     '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
 }
+
+# 过滤条件里的相对时点，如“10年前”“3个月以前”，按当天换算成具体日期。
+# 这类条件不一定挂在登记指标上，所以不依赖指标单位表。
+_RELATIVE_DATE = re.compile(
+    r'^\s*(\d+|[一二两三四五六七八九十]+)\s*个?\s*'
+    r'(天|日|周|星期|月|季度|季|半年|年)\s*(?:之前|以前|前)\s*$'
+)
+# 过滤条件里的金额数量级写法，如“100万”“1.5亿”，按基础单位元换成纯数字
+_PLAIN_AMOUNT = re.compile(
+    r'^\s*([+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*(百万|千万|亿|万|千)?\s*元?\s*$'
+)
+_PLAIN_AMOUNT_SCALES = {
+    '千': 1_000, '万': 10_000, '百万': 1_000_000,
+    '千万': 10_000_000, '亿': 100_000_000,
+}
+
+
+def _shift_months(value: date, months: int) -> date:
+    index = value.year * 12 + value.month - 1 - months
+    year, month = divmod(index, 12)
+    month += 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def _relative_date(text: str, today: date) -> str | None:
+    """把“X年前/X个月前/X天前”换算成具体日期；认不出时返回None。"""
+    match = _RELATIVE_DATE.match(text)
+    if not match:
+        return None
+    amount = _cn_number(match.group(1))
+    if amount is None or amount <= 0:
+        return None
+    unit = match.group(2)
+    if unit in {'天', '日'}:
+        target = today - timedelta(days=amount)
+    elif unit in {'周', '星期'}:
+        target = today - timedelta(weeks=amount)
+    elif unit == '月':
+        target = _shift_months(today, amount)
+    elif unit in {'季度', '季'}:
+        target = _shift_months(today, amount * 3)
+    elif unit == '半年':
+        target = _shift_months(today, 6)
+    else:
+        target = _shift_months(today, amount * 12)
+    return target.isoformat()
+
+
+def _plain_amount(text: str):
+    """没有指标单位时，把“100万”这类数量级写法换成数字，便于SQL比较。"""
+    match = _PLAIN_AMOUNT.match(text)
+    if not match or not match.group(2):
+        return None
+    value = Decimal(match.group(1)) * Decimal(_PLAIN_AMOUNT_SCALES[match.group(2)])
+    return int(value) if value == value.to_integral_value() else float(value)
+
+
+def _normalize_value(item, unit: str | None, today: date):
+    """有登记单位按指标单位换算；没有单位的相对时点和金额也换成可查询的值。"""
+    if unit:
+        try:
+            return numeric_threshold(item, unit)
+        except (ValueError, InvalidOperation, TypeError):
+            pass
+    if isinstance(item, str):
+        text = item.strip()
+        converted = _relative_date(text, today)
+        if converted is not None:
+            return converted
+        converted = _plain_amount(text)
+        if converted is not None:
+            return converted
+    return item
 
 
 def _cn_number(text: str) -> int | None:
@@ -151,31 +228,27 @@ def _time_unit_for_metrics(structured: dict, units: dict[str, str]) -> str | Non
     return found.pop() if len(found) == 1 else None
 
 
-def normalize_metric_units(structured: dict | None, units: dict[str, str] | None) -> None:
+def normalize_metric_units(structured: dict | None, units: dict[str, str] | None,
+                           today: date | None = None) -> None:
     """按语义目录登记的单位归一结构化提取里的阈值与相对时间表述。
 
     金额：目录单位为元时“100万”记为1000000；时间：目录单位为天时
-    “近三个月”记为“近90天”、“六个月前”记为“180天之前”。只处理目录
-    里有单位登记的指标，换算不了的原样保留。
+    “近三个月”记为“近90天”、“六个月前”记为“180天之前”。没有登记单位的
+    条件也做基础归一：“10年前”换算成具体日期、“100万”换算成数字，保证
+    传下去的值SQL能直接比较。
     """
-    if not isinstance(structured, dict) or not units:
+    if not isinstance(structured, dict):
         return
+    units = units or {}
+    base_date = today or datetime.now(ZoneInfo('Asia/Shanghai')).date()
     for condition in structured.get('过滤条件') or []:
         if not isinstance(condition, dict):
             continue
-        field = str(condition.get('field') or '').strip()
-        unit = units.get(field)
-        if not unit:
-            continue
+        unit = units.get(str(condition.get('field') or '').strip())
         values = condition.get('value')
         single = not isinstance(values, list)
         items = values if isinstance(values, list) else [values]
-        converted = []
-        for item in items:
-            try:
-                converted.append(numeric_threshold(item, unit))
-            except (ValueError, InvalidOperation, TypeError):
-                converted.append(item)
+        converted = [_normalize_value(item, unit, base_date) for item in items]
         condition['value'] = converted[0] if single else converted
     granularity = structured.get('时间粒度')
     if not isinstance(granularity, dict):

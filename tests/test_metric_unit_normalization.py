@@ -110,6 +110,40 @@ class TestNormalizeMetricUnits:
         assert structured['时间粒度']['time_range'] == '2025年10月至12月'
 
 
+class TestPlainValueNormalization:
+    """没有登记单位的条件也要换成SQL能直接比较的值。"""
+
+    def _run(self, field: str, value, units: dict[str, str] | None = None):
+        structured = {
+            '指标': [],
+            '过滤条件': [{'entity': '经销商', 'field': field, 'op': '<=', 'value': [value]}],
+            '时间粒度': {'unit': None, 'time_range': None, 'anchor': None},
+        }
+        normalize_metric_units(structured, units or {}, today=date(2026, 10, 28))
+        return structured['过滤条件'][0]['value']
+
+    def test_years_before_becomes_date(self) -> None:
+        assert self._run('经销商首笔有效成交订单日期', '10年前') == ['2016-10-28']
+
+    def test_months_before_uses_calendar(self) -> None:
+        assert self._run('订单日期', '3个月前') == ['2026-07-28']
+
+    def test_days_before_becomes_date(self) -> None:
+        assert self._run('订单日期', '90天前') == ['2026-07-30']
+
+    def test_amount_suffix_without_metric_unit(self) -> None:
+        assert self._run('含税金额', '100万') == [1_000_000]
+        assert self._run('含税金额', '1.5亿') == [150_000_000]
+
+    def test_metric_unit_takes_priority(self) -> None:
+        assert self._run('合作时长', '10年', {'合作时长': '天'}) == [3650]
+        assert self._run('合作时长', '3个月', {'合作时长': '天'}) == [90]
+
+    def test_enum_value_untouched(self) -> None:
+        assert self._run('省份', '浙江') == ['浙江']
+        assert self._run('厂牌', '费森尤斯') == ['费森尤斯']
+
+
 class TestDayRollingWindow:
     def test_day_rolling_token_parsed(self) -> None:
         assert _rolling_window_spec('近90天') == (90, 'day')

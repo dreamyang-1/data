@@ -12966,6 +12966,22 @@ class DataAnalysisOrchestrator:
         ambiguity: SemanticAmbiguity = choice["ambiguity"]
         detail = choice.get("detail") or {}
         completed = pending.rewritten_question or pending.original_question
+        missing_values: list[str] = []
+        for item in pending.filters:
+            raw = item.get("value") if isinstance(item, dict) else None
+            values = raw if isinstance(raw, list) else [raw]
+            for value in values:
+                text = str(value or "").strip()
+                if text and text not in completed and text not in missing_values:
+                    missing_values.append(text)
+        if missing_values:
+            completed = completed.rstrip("。.!！") + "，范围：" + "、".join(missing_values) + "。"
+        missing_outputs = [
+            str(value).strip() for value in pending.fields
+            if str(value).strip() and str(value).strip() not in completed
+        ]
+        if missing_outputs:
+            completed = completed.rstrip("。.!！") + "，返回：" + "、".join(missing_outputs) + "。"
         selected = str(
             detail.get("canonical_value")
             or detail.get("value")
@@ -12988,22 +13004,6 @@ class DataAnalysisOrchestrator:
                 phrase = literal
         elif isinstance(slot, str):
             phrase = slot
-        missing_values: list[str] = []
-        for item in pending.filters:
-            raw = item.get("value") if isinstance(item, dict) else None
-            values = raw if isinstance(raw, list) else [raw]
-            for value in values:
-                text = str(value or "").strip()
-                if text and text not in completed and text not in missing_values:
-                    missing_values.append(text)
-        if missing_values:
-            completed = completed.rstrip("。.!！") + "，范围：" + "、".join(missing_values) + "。"
-        missing_outputs = [
-            str(value).strip() for value in pending.fields
-            if str(value).strip() and str(value).strip() not in completed
-        ]
-        if missing_outputs:
-            completed = completed.rstrip("。.!！") + "，返回：" + "、".join(missing_outputs) + "。"
         if phrase and selected and phrase in completed:
             return completed.replace(phrase, selected, 1)
         if selected and selected not in completed:

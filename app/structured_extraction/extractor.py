@@ -370,6 +370,35 @@ def sanitize_extraction(
     for key in ('计算绑定', '结果操作', '计算待确认'):
         if isinstance(value.get(key), dict) and value[key]:
             structured[key] = copy.deepcopy(value[key])
+    # 指标通道已经承载的指标不再重复出现在展示字段：ASL会把它当实体属性
+    registered = metric_catalog[0] if metric_catalog else frozenset()
+    aliases = metric_catalog[1] if metric_catalog else {}
+    metric_names: set[str] = set()
+    for item in structured["指标"]:
+        name = (
+            str(item.get("name") or item.get("field") or "").strip()
+            if isinstance(item, dict) else str(item).strip()
+        )
+        if not name:
+            continue
+        metric_names.add(name)
+        if registered:
+            metric_names.add(normalize_metric_name(name, registered, aliases))
+    if metric_names:
+        kept_display = []
+        for item in structured["展示字段"]:
+            name = (
+                str(item.get("field") or item.get("name") or "").strip()
+                if isinstance(item, dict) else str(item).strip()
+            )
+            normalized = (
+                normalize_metric_name(name, registered, aliases)
+                if registered and name else name
+            )
+            if name in metric_names or normalized in metric_names:
+                continue
+            kept_display.append(item)
+        structured["展示字段"] = kept_display
     from app.planning.metric_thresholds import normalize_metric_units
     normalize_metric_units(structured, metric_units)
     return structured
