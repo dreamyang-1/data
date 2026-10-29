@@ -168,14 +168,19 @@ async def test_repeated_bad_prose_is_removed_without_losing_selection_or_good_fa
 
 
 @pytest.mark.asyncio
-async def test_synthesis_total_deadline_degrades_report_not_query(monkeypatch):
+async def test_synthesis_waits_for_generation_and_review_without_deadline(monkeypatch):
     monkeypatch.setattr('app.analysis.synthesis._semantic_reference', reference)
     async def handler(request):
-        await asyncio.sleep(.2)
-        return httpx.Response(200)
-    settings = Settings(env='test', intent_model_api_key='test', analysis_synthesis_timeout_seconds=.02)
-    with pytest.raises(SynthesisValidationError, match='deadline'):
-        await QwenAnalysisSynthesizer(settings, httpx.MockTransport(handler)).synthesize_combined('问题', [material()])
+        assert all(value is None for value in request.extensions['timeout'].values())
+        await asyncio.sleep(.03)
+        data = json.loads(json.loads(request.content)['messages'][1]['content'])
+        output = ({'reviews': [{'id': item['id'], 'kind': 'FACT', 'supported': True} for item in data['items']]}
+                  if 'items' in data else report('平均成交金额为20元/笔。'))
+        return httpx.Response(200, json={'choices': [{'message': {'content': json.dumps(output)}}]})
+    settings = Settings(env='test', intent_model_api_key='test', analysis_synthesis_timeout_seconds=.001)
+    assert not hasattr(settings, 'analysis_synthesis_timeout_seconds')
+    text, output = await QwenAnalysisSynthesizer(settings, httpx.MockTransport(handler)).synthesize_combined('问题', [material()])
+    assert '20元/笔' in text and output.final_answer['result_task_ids'] == ['calc']
 
 
 def test_answer_has_no_total_or_asl_deadline():
@@ -314,6 +319,31 @@ def test_grounded_ratio_keeps_missing_value_and_watermark_limits():
     assert '1条有效计算结果' in ''.join(result['facts'])
     assert '1条结果缺少有限数值' in ''.join(result['warnings'])
     assert '缺失数据的数量及其对最终数值、排名的影响尚不能确定' in ''.join(result['warnings'])
+
+
+def test_grounded_ratio_recognizes_percentages_and_keeps_invalid_values():
+    from app.analysis.report_contract import grounded_ratio_text
+    item = complete_ratio_material()
+    item['facts']['query_data'].update(rows=[{'平均成交金额': '29.51%'},
+        {'平均成交金额': '0.82%'}, {'平均成交金额': 0.1}, {'平均成交金额': None},
+        {'平均成交金额': 'NaN'}, {'平均成交金额': '3%%'}], total_row_count=6)
+    data = {'tasks': [item], 'semantic_reference': REFERENCE}
+    result = grounded_ratio_text(data, build_report_contract(data))
+    facts = ''.join(result['facts'])
+    assert '3条有效计算结果' in facts
+    assert '最高为29.51%，最低为0.82%，两者相差28.69%' in facts
+    assert '3条结果缺少有限数值' in ''.join(result['warnings'])
+
+
+def test_grounded_ratio_percentage_rows_do_not_report_missing():
+    from app.analysis.report_contract import grounded_ratio_text
+    item = complete_ratio_material()
+    item['facts']['query_data'].update(rows=[{'平均成交金额': '29.51%'},
+        {'平均成交金额': '0.82%'}], total_row_count=2)
+    data = {'tasks': [item], 'semantic_reference': REFERENCE}
+    result = grounded_ratio_text(data, build_report_contract(data))
+    assert '最高为29.51%，最低为0.82%' in ''.join(result['facts'])
+    assert '缺少有限数值' not in ''.join(result['warnings'])
 
 
 @pytest.mark.asyncio

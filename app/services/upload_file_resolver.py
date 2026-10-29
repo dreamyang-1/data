@@ -60,8 +60,8 @@ class PlatformUploadFileResolver:
                 cursorclass=pymysql.cursors.DictCursor,
                 autocommit=True,
                 connect_timeout=connect_timeout,
-                read_timeout=read_timeout,
-                write_timeout=read_timeout,
+                read_timeout=None,
+                write_timeout=None,
             )
 
         return cls(connect, max_age_seconds=max_age_seconds)

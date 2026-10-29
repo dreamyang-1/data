@@ -552,22 +552,6 @@ def generation_under(
                     break
 
 
-def set_comprehension_span(observation: Any) -> None:
-    """兼容入口：登记“问题理解与补全”结构节点。"""
-    register_structural_span("comprehension", observation)
-
-
-@contextmanager
-def observe_comprehension_child(
-    *, as_type: str = "span", name: str, input: Any = None, **kwargs: Any
-) -> Iterator[Any]:
-    """兼容入口：在“问题理解与补全”节点下建子节点。"""
-    with structural_child(
-        "comprehension", as_type=as_type, name=name, input=input, **kwargs
-    ) as observation:
-        yield observation
-
-
 @contextmanager
 def trace_attributes(**kwargs: Any) -> Iterator[None]:
     if not is_enabled() or _propagate_attributes is None:

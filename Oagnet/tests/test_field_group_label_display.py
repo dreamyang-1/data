@@ -1,18 +1,5 @@
 # -*- coding: utf-8 -*-
-"""字段式分组维度下同实体主名称展示被误判为无唯一关联的复现与回归。
-
-任务2（查询这些经销商主要销售的产品明细）偶发待补充条件的根因复现：
-规划把任务2解析成指标查询（指标=含税销售总额，维度=经销商+商品）时，
-ASL 模型按「商品」维度的治理绑定（商品编码）把分组写成物理字段
-product.product_code；展示字段商品名称（product.product_name）与该分组
-同属商品实体、是同一行的 1:1 身份/标签对，但 _group_exposes_field 只
-识别逻辑维度定义，字段式分组直接返回 False，随后 _related_display_field
-又因 `target_table not in starts` 排除了同表场景，最终误报
-「该展示属性与分组对象之间没有可确认的唯一关联」歧义。该歧义类型为
-dimension（中文槽位「展示字段」），澄清门判定为可提问（ASK），
-DAG 子任务终止为 NEEDS_CLARIFICATION，前端表现为任务2卡在
-"正在解析并校验结构化参数，生成标准 ASL"。
-"""
+"""展示字段保留及分组绑定回归；关联路径由翻译器检查。"""
 import json
 
 import pytest
@@ -109,7 +96,7 @@ def test_field_style_code_group_allows_same_entity_label_display():
                  _metric_plan('product.product_code'))
     assert _no_display_relation_ambiguity(ast), json.dumps(
         ast['ambiguity'], ensure_ascii=False)
-    assert not ast.get('display_fields')
+    assert ast.get('display_fields')
 
 
 def test_logical_product_group_still_allows_label_display():
@@ -118,11 +105,30 @@ def test_logical_product_group_still_allows_label_display():
                  _metric_plan('product'))
     assert _no_display_relation_ambiguity(ast), json.dumps(
         ast['ambiguity'], ensure_ascii=False)
-    assert not ast.get('display_fields')
+    assert ast.get('display_fields')
 
 
-def test_cross_entity_display_without_relation_still_ambiguous():
-    """跨实体展示且无 to-one 关系：仍按歧义拦停，不得放宽。"""
+def test_brand_dimension_retains_its_authorized_manufacturer_brand_field():
+    knowledge = _product_dealer_knowledge()
+    knowledge['entities'].append(Obj(metadata={'entity_code': 'manufacturer', 'attributes': [
+        {'attr_code': 'parent_brand', 'attr_name': '母厂牌',
+         'field_mapping': 'manufacturer.parent_brand'}]}))
+    knowledge['dimensions'].append(Obj(metadata={'dim_code': 'product_brand', 'dim_name': '商品品牌',
+        'bind_entities': [{'mappingTable': 'manufacturer', 'mappingColumn': 'parent_brand'}]}))
+    knowledge['_vector_authorized_fields'].append('manufacturer.parent_brand')
+    extraction = _metric_extraction()
+    extraction.update({'维度': ['商品品牌'], '展示字段': [{'entity': '生产厂家', 'field': '母厂牌'}]})
+    plan = {'subject': 'sales_order', 'metrics': [{'index': 0, 'key': 'sales_including_tax'}],
+            'dimensions': [{'index': 0, 'key': 'product_brand'}],
+            'display_fields': [{'index': 0, 'key': 'manufacturer.parent_brand'}]}
+    ast, _ = run(extraction, knowledge, plan)
+    assert _no_display_relation_ambiguity(ast)
+    assert ast['dimensions'][0]['name'] == 'product_brand'
+    assert ast['display_fields'][0]['name'] == 'manufacturer.parent_brand'
+
+
+def test_cross_entity_display_is_deferred_to_join_resolution():
+    """跨实体展示保留字段；是否存在关联路径由翻译器检查。"""
     knowledge = _product_dealer_knowledge()
     knowledge['_vector_authorized_fields'].append('hospital.hospital_name')
     knowledge['entities'].append(Obj(metadata={'entity_code': 'hospital', 'attributes': [
@@ -131,8 +137,7 @@ def test_cross_entity_display_without_relation_still_ambiguous():
     plan = _metric_plan('product.product_code')
     plan['display_fields'] = [{'index': 0, 'key': 'hospital.hospital_name'}]
     ast, _ = run(_hospital_extraction(), knowledge, plan)
-    assert any('没有可确认的唯一关联' in json.dumps(item, ensure_ascii=False)
-               for item in ast['ambiguity'])
+    assert _no_display_relation_ambiguity(ast)
 
 
 def _amount_extraction(field='含税金额', intent='明细查询'):
@@ -157,8 +162,8 @@ def _amount_knowledge(formula):
     return knowledge
 
 
-def test_display_field_covered_by_bound_metric_is_omitted():
-    """汇总场景：展示字段度量已由指标公式覆盖，不重复作为行级列。"""
+def test_display_field_covered_by_bound_metric_is_retained():
+    """汇总场景保留已绑定的展示字段，不以唯一性为由拦截。"""
     plan = _metric_plan('product.product_code')
     plan['display_fields'] = [{'index': 0, 'key': 'sales_order.amount_with_tax'}]
     ast, repairs = run(
@@ -166,11 +171,10 @@ def test_display_field_covered_by_bound_metric_is_omitted():
         _amount_knowledge('sales_total_including_tax=SUM(sales_order.amount_with_tax)'),
         plan,
     )
-    assert _no_display_relation_ambiguity(ast), json.dumps(
-        ast['ambiguity'], ensure_ascii=False)
-    assert not ast.get('display_fields')
-    assert any(item['type'] == 'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC'
-               for item in repairs)
+    assert _no_display_relation_ambiguity(ast)
+    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['display_fields']}
+    assert 'sales_order.amount_with_tax' not in {d['name'] for d in ast['dimensions']}
+    assert not any(r['type'] in {'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC', 'DISPLAY_FIELD_AS_ROW_PROJECTION'} for r in repairs)
 
 
 def test_detail_display_field_covered_by_metric_is_projected_as_row_column():
@@ -182,15 +186,14 @@ def test_detail_display_field_covered_by_metric_is_projected_as_row_column():
         _amount_knowledge('sales_total_including_tax=SUM(sales_order.amount_with_tax)'),
         plan,
     )
-    assert _no_display_relation_ambiguity(ast), json.dumps(
-        ast['ambiguity'], ensure_ascii=False)
-    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['dimensions']}
-    assert any(item['type'] == 'DISPLAY_FIELD_AS_ROW_PROJECTION'
-               for item in repairs)
+    assert _no_display_relation_ambiguity(ast)
+    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['display_fields']}
+    assert 'sales_order.amount_with_tax' not in {d['name'] for d in ast['dimensions']}
+    assert not any(r['type'] in {'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC', 'DISPLAY_FIELD_AS_ROW_PROJECTION'} for r in repairs)
 
 
-def test_display_field_not_covered_by_metric_stays_ambiguous():
-    """指标公式未引用该列：不得借指标覆盖悄悄丢弃展示字段。"""
+def test_display_field_not_covered_by_metric_is_retained():
+    """指标公式未引用该列时也保留展示字段。"""
     plan = _metric_plan('product.product_code')
     plan['display_fields'] = [{'index': 0, 'key': 'sales_order.net_amount'}]
     ast, repairs = run(
@@ -198,8 +201,7 @@ def test_display_field_not_covered_by_metric_stays_ambiguous():
         _amount_knowledge('sales_total_including_tax=SUM(sales_order.amount_with_tax)'),
         plan,
     )
-    assert any('没有可确认的唯一关联' in json.dumps(item, ensure_ascii=False)
-               for item in ast['ambiguity'])
+    assert _no_display_relation_ambiguity(ast)
     assert not any(item['type'] == 'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC'
                    for item in repairs)
 
@@ -230,13 +232,14 @@ def test_contract_detail_intent_projects_field_when_extraction_omits_it():
         plan,
         True,
     )
-    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['dimensions']}
-    assert any(item['type'] == 'DISPLAY_FIELD_AS_ROW_PROJECTION'
-               for item in repairs)
+    assert _no_display_relation_ambiguity(ast)
+    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['display_fields']}
+    assert 'sales_order.amount_with_tax' not in {d['name'] for d in ast['dimensions']}
+    assert not any(r['type'] in {'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC', 'DISPLAY_FIELD_AS_ROW_PROJECTION'} for r in repairs)
 
 
-def test_contract_metric_intent_omits_field_when_extraction_omits_it():
-    """契约是汇总口径时仍按聚合投影，不额外附加行级列。"""
+def test_contract_metric_intent_retains_requested_display():
+    """契约为汇总口径时保留已绑定的展示字段。"""
     plan = _metric_plan('product.product_code')
     plan['display_fields'] = [{'index': 0, 'key': 'sales_order.amount_with_tax'}]
     extraction = _amount_extraction()
@@ -247,9 +250,10 @@ def test_contract_metric_intent_omits_field_when_extraction_omits_it():
         plan,
         False,
     )
+    assert _no_display_relation_ambiguity(ast)
+    assert 'sales_order.amount_with_tax' in {d['name'] for d in ast['display_fields']}
     assert 'sales_order.amount_with_tax' not in {d['name'] for d in ast['dimensions']}
-    assert any(item['type'] == 'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC'
-               for item in repairs)
+    assert not any(r['type'] in {'OMIT_DISPLAY_FIELD_COVERED_BY_METRIC', 'DISPLAY_FIELD_AS_ROW_PROJECTION'} for r in repairs)
 
 
 def _salesperson_id_knowledge():
@@ -318,16 +322,15 @@ def test_unflagged_surrogate_id_group_allows_same_entity_label_display():
     ast, _ = run(_salesperson_extraction(), _salesperson_id_knowledge(), plan)
     assert _no_display_relation_ambiguity(ast), json.dumps(
         ast['ambiguity'], ensure_ascii=False)
-    assert not ast.get('display_fields')
+    assert ast.get('display_fields')
 
 
-def test_non_identity_code_group_still_ambiguous():
+def test_non_identity_code_group_does_not_block_display():
     """分组键是非身份业务编码列（部门编码）：粒度保护不得放宽。"""
     plan = {'subject': 'sales_order',
             'metrics': [{'index': 0, 'key': 'sales_including_tax'}],
             'dimensions': [{'index': 0, 'key': 'salesperson.department_code'}],
             'display_fields': [{'index': 0, 'key': 'salesperson.salesperson_name'}]}
     ast, _ = run(_salesperson_extraction(), _salesperson_id_knowledge(), plan)
-    assert any('没有可确认的唯一关联' in json.dumps(item, ensure_ascii=False)
-               for item in ast['ambiguity'])
+    assert _no_display_relation_ambiguity(ast)
 

@@ -1313,7 +1313,7 @@ def _build_context_dependencies(settings: Settings) -> ContextV1ExternalDependen
             settings.effective_redis_url(),
             decode_responses=True,
             socket_connect_timeout=10,
-            socket_timeout=35,
+            socket_timeout=None,
         ),
         module_origins={
             name: str(Path(module.__file__).resolve())

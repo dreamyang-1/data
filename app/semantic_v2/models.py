@@ -129,7 +129,7 @@ class SemanticAxes(StrictModel):
 
 
 class Mention(StrictModel):
-    """Unicode code-point span in the current user utterance."""
+    """当前轮用户原文里的 Unicode code-point 区间。"""
 
     mention_id: Identifier
     surface: str = Field(min_length=1, max_length=1000)

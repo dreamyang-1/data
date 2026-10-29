@@ -69,8 +69,8 @@ class AgentPromptStore:
                 cursorclass=pymysql.cursors.DictCursor,
                 autocommit=True,
                 connect_timeout=connect_timeout,
-                read_timeout=read_timeout,
-                write_timeout=read_timeout,
+                read_timeout=None,
+                write_timeout=None,
             )
 
         return cls(connect, cache_ttl_seconds=cache_ttl_seconds)

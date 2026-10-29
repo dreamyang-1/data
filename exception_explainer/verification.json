@@ -1,0 +1,539 @@
+{
+  "date": "2026-10-27",
+  "scope": "独立异常解释组件；智能体仅通过API接入，不改任务规划、ASL、SQL或数据权限",
+  "research": {
+    "project": "HolmesGPT",
+    "revision": "49804bde566633d4e945952e01c6bf99df6df7ab",
+    "adapted": "区分事实与推测；按错误证据解释；限制影响范围",
+    "license": "Apache-2.0"
+  },
+  "verification": {
+    "focused_remote": {
+      "passed": 42,
+      "failed": 0
+    },
+    "full_offline_baseline": {
+      "PASS": 6187,
+      "FAIL": 567,
+      "ERROR": 7
+    },
+    "full_offline_after": {
+      "PASS": 6209,
+      "FAIL": 567,
+      "ERROR": 7
+    },
+    "new_offline_failures": [],
+    "note": "全量运行后补充的入口早期超时用例另行通过，且计入42项专项。现有567失败及7错误仍未解决。"
+  },
+  "deployment": {
+    "server_alias": "49",
+    "merge_applied": true,
+    "configuration_preserved": true,
+    "service_live": "UP",
+    "service_ready": "READY"
+  },
+  "original_question": {
+    "question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+    "answer_received": true,
+    "terminal_status": "PARTIAL_SUCCESS",
+    "last_event_types": [
+      "message_chunk",
+      "message_chunk",
+      "answer",
+      "complete"
+    ],
+    "stages": [
+      "INTENT_RECOGNITION",
+      "TASK_PLANNING",
+      "ASL_GENERATION",
+      "SEMANTIC_QUERY_PLANNING",
+      "SQL_EXECUTION",
+      "DATA_RETRIEVAL",
+      "ANALYSIS_TOOL",
+      "RELIABILITY_CHECK",
+      "INSIGHT_ANALYSIS",
+      "FINAL_OUTPUT"
+    ],
+    "tasks": [
+      {
+        "task_id": "task-1",
+        "status": "COMPLETED"
+      },
+      {
+        "task_id": "task-2",
+        "status": "COMPLETED"
+      },
+      {
+        "task_id": "task-3",
+        "status": "COMPLETED"
+      },
+      {
+        "task_id": "task-4",
+        "status": "SAFE_FALLBACK"
+      }
+    ],
+    "explanation": "2025年订单平均金额前五名销售人员及计算已完成，但查询其所属销售公司时失败。原因是系统无法将前一步算出的名单安全转换为下一步的精确筛选条件，导致该子任务未执行。现有日志不能确定具体是哪个字段衔接出了问题。",
+    "business_fully_completed": false
+  },
+  "business_cases": [
+    {
+      "id": "huashan_sales_products",
+      "before": [
+        "PARTIAL_SUCCESS"
+      ],
+      "after": [
+        "PARTIAL_SUCCESS"
+      ],
+      "task_statuses": [
+        [
+          {
+            "task_id": "task-1",
+            "status": "COMPLETED"
+          },
+          {
+            "task_id": "task-2",
+            "status": "SAFE_FALLBACK"
+          }
+        ]
+      ]
+    },
+    {
+      "id": "shanghai_three_dealers_products",
+      "before": [
+        null,
+        "COMPLETED"
+      ],
+      "after": [
+        "COMPLETED",
+        "COMPLETED"
+      ],
+      "task_statuses": [
+        [],
+        []
+      ]
+    },
+    {
+      "id": "company_top5",
+      "before": [
+        null
+      ],
+      "after": [
+        "PARTIAL_SUCCESS"
+      ],
+      "task_statuses": [
+        [
+          {
+            "task_id": "task-1",
+            "status": "COMPLETED"
+          },
+          {
+            "task_id": "task-2",
+            "status": "COMPLETED"
+          },
+          {
+            "task_id": "task-3",
+            "status": "COMPLETED"
+          },
+          {
+            "task_id": "task-4",
+            "status": "SAFE_FALLBACK"
+          }
+        ]
+      ]
+    },
+    {
+      "id": "shanghai_coverage",
+      "before": [
+        "COMPLETED"
+      ],
+      "after": [
+        "COMPLETED"
+      ],
+      "task_statuses": [
+        [
+          {
+            "task_id": "task-1",
+            "status": "COMPLETED"
+          },
+          {
+            "task_id": "task-2",
+            "status": "COMPLETED"
+          },
+          {
+            "task_id": "task-3",
+            "status": "COMPLETED"
+          }
+        ]
+      ]
+    },
+    {
+      "id": "hospital_sales_products",
+      "before": [
+        "PARTIAL_SUCCESS"
+      ],
+      "after": [
+        "PARTIAL_SUCCESS"
+      ],
+      "task_statuses": [
+        [
+          {
+            "task_id": "task-1",
+            "status": "COMPLETED"
+          },
+          {
+            "task_id": "task-2",
+            "status": "SAFE_FALLBACK"
+          }
+        ]
+      ]
+    },
+    {
+      "id": "semantic_entities",
+      "before": [
+        "COMPLETED"
+      ],
+      "after": [
+        "COMPLETED"
+      ],
+      "task_statuses": [
+        []
+      ]
+    },
+    {
+      "id": "orthopedics",
+      "before": [
+        "COMPLETED"
+      ],
+      "after": [
+        "COMPLETED"
+      ],
+      "task_statuses": [
+        []
+      ]
+    },
+    {
+      "id": "longest_cooperation",
+      "before": [
+        "COMPLETED"
+      ],
+      "after": [
+        "COMPLETED"
+      ],
+      "task_statuses": [
+        []
+      ]
+    },
+    {
+      "id": "cooperation_over_three_months",
+      "before": [
+        "COMPLETED"
+      ],
+      "after": [
+        "COMPLETED"
+      ],
+      "task_statuses": [
+        []
+      ]
+    },
+    {
+      "id": "dealer_duration_exact",
+      "before": [
+        "COMPLETED"
+      ],
+      "after": [
+        "COMPLETED"
+      ],
+      "task_statuses": [
+        []
+      ]
+    },
+    {
+      "id": "dealer_duration_recent",
+      "before": [
+        "COMPLETED"
+      ],
+      "after": [
+        "COMPLETED"
+      ],
+      "task_statuses": [
+        []
+      ]
+    },
+    {
+      "id": "supplier_first_cooperation",
+      "before": [
+        "COMPLETED"
+      ],
+      "after": [
+        "COMPLETED"
+      ],
+      "task_statuses": [
+        []
+      ]
+    }
+  ],
+  "inspection": [
+    {
+      "case": "after-cooperation_over_three_months",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 经销商名称 | 合作时长（天） |",
+        "| --- | --- |"
+      ],
+      "charts": 0,
+      "files": 1,
+      "attachments": [
+        {
+          "readable": true,
+          "no_report_notes_sheet": true,
+          "sheets": 1,
+          "row_counts": [
+            1001
+          ]
+        }
+      ]
+    },
+    {
+      "case": "after-semantic_entities",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [],
+      "returned_zero_rows": false,
+      "headers": [],
+      "charts": 0,
+      "files": 0,
+      "attachments": []
+    },
+    {
+      "case": "after-longest_cooperation",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 经销商名称 | 经销商首笔有效成交订单日期 | 合作时长（天） |",
+        "| --- | --- | --- |"
+      ],
+      "charts": 0,
+      "files": 0,
+      "attachments": []
+    },
+    {
+      "case": "after-shanghai_three_dealers_products-turn2",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [],
+      "returned_zero_rows": true,
+      "headers": [],
+      "charts": 0,
+      "files": 0,
+      "attachments": []
+    },
+    {
+      "case": "after-hospital_sales_products",
+      "status": "PARTIAL_SUCCESS",
+      "answer_received": true,
+      "task_statuses": [
+        "COMPLETED",
+        "SAFE_FALLBACK"
+      ],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 业务员 | 销售员姓名 | 含税销售总额（元） |",
+        "| --- | --- | --- |"
+      ],
+      "charts": 0,
+      "files": 1,
+      "attachments": [
+        {
+          "readable": true,
+          "no_report_notes_sheet": true,
+          "sheets": 1,
+          "row_counts": [
+            null
+          ]
+        }
+      ]
+    },
+    {
+      "case": "after-company_top5",
+      "status": "PARTIAL_SUCCESS",
+      "answer_received": true,
+      "task_statuses": [
+        "COMPLETED",
+        "COMPLETED",
+        "COMPLETED",
+        "SAFE_FALLBACK"
+      ],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 业务员 | 销售员姓名 | 含税销售总额（元） | 订单笔数（笔） | 平均每单销售金额（元） |",
+        "| --- | --- | --- | --- | --- |"
+      ],
+      "charts": 0,
+      "files": 1,
+      "attachments": [
+        {
+          "readable": true,
+          "no_report_notes_sheet": true,
+          "sheets": 1,
+          "row_counts": [
+            null
+          ]
+        }
+      ]
+    },
+    {
+      "case": "after-shanghai_three_dealers_products-turn1",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [],
+      "returned_zero_rows": false,
+      "headers": [],
+      "charts": 1,
+      "files": 0,
+      "attachments": []
+    },
+    {
+      "case": "after-dealer_duration_recent",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 经销商名称 | 合作时长（天） |",
+        "| --- | --- |"
+      ],
+      "charts": 0,
+      "files": 1,
+      "attachments": [
+        {
+          "readable": true,
+          "no_report_notes_sheet": true,
+          "sheets": 1,
+          "row_counts": [
+            1001
+          ]
+        }
+      ]
+    },
+    {
+      "case": "after-dealer_duration_exact",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 经销商名称 | 合作时长（天） |",
+        "| --- | --- |"
+      ],
+      "charts": 0,
+      "files": 1,
+      "attachments": [
+        {
+          "readable": true,
+          "no_report_notes_sheet": true,
+          "sheets": 1,
+          "row_counts": [
+            1001
+          ]
+        }
+      ]
+    },
+    {
+      "case": "after-huashan_sales_products",
+      "status": "PARTIAL_SUCCESS",
+      "answer_received": true,
+      "task_statuses": [
+        "COMPLETED",
+        "SAFE_FALLBACK"
+      ],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 业务员 | 销售员姓名 | 含税销售总额（元） |",
+        "| --- | --- | --- |"
+      ],
+      "charts": 0,
+      "files": 1,
+      "attachments": [
+        {
+          "readable": true,
+          "no_report_notes_sheet": true,
+          "sheets": 1,
+          "row_counts": [
+            null
+          ]
+        }
+      ]
+    },
+    {
+      "case": "after-supplier_first_cooperation",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 经销商名称 | 经销商首笔有效成交订单日期 | 合作时长（天） |",
+        "| --- | --- | --- |"
+      ],
+      "charts": 0,
+      "files": 0,
+      "attachments": []
+    },
+    {
+      "case": "after-shanghai_coverage",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [
+        "COMPLETED",
+        "COMPLETED",
+        "COMPLETED"
+      ],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 经销商名称 | 有效订单去重医院数（个） | 区域全部医院总数（家） | 区域医院覆盖率（%） |",
+        "| --- | --- | --- | --- |"
+      ],
+      "charts": 0,
+      "files": 1,
+      "attachments": [
+        {
+          "readable": true,
+          "no_report_notes_sheet": true,
+          "sheets": 1,
+          "row_counts": [
+            null
+          ]
+        }
+      ]
+    },
+    {
+      "case": "after-orthopedics",
+      "status": "COMPLETED",
+      "answer_received": true,
+      "task_statuses": [],
+      "returned_zero_rows": false,
+      "headers": [
+        "| 含税销售总额（元） | 销售总数量（件） | 订单笔数（笔） |",
+        "| --- | --- | --- |"
+      ],
+      "charts": 0,
+      "files": 0,
+      "attachments": []
+    }
+  ],
+  "known_gaps": [
+    "销售公司原问题仍部分成功：前三个任务完成，公司依赖查询失败。异常解释已输出，不代表公司查询修复。",
+    "华山医院、新华医院问题的产品依赖查询仍失败。",
+    "上海三家经销商产品追问返回0行；仅HTTP或COMPLETED状态不足以证明业务验收通过。",
+    "上海覆盖率本轮规划出现额外经销商分组；修改前为整体粒度。本次未修改规划；差异发生在异常解释入口之前。需单独调查模型规划波动，不能宣称无业务差异。",
+    "供应商问题前后均展示经销商字段，实体口径尚需核实。",
+    "缺少原授权应用、完整实体ID或上下文的推荐问题未验证；发布操作不在只读回归范围。模型133问题缺少对应应用上下文未猜测重放。",
+    "程序崩溃、强制结束、客户端断网以及未抛错的无限等待不能由进程内异常解释器自动回复。正常用户取消不调用模型。",
+    "模型解释依据有限日志，证据不足时保留不确定；不承诺自动找到全部根因。"
+  ],
+  "business_all_passed": false
+}

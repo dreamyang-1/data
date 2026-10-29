@@ -383,8 +383,8 @@ def _test_enum_labels_are_available_to_vector_binding():
     assert ast['filters'][0]['value'] == ['3', '5']
 
 
-def test_alphanumeric_literal_widens_value_field_before_rejecting_model_id():
-    """A model/spec value may be classified as a product name upstream."""
+def test_alphanumeric_literal_can_expand_when_bound_field_has_no_value_match():
+    """A complete miss permits a unique match in the original authorized pool."""
     extraction, knowledge, plan = dealer_list_fixture()
     product = next(
         entity for entity in knowledge['entities']

@@ -159,7 +159,7 @@ async def test_unregistered_executor_is_never_dynamically_imported():
 
 
 @pytest.mark.asyncio
-async def test_analysis_runtime_enforces_total_budget_and_never_starts_later_steps():
+async def test_analysis_runtime_waits_for_slow_dependency_and_runs_later_steps():
     later_started = False
 
     async def slow(_inputs, _dependencies):
@@ -171,11 +171,11 @@ async def test_analysis_runtime_enforces_total_budget_and_never_starts_later_ste
         later_started = True
         return {"unexpected": True}
 
-    result = await AnalysisRuntime(max_duration_seconds=0.03).execute(
+    result = await AnalysisRuntime().execute(
         plan([
             AnalysisStep(
                 id="slow-query", action="QUERY", tool="slow",
-                expected_output="慢查询结果", timeout_seconds=1,
+                expected_output="慢查询结果", timeout_seconds=.01,
             ),
             AnalysisStep(
                 id="later-analysis", action="ANALYZE", tool="later",
@@ -186,28 +186,23 @@ async def test_analysis_runtime_enforces_total_budget_and_never_starts_later_ste
         {"slow": slow, "later": later},
     )
 
-    assert result.status == "FAILED"
-    assert result.budget_exhausted is True
-    assert result.budget_seconds == 0.03
-    assert result.latency_ms < 150
-    assert later_started is False
-    assert result.failed_step_ids == ["slow-query"]
-    assert result.skipped_step_ids == ["later-analysis"]
-    assert all(
-        item.error_code == "ANALYSIS_BUDGET_EXHAUSTED"
-        for item in result.step_results
-    )
+    assert result.status == "COMPLETED"
+    assert result.budget_exhausted is False
+    assert result.budget_seconds is None
+    assert later_started is True
+    assert result.failed_step_ids == []
+    assert result.skipped_step_ids == []
 
 
 @pytest.mark.asyncio
-async def test_analysis_budget_preserves_completed_optional_results_as_partial_success():
+async def test_analysis_runtime_waits_for_optional_results():
     async def completed(_inputs, _dependencies):
         return {"baseline": 10}
 
     async def slow_optional(_inputs, _dependencies):
         await asyncio.sleep(0.2)
 
-    result = await AnalysisRuntime(max_duration_seconds=0.03).execute(
+    result = await AnalysisRuntime().execute(
         plan([
             AnalysisStep(
                 id="baseline", action="QUERY", tool="completed",
@@ -222,6 +217,6 @@ async def test_analysis_budget_preserves_completed_optional_results_as_partial_s
         {"completed": completed, "slow_optional": slow_optional},
     )
 
-    assert result.status == "PARTIAL_SUCCESS"
-    assert result.outputs == {"baseline": {"baseline": 10}}
-    assert result.budget_exhausted is True
+    assert result.status == "COMPLETED"
+    assert result.outputs["baseline"] == {"baseline": 10}
+    assert result.budget_exhausted is False

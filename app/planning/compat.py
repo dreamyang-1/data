@@ -113,7 +113,7 @@ def inherit_recognized_intent(intent, *, plan=None, extraction=None, judgment=No
 
 async def plan_question(planner: Any, question: str, *, semantic_context: str,
                         semantic_model_id: int, prior_judgment: Any = None,
-                        root_intent: Any = None) -> PlanningResult:
+                        root_intent: Any = None, intents_locked: bool = False) -> PlanningResult:
     """Support legacy plan() and the deployed router without judging twice.
 
     root_intent 是意图识别节点的根意图：规划器支持该参数时整轮规划
@@ -124,11 +124,16 @@ async def plan_question(planner: Any, question: str, *, semantic_context: str,
     reuse = getattr(planner, 'plan_with_judgment', None)
     routed = callable(route_method)
     reuse_judgment = routed and prior_judgment is not None and callable(reuse)
+    if intents_locked and routed and not reuse_judgment:
+        from app.planning.task_dag import TaskPlanningError
+        raise TaskPlanningError("V2任务规划缺少问题补全阶段的拆分与意图合同")
     method = reuse if reuse_judgment else (route_method if routed else planner.plan)
     parameters = inspect.signature(method).parameters
     values = {'semantic_context': semantic_context, 'semantic_model_id': semantic_model_id}
     if root_intent is not None:
         values['root_intent'] = root_intent
+    if intents_locked:
+        values['intents_locked'] = True
     kwargs = {name: value for name, value in values.items() if name in parameters}
     args = (prior_judgment, question) if reuse_judgment else (question,)
     outcome = await method(*args, **kwargs)

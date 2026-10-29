@@ -1,0 +1,396 @@
+{
+  "request": "去除展示字段唯一归属拦截；用户补充多厂家按多行展示",
+  "root_cause": [
+    "业务域维度记录被当作未知类型忽略，商品品牌被误改为商品名称。",
+    "绑定层和翻译层均要求展示字段与分组对象有唯一对应，导致已有关联的结果被提前拦截。"
+  ],
+  "changes": {
+    "Oagnet": "识别当前范围内scoped_dimension，移除唯一归属判断，保留向量字段与值绑定。",
+    "SQL_Translator": "删除展示字段唯一性限制，保留已注册字段及关联路径要求；多个展示值按现有分组和展示字段组合分行。"
+  },
+  "deployment": {
+    "server_merged": true,
+    "services_restarted": true,
+    "health_passed": true,
+    "config_preserved": true,
+    "final_files_verified": true
+  },
+  "original_acceptance": {
+    "business_scope": "model 130, domain 296",
+    "status": "PASS_WITH_SCOPE_NOTE",
+    "output": "原问题按品牌返回两行；另按用户补充要求测试厂家多行，12行按品牌合计与原问题结果一致。",
+    "remaining": "原问题未明确时间，系统使用最近12个月；默认口径尚未核实。"
+  },
+  "local_checks": {
+    "oagnet_baseline": {
+      "passed": 2006,
+      "failed": 44
+    },
+    "oagnet_final": {
+      "passed": 2009,
+      "failed": 44,
+      "new_failures": 0
+    },
+    "sql_relevant_passed": 198,
+    "index_oagnet_passed": 23,
+    "index_sql_passed": 24,
+    "sql_full_suite": "测试进程在执行中长时间停滞，未完成；不能标为通过。"
+  },
+  "history": {
+    "bounded_concurrency": 2,
+    "independent_sessions": true,
+    "cases": [
+      {
+        "id": "two_brands_tier_two_hospitals",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 2529
+          }
+        ],
+        "elapsed": 74.0,
+        "business_review": "PASS_WITH_SCOPE_NOTE",
+        "review_detail": "原问题已按两个品牌返回销售额；模型默认使用最近12个月，用户未明确指定时间，默认口径尚未核实。"
+      },
+      {
+        "id": "shanghai_coverage",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-3",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1474
+          }
+        ],
+        "elapsed": 77.6,
+        "business_review": "PARTIAL",
+        "review_detail": "覆盖率说明无假缺失提示；仍按经销商分组，未输出上海整体覆盖率。"
+      },
+      {
+        "id": "cooperation_over_three_months",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 885
+          }
+        ],
+        "elapsed": 59.0,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "已执行；不以状态代替全部业务结果验收。"
+      },
+      {
+        "id": "dealer_duration_exact",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 877
+          }
+        ],
+        "elapsed": 60.0,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "已执行；不以状态代替全部业务结果验收。"
+      },
+      {
+        "id": "dealer_duration_recent",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 782
+          }
+        ],
+        "elapsed": 54.8,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "已执行；不以状态代替全部业务结果验收。"
+      },
+      {
+        "id": "company_top5",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-3",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-4",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1321
+          }
+        ],
+        "elapsed": 129.1,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "4任务、5人公司对应、单位、排序和附件通过。"
+      },
+      {
+        "id": "huashan_sales_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1507
+          }
+        ],
+        "elapsed": 110.9,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "两个任务及产品明细已返回。"
+      },
+      {
+        "id": "shanghai_three_dealers_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 3026
+          },
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 362
+          }
+        ],
+        "elapsed": 151.7,
+        "business_review": "FAIL_EXISTING",
+        "review_detail": "追问返回整体汇总及样本商品，未返回三家各自的主要商品。"
+      },
+      {
+        "id": "hospital_sales_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1127
+          }
+        ],
+        "elapsed": 108.0,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "两个任务及产品明细已返回。"
+      },
+      {
+        "id": "semantic_entities",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 622
+          }
+        ],
+        "elapsed": 15.6,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "已执行；不以状态代替全部业务结果验收。"
+      },
+      {
+        "id": "orthopedics",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 231
+          }
+        ],
+        "elapsed": 62.0,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "已执行；不以状态代替全部业务结果验收。"
+      },
+      {
+        "id": "longest_cooperation",
+        "turns": [
+          {
+            "status": "NEEDS_CLARIFICATION",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 52
+          }
+        ],
+        "elapsed": 58.1,
+        "business_review": "FAIL",
+        "review_detail": "本次缺少合作时长指标，仍要求补充；发生于参数提取阶段，尚未证明由本次修改引起。"
+      },
+      {
+        "id": "supplier_first_cooperation",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1154
+          }
+        ],
+        "elapsed": 57.2,
+        "business_review": "UNVERIFIED",
+        "review_detail": "供应商映射为经销商，语义仍需核实。"
+      },
+      {
+        "id": "shanghai_dealer_sales_total_threshold",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 3593
+          }
+        ],
+        "elapsed": 71.4,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "已执行；不以状态代替全部业务结果验收。"
+      }
+    ],
+    "multirow_additional": [
+      {
+        "id": "two_brands_manufacturers_multirow",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 7890
+          }
+        ],
+        "elapsed": 99.6
+      }
+    ],
+    "company_acceptance": {
+      "original_question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+      "status": "COMPLETED",
+      "all_four_tasks_completed": true,
+      "company_rows": 5,
+      "same_person_codes_and_names": true,
+      "descending_average": true,
+      "units_present": true,
+      "attachments": [
+        {
+          "readable": true,
+          "sheets": 2,
+          "no_notes_sheet": true
+        }
+      ]
+    },
+    "unresolved_context": [
+      {
+        "id": "metric_filter_empty_metric_list_20261027",
+        "request": "过滤条件有指标字段，但是指标字段为空，没有值",
+        "missing": "用户描述的是失败形态，尚未取得与该次失败对应的完整原始业务提问、授权范围和多轮上下文；近期日志有同类指标筛选拦停，但不能用构造参数测试代替原问题端到端验收",
+        "expected": "明确说明筛选引用的指标漏提；分别说明条件值缺失、位置错误及已提取但匹配失败，不补参、不猜语义配置缺失"
+      },
+      {
+        "id": "structured_stop_after_pending_20261026",
+        "request": "2025年10月份销售给上海地区医院销售订单总金额排名前三的经销商",
+        "missing": "日志可追溯本轮新问题被带回合作时长旧任务并产生结构化参数null；原会话记录已过期，缺少完整前序澄清及原请求授权范围，不能以独立新会话代替该场景验收"
+      },
+      {
+        "id": "earliest_dealer_amount_20261027",
+        "request": "合作最早的经销商，它的订单总金额是多少？",
+        "missing": "日志可追溯依赖任务在fields槽位停止；原会话记录已过期，尚未恢复原请求完整授权范围与上下文"
+      },
+      {
+        "id": "largest_order_after_pending_20261027",
+        "request": "全部历史订单金额最大的一笔订单是哪一笔?",
+        "missing": "日志可追溯本轮被带回旧经销商统计任务，名称和编码展示字段关系校验失败；原会话记录已过期，缺少完整前序澄清及原请求授权范围"
+      },
+      {
+        "id": "department_hospital_relation",
+        "request": "医院与科室多对多判断",
+        "missing": "原文实体ID已省略，缺少完整实体ID及模型范围"
+      },
+      {
+        "id": "relation_model122",
+        "request": "实体关系推荐返回空数组",
+        "semantic_model_id": 122,
+        "business_domain_id": 307,
+        "entity_type_id": "45eae41b-82d6-4bf7-b608-8e341b77d0f8",
+        "expected": "直接同名字段关系推荐，不推荐中间表"
+      },
+      {
+        "id": "city_province_relation",
+        "request": "城市跟省份为什么没有推荐关系",
+        "missing": "原请求模型、业务域和实体ID"
+      },
+      {
+        "id": "company_salesperson_relation",
+        "request": "国药公司和销售员这两个表有相同字段，为什么没有推荐",
+        "missing": "原请求模型、业务域和实体ID"
+      },
+      {
+        "id": "publication_error",
+        "request": "发布失败报错中文化",
+        "missing": "发布操作的完整原始参数；不在本轮只读查询回归范围内"
+      }
+    ]
+  },
+  "known_limitations": [
+    "品牌对应多家厂家时按品牌与厂家分多行；若同一事实记录同时关联多个厂家，跨行加总可能重复，不能假定总是可直接相加。",
+    "上海三家产品追问和合作时长最长案例本轮仍未正常完成；不作全部历史问题通过的结论。"
+  ]
+}

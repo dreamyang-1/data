@@ -1,46 +1,44 @@
 """Analysis goals are independent of the query's time-series/aggregate shape."""
-import re
 from app.domain.models import PrimaryIntent as I
-
 LABELS = {I.TREND_ANALYSIS: '趋势分析', I.COMPARISON_ANALYSIS: '对比分析',
           I.COMPOSITION_ANALYSIS: '占比分析', I.ANOMALY_ANALYSIS: '异常分析',
           I.ROOT_CAUSE_ANALYSIS: '归因分析', I.FORECAST_ANALYSIS: '预测分析'}
-PATTERNS = (
-    (I.ROOT_CAUSE_ANALYSIS, r'归因|原因分析|下降原因|增长原因|波动原因|分析.{0,12}原因|变化贡献|增减贡献|为什么.{0,20}(?:下降|增长|波动)'),
-    (I.FORECAST_ANALYSIS, r'预测|预估|预计|未来走势|回测|候选模型比较|模型比较'),
-    (I.ANOMALY_ANALYSIS, r'异常|离群|突增|突降'),
-    (I.COMPOSITION_ANALYSIS, r'占比|比重|构成|份额'),
-    (I.COMPARISON_ANALYSIS, r'对比|比较|差额|差异率'),
-    (I.TREND_ANALYSIS, r'趋势|走势|月度变化|连续涨跌|拐点'),
-)
+_INTENT_LABELS = {
+    '统计查询': I.METRIC_QUERY, '指标查询': I.METRIC_QUERY,
+    '明细查询': I.DETAIL_QUERY, '解释口径': I.METRIC_DEFINITION,
+    '数据血缘': I.DATA_LINEAGE, '数据质量': I.DATA_QUALITY,
+    '报告生成': I.REPORT_GENERATION, '闲聊': I.CHAT,
+    '超出范围': I.OUT_OF_SCOPE, **{value: key for key, value in LABELS.items()},
+}
 
 
-def analysis_goals(question: str) -> list[I]:
-    goals = []
-    # Negation is local to a clause; it must not erase another explicit goal.
-    for clause in re.split(r'[，,。；;]|同时|并且', question or ''):
-        for intent, pattern in PATTERNS:
-            if intent == I.ROOT_CAUSE_ANALYSIS and re.search(r'不分析原因|不是(?:要)?分析(?:下降|增长|波动)?原因', clause):
-                continue
-            if re.search(r'(?:不要|不做|无需|不用|不需要|不是(?:要)?|不分析原因|不用分析原因).{0,6}(?:' + pattern + ')', clause):
-                continue
-            if re.search(pattern, clause) and intent not in goals:
-                goals.append(intent)
-    # "预测未来趋势" and "归因变化" are single deliverables. Only a
-    # separate explicit trend goal should add a second chain.
-    if I.FORECAST_ANALYSIS in goals and I.TREND_ANALYSIS in goals:
-        if not re.search(r'趋势分析|分析.{0,30}历史.{0,10}趋势|先.{0,20}趋势', question):
-            goals.remove(I.TREND_ANALYSIS)
-    if not goals:
-        from app.analysis.tool_selection import independent_intent
-        independent = independent_intent(question)
-        if independent:
-            goals.append(independent)
-    return goals
+def primary_intent_from_label(value) -> I | None:
+    """Parse an upstream intent label without reclassifying the question."""
+    if isinstance(value, I):
+        return value
+    text = str(value or '').strip()
+    if not text:
+        return None
+    try:
+        return I(text)
+    except ValueError:
+        return _INTENT_LABELS.get(text)
 
 
-def resolve_analysis_intent(intent: I, question: str) -> I:
-    if intent not in LABELS:
-        return intent
-    goals = analysis_goals(question)
-    return goals[0] if goals else intent
+def analysis_goals(question=None, *, routes=None, intent=None) -> list[I]:
+    """Read model-produced chain IDs/intent enums; never inspect free text."""
+    from app.analysis.tools.registry import intent_for_chain
+    if routes is not None:
+        return list(dict.fromkeys(intent_for_chain(route) for route in routes))
+    parsed = primary_intent_from_label(intent)
+    return [parsed] if parsed in LABELS else []
+
+
+def resolve_analysis_intent(intent: I, question=None) -> I:
+    """The upstream model owns the intent, even if the wording suggests another."""
+    return intent
+
+
+def normalize_locked_root_intent(intent: I | None, question=None) -> I | None:
+    """Do not reclassify an already locked model decision."""
+    return intent

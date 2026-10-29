@@ -1571,6 +1571,8 @@ def _synonym_terms(value):
 def _record_identity(meta):
     """向量记录的身份：(类型, 稳定编码, 标准名, 同义词集合)。"""
     kind = meta.get('type')
+    if kind == 'scoped_dimension':
+        kind = 'dimension'
     if kind == 'metric':
         return ('metric', str(meta.get('metric_code') or ''),
                 str(meta.get('metric_name') or '').strip(),

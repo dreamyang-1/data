@@ -1,0 +1,210 @@
+{
+  "change": "Move query dependency inputs from extraction into planning/task state",
+  "root_cause": "Production extraction prompt lacked predecessor-binding instructions; runtime still read extraction for bindings.",
+  "implementation": [
+    "Planning owns dependency_bindings",
+    "Expansion and deduplication remap task input references",
+    "Execution consumes task state, not extraction",
+    "Removed extraction-owned binding path; retained executed field identity and scope checks"
+  ],
+  "offline": {
+    "focused_candidate_passed": 17,
+    "full_run_then_changed_fixture_retest": "No unexplained new failures against baseline; 34 old-contract fixtures migrated/retested; baseline 567 failures and 7 errors remain."
+  },
+  "deployment": {
+    "merged": true,
+    "configuration_preserved": true,
+    "health": "READY"
+  },
+  "original_stream_acceptance": {
+    "original_question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+    "status": "COMPLETED",
+    "all_four_tasks_completed": true,
+    "company_rows": 5,
+    "same_person_codes_and_names": true,
+    "descending_average": true,
+    "units_present": true,
+    "attachments": [
+      {
+        "readable": true,
+        "sheets": 2,
+        "no_notes_sheet": true
+      }
+    ]
+  },
+  "business_regression": [
+    {
+      "id": "huashan_sales_products",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "status": "COMPLETED"
+            },
+            {
+              "task_id": "task-2",
+              "status": "COMPLETED"
+            }
+          ],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 1533
+        }
+      ],
+      "elapsed": 205.3
+    },
+    {
+      "id": "shanghai_three_dealers_products",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 3035
+        },
+        {
+          "status": "NEEDS_CLARIFICATION",
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 331
+        }
+      ],
+      "elapsed": 423.3
+    },
+    {
+      "id": "shanghai_coverage",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "status": "COMPLETED"
+            },
+            {
+              "task_id": "task-2",
+              "status": "COMPLETED"
+            },
+            {
+              "task_id": "task-3",
+              "status": "COMPLETED"
+            }
+          ],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 1451
+        }
+      ],
+      "elapsed": 234.0
+    },
+    {
+      "id": "company_top5",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "status": "COMPLETED"
+            },
+            {
+              "task_id": "task-2",
+              "status": "COMPLETED"
+            },
+            {
+              "task_id": "task-3",
+              "status": "COMPLETED"
+            },
+            {
+              "task_id": "task-4",
+              "status": "COMPLETED"
+            }
+          ],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 946
+        }
+      ],
+      "elapsed": 525.3
+    },
+    {
+      "id": "semantic_entities",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 669
+        }
+      ],
+      "elapsed": 17.1
+    },
+    {
+      "id": "orthopedics",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 287
+        }
+      ],
+      "elapsed": 732.9
+    }
+  ],
+  "not_completed": [
+    "hospital_sales_products",
+    "longest_cooperation",
+    "cooperation_over_three_months",
+    "dealer_duration_exact",
+    "dealer_duration_recent",
+    "supplier_first_cooperation"
+  ],
+  "blocker": "Stopped regression harness after upstream ASL capacity exhaustion and long-running requests; remaining cases are NOT verified.",
+  "known_failures": [
+    "Three-dealer follow-up needs clarification at ASL display-field binding.",
+    "Second company run completed all four tasks and returned five companies but final report omitted ranking after insight timeout."
+  ],
+  "subsequent_diagnosis": {
+    "certainty": "PROVEN",
+    "insight_start": "2026-10-27 14:53:20 +08:00",
+    "insight_end": "2026-10-27 14:54:20 +08:00",
+    "cause": "Existing outer 60-second wait interrupted evidence review; existing leaf-only report selection then hid task-3 ranking because task-4 consumed it. Both implementations predate this patch. Not fixed in this commit."
+  },
+  "unresolved_history_context": [
+    {
+      "id": "department_hospital_relation",
+      "request": "医院与科室多对多判断",
+      "missing": "原文实体ID已省略，缺少完整实体ID及模型范围"
+    },
+    {
+      "id": "relation_model122",
+      "request": "实体关系推荐返回空数组",
+      "semantic_model_id": 122,
+      "business_domain_id": 307,
+      "entity_type_id": "45eae41b-82d6-4bf7-b608-8e341b77d0f8",
+      "expected": "直接同名字段关系推荐，不推荐中间表"
+    },
+    {
+      "id": "city_province_relation",
+      "request": "城市跟省份为什么没有推荐关系",
+      "missing": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "company_salesperson_relation",
+      "request": "国药公司和销售员这两个表有相同字段，为什么没有推荐",
+      "missing": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "publication_error",
+      "request": "发布失败报错中文化",
+      "missing": "发布操作的完整原始参数；不在本轮只读查询回归范围内"
+    }
+  ]
+}

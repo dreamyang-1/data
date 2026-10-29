@@ -321,11 +321,11 @@ async def test_original_and_three_similar_dependent_queries(target_owner, target
               "过滤条件": [{"field": "医院名称", "value": ["测试医院"]}],
               "时间粒度": {"unit": "年", "time_range": "2025年"}}
     target = {**source, "维度": [], "指标": [],
-              "依赖绑定": [{"source_task_id": "task-1", "source_column": "业务员（编码）"}],
               "展示字段": [{"entity": target_owner, "field": target_field}]}
     plan = TaskPlan(planner="DETERMINISTIC_RULE", tasks=[
         AtomicTask(task_id="task-1", question="查询2025年测试医院销售额最高的销售员", extraction=source),
-        AtomicTask(task_id="task-2", question=question, depends_on=["task-1"], extraction=target)])
+        AtomicTask(task_id="task-2", question=question, depends_on=["task-1"], extraction=target,
+                   dependency_bindings=[{"source_task_id":"task-1","source_column":"业务员（编码）"}])])
     service = Service(settings=settings, classifier=SimpleNamespace(), adapters=build_mock_adapters(),
         sessions=sessions, task_planner=CompoundQuestionRouter(settings), dataset_store=Store())
     result = await service._handle_task_plan(ChatRequest(semantic_model_id=81, application_id="app",
