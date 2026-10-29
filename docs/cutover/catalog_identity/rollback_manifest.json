@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "a1708a796c9eb103309bc189280a94fb51b0ebfd",
+  "feature_branch": "cutover-catalog-identity-20260908-01",
+  "source_rollback": "Reviewed revert of the behavior commits; explicit file synchronization and scoped/full tests. Reverting model constraints reintroduces proven metadata cross-model risk.",
+  "runtime_operations_performed": false,
+  "index_publications": 0,
+  "production_traffic_rollback_proven": false,
+  "target_publication": "No release/collection/marker created; no live rollback required",
+  "auto_merge": false
+}

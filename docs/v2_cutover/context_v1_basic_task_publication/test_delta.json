@@ -1,0 +1,95 @@
+{
+  "status": "V2_BASIC_NEW_TASK_AND_FOLLOWUP_EXECUTION_COMPLETE",
+  "targeted": {
+    "passed": 7,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "affected": {
+    "passed": 659,
+    "existing_failed": 1,
+    "collection_errors": 0,
+    "baseline_comparable_nodes": 595,
+    "old_pass_to_new_fail": 0,
+    "same_baseline_failure": "tests/test_v2_operation_round1.py::test_rejected_mixed_patch_leaves_state_barriers_versions_and_message_unchanged[slot_conflict]"
+  },
+  "diagnostic_calls": {
+    "current_turn": 1,
+    "semantic_edits": 0,
+    "retry": 0,
+    "post_fix_model_calls": 0,
+    "sql": 0,
+    "production_writes": 0
+  },
+  "first_divergence": "SOURCE_VALUE_RECEIPT_SCOPE_VALIDATION",
+  "fallback_reason": "V2_SOURCE_VALUE_RECEIPT_MISMATCH",
+  "private_hashes": {
+    "current_trace.json": "e124854f8a270816d8b2bebb05672595bc9c84156d54fce59bf85ab531e6aeec",
+    "raw_model_exchanges.json": "5baedf92a2a5707281ffa21ccd39de560b93415f9db142f977e49dcf24dbdd70",
+    "receipt_comparison.json": "f090eb273f3b4ced3ccb5fa97abadd830dce71ab03fa7e9e058d440e6920603b",
+    "post_fix_replay.json": "58718cc819895bef76be73f73e6dda5f2e440fed859ad7147ef256e1bc07a1e7",
+    "affected_junit.xml": "c7225ceed4861dc20a9f27d27523330035d691fcda0973a0d85a505ab86a69ed",
+    "live_platform_validation.json": "5022eb1ce46d05d3103ca9a34eb98894bd3ae6a776f027571e89fa0a12aaf535"
+  },
+  "live_runtime": {
+    "first_turn": {
+      "v2_task_created": true,
+      "v1_fallback": false,
+      "task_version": 1,
+      "v1_execution": "REACHED",
+      "oagent": "REACHED",
+      "sql_translation": "REACHED",
+      "db_execution": "REACHED",
+      "page_result": "COMPLETED"
+    },
+    "followup": {
+      "same_task": true,
+      "task_version": 2,
+      "time_operation": "REPLACE",
+      "time_year": 2026,
+      "completed_question": "查询2026年江苏省订单笔数。",
+      "v1_execution": "REACHED",
+      "oagent": "REACHED",
+      "sql_translation": "REACHED",
+      "db_execution": "REACHED",
+      "page_result": "COMPLETED",
+      "first_failure_stage": null,
+      "adapter_error_code": null
+    },
+    "production_code_changes_after_live_failure": 1,
+    "oagent_pid": 28896,
+    "data_analysis_pid_unchanged": 35348,
+    "sql_translator_pid_unchanged": 26172,
+    "changed_service": "Oagnet"
+  },
+  "oagent_downstream_closure": {
+    "baseline": {
+      "passed": 697,
+      "existing_failed": 1,
+      "collection_errors": 0
+    },
+    "candidate": {
+      "passed": 701,
+      "existing_failed": 1,
+      "collection_errors": 0
+    },
+    "affected": {
+      "passed": 107,
+      "existing_failed": 1,
+      "collection_errors": 0
+    },
+    "old_pass_to_new_fail": 0,
+    "new_tests": 4,
+    "same_existing_failure": "Oagnet/tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+    "diagnostic_oagent_calls": 4,
+    "diagnostic_sql_calls": 0,
+    "diagnostic_db_calls": 0
+  },
+  "downstream_private_hashes": {
+    "oagnet_baseline_full.xml": "6dbdcb94249e438f30109672e51065feff4781e1994da289321278de93dbcc5f",
+    "oagnet_candidate_final_full.xml": "422544a0f377cff37b90c9363d0a4d987dd62d087226551b518a0c6ffbe186ba",
+    "oagnet_test_delta.json": "148a9b5ebd9ca5002b51ce95c2c01a9a097ffeb97206cd9e5ad30ddc04997e04",
+    "live_utf8_first.json": "76f0af1365d60d952468b4306aac8d0502661d7b038a7b05c679364226be8403",
+    "live_utf8_followup.json": "561c5cfc12a783f0d01c22e0c38b87508cc3dc126e826568cc4f5377111cb0aa"
+  }
+}

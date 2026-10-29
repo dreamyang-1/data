@@ -1,0 +1,44 @@
+{
+  "status": "DEPLOYED_HEALTHY",
+  "code_commit": "09881619001d6d8eede8f61053d1ddb875d4e6ee",
+  "only_service_restarted": "data-analysis-agent.service",
+  "health": {
+    "Agent": 200,
+    "AgentLive": 200
+  },
+  "configurations_unchanged": true,
+  "files": [
+    {
+      "path": "app/planning/task_plan_stages.py",
+      "sha256": "9129ed4d81f7f1e3a4ce24706586666ab7bf83e852e2fc92f02131632267a815"
+    },
+    {
+      "path": "app/services/computation_delivery.py",
+      "sha256": "07164bcfd6101202b29ac25a6d5d3736d8ca80b5ce67fa4de9ec39ee56d49222"
+    },
+    {
+      "path": "app/services/calculation_execution.py",
+      "sha256": "6b73e8ec16cd9e571d8cffc96c8bd7f0cade1ce42b5d8c4a19721b3fcc844271"
+    },
+    {
+      "path": "app/planning/task_dag.py",
+      "sha256": "26bc320a448a378c2c0892683008264337468a096743a64a4b7ac7bb1c8b0893"
+    },
+    {
+      "path": "app/planning/compound_question.py",
+      "sha256": "b276acbcfebe0fab6e0ccf8ef9fbef364f2667ae7d37944874dde5ff2ef95ab8"
+    }
+  ],
+  "post_deployment_real_model": {
+    "mode": "DEPLOYED_REAL_MODEL_PLAN_ONLY",
+    "case": "original",
+    "passed": true,
+    "task_count": 3,
+    "phase_sequence": [
+      "plan",
+      "parameters"
+    ],
+    "production_sql_calls": 0
+  },
+  "scope": "Only task-planning and dependent calculation changes; no catalog/index/V2 cutover or ASL/SQL rule changes."
+}

@@ -1,0 +1,46 @@
+{
+  "status": "DEPLOYED_HEALTHY",
+  "runtime_file_count": 11,
+  "only_expected_sources_changed": true,
+  "protected_configuration_count": 10,
+  "configurations_unchanged": true,
+  "backups_verified": true,
+  "compare_and_swap_verified": true,
+  "services": [
+    {
+      "service": "SQL",
+      "healthy": true,
+      "pid": "2190343"
+    },
+    {
+      "service": "Oagnet",
+      "healthy": true,
+      "pid": "2190460"
+    },
+    {
+      "service": "Agent",
+      "healthy": true,
+      "pid": "2190990"
+    }
+  ],
+  "health": {
+    "SQL": 200,
+    "Oagnet": 200,
+    "Agent": 200,
+    "AgentLive": 200
+  },
+  "production_original_question": {
+    "status": "COMPLETED",
+    "all_tasks_completed": true,
+    "task_count": 3,
+    "seven_stages_in_order": true,
+    "elapsed_seconds": 105.485
+  },
+  "preserved_remote_behavior": [
+    "existing time-window handling",
+    "conversation logging",
+    "vector-standard business values"
+  ],
+  "isolated_candidates_stopped": true,
+  "no_auto_merge": true
+}

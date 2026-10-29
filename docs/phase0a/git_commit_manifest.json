@@ -1,0 +1,712 @@
+{
+  "files": [
+    {
+      "path": ".gitattributes",
+      "workspace_hash": "5c9ba2ea6f4e1b9e3d8aaf371b87157634722667f2a3487bf254bd631428a388",
+      "previous_git_hash": null
+    },
+    {
+      "path": ".gitignore",
+      "workspace_hash": "2fdf44d1769a88ed73827e33064dbbc36857e9d26862c62255d466a218444541",
+      "previous_git_hash": "c2f8ebc800b3379f548e890b96762cb85779814182b60cc28ffff8d81819faf8"
+    },
+    {
+      "path": "app/adapters/semantic_query.py",
+      "workspace_hash": "9ba7da8207ff565b1dae26baf8dee6d230bf90b6408a3da1baaf7afffcb44d3e",
+      "previous_git_hash": "858ae0eca39b8723042c7faf816a30b1c0db2e52ba7ca925c8ccc4a336428af7"
+    },
+    {
+      "path": "app/analysis/synthesis.py",
+      "workspace_hash": "7b9d8bfb41f6c76abe1ab327f2d9f54f42f3d891cebd898e5239e0ddc930dae7",
+      "previous_git_hash": "a9a5ba336a0c4702739a4c18a1d3a08cf7b29da0bc2d25e62fdfdfff1779f31c"
+    },
+    {
+      "path": "app/domain/models.py",
+      "workspace_hash": "f374a95f642185fb9fab07d93cc16f066b78334b22c8d849d1311008a2bb7186",
+      "previous_git_hash": "a2887d285f7007c4e5546863f636ea594fed44e11bd1f46d9751077319b907e5"
+    },
+    {
+      "path": "app/stores/session.py",
+      "workspace_hash": "58c21533db69b115b67d876cf5b2bc01b7cf76526b4fcf1081f52e5e265aa2e0",
+      "previous_git_hash": "04c1cf4de2b48c6314b5d09acce40fb7131511284daa4745a4ec95e6d44d01ef"
+    },
+    {
+      "path": "docs/phase0a/drift_disposition.csv",
+      "workspace_hash": "73b38ade6fb361f9392f7350d20c78d9281c4232990e9f9f4e8f9d125aee9647",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/drift_disposition.json",
+      "workspace_hash": "1b60a4f9e054c131c513839a4604189b99d94cf568bc829ea7449f558d1cf81e",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/line_ending_alignment.json",
+      "workspace_hash": "c0a4191d8b07d4507f348782aa27a02497d0c0ff11498e33e1ce30fc3ee5fd7b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/phase0a_closure_report.md",
+      "workspace_hash": "9e02c7905552e938b828b07e538a85eb1f081dadc6395c4eb511df9189a6aa64",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/phase25_1_evidence_index.json",
+      "workspace_hash": "ffad87011272849a9b75f88cdf24caa2f482e3f3734bc3708495e8750ce00543",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/preexisting_drift_inventory.csv",
+      "workspace_hash": "a1c454aab6cf0e333ac9c2902ba64270a43b05c40428eb9d7a72bdcf09ed0897",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/preexisting_drift_inventory.json",
+      "workspace_hash": "8bca498844df088129729059042643a0ea27b0a3247f7c3792c8afa79f875f18",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/repository_reproducibility_report.md",
+      "workspace_hash": "9e02c7905552e938b828b07e538a85eb1f081dadc6395c4eb511df9189a6aa64",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/rollback_manifest.json",
+      "workspace_hash": "c376f2e259bd5e8d45e35323ed85016c761d8ce61a3159c44e1a814dfb3b54f4",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/test_delta.json",
+      "workspace_hash": "89227f132180e5257c927dafb08be32d209049d996229cc6439c6356a6be017f",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/test_environment.json",
+      "workspace_hash": "c3c13b1adb3ae2645aee38fe7afa325c307e9945f01672a677913ed2dc8b092b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0a/test_gate.json",
+      "workspace_hash": "ab20efbe2cd8771d189cf60f0fab58ce4c7120c57f6362fb8d2b7618d4f240f9",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase2/architecture_evidence_map.json",
+      "workspace_hash": "bd94abbe5639ab4e719eb45ace4aaa88e0a6e2dd3ab599d025e6c79ef67daaf8",
+      "previous_git_hash": "0dda3a7b1d12e5f57bf837562e63de13a02e6f2adb83c9b976698847c95a18be"
+    },
+    {
+      "path": "docs/phase2/asl_nl2sql_contracts.json",
+      "workspace_hash": "500978b97e73d57df9cf071eb3b3819ce3639d6581a610982a9a34f0bdd964bc",
+      "previous_git_hash": "5c125075e6bc9382403cf3eadfde1fac73e468dcddc4411aa9317c964a3d579d"
+    },
+    {
+      "path": "docs/phase2/asl_nl2sql_gap_matrix.csv",
+      "workspace_hash": "24e3ee316d5b1c592e880eaf8a6b59c2fd15b597f15ad5d5d45d6e0e686c6933",
+      "previous_git_hash": "6600d2c2eea434c78a2405c0ee70f8656674cbff9c5c5eb8c23990639bcb677b"
+    },
+    {
+      "path": "docs/phase2/catalog_quality_summary.csv",
+      "workspace_hash": "395c6cb69a9517df41df534b8d7335305fbb815e7f25604d4f11eb98acc4b8b7",
+      "previous_git_hash": "14ae6c1d26bb24984d14f54950c53224d5da25c1591262f7224f06b072a30ad7"
+    },
+    {
+      "path": "docs/phase2/cross_repository_change_matrix.csv",
+      "workspace_hash": "ca8a5efaf4b9b3ca156d1b1dbe81786996ffd046ded71199e891430a810358ea",
+      "previous_git_hash": "b569015c2449f1eeb1625f302403d75187b909fa2e7d8a3207b74e39455a2465"
+    },
+    {
+      "path": "docs/phase2/entity_relationship_inventory.json",
+      "workspace_hash": "7fafb47f2fba2e2342c5050f999346f0e42669068c0284383f9afa03f547c6d0",
+      "previous_git_hash": "5f783aafd74f8ef2d592d0e4a93c4a30010607da7f526aa3b1772be09c185c15"
+    },
+    {
+      "path": "docs/phase2/evaluation_metric_spec.json",
+      "workspace_hash": "a67764221d20e9f3d0314aa4b0e7d484164bfc849aa1a4f0cb342e40819e3a4e",
+      "previous_git_hash": "da8dc2ed9aa014cae46480e97477f0dbd91372b2d45624dd9395af529caec4d0"
+    },
+    {
+      "path": "docs/phase2/external_service_inventory.json",
+      "workspace_hash": "f4dbb00e3d011adbdfcb4b5aceefbbe4a009010bb313647edd719a2d69e9520b",
+      "previous_git_hash": "ff6795ac706e4b674255e0fc1d942dc7ce090801b8264805212dd34e038caeb4"
+    },
+    {
+      "path": "docs/phase2/failure_stage_distribution.csv",
+      "workspace_hash": "c8de6e9cfaedf8126ee09e6e27a05fe1a640f162c906479928839b20f99776e7",
+      "previous_git_hash": "084f3c20dc3e407d19521328ebca0e74296d8f6df865eadf2728778440e6f379"
+    },
+    {
+      "path": "docs/phase2/intent_confusion_matrix.csv",
+      "workspace_hash": "e547726b3c014b75269c26278485f923065e7509710cc938326df7d531bcb0e7",
+      "previous_git_hash": "fc274138ab27671582158a75bfe71826c0be8968ca7e2e25ed2d0e43b1c09eee"
+    },
+    {
+      "path": "docs/phase2/metric_dimension_compatibility.json",
+      "workspace_hash": "65c93b0ede89dec97776f6fa8fef74743597397c1bd051e2de61df448c932c91",
+      "previous_git_hash": "6b71e20bc73ce44397a2a642cdcd73edb22cfdf4dc63183b43991c191e0f96e6"
+    },
+    {
+      "path": "docs/phase2/semantic_catalog_inventory.json",
+      "workspace_hash": "7b4294d2d00aeecef3130dfe99ee54136538735113a6a326dc520ec5423c9fd5",
+      "previous_git_hash": "774aa3ef36ee8730c39fca1c5d094303b220840223b47df9d1d72b11bb731f2d"
+    },
+    {
+      "path": "docs/phase2/semantic_role_confusion_matrix.csv",
+      "workspace_hash": "ac7b9536ce7a7b7745618b68bc89c74020b6bf6398d0ba43b4a8c3d35ea35600",
+      "previous_git_hash": "edca0798db9e72c06ecd4600d513ba971d245a4eb9ba68c5a26551f211623497"
+    },
+    {
+      "path": "docs/phase2/slot_role_confusion_matrix.csv",
+      "workspace_hash": "bf401ca16a2992e6cda2e0d238606c54f319dee11142c94053c8c5a168eaa156",
+      "previous_git_hash": "11c5f8f1af5d2259fd366f4546c096e0d791a53e285484db569c266c878d26c1"
+    },
+    {
+      "path": "docs/phase2/typed_logical_plan_schema_draft.json",
+      "workspace_hash": "e9fe0b21a37dca8f1c15f5d87c95d3b86d2010398e56bfdae7f208bed282a4b5",
+      "previous_git_hash": "f5aaf6ce77c82f0f04ec14fea45d1f57febbe186fb34ed55d13ac241bfc3681c"
+    },
+    {
+      "path": "docs/phase25/asl1_adapter_loss_matrix.csv",
+      "workspace_hash": "b89ac57a24f6ea4b31527e5a2a571b61f7e5655e96105a3187a65e1d0ac2ed2f",
+      "previous_git_hash": "28d81d4683dbc2aaf38669b82ea0142c18e2cbe47381d1cd6a3cb4224e3b8337"
+    },
+    {
+      "path": "docs/phase25/baseline_manifest.json",
+      "workspace_hash": "0337e34bb891bc01a2bb70a2f81af808bd2442bbbf976d4a1ae10a2c1995769b",
+      "previous_git_hash": "af40c31a422fb03c45af3e035a6b5bf474f4a1983e1d489f17662297cbc3274f"
+    },
+    {
+      "path": "docs/phase25/baseline_test_report.md",
+      "workspace_hash": "b352e4429e7c197b36358a6eb5f49339aab0c533ed8ad9abf22f6598f4f3f9bd",
+      "previous_git_hash": "c5643accad4afaa3cc7f4a9623352492ed7c5fd0bf91921a804da5fdd09354a4"
+    },
+    {
+      "path": "docs/phase25/catalog_governance_overlay.json",
+      "workspace_hash": "2956fae7e751652dca5faad2dafe6e3211a048bcc69842d2f4ba835d286e3072",
+      "previous_git_hash": "1bc711f4b3c564d1e7147983a5f81aed9464fe949c6b6693748f0f265918a1d1"
+    },
+    {
+      "path": "docs/phase25/catalog_lint_report.json",
+      "workspace_hash": "771b15de79d4c3d9faa048bacd23a84b833622b9c080d5abf2894be0153b1671",
+      "previous_git_hash": "a4921ec2df2c5b0483cd596ecac36244b8b52179c05fe6a7e18b5aaa82ef4579"
+    },
+    {
+      "path": "docs/phase25/catalog_owner_review_checklist.md",
+      "workspace_hash": "c7635840fc63bc2ce59050e08330f251923655334003d74e7d6cb6e629aef2c3",
+      "previous_git_hash": "91396474455d341f7d9bfc66121e44dc790db24cfa23de60941477da3609f02f"
+    },
+    {
+      "path": "docs/phase25/change_manifest.json",
+      "workspace_hash": "c2aa8c6cf655d3de7eaa9bf15dbaa90357ade2bb42f81bb28c7c8e1376f38c22",
+      "previous_git_hash": "3b09a093107b5c61c7807417d8159053d2888bc02612d9e47cac0e09a13bb463"
+    },
+    {
+      "path": "docs/phase25/clarification_contract.md",
+      "workspace_hash": "c912a10e7756c7bdbcdde78fdcd6c745920d270665878cec1f4d5b5335d42454",
+      "previous_git_hash": "2d18c147b3e5553144889465642b013af609846d950f3736a5aab43db8e6014f"
+    },
+    {
+      "path": "docs/phase25/conversation_state_machine.md",
+      "workspace_hash": "f4ae7e01dd286524eb6f43eaef8941648f896eb0e431981b03b3faae0ac76c94",
+      "previous_git_hash": "1993caa36dab53e7a8a693399a8adaa266e38c5051f97c2387f77b919766721a"
+    },
+    {
+      "path": "docs/phase25/conversation_state_machine.mmd",
+      "workspace_hash": "e37f2aa0fc2276fab2f0e6bbc343634fdd9a1a1a7b6fae3c3ca3d1778117185f",
+      "previous_git_hash": "ab3eaf69f11e8a2d8c6811989fd08134cd8d9911790718fa29e05d44e9dece86"
+    },
+    {
+      "path": "docs/phase25/evaluation_annotation_guide.md",
+      "workspace_hash": "b7903472b4672e178a5cbc7bd678d18887b3c1e620bbf352905d4091daeace93",
+      "previous_git_hash": "f8b54fa8cf4c76e0bff866f5c0187f7380b36dfed591afc9b9f0510caad4614d"
+    },
+    {
+      "path": "docs/phase25/evaluation_metric_spec_v2.json",
+      "workspace_hash": "76103ba8e6f17a89c6659b6c818691746a28c63cd0484cbc668bdb46aeb8015a",
+      "previous_git_hash": "990dd858f9942df8485dd8c8fcd382673918610b99fc9152d0a3b04211a6ad3d"
+    },
+    {
+      "path": "docs/phase25/gold_v2_seed.jsonl",
+      "workspace_hash": "5a6a0157417c550ca3b833b01d3b5f02c3818cc642e919ea19f342eaa71f57b2",
+      "previous_git_hash": "99896b354cdbb01334106924d758ce1c27ee8c9daa431ee79848b70f3e6c99ff"
+    },
+    {
+      "path": "docs/phase25/implementation_backlog.md",
+      "workspace_hash": "99c304df46488ba4caea6f93868d68e659a3131746cfca656c48cabe40d46abf",
+      "previous_git_hash": "154e4610cb78dbcf953b276139639beb5c0912b2f578b34e640bbf66b604d699"
+    },
+    {
+      "path": "docs/phase25/metric_dimension_compatibility_v2.json",
+      "workspace_hash": "3058be6c86b76cbeaa199397d15694e03c1d8ee99ab87ba203ae30874d4adc16",
+      "previous_git_hash": "72e042de3eab43ee7c19e7a07fdd21bfdd793492549a4250fc443e859ce1a73c"
+    },
+    {
+      "path": "docs/phase25/open_business_metadata_items.md",
+      "workspace_hash": "d1e05c1254a15e0813243ed893ddf3e2dc3812e6e97fdc47a51ca386671d6222",
+      "previous_git_hash": "b83a4481e4a60c198da898b8480ed8f66047479c0d64a06598a4798b6e3a5924"
+    },
+    {
+      "path": "docs/phase25/phase25_closure_report.md",
+      "workspace_hash": "65f25a1b6d4d51bac364f6b6ef0f4291554857b2fde9e858a5a1477fc1ddff47",
+      "previous_git_hash": "4b8866b8f8046edc2a8c96d663f1b66d32897023d79eac35b2a8f640cf21f322"
+    },
+    {
+      "path": "docs/phase25/phase2_corrections_and_addendum.md",
+      "workspace_hash": "c0e582223e3a0755d77d0a5c01c5d044bb06ea3cb073e55922797d745e91c8eb",
+      "previous_git_hash": "db0c208d496c15e19e4a7c112684288fa201e9e937e1a651f6390db2c979ea55"
+    },
+    {
+      "path": "docs/phase25/relation_governance_overlay.json",
+      "workspace_hash": "ad945c0b5951f065953d8bc918a125c6d348250f63a3fddb5e572580f8205057",
+      "previous_git_hash": "ad95ac460a550a7ec006145747b17d1cd62b85a46e23e872b79977235f61103b"
+    },
+    {
+      "path": "docs/phase25/result_contract_and_proof_chain.md",
+      "workspace_hash": "d7a5ea55628f703cc79e0c830f96e2dfbc793078e55a2845828e31651fbb9d7a",
+      "previous_git_hash": "62c96bb08320e12b8015c19974b2a4b9b58d5e530764e5d009549c68edf8f150"
+    },
+    {
+      "path": "docs/phase25/semantic_resolution_v2.md",
+      "workspace_hash": "87f7096169f102818ef3e4a6d371bc79a0a85d0a211e5fb6a350fd8a657c900f",
+      "previous_git_hash": "11c28fba448a8847da36b9324853c5c1a056ab7f67c7a29a62b0aa08fea58781"
+    },
+    {
+      "path": "docs/phase25/shadow_runner_usage.md",
+      "workspace_hash": "474c3fff40d84f9207e7e0da3fe9f7b76722c7045f4ad1cdf91deaa147537e46",
+      "previous_git_hash": "d698d95bf840f100c2e87355d576222298f8ea9c924536b8962e3b00bc7c20c2"
+    },
+    {
+      "path": "docs/phase25/state_transition_table.csv",
+      "workspace_hash": "b0ce18af8e096c6518e31b64deee337b27eaef6251fbe13acfbd53ec974c97b5",
+      "previous_git_hash": "f719dfe81034caaaed2b236153e5603eb1ac44f2b3b45a3464c57400b4859265"
+    },
+    {
+      "path": "docs/phase25/surface_collision_inventory.json",
+      "workspace_hash": "bdfa5b5aa6b91a3f7e3e4b8660f945cb175994786a63f8986d24602b3c7a252b",
+      "previous_git_hash": "b0e3ee970f2d71b3e229cc7cd6fd6165bfcfc4bfa6ca219ea605eafd5b2c41a1"
+    },
+    {
+      "path": "docs/phase25/surface_collision_summary.csv",
+      "workspace_hash": "8a475e3e404863912650f56b007d9ee07eb479e51e74688da8d94517f00ba85c",
+      "previous_git_hash": "290f7e1db8f47d1e1de345a5e6695d3550ffc0b6458d115746c68b392c6aecfd"
+    },
+    {
+      "path": "docs/phase25/synthetic_test_proposals_v2.jsonl",
+      "workspace_hash": "f9c3576e6e0c90628e7836bc63f41bf7a8d1840af0c8958ee24aa4ffd530fdf0",
+      "previous_git_hash": "2112130461f3b3df6aeedf37e481ad057effca498b1fefb71f9b87bd97872680"
+    },
+    {
+      "path": "docs/phase25/test_failure_triage.json",
+      "workspace_hash": "680686c9533ed8dc074ffa5a7fac996a2bc044f6355f877ed457e5485ebd482a",
+      "previous_git_hash": "cf242a82f7b17071d2c473ff3fa918668efc87f53fb041ada61629d6fefcc43a"
+    },
+    {
+      "path": "docs/phase25/test_failure_triage.md",
+      "workspace_hash": "721b8f7127a2217e07ce22e3a72c5a7f754b8a93c08cb281c9e3172d509f1f23",
+      "previous_git_hash": "513b52fe8dff11fc0b36a3560934149a27abbea5ae6f373b8d5ae8dfcbba06fa"
+    },
+    {
+      "path": "docs/phase25/trace_v2_contract.md",
+      "workspace_hash": "6d78fefe3baf575fb93d3771f94ceeb6661d3e6c13d244ab864cf0c913809e85",
+      "previous_git_hash": "48242f1be88bc7b41e7ae78a0ae367be3455824137e911b81266fddd23aecfa8"
+    },
+    {
+      "path": "docs/phase25/typed_logical_plan_v0_2.schema.json",
+      "workspace_hash": "5bf0a52816ead043a7d5c4ab7e0e5c30bd5bf554375c3157573fbecae263d08e",
+      "previous_git_hash": "0e16dbcc13ddf68aca136969570773befcc40e2083a246e0fb47bf2dcee9186a"
+    },
+    {
+      "path": "docs/phase25/typed_logical_plan_v0_2_examples.jsonl",
+      "workspace_hash": "3494a1a64f6e81ec6ca5f6918aca4031914b27c5a8dd3e56c4b910c2227fd441",
+      "previous_git_hash": "52852a8253665667f7042f1286b8f14919a7bfa85d5bab2a507a7da26a28429e"
+    },
+    {
+      "path": "docs/phase25_1/baseline_test_gate.json",
+      "workspace_hash": "b0b0ac2a3a7eb2a94537a54c9f1d37f615bac8c7a331926175e418db4bdd60ef",
+      "previous_git_hash": "30c590bafff08bf027689954606c4e2e6f3d1cc58dd12dec1706427da8fe2b8e"
+    },
+    {
+      "path": "docs/phase25_1/change_manifest_closure.json",
+      "workspace_hash": "3a387f9013d60bc03f12517abf08141a51983d30b24af2792de2c80fea108a41",
+      "previous_git_hash": "474e9b0c5e2220714665c45ac81ea7eef6c3924a6879a2efc119c9ea4606d37c"
+    },
+    {
+      "path": "docs/phase25_1/change_manifest_implementation.json",
+      "workspace_hash": "7f2ba317afa8ff258801fe7948b41e45753d763128e6fc6bd020c203e41a3c70",
+      "previous_git_hash": "b6b2078f0799b0fa36012c24f1557b294ed7843971a4628cf811984c410d418a"
+    },
+    {
+      "path": "docs/phase25_1/contrast_cases.json",
+      "workspace_hash": "72ab2c87db56d690106cdce1e3577d15d247d7a98cca420fcadc1bdbeec0cad6",
+      "previous_git_hash": "feba836dbc890e1a0656f3f35044a96232c65ab31d7460a5424c494f395211e7"
+    },
+    {
+      "path": "docs/phase25_1/dataset_ancestry_fixture.json",
+      "workspace_hash": "be45132aeac3b9f6117f61e55dc4d067418089cfe3c3d7cebb7af3f1eccf6039",
+      "previous_git_hash": "344da13ab73ed2b507b42d259413e1f7a5597ac39750937c9de76874525c6acd"
+    },
+    {
+      "path": "docs/phase25_1/final_verified_test_gate.json",
+      "workspace_hash": "ab20efbe2cd8771d189cf60f0fab58ce4c7120c57f6362fb8d2b7618d4f240f9",
+      "previous_git_hash": "f963de960dd0172e6fe8e3188087e57042560276296bb88f8ffd093d956c9f54"
+    },
+    {
+      "path": "docs/phase25_1/final_workspace_git_drift.json",
+      "workspace_hash": "80d1a6f0f1a362c15de91e33c3154f4e8b9384f443eed851deff501f7bc6cceb",
+      "previous_git_hash": "d285cbd18974c072a0b6269c0eea813395d574ac7b46bd7d090150096e31508d"
+    },
+    {
+      "path": "docs/phase25_1/gold_v0_2_1.jsonl",
+      "workspace_hash": "617ee90c28e63503835c2451bbe8e4b4fe20ad7ef9f3dbd6038e2a524febf520",
+      "previous_git_hash": "df5baa3374055e0243fa3ae3f70e0f6d4bc5e2c28b311933728718dd6663a273"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/dealer_orders.json",
+      "workspace_hash": "8939a3d1248b9ab7414a5d9350dfe3a615c7665e6b2dd316cc68033e3073d5a5",
+      "previous_git_hash": "f1f8e76ecaf64a61424e15cff76f1c7a0f9b913b7f5d902c3faf900df32bd6fd"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/department_purchases.json",
+      "workspace_hash": "cd406cf18b2580fcfd37f6e909a3f7fc3cdce1790cb3efe3f06d82188afe9a1a",
+      "previous_git_hash": "68d575ac2863b212eddca8d9be0d0926f5f5d657e292c0af4c97ecf0a4ad09aa"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/hospital_sales.json",
+      "workspace_hash": "87c270a706c0755d4f7dc6a63b89cd33116fd3536f1ad3208cfc83d1a90e4273",
+      "previous_git_hash": "3178e6ad1d0a865e46ee666ef8e09ebb862058a7ebc2752e0ebb974f3c713b9a"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/product_returns.json",
+      "workspace_hash": "327fa3b6385886f8592615af0d19b21bfa5c728a1641439bbc636613cafeaa26",
+      "previous_git_hash": "90f5c980edc7ac51dbf83467dda5a5a681bc3c668d3456ee6bdd3e244f47932c"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/warehouse_stock.json",
+      "workspace_hash": "620b2d84eb466078c7b4180aac8fda5af784ff76dacd952892c6f36338d6ff7c",
+      "previous_git_hash": "73e03fdde63743e01b5d70c1150937fcaa3acf7335dce9cfa3f276ffc6396c05"
+    },
+    {
+      "path": "docs/phase25_1/magic_string_audit.json",
+      "workspace_hash": "d6e4d3aa4545b54ae24558d901522ed79852a724aca8f14cd026d10040c02c4c",
+      "previous_git_hash": "d1a8456bba06c56ffab73f7a52cb19dcb8adb4e660ebc64b1ac192cee1918558"
+    },
+    {
+      "path": "docs/phase25_1/metamorphic_cases.json",
+      "workspace_hash": "583dd2941f34b97696eef705a87f78376fcac1c9f37573cf9d7d6c7e4ef36163",
+      "previous_git_hash": "573d9f98613f9c66d69daccbab7d0fa191f81820e3108a5746111998a86bcf31"
+    },
+    {
+      "path": "docs/phase25_1/plan_axis_compatibility_matrix.csv",
+      "workspace_hash": "981715e56f9d1de094ba8b56befc22da6d62377a1bc6a928b0196af5e884b4de",
+      "previous_git_hash": "ef2c96815a5f4d78dd826ad5659ef6e6a44b041e68be985b41afca0fca8828f4"
+    },
+    {
+      "path": "docs/phase25_1/preexisting_workspace_drift.json",
+      "workspace_hash": "bb7047f885d889ae3ff620c12a1c5ccab16b3c80fa0b15aedeb1d0996b2e69f6",
+      "previous_git_hash": "a6fb566b0e763e8e8845e3e188f58fa6d9e63172367dec7569cab5f5b133b3a6"
+    },
+    {
+      "path": "docs/phase25_1/safety_gate.json",
+      "workspace_hash": "584582b67a41bc79fa0353e348d27794124e10f7f171bc5b23b415c3c24b01d2",
+      "previous_git_hash": "9ecd652e4b91b6c437afaa7d1450ed161382725d5be807b25556be7677d32f18"
+    },
+    {
+      "path": "docs/phase25_1/semantic_v2_import_audit.json",
+      "workspace_hash": "9d5238e2e9e8a9bbcbda5a973930677c5aed15ff831903a68a7bf3d108efdd8b",
+      "previous_git_hash": "40bea79c6e27b085afede3b67a6933d82ed677500fee1035e5d9045a3e669996"
+    },
+    {
+      "path": "docs/phase25_1/source_inventory.json",
+      "workspace_hash": "dfbdc1b3c3cf0f0245c7dee233a13858e18ff99cb0861e40d8af4a15eade39f0",
+      "previous_git_hash": "dd18da3a8e97245b924939e671c0fec1b275f726f7fc922f0abe6124ca57448f"
+    },
+    {
+      "path": "docs/phase25_1/test_gate_comparison.json",
+      "workspace_hash": "c051b2bca381445bffe3b46c184ced77b99a7d77bc0b7a9a84a68b61f7bb4058",
+      "previous_git_hash": "506b9386c8542bd8dc65f9054fe289c466fdd66dabcbaec72d0c4472413cfdea"
+    },
+    {
+      "path": "docs/phase25_1/verified_final_test_gate.json",
+      "workspace_hash": "37087ffd3a8599343a676725f0ce8af9a4e1ae7383716d62f1e9b99dbbc0a9ff",
+      "previous_git_hash": "0a5021d2c3212957ccd86bbabadeb2c4dacfe3c0ef2a2c265dadccb385959d54"
+    },
+    {
+      "path": "evals/results/debug-projection-response.json",
+      "workspace_hash": "0e85017544a22dadac53be445679648ae5509a712a7e764eb88d55244d95bb8d",
+      "previous_git_hash": "461d3ae7d3960f0ea168ef921efafb1cfd09ab55a4117406cd101ed9307efe6e"
+    },
+    {
+      "path": "evals/results/debug-sales-detail-r3.json",
+      "workspace_hash": "cc7101037f6e436fdd93283a00e073fd9998abd49f33f59da740bcc4dc5b0c59",
+      "previous_git_hash": "df99102a6016b71a317aa7b61dc0b6634e94c4d240c764860aa1888772640e76"
+    },
+    {
+      "path": "evals/results/entity-off-20260831.json",
+      "workspace_hash": "163edba75f337a32cc0d15c2252dfb9ce171a5e4d98e28ca5d47856dc80e510a",
+      "previous_git_hash": "01a785efcb02ea8074bc1ec6f01d05488d53485156e40444a0547470eab97bc5"
+    },
+    {
+      "path": "evals/results/entity-shadow-20260831.json",
+      "workspace_hash": "23fe0b92ca4c93b5229d3427da7debf26bd3a7578e2644219f1b037fc1805f7d",
+      "previous_git_hash": "a185f30be53c28b420762f34b7f7541d4cae24c9e55bab8b8e54d1032c53bea1"
+    },
+    {
+      "path": "evals/results/focused-clarification-switch.json",
+      "workspace_hash": "b91e9fe2cbbda136fc73bb457db3bf118fb22cfd9ff4f47ef2d0584a45854ef3",
+      "previous_git_hash": "ee3d2bb4b2e106ae0c0cc0f75e19c0c2e6cd4a978aeb050656785232ba9e5e11"
+    },
+    {
+      "path": "evals/results/focused-entity-after-fix.json",
+      "workspace_hash": "5ce127878041c80daeb0a439f7f5922d5ba426f971375e67f0e20527e8569c0b",
+      "previous_git_hash": "4e70b848bb04726eefdb14b517eef717eb483dc372799ab9b2ed8ee9e9aa9058"
+    },
+    {
+      "path": "evals/results/focused-entity-ranking-v2.json",
+      "workspace_hash": "7975bbc263a8691c2456a4f542c65aba11748bcc44e8524d73297073e94713da",
+      "previous_git_hash": "8bfcca69221f8373a55310ce7386d2338fc5e4c0ff94ad08a929ae3b68880918"
+    },
+    {
+      "path": "evals/results/focused-entity-ranking-v3.json",
+      "workspace_hash": "bbc104943b9a02e7b9ca340ca64c5e717c8f42c4ae8692ef415aeb75088513f0",
+      "previous_git_hash": "469783751f729140b431bb608b894f22028bc05d59839d50fd6d88383eb64dc7"
+    },
+    {
+      "path": "evals/results/focused-entity-ranking.json",
+      "workspace_hash": "4bd78249b43cb55b8afae9df42458009b58b2b3d55038bb017b62575f6bc3972",
+      "previous_git_hash": "1a630fad282907fcb2f71f47466f29cc51bf9dfb2df723fd3be0e76a247bd25a"
+    },
+    {
+      "path": "evals/results/focused-multidimensional-after-fix.json",
+      "workspace_hash": "de168226819204e3715efca5c871cfd9f0be77720d612f2b4cf1c7cd85e6528e",
+      "previous_git_hash": "4540c4ee5a85de760a9f0cd1a4bce23a1327396919223536eb64ceaa4a3eea42"
+    },
+    {
+      "path": "evals/results/focused-multidimensional.json",
+      "workspace_hash": "3fda89ece8abc665a95c88a52b74adcc7da53adac85dcb2a46fecb8a79ed15f0",
+      "previous_git_hash": "a1e0883994e48de7dacba9a2146ff94274a0c469d998a3287b23a738a51fe7f0"
+    },
+    {
+      "path": "evals/results/focused-time-followup-after-fix.json",
+      "workspace_hash": "66d6c7c31dc8cb53b5c959808ff8d11ab1af1c9c1289f5eff093922f25d7e0d2",
+      "previous_git_hash": "bd44ccf9a519de747bb44a7387fd5ceddebb2f86b631a94d27a941c18ca8db82"
+    },
+    {
+      "path": "evals/results/focused-time-followup-brand-preserve.json",
+      "workspace_hash": "cafde4bfa9bcf5abb4c7c69ccd6c1b7aa86c959ab618cccf2a6348b189e71ab7",
+      "previous_git_hash": "c58cfebcd4d159626bb7e3aaecad886c1832cd46c6d5fc7f3a761eaeefe69b98"
+    },
+    {
+      "path": "evals/results/focused-time-followup-final.json",
+      "workspace_hash": "4d464620fb3749aaae475e49ba56006ab142a2f717914fd73bd2637980aac7c5",
+      "previous_git_hash": "69418594b0a5b098cce8f19a398cdfd6275b2e504ba1f3f786317f344dde5778"
+    },
+    {
+      "path": "evals/results/focused-time-followup-second-fix.json",
+      "workspace_hash": "45e4eb1994d467dcd7ea6db53abc053c0156f3f79713267c283bd2fa3fdea29b",
+      "previous_git_hash": "0a813ebdc6ba8c1c28e8fd3a09e851d41efac0d09a75dc9f1c741afb5b31220d"
+    },
+    {
+      "path": "evals/results/focused-time-followup-verified-v2.json",
+      "workspace_hash": "f038913a43d99377c6fba3f14fa7b9c1536509d9e47a4db8c99ebcc2bfb39d62",
+      "previous_git_hash": "c31e5bceb20083324ddb1741edbafe3a42a9e5aad125fd09a0b558e680b12184"
+    },
+    {
+      "path": "evals/results/focused-time-followup-verified-v3.json",
+      "workspace_hash": "29256cf5b61a43e0767ddde38ce156f568f389c0f81e4dec8881b58da78d4531",
+      "previous_git_hash": "44f51753de60523215bb2a0a75a696c200637444ad6f113e8825f1dd354432bd"
+    },
+    {
+      "path": "evals/results/focused-time-followup-verified.json",
+      "workspace_hash": "56827f55327cf94b2d6894e77b28c0f917aa7c90e7a7907552c36dd01c6f5eaa",
+      "previous_git_hash": "204991bdf621683b1a5f56c18b8f245a31df01f4f719fc9defaecf3becf832b5"
+    },
+    {
+      "path": "evals/results/followup-30turn-20260828-202635.json",
+      "workspace_hash": "ea84ac2caa84ab36f06b57e9896b41f41c76dde24e2dd800e9ff2cbe154d3a61",
+      "previous_git_hash": "7da7dbc50661c1f979305a62f77008031edb63cb4dd5d1f8f4fea37512fa2251"
+    },
+    {
+      "path": "evals/results/followup-30turn-20260828-203915.json",
+      "workspace_hash": "c59d54a480d6eac086b4e45ba4a29ae643aa97ab71de8994d03dd9725ca3d046",
+      "previous_git_hash": "98e6abbcea0ca8949ac2c6c231709c303a2ddbdc9ca2a3b248227f7ee0473656"
+    },
+    {
+      "path": "evals/results/live-baseline-after-followup-fixes.json",
+      "workspace_hash": "b415a29b99b957f56a7d37efc9c492e57870e3cb3ae98095a801800db12c62b0",
+      "previous_git_hash": "9f622dd0589a8e2de294472cadaba36290a49266fe0b21ff72d7d2e4f85a419f"
+    },
+    {
+      "path": "evals/results/live-baseline-current.json",
+      "workspace_hash": "6b61c85f1e34a8e1991400f867da1f7cd715b3407cec90b92a23ef51357410c1",
+      "previous_git_hash": "9427c19204d9bb57430c0d2d195da3ffb2cc3560edeb7973347de99f8937f65f"
+    },
+    {
+      "path": "evals/results/live-expanded-simple-36-final.json",
+      "workspace_hash": "61581280ed34cc696fcac67e4fa9e3a59ccaa3a436b94c60b2dc6a8c1edb0faa",
+      "previous_git_hash": "aac78f6cae12792197ff4ef2a30975815ba949f90774deac74e081064f9178fe"
+    },
+    {
+      "path": "evals/results/live-expanded-simple-q09-q12-r2.json",
+      "workspace_hash": "a653977585dacb05a810536654d28fa0348e128d0414a0aefb8a7fbfea0329b6",
+      "previous_git_hash": "4171c50a843f223013fe7045f9c713f58a92e50f60354b2f1db28514697ebd1a"
+    },
+    {
+      "path": "evals/results/live-expanded-simple-q09-q12.json",
+      "workspace_hash": "1747b8e9ae1c52db2e418bfb7fe8c41b0334d3968b02b4b8994739e1ea1f1836",
+      "previous_git_hash": "87a8281bf55852af33f5533a6faff4e0c93b6d52f5aa6db3897562d7e685d9fe"
+    },
+    {
+      "path": "evals/results/model81-30-failures-round2.json",
+      "workspace_hash": "71ec980b32d2e4ba66cb4f44c0646e076a9825b78cc0ecc57d5c1222b10cc060",
+      "previous_git_hash": "e79cde63f3534a40a37ebdf7a59cd980a516ef2d3803d31c359ca8897e14920d"
+    },
+    {
+      "path": "evals/results/model81-30-failures-round3.json",
+      "workspace_hash": "f3c5e5582e66a4baf5f81bc27302a68de5b9c379339615687aff1f5671ff979f",
+      "previous_git_hash": "25515c2a434197890eb95b9c6a9f7cd7a251d8b72f89d79b19caa5b10fe129a9"
+    },
+    {
+      "path": "evals/results/model81-30-final-round1.json",
+      "workspace_hash": "75369a018a50adf670c61009c6accad57b8f61ca2f6abcda381dd2dbafc8acc2",
+      "previous_git_hash": "a6d68d115c5903dbe9af8bf399ab6e3b207e0d243000b8323501f42f48a0622b"
+    },
+    {
+      "path": "evals/results/model81-30-q16-round4.json",
+      "workspace_hash": "522d8f0b96260e785d21cff200c8c1de5abcf53347bbfc13e68e81d4360c7651",
+      "previous_git_hash": "cf8aa6308567e88b95b5883caf4b791b4fcc042d95170a0dbcb4942f6b73a9c4"
+    },
+    {
+      "path": "evals/results/model81-30-q16-round6.json",
+      "workspace_hash": "f7b788d74384caa08efa943af99c22201e238cea544094b666a9922604a115ab",
+      "previous_git_hash": "059261ecd79a5af3d5a3403f2a64bb24d4b60aee7a3130e5f22aa8c3a44702ff"
+    },
+    {
+      "path": "evals/results/model81-30-q16-round7.json",
+      "workspace_hash": "173b5657f86be2fc004a1386c7ccb3781c58dbd77f1c16aca7a0ce5270a32be4",
+      "previous_git_hash": "53520b16f809eba540e487fa86558c7dfa606b9674382a0ceee49f35d69ddc53"
+    },
+    {
+      "path": "evals/results/model81-30-q16-round8.json",
+      "workspace_hash": "c735db22039259038c7cf9d2ec6dfebf3809af65f67b3c9394ef6600066a383e",
+      "previous_git_hash": "2a8df2b54129a2717b1c77c677ec2befba0b43ea2d64ddaaa89ee5dd771da496"
+    },
+    {
+      "path": "evals/results/model81-30-q16-trend-round5.json",
+      "workspace_hash": "46761f5b17fb87daa15b6138ebcd6b84008f6ad73d8e51477d8d92414eb84d03",
+      "previous_git_hash": "7d35d157fc19c5415dcfbffdad4c7f064918c06f57de20d774a3392039ae906d"
+    },
+    {
+      "path": "evals/results/model81-30-round1.json",
+      "workspace_hash": "090032c2457e3fc6bb198623600d0bc2236407f1dd0ad504337a59f6b60e3d13",
+      "previous_git_hash": "f84a93b227014cdc5d5bc6682cf36d9a3938d639ef0ef9af8b2860e2614e2c95"
+    },
+    {
+      "path": "evals/results/model81-q14-full-138.json",
+      "workspace_hash": "38cf4e06f4296eaa4fc5685a38fb0e5ea45302f4113f52e374614d98bf4f4671",
+      "previous_git_hash": "a933ed2d302ed17ac0c397fb65ec1a44ac892b553983397997480507cf56654f"
+    },
+    {
+      "path": "evals/results/model81-q7-distinct-fix.json",
+      "workspace_hash": "a066494df4c3c3f0bb35ebb8a605a89514b4b3601a34bb573deeb6387235409e",
+      "previous_git_hash": "edad2fa4017bfcc5d3f3f33523f7afba815bf1f8cab06c8800ee08f6219a0c17"
+    },
+    {
+      "path": "evals/results/qwen3.6-plus-hybrid-intent-200-20260820-171114.json",
+      "workspace_hash": "0958dd576dc3030b6c4f0c9eb732608210401c51f5987704fa5261e52f520daa",
+      "previous_git_hash": "a008abf8a83d977803297ad3683e3339f5e6ddf5cc216c330ba328591fbf3be0"
+    },
+    {
+      "path": "evals/results/qwen3.6-plus-intent-200-20260820-170147.json",
+      "workspace_hash": "abcb99e743167b34f7bb101842dcfc39e3cac96ac69018d9cf9333aa67ac4807",
+      "previous_git_hash": "68b906a2aeafc22694515f45c35066830f22cb8b26c04a1e552ee334b0ec71e5"
+    },
+    {
+      "path": "evals/results/targeted-after-fix-1.json",
+      "workspace_hash": "4241385830bac9464a2cfbf5255ce0900c05a42fc5d98110e5d0f847c7afb768",
+      "previous_git_hash": "38719e6ddf0cc4a913492307c82fb5f67e82e823a923a0a15aa479549741dba2"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/CandidateSelectionDecision.schema.json",
+      "workspace_hash": "650d10ad06f8fcd69c2a3912231ecf6364722099e63f8860a270383b1ad29d2b",
+      "previous_git_hash": "b4c3c8b19a527ae90421ddd0c3b2dfe13805e652c9d5393085ea413b48fcd5de"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/ConversationState.schema.json",
+      "workspace_hash": "b8d7e50a758ea5de451628aa936c7511d7e8665aaf0b61a600e65a2a01d80a4c",
+      "previous_git_hash": "9b958e4fc08bec6f79cf8351df68f4af004d705c3bd887b69eb96c68861ef5bf"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/CurrentTurnParseResult.schema.json",
+      "workspace_hash": "72cca9f73702372b7f443f0206b69b36204441d5bc774a0642d31d9e7dd43e00",
+      "previous_git_hash": "32032fc14b6dc2ba449c7a62a533249a95ebf7fd4ef9f7806ad00c90437745d4"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/CurrentTurnSemanticParse.schema.json",
+      "workspace_hash": "6aab0ab5e2b832621afd33f14c454e0357b582427948a3f1b5a390289841057d",
+      "previous_git_hash": "3ab9403726507d56d40ce6334619145770e32eba4e4dd740c00da74023f9a93c"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/ExecutablePlan.schema.json",
+      "workspace_hash": "3c43d90d81b164ee068e0952865a1985eda9f7b318f66e4a6250928ab5db8857",
+      "previous_git_hash": "b2852d5b9a374008a9d91f97b097c1bd11bbb1efa274be1f6ff47392f00b6732"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/ExecutionAttemptRecord.schema.json",
+      "workspace_hash": "8f40c9588a1dcbd2ee4c38e6369566c6f09f8e9504f4899beaa4a5a746eb6b4e",
+      "previous_git_hash": "c375b608fd0b18353785d48b738e60cb20e0f5813af24eea30bd14e395e846ef"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/LogicalPlan.schema.json",
+      "workspace_hash": "4c003b013a77f8c04ae8e693135028f4f40ca809890b1b7b4b3a5c1ca6c39efc",
+      "previous_git_hash": "c30d82ce705c467ea604f04b3ccc4d9856a49afd2d4774e9afc2bf8f01544da3"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/PlanEnvelope.schema.json",
+      "workspace_hash": "2ab7ce6d62912931d64790660fe6972ae966613d7e3ba3f77b3bb31b4b65553a",
+      "previous_git_hash": "6d7bd6cce5311333cb6f137007bd98b277250c7f79f19343f09ed96e5b448580"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/TaskSemanticState.schema.json",
+      "workspace_hash": "e069696f6336097384586e2b9cc88c70b91da804f3f581919a08df6b4672a663",
+      "previous_git_hash": "7c4b9e2112cf62bd292c925239536ace57f8b8f690c68b178fcf725c1f02dc79"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/TurnResolutionResult.schema.json",
+      "workspace_hash": "4ae8eb0cff57d63be3eef7faefeb6248555df86a3a11cdb3f386be696f33f037",
+      "previous_git_hash": "44b2211a9cc3f85c4086bd3834e20b8b5cb0828a895099d3488d06019fb5601f"
+    },
+    {
+      "path": "specs/semantic_v2/semantic_resolution_contract.json",
+      "workspace_hash": "f84dc2c8d9b3950a09eec176c6eaa6edbeaa3490aa99d4526af9d40ec7c324d2",
+      "previous_git_hash": "5b181ae303907dc00dc9a86cd88fbe645767cde618c46c0ffd347c8a0d5fa97c"
+    },
+    {
+      "path": "specs/semantic_v2/trace_v2.schema.json",
+      "workspace_hash": "798d1e8eed3dc0a7abfa5067d323cce0f5a748f1ded0e892896e85c9176a35e3",
+      "previous_git_hash": "af1a3c7b1dc96efd9be5356bcfb830d091cd644760c2c85cd6796d7a3ac3a882"
+    },
+    {
+      "path": "specs/semantic_v2/typed_logical_plan_v0_2.schema.json",
+      "workspace_hash": "5bf0a52816ead043a7d5c4ab7e0e5c30bd5bf554375c3157573fbecae263d08e",
+      "previous_git_hash": "0e16dbcc13ddf68aca136969570773befcc40e2083a246e0fb47bf2dcee9186a"
+    },
+    {
+      "path": "tools/phase0/repro.py",
+      "workspace_hash": "115af24dba7848e766c4b551778f7e0bddebcaff98477bc282f24d73e625fddd",
+      "previous_git_hash": null
+    },
+    {
+      "path": "实际业务问题.md",
+      "workspace_hash": "cb8d814325607ae74c72c23df5aaee7b5f32f7f5be94eeb0093b755bbc3419b0",
+      "previous_git_hash": "14498644bc77235c048db4d03a22bb288ac7ba02a593ed8abd37522236a36aef"
+    }
+  ],
+  "credential_scan": "PASS",
+  "synchronization": "EXPLICIT_PATHS_ONLY",
+  "starting_commit": "6c1c6e5242a4b42b302e141f66b5886632aa21ec",
+  "final_commit_resolution": "git log -1 --format=%H -- docs/phase0a/phase0a_closure_report.md",
+  "removed_tracking": [
+    "??????.md"
+  ],
+  "deleted_workspace_files": []
+}

@@ -13,7 +13,6 @@ from app.domain.models import (
 from app.analysis.contracts import (
     contract_for_request,
     explicit_object_comparison_scope,
-    multidimensional_operator_for_question,
     ordered_entity_metric_ranking_request,
 )
 
@@ -42,23 +41,6 @@ class AnalysisPlanner:
 
     def build(self, request: CanonicalAnalysisRequest) -> AnalysisPlan | None:
         methods = list(self._METHODS.get(request.primary_intent, []))
-        compact_question = request.original_question.replace(" ", "")
-        if request.primary_intent == PrimaryIntent.ROOT_CAUSE_ANALYSIS and "量价" in compact_question:
-            methods = ["baseline_alignment", "price_volume_decomposition", "effect_reconciliation"]
-        elif (
-            request.primary_intent == PrimaryIntent.ROOT_CAUSE_ANALYSIS
-            and multidimensional_operator_for_question(compact_question)
-        ):
-            methods = [
-                "baseline_current_alignment", "dimension_surprise_ranking",
-                "explanatory_power_threshold", "root_cause_drilldown",
-            ]
-        elif request.primary_intent == PrimaryIntent.COMPOSITION_ANALYSIS and "漏斗" in compact_question:
-            methods = ["funnel_stage_validation", "stage_conversion_calculation", "dropoff_ranking"]
-        elif request.primary_intent == PrimaryIntent.COMPOSITION_ANALYSIS and any(
-            token in compact_question for token in ("结构变化", "结构变动", "份额变化", "份额变动")
-        ):
-            methods = ["period_alignment", "share_calculation", "structural_share_shift"]
         ordered_entity_ranking = ordered_entity_metric_ranking_request(request)
         if (
             AnalysisOperator.TOP_N in request.operators
@@ -68,6 +50,14 @@ class AnalysisPlanner:
             methods = ["ranking_metric_validation", "stable_ranking", "coverage_reconciliation"]
         if not methods:
             return None
+        from app.analysis.tools.registry import chain_for_intent
+        if chain_for_intent(request.primary_intent) is not None:
+            if not request._analysis_contract:
+                # Planning has not finished yet; do not infer tools for a UI summary.
+                return None
+            from app.analysis.tool_selection import selected_for
+            selected_for(request)
+            methods = list(request._analysis_contract.get('methods') or request._analysis_contract['tool_selection']['capabilities'])
         object_scope = explicit_object_comparison_scope(request)
         minimum_rows = (
             1

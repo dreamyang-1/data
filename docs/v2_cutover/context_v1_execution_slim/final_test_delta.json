@@ -1,0 +1,74 @@
+{
+  "status": "V2_CONTEXT_V1_EXECUTION_NAMED_PRODUCT_TREND_CLOSURE_VERIFIED",
+  "baseline": {
+    "nodes": 3823,
+    "passed": 3717,
+    "failed": 106,
+    "failed_node_sha256": "6361e44e0f402db5bd2f8605d6b7d244641d0f5ba95bcbd02f8babad2a2d914f"
+  },
+  "final": {
+    "nodes": 3869,
+    "passed": 3778,
+    "failed": 91,
+    "collection_errors": 0,
+    "failed_node_sha256": "5f090551b90f09f36bf894d89a3a077d7d69233b91fdcc6c2960f5fd61b203a5"
+  },
+  "delta": {
+    "old_pass_to_new_fail": 0,
+    "old_fail_to_new_pass": 15,
+    "new_nodes": 49,
+    "retired_nodes": 3
+  },
+  "retired_contract_tests": [
+    "tests.test_oagent_execution_scope_materialization::test_oagent_model_wide_multi_domain_execution_fails_closed",
+    "tests.test_oagent_execution_scope_materialization::test_oagent_unresolved_model_wide_execution_fails_before_call",
+    "tests.test_v2_context_v1_execution_bridge::test_failed_direct_completion_keeps_previous_active_task"
+  ],
+  "constraints": {
+    "benchmark_runs": 0,
+    "model_calls": 0,
+    "oagent_source_changes": 0,
+    "sql_translator_source_changes": 0,
+    "java_platform_changes": 0
+  },
+  "latest_region_pending_closure": {
+    "baseline_nodes": 3865,
+    "baseline_passed": 3774,
+    "baseline_failed": 91,
+    "final_nodes": 3869,
+    "final_passed": 3778,
+    "final_failed": 91,
+    "old_pass_to_new_fail": 0,
+    "old_fail_to_new_pass": 0,
+    "new_nodes": 4,
+    "removed_nodes": 0,
+    "affected_tests": "289 passed / 0 failed"
+  },
+  "latest_named_product_trend_closure": {
+    "baseline_nodes": 3869,
+    "baseline_passed": 3778,
+    "baseline_failed": 91,
+    "final_nodes": 3875,
+    "final_passed": 3784,
+    "final_failed": 91,
+    "collection_errors": 0,
+    "old_pass_to_new_fail": 0,
+    "old_fail_to_new_pass": 0,
+    "new_or_reframed_nodes": 8,
+    "replaced_test_names": 2,
+    "focused_tests": "12 passed / 0 failed",
+    "affected_tests": "713 passed / 0 failed",
+    "live_read_only_cases": {
+      "total": 4,
+      "query_result_returned": 4,
+      "completed": 3,
+      "partial_success": 1
+    },
+    "runtime": {
+      "pid": 39288,
+      "live": "HTTP 200",
+      "ready": "HTTP 200 / READY",
+      "runtime_mode": "V2_CONTEXT_V1_EXECUTION"
+    }
+  }
+}

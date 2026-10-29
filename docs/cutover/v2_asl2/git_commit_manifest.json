@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "abd6e82bfffb683d829e408581dda583633ec8d8",
+  "feature_branch": "cutover-v2-asl2-lowering-20260909-01",
+  "base_branch": "cutover-pinned-sql-catalog-20260909-01",
+  "implementation_commit": "1cfde548a7f1b7843ba02f5d3a7f48dfef2ba79b",
+  "service_commits": {
+    "SQL_Translator": "a469942c4a2ada5bc5e5ceab3b5f23cc57d5bfa9",
+    "DataAnalysis_Agent": "1cfde548a7f1b7843ba02f5d3a7f48dfef2ba79b"
+  },
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

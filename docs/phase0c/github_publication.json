@@ -1,0 +1,10 @@
+{
+  "number": 3,
+  "html_url": "https://github.com/dreamyang-1/data/pull/3",
+  "draft": true,
+  "state": "open",
+  "head": "phase0c-trust-semantic-scope-20260908-01",
+  "base": "phase0b-legacy-multiturn-p0-closure-20260907-01",
+  "head_at_creation": "1c28cd64e0422c98ad4bb3b0222701f63845984f",
+  "auto_merge": false
+}

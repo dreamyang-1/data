@@ -68,6 +68,10 @@ class SessionStore(Protocol):
     async def get_task_frame(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str) -> CanonicalAnalysisRequest | None: ...
     async def put_task_frame(self, request: CanonicalAnalysisRequest) -> None: ...
     async def get_recent_task_frames(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, *, limit: int) -> list[CanonicalAnalysisRequest]: ...
+    async def get_task_table(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str) -> dict | None: ...
+    async def put_task_table(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, table: dict) -> None: ...
+    async def get_question_log(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str) -> list[dict]: ...
+    async def append_question_log(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, entry: dict, *, max_items: int = 20) -> None: ...
     async def put_dataset_reference(self, reference: dict, *, recent_limit: int) -> None: ...
     async def get_recent_dataset_references(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str, *, limit: int) -> list[dict]: ...
     async def list_expired_dataset_references(self, *, now_epoch: float, limit: int) -> list[dict]: ...
@@ -83,6 +87,8 @@ class SessionStore(Protocol):
     async def put_report_reference(self, reference: dict) -> None: ...
     async def list_expired_report_references(self, *, now_epoch: float, limit: int) -> list[dict]: ...
     async def delete_report_reference(self, report_id: str) -> None: ...
+    async def put_validated_query_example(self, example: dict, *, max_items: int) -> None: ...
+    async def get_validated_query_examples(self, tenant_id: str, application_id: str, semantic_model_id: int, business_domain_ids: list[int], *, limit: int) -> list[dict]: ...
 
 
 class InMemorySessionStore:
@@ -104,6 +110,8 @@ class InMemorySessionStore:
         self._recent_task_frames: dict[
             tuple[str, str, str, str], list[tuple[float, CanonicalAnalysisRequest]]
         ] = {}
+        self._task_tables: dict[tuple[str, str, str, str], tuple[float, list[dict]]] = {}
+        self._question_logs: dict[tuple[str, str, str, str], tuple[float, list[dict]]] = {}
         self._dataset_references: dict[str, dict] = {}
         self._conversation_datasets: dict[tuple[str, str, str, str], list[str]] = {}
         self._dag_checkpoints: dict[tuple[str, str, str, str, str], tuple[float, dict]] = {}
@@ -112,6 +120,9 @@ class InMemorySessionStore:
             tuple[str, str, str, str, str], tuple[float, str, str]
         ] = {}
         self._report_references: dict[str, dict] = {}
+        self._validated_query_examples: dict[
+            tuple[str, str, int, tuple[int, ...]], list[dict]
+        ] = {}
         self._lock = asyncio.Lock()
 
     async def get_pending(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str) -> PendingState | None:
@@ -272,6 +283,59 @@ class InMemorySessionStore:
             ]
             self._recent_task_frames[key] = frames
             return [item[1].model_copy(deep=True) for item in frames[:max(0, limit)]]
+
+    async def get_task_table(
+        self, tenant_id: str, user_id: str, application_id: str, conversation_id: str,
+    ) -> dict | None:
+        key = (tenant_id, user_id, application_id, conversation_id)
+        async with self._lock:
+            item = self._task_tables.get(key)
+            if not item or item[0] <= time.monotonic():
+                self._task_tables.pop(key, None)
+                return None
+            return json.loads(json.dumps(item[1]))
+
+    async def put_task_table(
+        self, tenant_id: str, user_id: str, application_id: str,
+        conversation_id: str, table: dict,
+    ) -> None:
+        key = (tenant_id, user_id, application_id, conversation_id)
+        async with self._lock:
+            self._task_tables[key] = (
+                time.monotonic() + self.ttl_seconds,
+                json.loads(json.dumps(table)),
+            )
+
+    async def get_question_log(
+        self, tenant_id: str, user_id: str, application_id: str, conversation_id: str,
+    ) -> list[dict]:
+        key = (tenant_id, user_id, application_id, conversation_id)
+        async with self._lock:
+            item = self._question_logs.get(key)
+            if not item or item[0] <= time.monotonic():
+                self._question_logs.pop(key, None)
+                return []
+            return json.loads(json.dumps(item[1]))
+
+    async def append_question_log(
+        self, tenant_id: str, user_id: str, application_id: str,
+        conversation_id: str, entry: dict, *, max_items: int = 20,
+    ) -> None:
+        key = (tenant_id, user_id, application_id, conversation_id)
+        async with self._lock:
+            item = self._question_logs.get(key)
+            entries = (
+                list(item[1])
+                if item and item[0] > time.monotonic()
+                else []
+            )
+            entries.append(json.loads(json.dumps(entry)))
+            # 只保留最近 max_items 轮，早期轮次滚动淘汰
+            del entries[: max(0, len(entries) - max_items)]
+            self._question_logs[key] = (
+                time.monotonic() + self.ttl_seconds,
+                entries,
+            )
 
     async def put_dataset_reference(self, reference: dict, *, recent_limit: int) -> None:
         scope = reference["scope"]
@@ -435,6 +499,44 @@ class InMemorySessionStore:
     async def delete_report_reference(self, report_id: str) -> None:
         async with self._lock:
             self._report_references.pop(report_id, None)
+
+    async def put_validated_query_example(
+        self, example: dict, *, max_items: int
+    ) -> None:
+        """Store a bounded SQL-free semantic example in development memory."""
+
+        key = (
+            str(example["tenant_id"]),
+            str(example["application_id"]),
+            int(example["semantic_model_id"]),
+            tuple(sorted(int(item) for item in example.get("business_domain_ids", []))),
+        )
+        async with self._lock:
+            values = self._validated_query_examples.setdefault(key, [])
+            fingerprint = str(example["fingerprint"])
+            values[:] = [item for item in values if item.get("fingerprint") != fingerprint]
+            values.insert(0, json.loads(json.dumps(example)))
+            del values[max(1, max_items):]
+
+    async def get_validated_query_examples(
+        self,
+        tenant_id: str,
+        application_id: str,
+        semantic_model_id: int,
+        business_domain_ids: list[int],
+        *,
+        limit: int,
+    ) -> list[dict]:
+        """Return only examples from the exact semantic scope."""
+
+        key = (
+            tenant_id,
+            application_id,
+            semantic_model_id,
+            tuple(sorted(business_domain_ids)),
+        )
+        async with self._lock:
+            return json.loads(json.dumps(self._validated_query_examples.get(key, [])[:limit]))
 
 
 class RedisSessionStore:
@@ -679,6 +781,58 @@ return 0
             except (ValidationError, ValueError, TypeError):
                 logger.warning("discarding invalid recalled task frame: key=%s", key)
         return result
+
+    async def get_task_table(
+        self, tenant_id: str, user_id: str, application_id: str, conversation_id: str,
+    ) -> dict | None:
+        key = self._key("task-table", tenant_id, user_id, application_id, conversation_id)
+        raw = await self.redis.get(key)
+        if not raw:
+            return None
+        try:
+            return json.loads(raw)
+        except (ValueError, TypeError):
+            logger.error("discarding invalid task-table session state: key=%s", key)
+            await self.redis.delete(key)
+            return None
+
+    async def put_task_table(
+        self, tenant_id: str, user_id: str, application_id: str,
+        conversation_id: str, table: dict,
+    ) -> None:
+        key = self._key("task-table", tenant_id, user_id, application_id, conversation_id)
+        await self.redis.set(
+            key, json.dumps(table, ensure_ascii=False), ex=self.ttl_seconds
+        )
+
+    async def get_question_log(
+        self, tenant_id: str, user_id: str, application_id: str, conversation_id: str,
+    ) -> list[dict]:
+        # 新头在前的列表：lpush 写入、lrange 整表读出
+        key = self._key("question-log", tenant_id, user_id, application_id, conversation_id)
+        values = await self.redis.lrange(key, 0, -1)
+        result: list[dict] = []
+        for raw in values:
+            try:
+                entry = json.loads(raw)
+            except (ValueError, TypeError):
+                logger.warning("discarding invalid question-log entry: key=%s", key)
+                continue
+            if isinstance(entry, dict):
+                result.append(entry)
+        return result
+
+    async def append_question_log(
+        self, tenant_id: str, user_id: str, application_id: str,
+        conversation_id: str, entry: dict, *, max_items: int = 20,
+    ) -> None:
+        key = self._key("question-log", tenant_id, user_id, application_id, conversation_id)
+        encoded = json.dumps(entry, ensure_ascii=False)
+        async with self.redis.pipeline(transaction=True) as pipe:
+            pipe.lpush(key, encoded)
+            pipe.ltrim(key, 0, max(0, max_items - 1))
+            pipe.expire(key, self.ttl_seconds)
+            await pipe.execute()
 
     @property
     def _dataset_expiry_key(self) -> str:
@@ -940,3 +1094,60 @@ return 0
             pipe.delete(self._key("report-ref", report_id))
             pipe.zrem(self._report_expiry_key, report_id)
             await pipe.execute()
+
+    async def put_validated_query_example(
+        self, example: dict, *, max_items: int
+    ) -> None:
+        """Persist a bounded SQL-free example under its exact semantic scope."""
+
+        key = self._key(
+            "validated-query",
+            str(example["tenant_id"]),
+            str(example["application_id"]),
+            str(example["semantic_model_id"]),
+            json.dumps(sorted(example.get("business_domain_ids", []))),
+        )
+        raw_values = await self.redis.lrange(key, 0, max(0, max_items - 1))
+        fingerprint = str(example["fingerprint"])
+        retained: list[str] = []
+        for raw in raw_values:
+            try:
+                value = json.loads(raw)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                continue
+            if value.get("fingerprint") != fingerprint:
+                retained.append(json.dumps(value, ensure_ascii=False, separators=(",", ":")))
+        encoded = json.dumps(example, ensure_ascii=False, separators=(",", ":"))
+        async with self.redis.pipeline(transaction=True) as pipe:
+            pipe.delete(key)
+            pipe.rpush(key, encoded, *retained[: max(0, max_items - 1)])
+            pipe.expire(key, self.ttl_seconds)
+            await pipe.execute()
+
+    async def get_validated_query_examples(
+        self,
+        tenant_id: str,
+        application_id: str,
+        semantic_model_id: int,
+        business_domain_ids: list[int],
+        *,
+        limit: int,
+    ) -> list[dict]:
+        """Read validated examples from the exact tenant/application scope."""
+
+        key = self._key(
+            "validated-query",
+            tenant_id,
+            application_id,
+            str(semantic_model_id),
+            json.dumps(sorted(business_domain_ids)),
+        )
+        result: list[dict] = []
+        for raw in await self.redis.lrange(key, 0, max(0, limit - 1)):
+            try:
+                value = json.loads(raw)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                continue
+            if isinstance(value, dict):
+                result.append(value)
+        return result

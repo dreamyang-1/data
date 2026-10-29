@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "d798dc6f7a9342f3090ed418439d2fa0672a6c54",
+  "feature_branch": "cutover-v2-pending-20260908-01",
+  "base_branch": "cutover-v2-recognition-20260908-01",
+  "implementation_commit": "bc96e7a5c7ba712508827e19cd09f5cbff865382",
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

@@ -1,0 +1,165 @@
+{
+  "normal_path_calls_per_request": {
+    "before": 2,
+    "after": 2
+  },
+  "context_path_calls_per_request": {
+    "before": 2,
+    "after": 2
+  },
+  "exact_pending_calls_per_request": {
+    "before": 1,
+    "after": 1
+  },
+  "added_sequential_context_calls": 0,
+  "existing_source_probe_calls": "Independent existing capability; not counted as a newly added context call",
+  "matched_usage_case_ids": [
+    "S81-001",
+    "S81-002",
+    "S81-003",
+    "S81-014",
+    "S81-017"
+  ],
+  "before_current_production_usage": {
+    "input": {
+      "n": 5,
+      "mean": 16162,
+      "p95": 16984.2,
+      "method": "linear interpolated sample percentile"
+    },
+    "output": {
+      "n": 5,
+      "mean": 558.8,
+      "p95": 740.1999999999999,
+      "method": "linear interpolated sample percentile"
+    }
+  },
+  "after_current_production_usage": {
+    "input": {
+      "n": 5,
+      "mean": 17086,
+      "p95": 18034.2,
+      "method": "linear interpolated sample percentile"
+    },
+    "output": {
+      "n": 5,
+      "mean": 621,
+      "p95": 827.5999999999999,
+      "method": "linear interpolated sample percentile"
+    }
+  },
+  "before_first_stage_usage": {
+    "input": {
+      "n": 5,
+      "mean": 2181.4,
+      "p95": 2184.4,
+      "method": "linear interpolated sample percentile"
+    },
+    "output": {
+      "n": 5,
+      "mean": 413,
+      "p95": 520.8,
+      "method": "linear interpolated sample percentile"
+    }
+  },
+  "after_first_stage_usage": {
+    "input": {
+      "n": 5,
+      "mean": 3317.4,
+      "p95": 3442.4,
+      "method": "linear interpolated sample percentile"
+    },
+    "output": {
+      "n": 5,
+      "mean": 474,
+      "p95": 597.0,
+      "method": "linear interpolated sample percentile"
+    }
+  },
+  "before_recognition_seconds": {
+    "n": 0,
+    "mean": null,
+    "p95": null,
+    "status": "UNKNOWN_NO_RECEIPT"
+  },
+  "before_total_v2_seconds": {
+    "n": 0,
+    "mean": null,
+    "p95": null,
+    "status": "UNKNOWN_NO_RECEIPT"
+  },
+  "after_recognition_seconds": {
+    "n": 12,
+    "mean": 8.505083333371052,
+    "p95": 10.076899999950546,
+    "method": "linear interpolated sample percentile"
+  },
+  "after_total_v2_seconds": {
+    "n": 6,
+    "mean": 12.64866666670423,
+    "p95": 15.445999999938067,
+    "method": "linear interpolated sample percentile"
+  },
+  "total_latency_case_ids": [
+    "S81-001",
+    "S81-002",
+    "S81-003",
+    "S81-014",
+    "S81-017",
+    "R4L-010"
+  ],
+  "before_context_resolution_seconds": {
+    "n": 15,
+    "mean": 4.974666666666667e-05,
+    "p95": 8.08299999999999e-05,
+    "method": "linear interpolated sample percentile"
+  },
+  "after_context_discovery_seconds": {
+    "n": 12,
+    "mean": 0.014464841666666667,
+    "p95": 0.02640212999999999,
+    "method": "linear interpolated sample percentile"
+  },
+  "after_context_validation_seconds": {
+    "n": 22,
+    "mean": 0.005964227272727273,
+    "p95": 0.016267724999999993,
+    "method": "linear interpolated sample percentile"
+  },
+  "component_timing_limit": "Offline per-call seams, different measurement work; not end-to-end causal latency deltas",
+  "round4_experimental_joint_recognition_seconds": {
+    "n": 12,
+    "mean": 9.254083333342956,
+    "p95": 17.77409999998052,
+    "method": "linear interpolated sample percentile"
+  },
+  "round4_experimental_first_stage_usage": {
+    "input": {
+      "n": 12,
+      "mean": 3092.1666666666665,
+      "p95": 3210.35,
+      "method": "linear interpolated sample percentile"
+    },
+    "output": {
+      "n": 12,
+      "mean": 447.3333333333333,
+      "p95": 544.1499999999999,
+      "method": "linear interpolated sample percentile"
+    }
+  },
+  "token_increase_source": "Bounded summaries plus required proposal schema/consistency predicates. Draft sees only selected task.",
+  "provider_timeout_count": 0,
+  "schema_reject_count": 0,
+  "model_calls": 20,
+  "incremental_production_latency": "UNKNOWN_NO_MATCHED_BASELINE_TIMING_RECEIPT; NO_DETERMINISM_OR_PERFORMANCE_GUARANTEE",
+  "model": {
+    "name": "qwen3.7-max",
+    "enable_thinking": false,
+    "temperature": 0,
+    "retries": 0,
+    "timeout_seconds": 60,
+    "seed": "NOT_SENT",
+    "top_p": "NOT_SENT",
+    "max_tokens": "NOT_SENT"
+  }
+}

@@ -1,0 +1,2110 @@
+{
+  "status": "FRESH_QUERY_VERTICAL_CLOSURE_PARTIAL",
+  "started_at": "2026-09-10T10:44:02Z",
+  "deadline": "2026-09-10T12:44:02Z",
+  "baseline": "a55cf33c3d4917548c7f4b47d01641199448ea52",
+  "baseline_pr": 65,
+  "baseline_branch": "semantic-fresh-task-round5-6-20260910t081523z",
+  "branch": "semantic-fresh-query-closure-20260910t104402z",
+  "development_workspace": "E:\\YouoAgent\\DataAnalysis_Agent",
+  "git_repository": "E:/yy",
+  "baseline_tracked_files": 1669,
+  "baseline_unexpected_drift": 0,
+  "baseline_clean": true,
+  "release": {
+    "commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_7/results.json",
+    "draft_pr_base": "semantic-fresh-task-round5-6-20260910t081523z",
+    "draft_pr_head": "semantic-fresh-query-closure-20260910t104402z",
+    "final_publication_receipt": ".eval_private/vertical-round5-7-20260910T104402Z/publication_receipt.json",
+    "post_commit_verification": ".eval_private/vertical-round5-7-20260910T104402Z/commit_verification.json",
+    "status": "POST_COMMIT_RECEIPT_IS_AUTHORITATIVE",
+    "auto_merge": false
+  },
+  "changed_files": [
+    {
+      "path": "app/semantic_v2/filter_generation_schema.py",
+      "baseline_sha256": "3a48a1dcc4641315c460526a6c39ec32179f29375060cf04039a0d734689466e",
+      "final_sha256": "b1d3d00d8f930bef587f9fb9904eb44e2a27ddc6d7279b8875705fa708b57187"
+    },
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "baseline_sha256": "fd83db611de5015782214a89b70dea02207f3c02982872b7b2da7437921b80af",
+      "final_sha256": "0cda14e03e0cc1ae7a11375d29b8c3eb96a0dce647526f8d2ab0ec4d59cb48e7"
+    },
+    {
+      "path": "app/semantic_v2/structured_edits.py",
+      "baseline_sha256": "ffac0964d837f9dba9bb4abd3320234cfa548ac4e07ceea535254128cdc28dbd",
+      "final_sha256": "9c69cde8fd173c54aa872283794c763a5fc15438f102d5ee979b5f22dda78eee"
+    },
+    {
+      "path": "tools/cutover/round55_live_chains.py",
+      "baseline_sha256": "71dbf09443ea92c16fee641ed90e7102346e2494198dc0a504dc558ab76e054a",
+      "final_sha256": "99eacb20f1ff8651796fcd3a34454e663eea162631d7bf9721c5b5b04e595cdb"
+    },
+    {
+      "path": "tests/test_v2_fresh_filter_round57.py",
+      "baseline_sha256": null,
+      "final_sha256": "a3dead764ac7361ef9e6bdb63d8a1dbd51eaf12ec97604a59aacf5e55b593308"
+    }
+  ],
+  "documentation_files": [
+    "docs/v2_cutover/semantic_round5_7/closure_report.md",
+    "docs/v2_cutover/semantic_round5_7/results.json",
+    "docs/v2_cutover/semantic_round5_7/rollback.md"
+  ],
+  "live_runtime_hashes": {
+    "app/semantic_v2/__init__.py": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+    "app/semantic_v2/asl2.py": "b4ab7978bc7b0575cad45db6eb549fa3ba164e0fb02e9691292b86fd88b76759",
+    "app/semantic_v2/authorized_contract.py": "43528e54bcedb8e0646b8ad634617150fe957a011ff4cc1cbca906e5a471751f",
+    "app/semantic_v2/catalog_bridge.py": "2c16a2d216254aca64296fe57bf447e5c9a24fa1aede18bb5a1cf585ac39f40e",
+    "app/semantic_v2/catalog_mentions.py": "61cba704b689d0e3924b4fc2ddc1899ebd38ce39a9955bffa2edb8f598f94271",
+    "app/semantic_v2/catalog_paths.py": "dfdd61935121196ac64efc60c0eb5030390dab80f7b80c0123855da2e9dd6d77",
+    "app/semantic_v2/catalog_plans.py": "d284963c5b851631b67810103486c2e15dd7e8a598f6c2961a63bb8bbb4b90c7",
+    "app/semantic_v2/clarification.py": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+    "app/semantic_v2/context_contract.py": "b7086b43437c3cb2920efe7346d2c4d1afde1228385e2640d09676122c076934",
+    "app/semantic_v2/context_proposal.py": "ad5d3d9d88de83f138dc59a868dd44936495eebeba0e2e79c015d2c125c50e84",
+    "app/semantic_v2/enums.py": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+    "app/semantic_v2/explicit_time.py": "f9628794693b1a1dedc39c0cf4cff25c40d280c70267830f1351332c03cbca69",
+    "app/semantic_v2/filter_generation_schema.py": "b1d3d00d8f930bef587f9fb9904eb44e2a27ddc6d7279b8875705fa708b57187",
+    "app/semantic_v2/legacy_adapter.py": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
+    "app/semantic_v2/migration.py": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+    "app/semantic_v2/models.py": "e23643d4f97abcb5391b1124fd5214da2f6d94077499ddcf9f102ea0e911af78",
+    "app/semantic_v2/pending_recognition.py": "93f3daf560ac574d41caeb08e79dfa09c4acef202bae6ad4243de619f13a6d5b",
+    "app/semantic_v2/pipeline.py": "56715d069f2deca374fa619473136b0bc9b3e57b93d5a383030719bc3392280b",
+    "app/semantic_v2/recognition.py": "0cda14e03e0cc1ae7a11375d29b8c3eb96a0dce647526f8d2ab0ec4d59cb48e7",
+    "app/semantic_v2/recognition_client.py": "ba5462734b9bacf48b59d7a6baba43246d63d739d1197f9daeff0ad457154ce4",
+    "app/semantic_v2/recognition_initialization.py": "6af76337adae514fb67f39965146474afbcccd5eef05f406906cc9b492a47f81",
+    "app/semantic_v2/recognition_repairs.py": "b92cf8d46bcaceced32c0593a9eec37f2a702a297510460280c5301055e2ad86",
+    "app/semantic_v2/registries.py": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+    "app/semantic_v2/result_contract.py": "9189859325a15b8cc712294b312ec3ab21f39228a7be2db81c7a249bef029754",
+    "app/semantic_v2/schema.py": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+    "app/semantic_v2/slot_reducer.py": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+    "app/semantic_v2/source_value_binding.py": "9b03090dc22517080c7b5b3b05b9f63e44635b50a77a70f7cde25b36ec598e95",
+    "app/semantic_v2/source_value_probe.py": "55b4700f79776dea5569364b4ded2b0300b4e7ee99bc5c59808a3488dc5123fa",
+    "app/semantic_v2/source_value_recognition.py": "af68ff481d3d012af850cab6fc6f755eb3c6b57c1187154c365de819292ef149",
+    "app/semantic_v2/source_value_target.py": "d12675ecbb400b8d3bc7e8a1a9a7f8967e30fd597c4f4fa2e9495cd6db1f8a35",
+    "app/semantic_v2/state_machine.py": "f85d1157a44dd17c0e6a12d033460c6ae016282c1d8bb393228fcca61fcafa4f",
+    "app/semantic_v2/structured_edits.py": "9c69cde8fd173c54aa872283794c763a5fc15438f102d5ee979b5f22dda78eee",
+    "app/semantic_v2/temporal_comparisons.py": "624128af0ed814c3d686e00678727bb27cde5d1d3fadc4aa8e9ec01d8c9429dd",
+    "app/semantic_v2/trace_models.py": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+    "app/semantic_v2/validators.py": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15"
+  },
+  "effective_input_freeze": {
+    "cases": [
+      {
+        "case_id": "HC55-A",
+        "capability": "A",
+        "utterances": [
+          "查询去年江苏省订单笔数",
+          "换成北京市",
+          "不限地区",
+          "换今年"
+        ],
+        "initial_pending": false,
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ]
+        },
+        "clock": "2026-09-09T09:00:00+08:00",
+        "split": "PUBLIC_DEV"
+      },
+      {
+        "case_id": "HC55-B",
+        "capability": "B",
+        "utterances": [
+          "查询去年江苏省订单笔数",
+          "再加销售总数量",
+          "不要订单笔数",
+          "换今年"
+        ],
+        "initial_pending": false,
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ]
+        },
+        "clock": "2026-09-09T09:00:00+08:00",
+        "split": "PUBLIC_DEV"
+      },
+      {
+        "case_id": "HC55-C",
+        "capability": "C",
+        "utterances": [
+          "查询去年江苏省订单笔数",
+          "查询今年北京市销售总数量",
+          "返回刚才江苏订单笔数那个任务"
+        ],
+        "initial_pending": false,
+        "scope": {
+          "semantic_model_id": 81,
+          "business_domain_ids": [
+            205
+          ]
+        },
+        "clock": "2026-09-09T09:00:00+08:00",
+        "split": "PUBLIC_DEV"
+      }
+    ],
+    "fixture_sha256": "5e041a6236271f87b06910cc19a5e96132267e053e98745be448f43f7ab71dd3",
+    "runtime_hashes": {
+      "app/semantic_v2/__init__.py": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+      "app/semantic_v2/asl2.py": "b4ab7978bc7b0575cad45db6eb549fa3ba164e0fb02e9691292b86fd88b76759",
+      "app/semantic_v2/authorized_contract.py": "43528e54bcedb8e0646b8ad634617150fe957a011ff4cc1cbca906e5a471751f",
+      "app/semantic_v2/catalog_bridge.py": "2c16a2d216254aca64296fe57bf447e5c9a24fa1aede18bb5a1cf585ac39f40e",
+      "app/semantic_v2/catalog_mentions.py": "61cba704b689d0e3924b4fc2ddc1899ebd38ce39a9955bffa2edb8f598f94271",
+      "app/semantic_v2/catalog_paths.py": "dfdd61935121196ac64efc60c0eb5030390dab80f7b80c0123855da2e9dd6d77",
+      "app/semantic_v2/catalog_plans.py": "d284963c5b851631b67810103486c2e15dd7e8a598f6c2961a63bb8bbb4b90c7",
+      "app/semantic_v2/clarification.py": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+      "app/semantic_v2/context_contract.py": "b7086b43437c3cb2920efe7346d2c4d1afde1228385e2640d09676122c076934",
+      "app/semantic_v2/context_proposal.py": "ad5d3d9d88de83f138dc59a868dd44936495eebeba0e2e79c015d2c125c50e84",
+      "app/semantic_v2/enums.py": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+      "app/semantic_v2/explicit_time.py": "f9628794693b1a1dedc39c0cf4cff25c40d280c70267830f1351332c03cbca69",
+      "app/semantic_v2/filter_generation_schema.py": "b1d3d00d8f930bef587f9fb9904eb44e2a27ddc6d7279b8875705fa708b57187",
+      "app/semantic_v2/legacy_adapter.py": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
+      "app/semantic_v2/migration.py": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+      "app/semantic_v2/models.py": "e23643d4f97abcb5391b1124fd5214da2f6d94077499ddcf9f102ea0e911af78",
+      "app/semantic_v2/pending_recognition.py": "93f3daf560ac574d41caeb08e79dfa09c4acef202bae6ad4243de619f13a6d5b",
+      "app/semantic_v2/pipeline.py": "56715d069f2deca374fa619473136b0bc9b3e57b93d5a383030719bc3392280b",
+      "app/semantic_v2/recognition.py": "0cda14e03e0cc1ae7a11375d29b8c3eb96a0dce647526f8d2ab0ec4d59cb48e7",
+      "app/semantic_v2/recognition_client.py": "ba5462734b9bacf48b59d7a6baba43246d63d739d1197f9daeff0ad457154ce4",
+      "app/semantic_v2/recognition_initialization.py": "6af76337adae514fb67f39965146474afbcccd5eef05f406906cc9b492a47f81",
+      "app/semantic_v2/recognition_repairs.py": "b92cf8d46bcaceced32c0593a9eec37f2a702a297510460280c5301055e2ad86",
+      "app/semantic_v2/registries.py": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+      "app/semantic_v2/result_contract.py": "9189859325a15b8cc712294b312ec3ab21f39228a7be2db81c7a249bef029754",
+      "app/semantic_v2/schema.py": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+      "app/semantic_v2/slot_reducer.py": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+      "app/semantic_v2/source_value_binding.py": "9b03090dc22517080c7b5b3b05b9f63e44635b50a77a70f7cde25b36ec598e95",
+      "app/semantic_v2/source_value_probe.py": "55b4700f79776dea5569364b4ded2b0300b4e7ee99bc5c59808a3488dc5123fa",
+      "app/semantic_v2/source_value_recognition.py": "af68ff481d3d012af850cab6fc6f755eb3c6b57c1187154c365de819292ef149",
+      "app/semantic_v2/source_value_target.py": "d12675ecbb400b8d3bc7e8a1a9a7f8967e30fd597c4f4fa2e9495cd6db1f8a35",
+      "app/semantic_v2/state_machine.py": "f85d1157a44dd17c0e6a12d033460c6ae016282c1d8bb393228fcca61fcafa4f",
+      "app/semantic_v2/structured_edits.py": "9c69cde8fd173c54aa872283794c763a5fc15438f102d5ee979b5f22dda78eee",
+      "app/semantic_v2/temporal_comparisons.py": "624128af0ed814c3d686e00678727bb27cde5d1d3fadc4aa8e9ec01d8c9429dd",
+      "app/semantic_v2/trace_models.py": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+      "app/semantic_v2/validators.py": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15"
+    },
+    "source_hashes": {
+      ".eval_private\\grounding-round5-3-20260910T052350Z\\live_catalog_snapshot.json": "7fb70be719278958dcb0c549aa22227566070910ae9bd433d89f65c28491c654",
+      ".eval_private\\grounding-round5-3-20260910T052350Z\\source_observations.json": "a33a5842f2cd7a0c29d10de8fe85309efcb70174cbc986a971384fca4cde62f6",
+      ".eval_private\\grounding-round5-3-20260910T052350Z\\targeted_observations.json": "d3ce50c9308bf44c94ec404d158853f1911bd244db4a8b4912745edfc0815660",
+      "E:\\YouoAgent\\Oagnet\\catalog_publication.py": "153e959f73c39f29360f868b8b38c34a4ed9f6c6f893008d8543fbe084cb616f",
+      "E:\\YouoAgent\\Oagnet\\catalog_value_candidates.py": "34b5f23e9b324563d5a9484b1952b16ff178065e7a8d18066ca1ef65426f1047"
+    },
+    "catalog_read_hash": "7fb70be719278958dcb0c549aa22227566070910ae9bd433d89f65c28491c654",
+    "model": "qwen3.7-max",
+    "thinking": false,
+    "temperature": 0,
+    "retry": 0,
+    "current_budget": 30,
+    "prior_calls": 0,
+    "total_budget": 36,
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ]
+    },
+    "clock": "2026-09-09T09:00:00+08:00",
+    "independent_fresh_sessions": true,
+    "prefix_reuse": "NONE"
+  },
+  "user_to_consumer_mapping": [
+    {
+      "case": "HC55-A",
+      "user_filter": "江苏省",
+      "first_stage": "filter SET; metrics SET",
+      "source_request": "Explicit FILTER_VALUE mention; province_name candidate binding handle",
+      "candidate": "Offered pinned province field and frozen exact value; lookup not yet reached in rejected originals",
+      "second_stage": "FilterEdit ADD with full predicate and value_request_id",
+      "consumer": "source_value_recognition.resolve_requests -> RawTurnPlanner._patch -> lower_edits/TaskPatch -> apply_task_patch -> compile",
+      "first_mismatch": "Declared SET vs structured ADD"
+    },
+    {
+      "case": "HC55-B",
+      "user_filter": "江苏省",
+      "first_stage": "filter ADD; metrics ADD",
+      "source_request": "Explicit FILTER_VALUE mention; province_name candidate binding handle",
+      "candidate": "Offered pinned province field and frozen exact value; lookup not yet reached in rejected originals",
+      "second_stage": "SourceValueRequest present; no Filter edit; metrics SET array",
+      "consumer": "source_value_recognition.resolve_requests -> RawTurnPlanner._patch -> lower_edits/TaskPatch -> apply_task_patch -> compile",
+      "first_mismatch": "Unconsumed source request; after Oracle consumption, declared metrics ADD vs SET"
+    },
+    {
+      "case": "HC55-C",
+      "user_filter": "江苏省",
+      "first_stage": "filter ADD; metrics ADD",
+      "source_request": "Explicit FILTER_VALUE mention; province_name candidate binding handle",
+      "candidate": "Offered pinned province field and frozen exact value; lookup not yet reached in rejected originals",
+      "second_stage": "SourceValueRequest present; no Filter edit; metrics SET array",
+      "consumer": "source_value_recognition.resolve_requests -> RawTurnPlanner._patch -> lower_edits/TaskPatch -> apply_task_patch -> compile",
+      "first_mismatch": "Unconsumed source request; after Oracle consumption, declared metrics ADD vs SET"
+    }
+  ],
+  "root_findings": [
+    {
+      "id": "GENERATION_OPERATION_CHANNEL_ALIGNMENT",
+      "classification": "PROVEN_CONTRACT_GAP",
+      "cases": [
+        "HC55-A",
+        "HC55-B",
+        "HC55-C"
+      ],
+      "earliest": "SEMANTIC_TASK_DRAFT_GENERATION",
+      "evidence": "Raw Parse and Draft differ before adapters; Draft has the full Parse but schema previously permits conflicting choices.",
+      "change": "Export complete native filter tree and mutually exclusive existing channels; narrow uniform declared operations only for resolved NEW_TASK.",
+      "limit": "Parse is still model evidence; no general proof all Parse operations are correct. No SET=ADD conversion or singleton SET fallback."
+    },
+    {
+      "id": "SOURCE_REQUEST_APPLICATION_GENERATION",
+      "classification": "PROVEN_DRAFT_OMISSION",
+      "cases": [
+        "HC55-B",
+        "HC55-C"
+      ],
+      "earliest": "SEMANTIC_TASK_DRAFT_GENERATION",
+      "source_case_class": "A: explicit user filter with no consuming edit",
+      "evidence": "resolve_requests exists and rejects request-id set not equal to used references, before looking up source values.",
+      "change": "Generation structurally requires a filter channel when requests exist, describes exact request/field reference consumption and alternative hypotheses. Runtime consumer unchanged.",
+      "limit": "No automatic predicate construction from request existence, no Top1 selection, no deleting unused requests; downstream marker omission also corrected at generation."
+    },
+    {
+      "id": "WHOLE_FILTER_CURRENT_EVIDENCE_GUARD",
+      "classification": "PROVEN_NATIVE_VALIDATION_GAP",
+      "cases": [
+        "NEW_NEGATIVE_wrong_scope"
+      ],
+      "earliest": "TASK_PATCH_VALIDATION",
+      "evidence": "New native negative initially accepted generic SET Predicate.scope=CURRENT_DATASET while dedicated ADD rejects it.",
+      "change": "Reuse a recursive current-user/current-task predicate validator for both channels.",
+      "limit": "Predicate logical scope defect; no observed tenant/model authorization breach. Native Scope/Pin/field proof unchanged."
+    }
+  ],
+  "oracle": {
+    "rows": [
+      {
+        "case": "HC55-A",
+        "mode": "ORIGINAL",
+        "error": {
+          "type": "RecognitionFailure",
+          "reason": "V2_SLOT_OPERATION_CONFLICT"
+        },
+        "plan": false,
+        "checks": null
+      },
+      {
+        "case": "HC55-A",
+        "mode": "FILTER_EXPRESSION_CHANNEL",
+        "error": null,
+        "plan": true,
+        "checks": {
+          "status": "PASS_ON_DECLARED_AXES",
+          "whole_plan_gold": false
+        }
+      },
+      {
+        "case": "HC55-B",
+        "mode": "ORIGINAL",
+        "error": {
+          "type": "RecognitionFailure",
+          "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+        },
+        "plan": false,
+        "checks": null
+      },
+      {
+        "case": "HC55-B",
+        "mode": "FILTER_REQUEST_CONSUMPTION",
+        "error": {
+          "type": "RecognitionFailure",
+          "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+        },
+        "plan": false,
+        "checks": null
+      },
+      {
+        "case": "HC55-B",
+        "mode": "DRAFT_OPERATION_AND_REFERENCE_ALIGNMENT",
+        "error": null,
+        "plan": true,
+        "checks": {
+          "status": "PASS_ON_DECLARED_AXES",
+          "whole_plan_gold": false
+        }
+      },
+      {
+        "case": "HC55-C",
+        "mode": "ORIGINAL",
+        "error": {
+          "type": "RecognitionFailure",
+          "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+        },
+        "plan": false,
+        "checks": null
+      },
+      {
+        "case": "HC55-C",
+        "mode": "FILTER_REQUEST_CONSUMPTION",
+        "error": {
+          "type": "RecognitionFailure",
+          "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+        },
+        "plan": false,
+        "checks": null
+      },
+      {
+        "case": "HC55-C",
+        "mode": "DRAFT_OPERATION_AND_REFERENCE_ALIGNMENT",
+        "error": null,
+        "plan": true,
+        "checks": {
+          "status": "PASS_ON_DECLARED_AXES",
+          "whole_plan_gold": false
+        }
+      }
+    ],
+    "runtime_hashes": {
+      "app/semantic_v2/__init__.py": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+      "app/semantic_v2/asl2.py": "b4ab7978bc7b0575cad45db6eb549fa3ba164e0fb02e9691292b86fd88b76759",
+      "app/semantic_v2/authorized_contract.py": "43528e54bcedb8e0646b8ad634617150fe957a011ff4cc1cbca906e5a471751f",
+      "app/semantic_v2/catalog_bridge.py": "2c16a2d216254aca64296fe57bf447e5c9a24fa1aede18bb5a1cf585ac39f40e",
+      "app/semantic_v2/catalog_mentions.py": "61cba704b689d0e3924b4fc2ddc1899ebd38ce39a9955bffa2edb8f598f94271",
+      "app/semantic_v2/catalog_paths.py": "dfdd61935121196ac64efc60c0eb5030390dab80f7b80c0123855da2e9dd6d77",
+      "app/semantic_v2/catalog_plans.py": "d284963c5b851631b67810103486c2e15dd7e8a598f6c2961a63bb8bbb4b90c7",
+      "app/semantic_v2/clarification.py": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+      "app/semantic_v2/context_contract.py": "b7086b43437c3cb2920efe7346d2c4d1afde1228385e2640d09676122c076934",
+      "app/semantic_v2/context_proposal.py": "ad5d3d9d88de83f138dc59a868dd44936495eebeba0e2e79c015d2c125c50e84",
+      "app/semantic_v2/enums.py": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+      "app/semantic_v2/explicit_time.py": "f9628794693b1a1dedc39c0cf4cff25c40d280c70267830f1351332c03cbca69",
+      "app/semantic_v2/filter_generation_schema.py": "3a48a1dcc4641315c460526a6c39ec32179f29375060cf04039a0d734689466e",
+      "app/semantic_v2/legacy_adapter.py": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
+      "app/semantic_v2/migration.py": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+      "app/semantic_v2/models.py": "e23643d4f97abcb5391b1124fd5214da2f6d94077499ddcf9f102ea0e911af78",
+      "app/semantic_v2/pending_recognition.py": "93f3daf560ac574d41caeb08e79dfa09c4acef202bae6ad4243de619f13a6d5b",
+      "app/semantic_v2/pipeline.py": "56715d069f2deca374fa619473136b0bc9b3e57b93d5a383030719bc3392280b",
+      "app/semantic_v2/recognition.py": "fd83db611de5015782214a89b70dea02207f3c02982872b7b2da7437921b80af",
+      "app/semantic_v2/recognition_client.py": "ba5462734b9bacf48b59d7a6baba43246d63d739d1197f9daeff0ad457154ce4",
+      "app/semantic_v2/recognition_initialization.py": "6af76337adae514fb67f39965146474afbcccd5eef05f406906cc9b492a47f81",
+      "app/semantic_v2/recognition_repairs.py": "b92cf8d46bcaceced32c0593a9eec37f2a702a297510460280c5301055e2ad86",
+      "app/semantic_v2/registries.py": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+      "app/semantic_v2/result_contract.py": "9189859325a15b8cc712294b312ec3ab21f39228a7be2db81c7a249bef029754",
+      "app/semantic_v2/schema.py": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+      "app/semantic_v2/slot_reducer.py": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+      "app/semantic_v2/source_value_binding.py": "9b03090dc22517080c7b5b3b05b9f63e44635b50a77a70f7cde25b36ec598e95",
+      "app/semantic_v2/source_value_probe.py": "55b4700f79776dea5569364b4ded2b0300b4e7ee99bc5c59808a3488dc5123fa",
+      "app/semantic_v2/source_value_recognition.py": "af68ff481d3d012af850cab6fc6f755eb3c6b57c1187154c365de819292ef149",
+      "app/semantic_v2/source_value_target.py": "d12675ecbb400b8d3bc7e8a1a9a7f8967e30fd597c4f4fa2e9495cd6db1f8a35",
+      "app/semantic_v2/state_machine.py": "f85d1157a44dd17c0e6a12d033460c6ae016282c1d8bb393228fcca61fcafa4f",
+      "app/semantic_v2/structured_edits.py": "ffac0964d837f9dba9bb4abd3320234cfa548ac4e07ceea535254128cdc28dbd",
+      "app/semantic_v2/temporal_comparisons.py": "624128af0ed814c3d686e00678727bb27cde5d1d3fadc4aa8e9ec01d8c9429dd",
+      "app/semantic_v2/trace_models.py": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+      "app/semantic_v2/validators.py": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15"
+    },
+    "model_calls": 0,
+    "sql_calls": 0,
+    "production_writes": 0,
+    "intervention_artifact": "SemanticTaskDraft",
+    "version": "Round56 original runtime; before Round57 schema change",
+    "originals_read_only": true,
+    "unchanged_downstream_model_outputs": "No additional model call; same first-stage Parse; native downstream recalculated",
+    "independent_single_artifact_not_single_field": true,
+    "gold_or_live_pass": false
+  },
+  "checkpoint": {
+    "turns": 1,
+    "model_calls": 2,
+    "passed_declared_axes": 1,
+    "reused_as_formal_prefix": false
+  },
+  "formal": {
+    "declared_turns": 11,
+    "executed_turns": 11,
+    "accepted_plans": 10,
+    "strict_pass": 8,
+    "strict_fail": 3,
+    "label_or_field_expectation_gaps": 2,
+    "runtime_rejection": 1,
+    "not_run": 0,
+    "blocked_history": 0,
+    "no_shared_prefix": true,
+    "independent_conversations": 3,
+    "fixture_unchanged": true,
+    "rows": [
+      {
+        "case_id": "HC55-A",
+        "index": 0,
+        "turn_id": "71ce0d55431c39cfad6a23ee",
+        "error": null,
+        "status": "PASS_ON_DECLARED_AXES",
+        "plan_hash": "9402acf135b602ceb68320725d11336cce8e7a9e591fe290b27bc8bb11a56e68",
+        "permission_proof_count": 5
+      },
+      {
+        "case_id": "HC55-A",
+        "index": 1,
+        "turn_id": "b77fd772ea3cf22dcfb08d22",
+        "error": null,
+        "status": "PASS_ON_DECLARED_AXES",
+        "plan_hash": "c616711fa9ec264af54392f94927ad2dbc61a9b72bc60d1c87ca3bc2eafc5c9d",
+        "permission_proof_count": 5
+      },
+      {
+        "case_id": "HC55-A",
+        "index": 2,
+        "turn_id": "fa39fef96119ebdf5895707b",
+        "error": null,
+        "status": "AXIS_MISMATCH"
+      },
+      {
+        "case_id": "HC55-A",
+        "index": 3,
+        "turn_id": "bde25b2ebfea1b637e094387",
+        "error": null,
+        "status": "PASS_ON_DECLARED_AXES",
+        "plan_hash": "4f2e98fcc44958cc9b210ae5bf0f4e9ccd42db91bda0686d55a507413bf77e8d",
+        "permission_proof_count": 2
+      },
+      {
+        "case_id": "HC55-B",
+        "index": 0,
+        "turn_id": "c8c010c9b2e5abd89e6058f6",
+        "error": null,
+        "status": "PASS_ON_DECLARED_AXES",
+        "plan_hash": "982adb698ccf95b6a88d3f334171d426ec5852ce3e9adecc868e43be7fe3ec29",
+        "permission_proof_count": 5
+      },
+      {
+        "case_id": "HC55-B",
+        "index": 1,
+        "turn_id": "7d64c9ce88c880d66dca1e99",
+        "error": null,
+        "status": "PASS_ON_DECLARED_AXES",
+        "plan_hash": "6503eb25c65a640d4bac616b8a6f3fa5b9bac78a6abe399d0693bfcc61ca6724",
+        "permission_proof_count": 6
+      },
+      {
+        "case_id": "HC55-B",
+        "index": 2,
+        "turn_id": "05485e11352852ae03b7690c",
+        "error": null,
+        "status": "PASS_ON_DECLARED_AXES",
+        "plan_hash": "ac4648d121c9cd85cd210302a29277ce64196188c28c4595b45c72af0a40ac1b",
+        "permission_proof_count": 5
+      },
+      {
+        "case_id": "HC55-B",
+        "index": 3,
+        "turn_id": "7686528e9346457cc6a4bf09",
+        "error": null,
+        "status": "PASS_ON_DECLARED_AXES",
+        "plan_hash": "d421befda902ca287dcb47b77189d4baf6c5c6daf4a81cb0d04b02ad796d1b80",
+        "permission_proof_count": 5
+      },
+      {
+        "case_id": "HC55-C",
+        "index": 0,
+        "turn_id": "077c7232f1c6dcd659b1d79a",
+        "error": null,
+        "status": "PASS_ON_DECLARED_AXES",
+        "plan_hash": "79b25adf9c4fb19e87914a7b60ee5404f648b4b8d7dc3378a18197c954f4007e",
+        "permission_proof_count": 5
+      },
+      {
+        "case_id": "HC55-C",
+        "index": 1,
+        "turn_id": "0bc19a9a9e786a71d0972080",
+        "error": null,
+        "status": "AXIS_MISMATCH"
+      },
+      {
+        "case_id": "HC55-C",
+        "index": 2,
+        "turn_id": "81820fdbe3c3024e3ddb7356",
+        "error": {
+          "type": "RecognitionFailure",
+          "reason": "V2_EXPLICIT_SLOT_DROPPED",
+          "context_trace": null
+        },
+        "status": "FAIL_SAFE_REJECT"
+      }
+    ],
+    "whole_plan_gold": false,
+    "qualified_checks": {
+      "strict_receipt_unchanged_sha256": "c37ef7c4838efb9ac498566f45901ca862f91a9ca2a69e69ab4b7257b58d738f",
+      "clear": {
+        "case": "HC55-A",
+        "turn": 2,
+        "original_label": [
+          "CLEAR",
+          "REMOVE"
+        ],
+        "actual_label": "MODIFY",
+        "status": "LABEL_DIFFERENCE_RETAINED",
+        "actual_clear_patch": true,
+        "barrier": true,
+        "next_turn_clear_preserved": true,
+        "not_added_to_strict_pass": true
+      },
+      "independent_new_task": {
+        "case": "HC55-C",
+        "turn": 1,
+        "status": "EVALUATOR_FIELD_EXPECTATION_GAP",
+        "strict_field": "province_name",
+        "actual_field": "sm81_bd205:attr:city.city_name",
+        "actual_value_identity": "source-value:9825899a5c333cf9ab134dc315cb953da3df183d500303911370b94f754c64f6",
+        "actual_source": "VERIFIED_SOURCE_EXACT_LOOKUP",
+        "target_new": true,
+        "original_task_versions_unchanged": true,
+        "metrics_time_scope_ir_plan_consistent": true,
+        "administrative_grain_ground_truth": "NOT_CERTIFIED",
+        "not_added_to_strict_pass": true
+      },
+      "history_reject": {
+        "case": "HC55-C",
+        "turn": 2,
+        "first_divergence": "SEMANTIC_ROLE",
+        "manifestation": "V2_EXPLICIT_SLOT_DROPPED",
+        "model_target_correct": true,
+        "raw_parse_assertion": "Historical reference declared as current explicit subject",
+        "original_task_versions_unchanged": true,
+        "input_state_unchanged": true,
+        "published_state": false,
+        "downstream_effects": [
+          "TASK_PATCH_ABSENT",
+          "NEW_TASK_STATE_ABSENT",
+          "IR_ABSENT",
+          "PLAN_ABSENT"
+        ],
+        "independent_of_fresh_filter_initialization": true
+      }
+    }
+  },
+  "turn_details": [
+    {
+      "batch": "checkpoint-v1",
+      "case_id": "HC55-A",
+      "turn_index": 0,
+      "capture_key": "c26e4825e3b194b4368d86d2",
+      "question": "查询去年江苏省订单笔数",
+      "conversation_id": "round56-fresh-checkpoint-v1-HC55-A",
+      "total_seconds": 18.063000000000102,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 10.57800000000043
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 7.280999999999949
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-c26e4825e3b194b4368d86d2",
+      "task_version": 1,
+      "relation": "NEW_TASK",
+      "plan_hash": "04ab5663479728f79ad00de16ca8ec3cee4d068a9cacd271edbd9fbf91c4e5db",
+      "parse_hash": "e9c9288fa9f94f8e6f9213ee2b11be743bef62c3d78d04a274a51d0a77ec46d5",
+      "task_patch_hash": "5b9011a11da89de2e4c45542be102971524f2a5cea6cd41460dfa2cb069758ad",
+      "state_hash": "b720c120bd426606ce50a6bc52d311a7a3f15ab331085804b6293f35d74433fd",
+      "ir_hash": "4849ab3ca57117613b40e0e0363d57a2175fbb7e8d11b9c43828072c4ba75d0f",
+      "permission_proof_count": 5,
+      "input_state_hash": "a9351d5668a1c0179bc6d5a1cc647e142e99de070f245fd1c041f29d791d366c",
+      "source_calls": [
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        },
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        }
+      ],
+      "binding_checks": [
+        {
+          "field_id": "sm81_bd205:attr:province.province_name",
+          "source_value_id": "source-value:39234fd4b318b6a898553bb49256d50941b877c21559776f4e123c5ea25474e3",
+          "value": "江苏省",
+          "field_and_value_receipt_matched": true,
+          "receipt_hash": "f9df85cd79bf2e6176b3b15ed7610f60ec57e540771cab46d32b9726b9de1c99",
+          "field_mention_ids_differ": false
+        }
+      ]
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-A",
+      "turn_index": 0,
+      "capture_key": "71ce0d55431c39cfad6a23ee",
+      "question": "查询去年江苏省订单笔数",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-A",
+      "total_seconds": 18.453999999999724,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 10.17199999999957
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 8.092999999999847
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-71ce0d55431c39cfad6a23ee",
+      "task_version": 1,
+      "relation": "NEW_TASK",
+      "plan_hash": "23ba8ab33911df38fdfdf8506ec15cedf64943c52a485e404a0df856a0969d53",
+      "parse_hash": "5e303cab90f77d32e278d08f0e10d49cd615e5ef899fcc22b4dd8f866cb69d1b",
+      "task_patch_hash": "7ecc598910cabdcbb8514425cafc773d47a802fdd6d76dfa3ceab9261e694cb1",
+      "state_hash": "c3eb3cc303bb2e4e855c7fef7e902d40eb0c56f13cea3eb0fd2644dbf5a0bea8",
+      "ir_hash": "1b322047642ec3d5b8767470dbe6d853ad2f7d3d62f2889b8836700c407e8397",
+      "permission_proof_count": 5,
+      "input_state_hash": "a9351d5668a1c0179bc6d5a1cc647e142e99de070f245fd1c041f29d791d366c",
+      "source_calls": [
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        },
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        }
+      ],
+      "binding_checks": [
+        {
+          "field_id": "sm81_bd205:attr:province.province_name",
+          "source_value_id": "source-value:39234fd4b318b6a898553bb49256d50941b877c21559776f4e123c5ea25474e3",
+          "value": "江苏省",
+          "field_and_value_receipt_matched": true,
+          "receipt_hash": "a21776c05a989128b832f441f2efe71737d9b68f7ce3a7739d85fe7467b4768f",
+          "field_mention_ids_differ": false
+        }
+      ]
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-A",
+      "turn_index": 1,
+      "capture_key": "b77fd772ea3cf22dcfb08d22",
+      "question": "换成北京市",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-A",
+      "total_seconds": 14.375,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 7.811999999999898
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 6.234999999999673
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-71ce0d55431c39cfad6a23ee",
+      "task_version": 2,
+      "relation": "REPLACE",
+      "plan_hash": "2f4023ec56d27d57a59f472a2dffbcd7c9dca677f93f8a8646803f1a029ceb81",
+      "parse_hash": "41bc9dad71c6f95b0c558efd41fe492e66dce3a4f9a9df893115973842eb5a74",
+      "task_patch_hash": "abe75d88b339cc3cc89106571f8d314eb18d6b67edcb62d1f91fcd77093a94b2",
+      "state_hash": "8f01a52153fbdd33a301ec6c91be2fce00fdaed22a2f0cecbba6763dd1833e8f",
+      "ir_hash": "e6e7e8884998126d793a507a75ac230e4f311cec6f841b278d3dab14fc891fbf",
+      "permission_proof_count": 5,
+      "input_state_hash": "ef27cf906f7bcfcacf5ab7d6ad638906b2c5ccbb9d440c5e0cb6260c33b4cfc2",
+      "source_calls": [
+        {
+          "query_fingerprint": "cf5e0172ab7aefc3bdc911a82dea818baca399c4a331f87f9a818229c9198a29",
+          "status": "REPLAYED"
+        },
+        {
+          "query_fingerprint": "cf5e0172ab7aefc3bdc911a82dea818baca399c4a331f87f9a818229c9198a29",
+          "status": "REPLAYED"
+        }
+      ],
+      "binding_checks": [
+        {
+          "field_id": "sm81_bd205:attr:province.province_name",
+          "source_value_id": "source-value:2954144bf2c63876a3d8a45362dea57f9dac0fb4d3255fe9b5a3a8da6e71fcce",
+          "value": "北京市",
+          "field_and_value_receipt_matched": true,
+          "receipt_hash": "756b816a035505484801b78b679fd81a7b943a221c9825bb7da4da62c376e5db",
+          "field_mention_ids_differ": true
+        }
+      ]
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-A",
+      "turn_index": 2,
+      "capture_key": "fa39fef96119ebdf5895707b",
+      "question": "不限地区",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-A",
+      "total_seconds": 10.04699999999957,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 6.719000000000051
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 2.936999999999898
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-71ce0d55431c39cfad6a23ee",
+      "task_version": 3,
+      "relation": "MODIFY",
+      "plan_hash": "d5eca7a04d8afd86578d0ae987603077e3391cf0ac0d97624ff285e638920089",
+      "parse_hash": "4c5055b5529b4277e890a49e8d9ccfb1deb49dfeea4e67087a5a6054ddb24439",
+      "task_patch_hash": "cb900dd465800f1d611a5f0d3a01ecce1aafc87b6af297ada1c00107f4f1ad5c",
+      "state_hash": "99c7d54311d4c2f5a14a2f0960a489ff0553e8a403db9ba433a4d714b2588515",
+      "ir_hash": "0e394eb477817ed6f8ffbe29af168e1fa34a769e6646813becfa668fe40a5e59",
+      "permission_proof_count": 2,
+      "input_state_hash": "dca37f184b8e57456be092d87a3cd3a919e85673109fbbfc0c5ca9aed194a50f",
+      "source_calls": [],
+      "binding_checks": []
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-A",
+      "turn_index": 3,
+      "capture_key": "bde25b2ebfea1b637e094387",
+      "question": "换今年",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-A",
+      "total_seconds": 11.764999999999418,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 7.530999999999949
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 3.8280000000004293
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-71ce0d55431c39cfad6a23ee",
+      "task_version": 4,
+      "relation": "MODIFY",
+      "plan_hash": "66ec1d52e76674a05db257fbdbf23e59ccc89b31f41abea06aab47debe441ba5",
+      "parse_hash": "faf2dc1e1e34fff51f67f82d87818dc67bbf6f41c334886fbaada96f77b30045",
+      "task_patch_hash": "4ed00895c3a4f52fd72bb863286bdec0ddd5382b9924312e3e9c3fab88eb908d",
+      "state_hash": "6e10ede8c83fd0e7b267f72434c5d2fbbc80adacdb6b346cf936e6fdc9a23a20",
+      "ir_hash": "43bedf673b807bb1bac36bba9ffb7a4d53cae6fbe849c822cfb15210fc40d84c",
+      "permission_proof_count": 2,
+      "input_state_hash": "f4e7bd8300e2093cf056de9d295405c13a25de1d0aebc1c7f9e9d6657df8420e",
+      "source_calls": [],
+      "binding_checks": []
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-B",
+      "turn_index": 0,
+      "capture_key": "c8c010c9b2e5abd89e6058f6",
+      "question": "查询去年江苏省订单笔数",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-B",
+      "total_seconds": 17.686999999999898,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 10.92199999999957
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 6.578000000000429
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-c8c010c9b2e5abd89e6058f6",
+      "task_version": 1,
+      "relation": "NEW_TASK",
+      "plan_hash": "eae5cb2041e931b4eed891a0693899aa9bd9c39062e44dda477875ebf8c00682",
+      "parse_hash": "99d84f068d49d738d2099ac516b6227b97999156fb9fbb39b1d5aec551d5a7c2",
+      "task_patch_hash": "416a8647e394926460fb790e64bcbd2d679e3ddd48c329e4484cf78c5b4f0961",
+      "state_hash": "bfe5adc2332917a00e8bcb52e1d42924a197a09ef8c22c5b87f7ab8c9c2d4f90",
+      "ir_hash": "4bbdb986311759cab48dee6e923498c9a3694db2977ed0d8624dddcef303ee62",
+      "permission_proof_count": 5,
+      "input_state_hash": "a9351d5668a1c0179bc6d5a1cc647e142e99de070f245fd1c041f29d791d366c",
+      "source_calls": [
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        },
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        }
+      ],
+      "binding_checks": [
+        {
+          "field_id": "sm81_bd205:attr:province.province_name",
+          "source_value_id": "source-value:39234fd4b318b6a898553bb49256d50941b877c21559776f4e123c5ea25474e3",
+          "value": "江苏省",
+          "field_and_value_receipt_matched": true,
+          "receipt_hash": "54919dd5b91669872c1809ea282ad769fe1a9026764bf504fdb5a20fc79e1122",
+          "field_mention_ids_differ": false
+        }
+      ]
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-B",
+      "turn_index": 1,
+      "capture_key": "7d64c9ce88c880d66dca1e99",
+      "question": "再加销售总数量",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-B",
+      "total_seconds": 11.219000000000051,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 7.780999999999949
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 3.125
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-c8c010c9b2e5abd89e6058f6",
+      "task_version": 2,
+      "relation": "ADD",
+      "plan_hash": "686e8932fe04b40b70e186380f5cd027b5971f25823b5c26883205afd64a5f3b",
+      "parse_hash": "77b9648cdbd766078e1ae210ace4c296450b5772e22138b890dd202ee5688d7d",
+      "task_patch_hash": "59bc599722f5324dd15a46d1bf1c2df3cbf418bf53324bb86ea68efe05a249d2",
+      "state_hash": "508a99ca8f0d6bea0953f2fa66614a209dd28d4f0361ab5469816a23403ee526",
+      "ir_hash": "b452df71f36778b3a4aac0b786497adc18ee1b56c5962a664d85c739767e21c0",
+      "permission_proof_count": 6,
+      "input_state_hash": "5fa1fac16b4f6ab6035b7e5569942d9e551dbbe746c2200da2ca00b8c5a0daaa",
+      "source_calls": [
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        },
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        }
+      ],
+      "binding_checks": [
+        {
+          "field_id": "sm81_bd205:attr:province.province_name",
+          "source_value_id": "source-value:39234fd4b318b6a898553bb49256d50941b877c21559776f4e123c5ea25474e3",
+          "value": "江苏省",
+          "field_and_value_receipt_matched": true,
+          "receipt_hash": "54919dd5b91669872c1809ea282ad769fe1a9026764bf504fdb5a20fc79e1122",
+          "field_mention_ids_differ": false
+        }
+      ]
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-B",
+      "turn_index": 2,
+      "capture_key": "05485e11352852ae03b7690c",
+      "question": "不要订单笔数",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-B",
+      "total_seconds": 12.54700000000048,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 8.344000000000051
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 3.7969999999995707
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-c8c010c9b2e5abd89e6058f6",
+      "task_version": 3,
+      "relation": "REMOVE",
+      "plan_hash": "faa7b148bf86dc87017c0e01a709e988b266bdbc685a83daca7c8c658652b295",
+      "parse_hash": "c4004ac523d87a194c529ec002509f7d18bca060fd3e7f441caa8a1d6f5f1ecb",
+      "task_patch_hash": "a2768f54d57d1fb52830826a37f5441c1faf6eece985d47ad15aa2cfa2f34a72",
+      "state_hash": "1cfaae249143dd9dba58b1d3731fd404680462cbf699b576d2f28d4f163b5fb8",
+      "ir_hash": "fa86b025d4a5e0e35f38826557d4987b474d157e3b7370e56ea3ad0bc701e40e",
+      "permission_proof_count": 5,
+      "input_state_hash": "1473254956bd4be764d89027aa89affc789220612b2c3b4be2a7ad8b99d69ddd",
+      "source_calls": [
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        },
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        }
+      ],
+      "binding_checks": [
+        {
+          "field_id": "sm81_bd205:attr:province.province_name",
+          "source_value_id": "source-value:39234fd4b318b6a898553bb49256d50941b877c21559776f4e123c5ea25474e3",
+          "value": "江苏省",
+          "field_and_value_receipt_matched": true,
+          "receipt_hash": "54919dd5b91669872c1809ea282ad769fe1a9026764bf504fdb5a20fc79e1122",
+          "field_mention_ids_differ": false
+        }
+      ]
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-B",
+      "turn_index": 3,
+      "capture_key": "7686528e9346457cc6a4bf09",
+      "question": "换今年",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-B",
+      "total_seconds": 11.485000000000582,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 7.54700000000048
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 3.5159999999996217
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-c8c010c9b2e5abd89e6058f6",
+      "task_version": 4,
+      "relation": "MODIFY",
+      "plan_hash": "5de49626f80d5149dab50e138f12df2f2aafcf4b7dff4d6886d9b3ee4fd2927a",
+      "parse_hash": "6eaede5073da01c2b9c6f55ccac34d8720401a341f3c3d7d15beb64ffcf967c1",
+      "task_patch_hash": "7e58234c71bb2ecb266faae96b51552b5246da012314a5b14b287bdb914d5d43",
+      "state_hash": "490d4ef1ee863ffb38b5954217912fd4460fad923c9415b2ae9e8a13668cb990",
+      "ir_hash": "0858a4225a86c8989ec3090a72aa381084ffcaa04dd11f4ac4a33888fca42f4e",
+      "permission_proof_count": 5,
+      "input_state_hash": "582f9f58781dc59af81459180f17c6eaf1f7f722d185b69bba7681f66d4569c6",
+      "source_calls": [
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        },
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        }
+      ],
+      "binding_checks": [
+        {
+          "field_id": "sm81_bd205:attr:province.province_name",
+          "source_value_id": "source-value:39234fd4b318b6a898553bb49256d50941b877c21559776f4e123c5ea25474e3",
+          "value": "江苏省",
+          "field_and_value_receipt_matched": true,
+          "receipt_hash": "54919dd5b91669872c1809ea282ad769fe1a9026764bf504fdb5a20fc79e1122",
+          "field_mention_ids_differ": false
+        }
+      ]
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-C",
+      "turn_index": 0,
+      "capture_key": "077c7232f1c6dcd659b1d79a",
+      "question": "查询去年江苏省订单笔数",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-C",
+      "total_seconds": 19.29699999999957,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 10.671000000000276
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 8.45299999999952
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-077c7232f1c6dcd659b1d79a",
+      "task_version": 1,
+      "relation": "NEW_TASK",
+      "plan_hash": "e3e3fdc189bb8f0cf505ddef2396f32d728004aff1b9c9c076683df91cd41e28",
+      "parse_hash": "aa590cde902fdcbb9b19ff1f55b667c4659d71070212c9240274d282eb3b1fb7",
+      "task_patch_hash": "198af0366916655804700ee41d2120bef7f3d8221254ac886d73a5342ffb123d",
+      "state_hash": "3e070970e91a780ad5dc524ec1fa4b40e0f7d56e138febd4eed3f50ab07ca5db",
+      "ir_hash": "fa27c8f0bbf47b56b5f4e565587e2bca796f3e2cb7a58ef251c9d9b9a3a07b14",
+      "permission_proof_count": 5,
+      "input_state_hash": "a9351d5668a1c0179bc6d5a1cc647e142e99de070f245fd1c041f29d791d366c",
+      "source_calls": [
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        },
+        {
+          "query_fingerprint": "9a454ebdb39a082e58c112fdffe728ac87515d9e1ad5363ae50e4a6aeb63fbc8",
+          "status": "REPLAYED"
+        }
+      ],
+      "binding_checks": [
+        {
+          "field_id": "sm81_bd205:attr:province.province_name",
+          "source_value_id": "source-value:39234fd4b318b6a898553bb49256d50941b877c21559776f4e123c5ea25474e3",
+          "value": "江苏省",
+          "field_and_value_receipt_matched": true,
+          "receipt_hash": "391d849bed5ce1d11011adb378d0c69bf0b963a3a52cd1c2b2c7698ef96efff6",
+          "field_mention_ids_differ": false
+        }
+      ]
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-C",
+      "turn_index": 1,
+      "capture_key": "0bc19a9a9e786a71d0972080",
+      "question": "查询今年北京市销售总数量",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-C",
+      "total_seconds": 23.04700000000048,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 12.92199999999957
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 9.766000000000531
+        }
+      ],
+      "model_calls": 2,
+      "error": null,
+      "state_unchanged": true,
+      "task": "task:turn-0bc19a9a9e786a71d0972080",
+      "task_version": 1,
+      "relation": "NEW_TASK",
+      "plan_hash": "af122274cd71d64b5aedb03f86cabca4ccbbbda6eb3ab8e8674fc6c2153344f4",
+      "parse_hash": "c8f4566c05841e7d4a36774566be679d97f832cc155515ce830e206bb988bf07",
+      "task_patch_hash": "90a4e84af5371348769bb32802bb2e09296677bdda93cb2e46458d96084770ef",
+      "state_hash": "004420e4056f03f1f02075d1a6c9976f766bf4f4b1d7a40cc5fe7eb4db374ecb",
+      "ir_hash": "bde00be48f7b67bd8768b8fbad5037a2654c9f3018d0eca9b75a655b216088b8",
+      "permission_proof_count": 5,
+      "input_state_hash": "8f895fedc7648809535c8b770475ea5b5f29576a354d47fdadbe7bc6bbf4791c",
+      "source_calls": [
+        {
+          "query_fingerprint": "31633c87d5cf3bce318760b23a88804bf395790643aa0cc70fe727df1c1a7694",
+          "status": "REPLAYED"
+        },
+        {
+          "query_fingerprint": "31633c87d5cf3bce318760b23a88804bf395790643aa0cc70fe727df1c1a7694",
+          "status": "REPLAYED"
+        }
+      ],
+      "binding_checks": [
+        {
+          "field_id": "sm81_bd205:attr:city.city_name",
+          "source_value_id": "source-value:9825899a5c333cf9ab134dc315cb953da3df183d500303911370b94f754c64f6",
+          "value": "北京市",
+          "field_and_value_receipt_matched": true,
+          "receipt_hash": "6250633f0a9aa4a096f06c4915f6923e2fef1f8d2f74a0f3378d1b3498c317dd",
+          "field_mention_ids_differ": false
+        }
+      ]
+    },
+    {
+      "batch": "final-live-v1",
+      "case_id": "HC55-C",
+      "turn_index": 2,
+      "capture_key": "81820fdbe3c3024e3ddb7356",
+      "question": "返回刚才江苏订单笔数那个任务",
+      "conversation_id": "round56-fresh-final-live-v1-HC55-C",
+      "total_seconds": 9.79700000000048,
+      "stage_timings": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 7.469000000000051
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 2.030999999999949
+        }
+      ],
+      "model_calls": 2,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_EXPLICIT_SLOT_DROPPED",
+        "context_trace": null
+      },
+      "state_unchanged": true,
+      "task": null,
+      "task_version": null,
+      "relation": "RETURN_TO_TOPIC",
+      "plan_hash": null,
+      "parse_hash": null,
+      "task_patch_hash": null,
+      "state_hash": null,
+      "ir_hash": null,
+      "permission_proof_count": 0,
+      "input_state_hash": "2c7eb0b97a82c9cf2c365e2b73caa7b4f8fc07907e30c874a7afb0339346c245",
+      "source_calls": [],
+      "binding_checks": []
+    }
+  ],
+  "arbitration": {
+    "decisions": 12,
+    "accepted_model": 12,
+    "overrides": [],
+    "confidence_calibration": "NOT_CLAIMED",
+    "adversarial_safety_suite": false
+  },
+  "tests": {
+    "baseline_counts": {
+      "passed": 650
+    },
+    "final_counts": {
+      "passed": 681
+    },
+    "old_pass_to_new_fail": [],
+    "old_fail_to_new_pass": [],
+    "missing_tests": [],
+    "new_tests": [
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[both_channels]",
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[duplicate_request]",
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[extra_request]",
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[operation_conflict]",
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[unknown_reference]",
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[unused]",
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[wrong_field]",
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[wrong_handle]",
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[wrong_reference]",
+      "tests/test_v2_fresh_filter_round57.py::test_bad_source_or_operation_still_rejects_without_publishing[wrong_scope]",
+      "tests/test_v2_fresh_filter_round57.py::test_declared_operation_selects_existing_filter_channel[ADD]",
+      "tests/test_v2_fresh_filter_round57.py::test_declared_operation_selects_existing_filter_channel[SET]",
+      "tests/test_v2_fresh_filter_round57.py::test_empty_filter_and_source_consumption_use_native_compiler[ADD]",
+      "tests/test_v2_fresh_filter_round57.py::test_empty_filter_and_source_consumption_use_native_compiler[SET]",
+      "tests/test_v2_fresh_filter_round57.py::test_existing_task_structured_generation_is_unchanged[ADD]",
+      "tests/test_v2_fresh_filter_round57.py::test_existing_task_structured_generation_is_unchanged[CLEAR]",
+      "tests/test_v2_fresh_filter_round57.py::test_existing_task_structured_generation_is_unchanged[REMOVE]",
+      "tests/test_v2_fresh_filter_round57.py::test_existing_task_structured_generation_is_unchanged[REPLACE]",
+      "tests/test_v2_fresh_filter_round57.py::test_generation_rejects_missing_or_competing_filter_structure[bare_value]",
+      "tests/test_v2_fresh_filter_round57.py::test_generation_rejects_missing_or_competing_filter_structure[both_channels]",
+      "tests/test_v2_fresh_filter_round57.py::test_generation_rejects_missing_or_competing_filter_structure[missing_filter]",
+      "tests/test_v2_fresh_filter_round57.py::test_generation_rejects_missing_or_competing_filter_structure[unknown_field]",
+      "tests/test_v2_fresh_filter_round57.py::test_generation_rejects_missing_or_competing_filter_structure[wrong_tree]",
+      "tests/test_v2_fresh_filter_round57.py::test_initial_boolean_filter_is_not_flattened_by_generation[AND]",
+      "tests/test_v2_fresh_filter_round57.py::test_initial_boolean_filter_is_not_flattened_by_generation[NOT]",
+      "tests/test_v2_fresh_filter_round57.py::test_initial_boolean_filter_is_not_flattened_by_generation[OR]",
+      "tests/test_v2_fresh_filter_round57.py::test_new_metric_edit_cannot_reinterpret_uniform_current_marker[ADD]",
+      "tests/test_v2_fresh_filter_round57.py::test_new_metric_edit_cannot_reinterpret_uniform_current_marker[SET]",
+      "tests/test_v2_fresh_filter_round57.py::test_whole_filter_schema_keeps_boolean_structure[AND]",
+      "tests/test_v2_fresh_filter_round57.py::test_whole_filter_schema_keeps_boolean_structure[NOT]",
+      "tests/test_v2_fresh_filter_round57.py::test_whole_filter_schema_keeps_boolean_structure[OR]"
+    ],
+    "collection_errors": [],
+    "old_test_source_changes": [],
+    "full_agent": "NOT_RUN_FRESH_CHAIN_GATE_FAILED",
+    "full_oagnet": "NOT_RUN_FRESH_CHAIN_GATE_FAILED",
+    "full_sql_translator": "NOT_RUN_FRESH_CHAIN_GATE_FAILED",
+    "critical_existing_suite": {
+      "passed": 160,
+      "files": {
+        "tests/test_phase0b_regressions.py": 49,
+        "tests/test_phase0c_scope_contract.py": 88,
+        "tests/test_single_domain_integration.py": 23
+      }
+    },
+    "context_slice": {
+      "cases": 8,
+      "turns": 18,
+      "passed": 8,
+      "fixture": "tests/test_v2_context_followup_critical_slice.py",
+      "recognition": "CONTROLLED_COMPONENT_ONLY"
+    }
+  },
+  "targets": {
+    "contract": "ROUND5_VERSIONED_RECORDED_SIGNAL_MIGRATION_V1",
+    "runtime_source_hashes": {
+      "app\\semantic_v2\\context_contract.py": "b7086b43437c3cb2920efe7346d2c4d1afde1228385e2640d09676122c076934",
+      "app\\semantic_v2\\context_proposal.py": "ad5d3d9d88de83f138dc59a868dd44936495eebeba0e2e79c015d2c125c50e84",
+      "app\\semantic_v2\\recognition.py": "0cda14e03e0cc1ae7a11375d29b8c3eb96a0dce647526f8d2ab0ec4d59cb48e7",
+      "app\\semantic_v2\\catalog_bridge.py": "2c16a2d216254aca64296fe57bf447e5c9a24fa1aede18bb5a1cf585ac39f40e"
+    },
+    "cases": 15,
+    "target_preserved": 15,
+    "target_regressions": [],
+    "new_model_accuracy": false,
+    "strict_original_request_replay": false,
+    "blind_access": 0,
+    "private_capture_machine_replay": 13,
+    "private_text_debug_or_tuning": 0
+  },
+  "performance": {
+    "model_calls": 24,
+    "checkpoint_calls": 2,
+    "formal_calls": 22,
+    "smoke_calls": 0,
+    "smoke_reused": "Round56 same configuration; no task prefix reused",
+    "http_200": 24,
+    "retries": 0,
+    "timeouts": 0,
+    "tokens": {
+      "prompt_tokens": 346284,
+      "completion_tokens": 10868,
+      "total_tokens": 357152
+    },
+    "formal_turns": 11,
+    "checkpoint_turns": 1,
+    "returned_plans_formal": 10,
+    "runtime_rejections_formal": 1,
+    "formal_total_seconds": 159.72000000000025,
+    "formal_observed_p95_seconds": 23.04700000000048,
+    "p95_method": "nearest-rank n=11; curated related cases, not production SLA",
+    "stage_timing_scope": "Model call wall time only; native phases not separately timed",
+    "calls": [
+      {
+        "batch": "checkpoint-v1",
+        "capture_key": "c26e4825e3b194b4368d86d2",
+        "case_id": "HC55-A",
+        "turn_index": 0,
+        "stage": "v2_current_turn",
+        "schema_hash": "af19e66f15fdd89469a74975651eaebc37bec150f1a04d8461844799e3ca99c6",
+        "input_hash": "dd93a00fad13f93807504d645ee38725d991785ffdc08dd7199fb997ab5f0a5e",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 738,
+          "prompt_tokens": 3086,
+          "total_tokens": 3824
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "checkpoint-v1",
+        "capture_key": "c26e4825e3b194b4368d86d2",
+        "case_id": "HC55-A",
+        "turn_index": 0,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "3e8765d5534cc63385d95bdf053bd9a7b63cd324926cfd6b47fea5549fa907e9",
+        "input_hash": "b7e9140b83a967364e26f5c981cc2aadf74134f103dbc75ce3a91a4c37ba0c4e",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 501,
+          "prompt_tokens": 40302,
+          "total_tokens": 40803
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "71ce0d55431c39cfad6a23ee",
+        "case_id": "HC55-A",
+        "turn_index": 0,
+        "stage": "v2_current_turn",
+        "schema_hash": "af19e66f15fdd89469a74975651eaebc37bec150f1a04d8461844799e3ca99c6",
+        "input_hash": "e5c6e65a2b5a04653674160773a398f73731577241ba45e71591161078b434fd",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 665,
+          "prompt_tokens": 3083,
+          "total_tokens": 3748
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "71ce0d55431c39cfad6a23ee",
+        "case_id": "HC55-A",
+        "turn_index": 0,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "45acc332dffbd1174973f065980bced737de55bf57c058b4de54b3026bc89ab3",
+        "input_hash": "585278fb231be85e45160c9932246fd6406e885ba8ddb075512202f54be1b042",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 507,
+          "prompt_tokens": 22368,
+          "total_tokens": 22875
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "b77fd772ea3cf22dcfb08d22",
+        "case_id": "HC55-A",
+        "turn_index": 1,
+        "stage": "v2_current_turn",
+        "schema_hash": "ce40ce1f792fc7ab2b1fb951d693843e8a72e7e3e02f4598ae0fc6083c933b8b",
+        "input_hash": "03034a89833981dfa6a3132ac5ef5bdc6fdcf0f30439ec5f4ff9fa04347bdd68",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 517,
+          "prompt_tokens": 3671,
+          "total_tokens": 4188
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "b77fd772ea3cf22dcfb08d22",
+        "case_id": "HC55-A",
+        "turn_index": 1,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "019a7cdd4e82e402b7a3002f57dd044d689b6f63d3431308ee7c3f2e13bdb5f4",
+        "input_hash": "a35aacda9f042bdc7e25027be2de72c44b7779ad6ba35a42be03e265fa9a5256",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 264,
+          "prompt_tokens": 22422,
+          "total_tokens": 22686
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "fa39fef96119ebdf5895707b",
+        "case_id": "HC55-A",
+        "turn_index": 2,
+        "stage": "v2_current_turn",
+        "schema_hash": "ce40ce1f792fc7ab2b1fb951d693843e8a72e7e3e02f4598ae0fc6083c933b8b",
+        "input_hash": "4a28ea85f245c7027199a52d8a44017033599fff12d61bbec781afd1f1d92ed6",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 415,
+          "prompt_tokens": 3672,
+          "total_tokens": 4087
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "fa39fef96119ebdf5895707b",
+        "case_id": "HC55-A",
+        "turn_index": 2,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "63de910dee08dc63ffe555a142719adecda5b541dae2f282e817cd03efce3709",
+        "input_hash": "40b8c4c80d4afac8d2a99b12eeccd4eebe36c2787f3cd8d57a04d6013e7df1f3",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 108,
+          "prompt_tokens": 38019,
+          "total_tokens": 38127
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "bde25b2ebfea1b637e094387",
+        "case_id": "HC55-A",
+        "turn_index": 3,
+        "stage": "v2_current_turn",
+        "schema_hash": "ce40ce1f792fc7ab2b1fb951d693843e8a72e7e3e02f4598ae0fc6083c933b8b",
+        "input_hash": "f52cd87e62e19436d19a0ec6096b3a1510a5c5a5d3548310f9233c4e6e6dd458",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 487,
+          "prompt_tokens": 3593,
+          "total_tokens": 4080
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "bde25b2ebfea1b637e094387",
+        "case_id": "HC55-A",
+        "turn_index": 3,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "69bd64d0de99bd73b9b50413fe67b74056c9681678ab30ed923e7d9e61c31758",
+        "input_hash": "54662a4bc3afe0a680b8492e35325e3e0d8162a0e9da33af32d401e28ea47e7c",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 152,
+          "prompt_tokens": 17016,
+          "total_tokens": 17168
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "c8c010c9b2e5abd89e6058f6",
+        "case_id": "HC55-B",
+        "turn_index": 0,
+        "stage": "v2_current_turn",
+        "schema_hash": "af19e66f15fdd89469a74975651eaebc37bec150f1a04d8461844799e3ca99c6",
+        "input_hash": "a8f62fb773f7820b1e93a65e8e7bb106c76e26d983dca87cdb37786d127b40b9",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 721,
+          "prompt_tokens": 3084,
+          "total_tokens": 3805
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "c8c010c9b2e5abd89e6058f6",
+        "case_id": "HC55-B",
+        "turn_index": 0,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "3e8765d5534cc63385d95bdf053bd9a7b63cd324926cfd6b47fea5549fa907e9",
+        "input_hash": "5954ad23af565ae6e2e4d6955630daa320a820f99818d221a971040699a9781c",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 501,
+          "prompt_tokens": 40291,
+          "total_tokens": 40792
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "7d64c9ce88c880d66dca1e99",
+        "case_id": "HC55-B",
+        "turn_index": 1,
+        "stage": "v2_current_turn",
+        "schema_hash": "ca713c2219de3512debc8cf9e0e37b3a58a2a6afa92ad66b99bfa98fa33effe8",
+        "input_hash": "57fde6b4cc241deef713bb26d8f27f954c444f497c52609cf6a672bcc3a71b4b",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 494,
+          "prompt_tokens": 3680,
+          "total_tokens": 4174
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "7d64c9ce88c880d66dca1e99",
+        "case_id": "HC55-B",
+        "turn_index": 1,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "69bd64d0de99bd73b9b50413fe67b74056c9681678ab30ed923e7d9e61c31758",
+        "input_hash": "fab3c9061ea158f9bb8b12d7d54d26b1667d0e56dbb14782f85ccf8fad5fb976",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 133,
+          "prompt_tokens": 18350,
+          "total_tokens": 18483
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "05485e11352852ae03b7690c",
+        "case_id": "HC55-B",
+        "turn_index": 2,
+        "stage": "v2_current_turn",
+        "schema_hash": "ca713c2219de3512debc8cf9e0e37b3a58a2a6afa92ad66b99bfa98fa33effe8",
+        "input_hash": "27652e7f8ad00576daa1d9d5404d26209e769f31cc4ba7937f7a8fba35f1b341",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 566,
+          "prompt_tokens": 3704,
+          "total_tokens": 4270
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "05485e11352852ae03b7690c",
+        "case_id": "HC55-B",
+        "turn_index": 2,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "69bd64d0de99bd73b9b50413fe67b74056c9681678ab30ed923e7d9e61c31758",
+        "input_hash": "4ce005f21647d89c6491374fedc127e977cbc32ecdc913f190537f8c1b21434c",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 140,
+          "prompt_tokens": 18574,
+          "total_tokens": 18714
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "7686528e9346457cc6a4bf09",
+        "case_id": "HC55-B",
+        "turn_index": 3,
+        "stage": "v2_current_turn",
+        "schema_hash": "ca713c2219de3512debc8cf9e0e37b3a58a2a6afa92ad66b99bfa98fa33effe8",
+        "input_hash": "2c44d1175da6a47b47808c391c420a33d16b89eadb645cc88556ad3d5d672dd1",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 501,
+          "prompt_tokens": 3678,
+          "total_tokens": 4179
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "7686528e9346457cc6a4bf09",
+        "case_id": "HC55-B",
+        "turn_index": 3,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "69bd64d0de99bd73b9b50413fe67b74056c9681678ab30ed923e7d9e61c31758",
+        "input_hash": "2de22f360808ccfdec9a2b9707770088033300dfcfe74eb8844eb86b45e9530f",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 152,
+          "prompt_tokens": 17157,
+          "total_tokens": 17309
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "077c7232f1c6dcd659b1d79a",
+        "case_id": "HC55-C",
+        "turn_index": 0,
+        "stage": "v2_current_turn",
+        "schema_hash": "af19e66f15fdd89469a74975651eaebc37bec150f1a04d8461844799e3ca99c6",
+        "input_hash": "dd4151aaf5b6f3bd1e996e774f128957145e378af27c1d6dfe0134ef5ebb27a8",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 739,
+          "prompt_tokens": 3086,
+          "total_tokens": 3825
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "077c7232f1c6dcd659b1d79a",
+        "case_id": "HC55-C",
+        "turn_index": 0,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "760455856a6fe03970c6a628bdd054d5d986ef5ca550f7cf25d587987c82934d",
+        "input_hash": "385afb43107d69b6d406d5125117b9037ac6951b10997d50770a156c8552d887",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 514,
+          "prompt_tokens": 22453,
+          "total_tokens": 22967
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "0bc19a9a9e786a71d0972080",
+        "case_id": "HC55-C",
+        "turn_index": 1,
+        "stage": "v2_current_turn",
+        "schema_hash": "d5befe05fcd0db34b877e23015dde085075740758ed126ecc4f78f686da36e51",
+        "input_hash": "fd4c7b3dd26f3f6c14606fa8ab0890f4c9a2c5e4d16fca7b7be325f09120254d",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 912,
+          "prompt_tokens": 3689,
+          "total_tokens": 4601
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "0bc19a9a9e786a71d0972080",
+        "case_id": "HC55-C",
+        "turn_index": 1,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "d5dad0952894b73488c763e02c0e811f3f77c62cf46b6b90cf334b05e78cd5e3",
+        "input_hash": "e2364391f2dec965459e8e740e17d193cbfa71e91965e6c3601c2acc167ddd59",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 618,
+          "prompt_tokens": 26884,
+          "total_tokens": 27502
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "81820fdbe3c3024e3ddb7356",
+        "case_id": "HC55-C",
+        "turn_index": 2,
+        "stage": "v2_current_turn",
+        "schema_hash": "5b94a3cc9ddb611927f05530aa71390540a2f6a0ca02c845b879209debd3efde",
+        "input_hash": "eca236e2d6d9f8d382449c798de3629dc7c277ad881db88860602da1cb86c34b",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 477,
+          "prompt_tokens": 4250,
+          "total_tokens": 4727
+        },
+        "finish_reason": "stop"
+      },
+      {
+        "batch": "final-live-v1",
+        "capture_key": "81820fdbe3c3024e3ddb7356",
+        "case_id": "HC55-C",
+        "turn_index": 2,
+        "stage": "v2_semantic_edits",
+        "schema_hash": "1924986b2d76de64b577c9ea556ad50c10144f72f24de51e9b4d17221bd2aa6d",
+        "input_hash": "8b4a8f4e8f3941ebb742644d81e97eac4f9e42cd426f5a93b7c5bb4a3470b16f",
+        "status": 200,
+        "returned_model": "qwen3.7-max",
+        "usage": {
+          "completion_tokens": 46,
+          "prompt_tokens": 20172,
+          "total_tokens": 20218
+        },
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "platform_execution_chain_audit": [
+    {
+      "question": "1. Current HTTP/SSE route",
+      "files": [
+        "app/api.py:154 invoke",
+        "app/api.py:528 chat",
+        "app/api.py:605 chat_stream",
+        "app/dependencies.py:53 build_container",
+        "app/graph/workflow.py:67 skill_dispatch"
+      ],
+      "status": "CONNECTED_V1",
+      "finding": "Container constructs DataAnalysisOrchestrator with HybridIntentClassifier; workflow dispatch invokes its handle. Graph labels do not independently execute V2 stages.",
+      "impact": "V2 is not selected by public request."
+    },
+    {
+      "question": "2. Actual V2 callable entry",
+      "files": [
+        "app/semantic_v2/recognition.py:255 RawTurnPlanner.run"
+      ],
+      "status": "INTERNAL_ENTRY_ONLY",
+      "finding": "Takes ChatRequest, TrustedIdentity and explicitly supplied scoped state/plans/pending. No API/container invocation or response adapter.",
+      "impact": "Needs explicit state and routing integration before platform E2E; no port switch is sufficient."
+    },
+    {
+      "question": "3. LogicalPlan consumer",
+      "files": [
+        "app/semantic_v2/catalog_bridge.py:325 ScopedPlanSession.compile",
+        "app/semantic_v2/catalog_bridge.py:384 _compile_logical",
+        "app/semantic_v2/pipeline.py:335 compile_executable_plan"
+      ],
+      "status": "CONNECTED_PLAN_COMPILER_ONLY",
+      "finding": "Raw pipeline compiles/validates/seals a LogicalPlan and ExecutablePlan description. It does not submit execution.",
+      "impact": "Plan success is not SQL correctness or execution success."
+    },
+    {
+      "question": "4. DryPlan/lowering/ASL",
+      "files": [
+        "app/semantic_v2/catalog_bridge.py:333 compile_asl2",
+        "app/semantic_v2/asl2.py:226 lower_asl2",
+        "app/semantic_v2/legacy_adapter.py:15 assess_legacy_adapter",
+        "tools/cutover/harness_dryplan.py observe_dry_plan",
+        "sql-translator/pinned_catalog.py translate_pinned_catalog"
+      ],
+      "status": "SEPARATE_NATIVE_SEAM_NOT_MAINLINE",
+      "finding": "Opt-in pinned ASL2 lowering and injected SQL planning exist; direct-owner/time/capability restrictions apply. Legacy adapter assesses capability rather than compiling ASL. Harness seam is supplemental.",
+      "impact": "No new DryPlan or SQL was run; this query execution compatibility remains unverified."
+    },
+    {
+      "question": "5. Reparse through V1",
+      "files": [
+        "app/dependencies.py build_container",
+        "app/services/orchestrator.py DataAnalysisOrchestrator.handle",
+        "app/semantic_v2/recognition.py RawTurnPlanner.run"
+      ],
+      "status": "NO_V2_TO_V1_FALLBACK_WIRED",
+      "finding": "Public route already is V1; RawTurnPlanner does not forward its completed question to V1. Sending its NL to legacy classifier later would re-decide semantics.",
+      "impact": "Do not treat future NL forwarding as lossless plan adaptation."
+    },
+    {
+      "question": "6. Shared execution adapters",
+      "files": [
+        "app/adapters/semantic_query.py CompositeSemanticQueryTool.query",
+        "app/adapters/http.py HttpDataRetrievalAdapter.query",
+        "app/config.py"
+      ],
+      "status": "CONNECTED_V1_NOT_V2",
+      "finding": "V1 canonical requests call Oagnet /agent/query, SQL /api/translate and /api/execute. Oagnet query performs semantic generation; it is not a typed V2 plan executor.",
+      "impact": "Existing transports can be audited for reuse, but no current V2 connection or semantic equivalence is proven."
+    },
+    {
+      "question": "7. Result and execution state",
+      "files": [
+        "app/semantic_v2/result_contract.py:111 prove_result_contract",
+        "app/semantic_v2/result_contract.py:249 completed_allowed",
+        "app/semantic_v2/asl2.py:279 prove_asl2_result",
+        "app/semantic_v2/models.py:1543 ExecutionAttemptRecord"
+      ],
+      "status": "CONTRACTS_EXIST_EXECUTION_CONSUMER_MISSING",
+      "finding": "SUCCEEDED requires complete plan/ASL/SQL/result proof. Raw RecognizedPlan is a plan result; there is no executed-response bridge in the public route.",
+      "impact": "Must preserve the formal distinction when wiring."
+    },
+    {
+      "question": "8. Session/Dataset/executed receipt",
+      "files": [
+        "app/semantic_v2/recognition.py RawTurnPlanner.run",
+        "app/semantic_v2/state_machine.py DatasetState",
+        "app/services/orchestrator.py:6572 _persist_query_dataset"
+      ],
+      "status": "V2_EXECUTED_DATASET_INTEGRATION_GAP",
+      "finding": "Raw returns sealed next_state/plan_state; caller persistence is not wired to public V2. Typed Dataset and ownership contracts exist. Legacy dataset/object/session persistence is wired to V1 results.",
+      "impact": "Cannot fabricate V2 executed Dataset receipt from plan success or copy legacy metadata without the native proof contract."
+    },
+    {
+      "question": "9. Public compatibility",
+      "files": [
+        "app/domain/models.py:623 ChatRequest",
+        "app/domain/models.py:1290 AgentResponse",
+        "app/api.py:975 _event",
+        "app/presentation/intent_recognition.py"
+      ],
+      "status": "EXISTING_V1_CONTRACT_FROZEN",
+      "finding": "Keep application/conversation/message/question, strict model ID and normalized domains; AgentResponse terminal/error semantics. Streaming uses data-only JSON with type (including updata_state/message_chunk/tool_result/answer/complete/error); final complete carries AgentResponse. Existing six sections remain.",
+      "impact": "No public schema/SSE/UI change this round; RawRecognizedPlan is not directly serializable as a compatible terminal response."
+    },
+    {
+      "question": "10. completed_question",
+      "files": [
+        "app/intent/structured.py StructuredIntentDecision",
+        "app/presentation/intent_recognition.py:258 _completed_question_for_display",
+        "app/semantic_v2/recognition.py RawTurnPlanner"
+      ],
+      "status": "QUESTION_COMPLETION_CONTRACT_GAP_OPEN",
+      "finding": "V1 uses structured completed_question/rewritten_question and display rendering from canonical request. V2 parse disallows completed-question rewriting and has no public completion/display contract.",
+      "impact": "Product requirement retained; implementation explicitly out of scope."
+    }
+  ],
+  "audit_boundary": "CODE_ONLY; no deployment HTTP/process health/SQL/E2E invocation",
+  "gates": {
+    "FRESH_TASK_INITIALIZATION": "PASS_ON_TESTED_FROZEN_SCOPE_QUERY_4_OF_4",
+    "FRESH_CHAIN_A": "FAIL_STRICT_RELATION_AXIS; REQUIRED_STATE_AND_BARRIER_AXES_PASS",
+    "FRESH_CHAIN_B": "PASS_4_OF_4",
+    "FRESH_CHAIN_C": "FAIL; FIELD_EXPECTATION_GAP_AND_HISTORY_SAFE_REJECT",
+    "INTERNAL_DEMO_SEMANTIC_READY": "NO",
+    "CONTEXT_FOLLOWUP_READY": "NOT_READY",
+    "PLATFORM_EXECUTION_CHAIN_AUDIT": "COMPLETE_WITH_WIRING_GAPS",
+    "READY_FOR_INTERNAL_DEMO_E2E_SMOKE": "NO",
+    "QUESTION_COMPLETION_CONTRACT_GAP": "OPEN_UNCHANGED",
+    "READY_FOR_USER_APPROVAL": "NO"
+  },
+  "pathway_e2e_recommendation": {
+    "eligible": false,
+    "query": "查询去年江苏省订单笔数",
+    "semantic_evidence": "4 independent empty-session first turns",
+    "reason": "Typed V2 plan execution/persistence bridge absent; no SQL execution correctness evidence",
+    "isolation_if_later_wired": "81/[205], frozen/current verified Pin, isolated session and read-only execution proof; separate authorization before E2E"
+  },
+  "next_unique_action": "Investigate historical task-reference mention versus explicit current subject obligation using C3 raw evidence; retain hard explicit-slot guard. Do not start in Round57.",
+  "unchanged": {
+    "api_sse_ui": true,
+    "v1_routing": true,
+    "port8088": true,
+    "env_model_configuration": true,
+    "oagnet_sql_production_sources": true,
+    "scope_pin_consumer": true,
+    "old_tests_expectations": true,
+    "context_model_contract": true
+  },
+  "changes": {
+    "production_files": 3,
+    "tool_files": 1,
+    "new_test_files": 1,
+    "new_cases": 31,
+    "regex": 0,
+    "business_keyword_rules": 0,
+    "confidence_constants": 0,
+    "parse_draft_prompt_constants": 0,
+    "effective_schema_descriptions_changed": 3,
+    "normal_path_extra_model_calls": 0,
+    "singleton_set_fallback": false
+  },
+  "calls": {
+    "real_model": 24,
+    "sql": 0,
+    "source_sql": 0,
+    "production_writes": 0,
+    "benchmark": 0,
+    "blind": 0,
+    "shadow": 0,
+    "canary": 0
+  },
+  "review": {
+    "production_frozen_before_checkpoint_and_formal": true,
+    "baseline_old_tests_unchanged": true,
+    "generation_constraints_do_not_replace_runtime_validation": true,
+    "no_runtime_auto_added_filter": true,
+    "intermediate_negative_failure": "wrong_scope new test exposed real defect; fixed guard without changing expected",
+    "diagnostic_script_adjustments": [
+      "Used resolution_source native field name",
+      "Inherited filter field mention provenance differs from current value receipt; identity/scope/version matched separately",
+      "Counted one final arbitration decision per turn, not repeated native validation logs"
+    ]
+  },
+  "evidence_index": [
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/baseline-oracle/HC55-A-FILTER_EXPRESSION_CHANNEL.json",
+      "sha256": "4d7de59ee0b8eb471ce67ff12cfce4def71e3e93142379d993c2c3240a592bc8",
+      "purpose": "VERSIONED_BASELINE_ORACLE_NOT_LIVE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/baseline-oracle/HC55-A-ORIGINAL.json",
+      "sha256": "cb8bf41f53c16c33a969cafe1344cfbb17b41f0d5b255b3a1d8b982be2488c7c",
+      "purpose": "VERSIONED_BASELINE_ORACLE_NOT_LIVE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/baseline-oracle/HC55-B-DRAFT_OPERATION_AND_REFERENCE_ALIGNMENT.json",
+      "sha256": "3483279df563af5be663ad9138401c015558d7fda95928d8e131f929834d3f84",
+      "purpose": "VERSIONED_BASELINE_ORACLE_NOT_LIVE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/baseline-oracle/HC55-B-FILTER_REQUEST_CONSUMPTION.json",
+      "sha256": "de01a4432bb2682dbf5c3c8b1e9a950d8aa71587d1dd97db60b0b3617dbd51a6",
+      "purpose": "VERSIONED_BASELINE_ORACLE_NOT_LIVE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/baseline-oracle/HC55-B-ORIGINAL.json",
+      "sha256": "786d2eb0ae04f3cee2422eceaecf62c94be21cb227a20d42f2f020735f1312cf",
+      "purpose": "VERSIONED_BASELINE_ORACLE_NOT_LIVE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/baseline-oracle/HC55-C-DRAFT_OPERATION_AND_REFERENCE_ALIGNMENT.json",
+      "sha256": "a45c0125ab0cba75e1e4b588005c0a9296e39626d5737b3882da865a48610dd3",
+      "purpose": "VERSIONED_BASELINE_ORACLE_NOT_LIVE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/baseline-oracle/HC55-C-FILTER_REQUEST_CONSUMPTION.json",
+      "sha256": "049b5b89d8ae872a4b96e2459c07b3292a1b87d218011b0599652a4dc5ce31c9",
+      "purpose": "VERSIONED_BASELINE_ORACLE_NOT_LIVE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/baseline-oracle/HC55-C-ORIGINAL.json",
+      "sha256": "e6ad2b8cb4af7773b4fcc4f0b15b6628cf3ba9702d017f7d3469f45fb4c4b8b5",
+      "purpose": "VERSIONED_BASELINE_ORACLE_NOT_LIVE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/baseline-oracle/receipt.json",
+      "sha256": "94e590b1f5a406de83c05b60a6055fc86e399bfae93119f9ebad6a88ec12413c",
+      "purpose": "VERSIONED_BASELINE_ORACLE_NOT_LIVE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/checkpoint-v1/c26e4825e3b194b4368d86d2.json",
+      "sha256": "dbabaf87d465ed596f4ec8e0889cfd8ac63c78ad2bc6fa91119a9a4f16c2654f",
+      "purpose": "PRIVATE_FROZEN_LIVE_CHECKPOINT"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/checkpoint-v1/checks.json",
+      "sha256": "695554e136c3c84b8234263f67f4db197c636efb7b2540fface23c4bdae413ae",
+      "purpose": "PRIVATE_FROZEN_LIVE_CHECKPOINT"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/checkpoint-v1/input_freeze.json",
+      "sha256": "d0b86850386b248202e60f6dc9e987f381602374b88c73ac3cee8cd065808f58",
+      "purpose": "PRIVATE_FROZEN_LIVE_CHECKPOINT"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/checkpoint-v1/preflight.json",
+      "sha256": "d8846f5798c97651e7ebc72c88cdb0d2c3170b931b8245db127fc818afe0a1c4",
+      "purpose": "PRIVATE_FROZEN_LIVE_CHECKPOINT"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/checkpoint-v1/result.json",
+      "sha256": "29e9d75780a71cb3ff8f1462d4c4bba68cbac3e550014a3aa628686ab659a46a",
+      "purpose": "PRIVATE_FROZEN_LIVE_CHECKPOINT"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/checkpoint-v1/smoke_reuse.json",
+      "sha256": "9d4c92b86525da450b8851e1b28363c3ba5c17402a2d676474a0a3fa41c286a0",
+      "purpose": "PRIVATE_FROZEN_LIVE_CHECKPOINT"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/05485e11352852ae03b7690c.json",
+      "sha256": "0d836c6b04d9e924d44d4df66fbea2e39b015674540eadbc71e94868314b9099",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/077c7232f1c6dcd659b1d79a.json",
+      "sha256": "23a040e826e4a97c6ebddde98b399e3a9e9d54820b283b3dcc7c52484c702692",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/0bc19a9a9e786a71d0972080.json",
+      "sha256": "aa4a869904705859e8ccbda834fa40efb39c7201c18605037c3f5786585e2669",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/71ce0d55431c39cfad6a23ee.json",
+      "sha256": "c15553b519a88189d18af18721f4841168caaa27aa18d8b2f812222e760d29dc",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/7686528e9346457cc6a4bf09.json",
+      "sha256": "c7204ad7dd5f7bad4acadb6630224cf37272c3fc2a0071158c1fd37ec075323a",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/7d64c9ce88c880d66dca1e99.json",
+      "sha256": "d78b6036c28ecdad814fc03e9d8cb2f8fc97c7e073b8582eaf77c2abc0bcdd38",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/81820fdbe3c3024e3ddb7356.json",
+      "sha256": "f93b9ba15015888f8d2e4432a6e9b2ce2a1fc38e0a0c68649ec50bf6bce88a16",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/b77fd772ea3cf22dcfb08d22.json",
+      "sha256": "fb3e5ee891a6dfcf0c9d317e1e9b13c62a7b9a92fb930e82bf22f154dcbae76c",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/bde25b2ebfea1b637e094387.json",
+      "sha256": "eeb5e1ab949cc903e7aea73ec2715f85acbc7d5ac82c6bc37607236ca522b2f0",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/c8c010c9b2e5abd89e6058f6.json",
+      "sha256": "64300a83125eda1e3f2701ea3d95037d644a70cdc13bf12e0ac143015c0612b3",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/checks.json",
+      "sha256": "c37ef7c4838efb9ac498566f45901ca862f91a9ca2a69e69ab4b7257b58d738f",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/fa39fef96119ebdf5895707b.json",
+      "sha256": "fb044f4fdb362d6a1591a2d839d5696b67cee4a40442e20e3c2d36d60997edd7",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/input_freeze.json",
+      "sha256": "426e0717f90700e484ca67f11419fd726f5e4a221ce5b6fea4d363e5d2b01a1c",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/preflight.json",
+      "sha256": "d8846f5798c97651e7ebc72c88cdb0d2c3170b931b8245db127fc818afe0a1c4",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/result.json",
+      "sha256": "10e126604d26b3fd89dbc7f3220a1f3850270455e160cefe03eeb384979341d6",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-live-v1/smoke_reuse.json",
+      "sha256": "9d4c92b86525da450b8851e1b28363c3ba5c17402a2d676474a0a3fa41c286a0",
+      "purpose": "PRIVATE_FROZEN_LIVE_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/final-targets/target_receipt.json",
+      "sha256": "1a5c2cfb0b1e9fa967201525a9c736986f68a5a8f6d3f4246d07c33da68176ac",
+      "purpose": "VERSIONED_RECORDED_SIGNAL_MIGRATION"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/affected-v1.json",
+      "sha256": "04f8183a75bb773ce4523f2d2ececa737dee4a09d794c3e83e3a54f88e738461",
+      "purpose": "OFFLINE_AFFECTED_TEST_RECEIPT"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/focused-v1.json",
+      "sha256": "0d8c93f78235b29087d747d5d506111106875478dc03bf88c30a867bcb92af9d",
+      "purpose": "INTERMEDIATE_NEGATIVE_FOUND_DEFECT"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/focused-v2.json",
+      "sha256": "32ab4588eb120510c0cf4b5adf6bc6934360bd9f1f29d08537d5d4efcc42fe3e",
+      "purpose": "FOCUSED_FINAL"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/qualified_axis_checks.json",
+      "sha256": "957cd02dd48abdc1ec3ad4fa2a538606b4bfe1d586bb0373045af448af105382",
+      "purpose": "ADDITIONAL_DIAGNOSTIC_AXES_NOT_RESCORING"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/test_delta_derived.json",
+      "sha256": "1eab5d9e7248cf98365c38aee62965e87e4e2625fc196149e8992eaf7ef8fd10",
+      "purpose": "EXACT_NODEID_DELTA"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/performance_derived.json",
+      "sha256": "f6195aba8840d2a1599c1cab1698304ebbd7f316efdde62a94ebb1a85eeb1de7",
+      "purpose": "MODEL_USAGE"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/turn_rows.json",
+      "sha256": "9e4136642204329d03506c78c18adb2a5b0d30894ea1b0d059067e1a3a591a76",
+      "purpose": "TURN_SUMMARY"
+    },
+    {
+      "path": ".eval_private/vertical-round5-7-20260910T104402Z/arbitration_derived.json",
+      "sha256": "a49a470daacd00845ec57e97a5d93f0bd3f70e86e34474a7ab357a4e70bc38a8",
+      "purpose": "UNIQUE_TURN_ARBITRATION"
+    },
+    {
+      "path": ".eval_private/round57_baseline.py",
+      "sha256": "fc772e64928f192871b05610925e3c16bdcacf4b74be0762b6c4c4a8b1071b69",
+      "purpose": "PRIVATE_LOCAL_EVIDENCE_SCRIPT"
+    },
+    {
+      "path": ".eval_private/round57_inspect.py",
+      "sha256": "d2a94ed8560e6b8e24731cb71826d95e71fe9b7e38637db4adbf5f0f14cf30a9",
+      "purpose": "PRIVATE_LOCAL_EVIDENCE_SCRIPT"
+    },
+    {
+      "path": ".eval_private/round57_oracles.py",
+      "sha256": "24a6300a2ea29a57808cc1b11e5b2e74f016c2b5439a46eade428ee6471eb37c",
+      "purpose": "PRIVATE_LOCAL_EVIDENCE_SCRIPT"
+    },
+    {
+      "path": ".eval_private/round57_check_chains.py",
+      "sha256": "d9182b4ff0a0cbe0f094b54b81f53dd3ccca89fe1e723648d2e85b3de2ec6f48",
+      "purpose": "PRIVATE_LOCAL_EVIDENCE_SCRIPT"
+    },
+    {
+      "path": ".eval_private/round57_final_evidence.py",
+      "sha256": "a2ffd8f60fa0b077d96d745f12b92c8e242f84bba27573f8aaddb4d51d3bfa88",
+      "purpose": "PRIVATE_LOCAL_EVIDENCE_SCRIPT"
+    },
+    {
+      "path": ".eval_private/round57_report_data.py",
+      "sha256": "5c1039ed34b31209d3e014e4f03d7764e70b8ac8d9ebd1d5bbcf55d7e73f3fb2",
+      "purpose": "PRIVATE_LOCAL_EVIDENCE_SCRIPT"
+    },
+    {
+      "path": ".eval_private/fresh-round5-6-20260910T081523Z/live-v1/3bd07d4b54477b378b35cab2.json",
+      "sha256": "99d27c3a51f61d3423bb597fc4041053ed17c9d0107325e08611a6e98ac3dbe6",
+      "purpose": "IMMUTABLE_ROUND56_ORIGINAL"
+    },
+    {
+      "path": ".eval_private/fresh-round5-6-20260910T081523Z/live-v1/a8d15fb19d7f87437e97400f.json",
+      "sha256": "24c8a27f1a59e17d4929e26f4037513ebd8872e5419ebc739a38f548e23c62b0",
+      "purpose": "IMMUTABLE_ROUND56_ORIGINAL"
+    },
+    {
+      "path": ".eval_private/fresh-round5-6-20260910T081523Z/live-v1/ad7c632e9cb2abbb2b21b2ef.json",
+      "sha256": "360f5b9e78195935d2f0a4b37596cc9aab8c24a94dc73bf694494cb13a1b184e",
+      "purpose": "IMMUTABLE_ROUND56_ORIGINAL"
+    }
+  ]
+}

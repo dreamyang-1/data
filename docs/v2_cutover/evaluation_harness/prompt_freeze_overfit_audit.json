@@ -1,0 +1,82 @@
+{
+  "evaluator": {
+    "evaluator_version": "runtime-evaluation-harness-v1",
+    "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+    "evaluator_files": {
+      "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+      "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+      "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+      "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+      "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+      "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+      "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+      "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+      "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+      "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+      "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+      "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+      "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+      "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+      "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+      "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+      "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+    }
+  },
+  "prompts": {
+    "PARSE": {
+      "version": "v2-current-recognition-v8",
+      "hash": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+      "line_count": 16,
+      "sentence_units": 19
+    },
+    "DRAFT": {
+      "version": "v2-current-recognition-v8",
+      "hash": "446b110d7b3411d585858c8e6919dafc7739c5152b5d3934127908e91ff1122d",
+      "line_count": 63,
+      "sentence_units": 63
+    },
+    "PROBE": {
+      "version": "v2-source-value-choice-v1",
+      "hash": "18c52183ff785de85c9c9afc2b906cdacfdd56b0cb852451b452387d32968fcf",
+      "line_count": 8,
+      "sentence_units": 10
+    }
+  },
+  "schema_hashes": {
+    "current_turn": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "semantic_draft_template": "306d5c5f8a9191a0923b100ef6d5ef4e0ff4fe1d98668e521dbe5b3b9fa86421",
+    "value_choice_template": "ae2cb6191e0bbf34e5fa39e11fc976414cf10c52df1d07a47bd820474aca0bf7"
+  },
+  "production_semantic_source_equals_PR52": true,
+  "production_changes_this_stage": 0,
+  "semantic_regex_count": 0,
+  "schema_regex_count": 2,
+  "language_keyword_count": 33,
+  "business_keyword_special_case_count": 0,
+  "prompt_rule_count": 92,
+  "first_raw_baseline": {
+    "commit": "ab3c7fe5613699872b5c5d5e048fff3b590708ee",
+    "prompt_rule_count": 34,
+    "language_keyword_count": 0
+  },
+  "delta_this_stage": {
+    "semantic_regex": 0,
+    "schema_regex": 0,
+    "language_keywords": 0,
+    "business_special_cases": 0,
+    "prompt_rules": 0
+  },
+  "legacy_time_parser_dependency": {
+    "regex_invocation_sites": 25,
+    "global_pattern_definitions": 13,
+    "new_definitions": 0
+  },
+  "overfit_risk": true,
+  "proven_prompt_overfit": false,
+  "prompt_variant_comparison": "NOT_RUN",
+  "reason": "Early prompts are recoverable; same-harness variant comparison is not complete. Harness/safety gates remain open and Blind Holdout is locked before Semantic Freeze Candidate. No public/private score delta across different prompts is claimed.",
+  "public_corpus_exposed": true,
+  "private_validation": "24 programmatically composed contract cases, not human-independent or representative",
+  "blind_holdout": "24 sealed, never opened or run; construction method does not establish representative business holdout coverage"
+}

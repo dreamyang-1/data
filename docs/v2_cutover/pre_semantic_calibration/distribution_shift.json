@@ -1,0 +1,197 @@
+{
+  "public_cases": 100,
+  "private_cases": 24,
+  "feature_comparison": {
+    "context_dependency": {
+      "PUBLIC_DEV": {
+        "n": 42,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 16,
+        "N": 24
+      }
+    },
+    "pending": {
+      "PUBLIC_DEV": {
+        "n": 1,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "dataset": {
+      "PUBLIC_DEV": {
+        "n": 1,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "historical_return": {
+      "PUBLIC_DEV": {
+        "n": 2,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "multi_metric_current_surface": {
+      "PUBLIC_DEV": {
+        "n": 0,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "multi_metric_expected": {
+      "PUBLIC_DEV": {
+        "n": 0,
+        "N": 0
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 8,
+        "N": 24
+      }
+    },
+    "multi_dimension_current_surface": {
+      "PUBLIC_DEV": {
+        "n": 1,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "entity_value_labeled": {
+      "PUBLIC_DEV": {
+        "n": 0,
+        "N": 75
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 0
+      }
+    },
+    "ADD": {
+      "PUBLIC_DEV": {
+        "n": 3,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 8,
+        "N": 24
+      }
+    },
+    "REPLACE": {
+      "PUBLIC_DEV": {
+        "n": 4,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "REMOVE": {
+      "PUBLIC_DEV": {
+        "n": 3,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 8,
+        "N": 24
+      }
+    },
+    "CLEAR": {
+      "PUBLIC_DEV": {
+        "n": 3,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "time": {
+      "PUBLIC_DEV": {
+        "n": 5,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "comparison": {
+      "PUBLIC_DEV": {
+        "n": 0,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "ranking": {
+      "PUBLIC_DEV": {
+        "n": 1,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "relationship": {
+      "PUBLIC_DEV": {
+        "n": 2,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    },
+    "time_any_turn_proxy": {
+      "PUBLIC_DEV": {
+        "n": 8,
+        "N": 100
+      },
+      "PRIVATE_VALIDATION": {
+        "n": 0,
+        "N": 24
+      }
+    }
+  },
+  "query_shape_comparison": {
+    "PUBLIC_DEV": {
+      "DETAIL_ROWS": 15,
+      "SCALAR_AGGREGATE": 24,
+      "GROUPED_AGGREGATE": 13,
+      "UNKNOWN_UNLABELED": 44,
+      "DATASET_TRANSFORM": 1,
+      "RANKING": 1,
+      "LINEAGE_GRAPH": 1,
+      "TIME_SERIES": 1
+    },
+    "PRIVATE_VALIDATION": {
+      "UNKNOWN_UNLABELED": 24
+    }
+  },
+  "global_difficulty_order": "NOT_IDENTIFIABLE_FROM_PARTIAL_LABELS",
+  "prompt_overfit_from_zero_private_passes": "NOT_ESTABLISHED",
+  "limits": [
+    "Different construction and label coverage confound aggregate pass fractions.",
+    "Private composition intentionally concentrates metric ADD/REMOVE; public includes metadata, entities and pending/dataset."
+  ]
+}

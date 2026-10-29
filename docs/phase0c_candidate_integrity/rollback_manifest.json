@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "dfdcd1b76ab9f8dbdbfb8d88777abeabb7215f36",
+  "feature_branch": "phase0c-candidate-integrity-20260908-01",
+  "runtime_files": ["app/domain/models.py", "app/services/clarification_policy.py", "app/services/orchestrator.py"],
+  "rollback": "Use a new branch at a reviewed revision or a fresh revert commit. Preserve unrelated edits, rerun candidate/clarification/scope regressions, and explicitly synchronize reviewed files to development. Do not rewrite branch history.",
+  "compatibility": "No public or persisted schema fields change. New question keys are opaque hashes; forward reads map legacy keys from the stored Pending. An older revision does not understand newly produced repetition keys, so retain the compatible Pending reader during operational rollback until those sessions expire.",
+  "external_data_rollback_required": false,
+  "production_v2_routing_changed": false,
+  "forbidden": ["reset --hard", "clean", "force push", "whole-directory overwrite", "automatic merge"]
+}

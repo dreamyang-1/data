@@ -1,0 +1,20 @@
+{
+  "baseline_commit": "d01d305e23059d99d147aa4a5d2f1ff6022e02e1",
+  "parent_draft_pr": "https://github.com/dreamyang-1/data/pull/56",
+  "base_branch": "semantic-projection-round2-20260909t132659z",
+  "feature_branch": "semantic-context-round3-20260909t141050z",
+  "new_commits": 1,
+  "independent_production_contract_fixes": 0,
+  "final_commit": {
+    "resolution": "Commit introducing this exact manifest; SHA is not embedded recursively in its own tree.",
+    "command": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round3/git_commit_manifest.json"
+  },
+  "publication": {
+    "remote": "https://github.com/dreamyang-1/data",
+    "head": "semantic-context-round3-20260909t141050z",
+    "base": "semantic-projection-round2-20260909t132659z",
+    "draft": true,
+    "auto_merge": false,
+    "verification": "Check remote SHA and open Draft PR head/base after commit; publication receipt remains outside its own commit."
+  }
+}

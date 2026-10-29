@@ -1,0 +1,8 @@
+{
+  "PHASE0A_BASELINE_COMMIT": "e4d3bb59026d3b219c9268ac53f87dccf58f3c28",
+  "committed_files": 420,
+  "raw_commit_matches_both_workspaces": true,
+  "git_working_tree_clean_before_phase0b": true,
+  "phase0a_gate": "PASS",
+  "phase0a_draft_pr": "https://github.com/dreamyang-1/data/pull/1"
+}

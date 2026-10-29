@@ -377,8 +377,10 @@ def test_incomplete_unreferenced_turn_exposes_relation_clarification_state():
         "ambiguous-relation-state",
     )
 
-    assert decision.relation == TurnRelation.AMBIGUOUS_RELATION
-    assert decision.needs_clarification is True
+    # Phase 0B current business contract: execution incompleteness alone is
+    # never evidence of a relation ambiguity (stale decision ST-0B-01).
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert decision.needs_clarification is False
     assert decision.inherit_business_context is False
     assert not any(
         item.operation == SlotOperationType.INHERIT
@@ -1191,7 +1193,7 @@ async def test_complete_business_query_does_not_bypass_enabled_model_classifier(
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="model-required-complete-query",
             message_id="m1",
@@ -1203,3 +1205,68 @@ async def test_complete_business_query_does_not_bypass_enabled_model_classifier(
     assert response.status == "COMPLETED"
     assert classifier.calls == ["查询本月销售额"]
     assert response.intent_source == "STRUCTURED_MODEL"
+
+
+class _AuthoritativeModelFilterClassifier:
+    def __init__(self) -> None:
+        self.rules = RuleBasedIntentClassifier()
+
+    async def classify(self, question, identity, conversation_id, **_kwargs):
+        request = self.rules.classify(question, identity, conversation_id)
+        request.filters = [{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器",
+        }]
+        request.semantic_entity_mentions = ["空心纤维血液透析器"]
+        request.intent_source = "STRUCTURED_MODEL"
+        request.intent_confidence = 0.98
+        request.assumptions.append("MODEL_FILTER_EXTRACTION_AUTHORITATIVE")
+        return request
+
+    def merge_clarification(self, pending, answer):
+        return self.rules.merge_clarification(pending, answer)
+
+
+@pytest.mark.asyncio
+async def test_model_filter_rebinds_early_turn_admission_rule_guess():
+    sessions = InMemorySessionStore()
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            env="test", adapter_mode="mock", intent_model_enabled=True
+        ),
+        classifier=_AuthoritativeModelFilterClassifier(),
+        adapters=build_mock_adapters(),
+        sessions=sessions,
+    )
+    conversation_id = "model-filter-turn-admission"
+
+    response = await agent.handle(
+        ChatRequest(
+            semantic_model_id=81,
+            application_id="app-1",
+            conversation_id=conversation_id,
+            message_id="m1",
+            question="查一下空心纤维血液透析器产品合作的经销商名单。",
+        ),
+        IDENTITY,
+    )
+    frame = await sessions.get_task_frame(
+        IDENTITY.tenant_id,
+        IDENTITY.user_id,
+        "app-1",
+        conversation_id,
+    )
+
+    assert response.status == "COMPLETED"
+    assert frame is not None
+    assert frame.filters == [{
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "空心纤维血液透析器",
+    }]
+    explicit_filters = frame.turn_admission.current_turn_facts.explicit_slots[
+        "filters"
+    ]
+    assert explicit_filters.value == frame.filters
+    assert "查一下空心纤维血液透析器" not in str(frame.filters)

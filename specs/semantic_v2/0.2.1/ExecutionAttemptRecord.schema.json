@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ContractProof": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ProofStatus"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/ProofCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "errors": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Errors",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ContractProof",
+      "type": "object"
+    },
+    "ErrorType": {
+      "enum": [
+        "USER_AMBIGUITY",
+        "SURFACE_PARSE_FAILURE",
+        "SEMANTIC_RESOLUTION_FAILURE",
+        "PLAN_VALIDATION_FAILURE",
+        "ASL_CONTRACT_FAILURE",
+        "SQL_PLAN_FAILURE",
+        "EXECUTION_FAILURE",
+        "RESULT_CONTRACT_FAILURE",
+        "NO_DATA",
+        "PERMISSION_DENIED",
+        "DATA_NOT_READY"
+      ],
+      "title": "ErrorType",
+      "type": "string"
+    },
+    "ExecutionBackend": {
+      "enum": [
+        "SEMANTIC_QUERY",
+        "DATASET_LOCAL",
+        "SEMANTIC_METADATA",
+        "ANALYTICS",
+        "CHAT_RESPONSE",
+        "CONTROL",
+        "REPORT_COMPOSITION"
+      ],
+      "title": "ExecutionBackend",
+      "type": "string"
+    },
+    "ExecutionStatus": {
+      "enum": [
+        "CREATED",
+        "RUNNING",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELLED"
+      ],
+      "title": "ExecutionStatus",
+      "type": "string"
+    },
+    "ProofChain": {
+      "additionalProperties": false,
+      "properties": {
+        "plan": {
+          "$ref": "#/$defs/ContractProof"
+        },
+        "asl": {
+          "$ref": "#/$defs/ContractProof"
+        },
+        "sql_plan": {
+          "$ref": "#/$defs/ContractProof"
+        },
+        "result": {
+          "$ref": "#/$defs/ContractProof"
+        }
+      },
+      "required": [
+        "plan",
+        "asl",
+        "sql_plan",
+        "result"
+      ],
+      "title": "ProofChain",
+      "type": "object"
+    },
+    "ProofCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Check Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ProofStatus"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity",
+          "default": "BLOCKING"
+        },
+        "evidence_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "errors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Errors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "check_id",
+        "status"
+      ],
+      "title": "ProofCheck",
+      "type": "object"
+    },
+    "ProofStatus": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "UNKNOWN",
+        "NOT_APPLICABLE"
+      ],
+      "title": "ProofStatus",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "BLOCKING",
+        "ADVISORY"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "execution_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Execution Id",
+      "type": "string"
+    },
+    "task_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Task Id",
+      "type": "string"
+    },
+    "task_version": {
+      "minimum": 1,
+      "title": "Task Version",
+      "type": "integer"
+    },
+    "attempt_number": {
+      "minimum": 1,
+      "title": "Attempt Number",
+      "type": "integer"
+    },
+    "status": {
+      "$ref": "#/$defs/ExecutionStatus",
+      "default": "CREATED"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "completed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Completed At"
+    },
+    "execution_backend": {
+      "$ref": "#/$defs/ExecutionBackend"
+    },
+    "snapshot_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Snapshot Id",
+      "type": "string"
+    },
+    "data_watermark": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Data Watermark"
+    },
+    "catalog_version": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Catalog Version",
+      "type": "string"
+    },
+    "vector_index_version": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Vector Index Version",
+      "type": "string"
+    },
+    "semantic_model_version": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Semantic Model Version",
+      "type": "string"
+    },
+    "policy_version": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Policy Version",
+      "type": "string"
+    },
+    "asl_digest": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Asl Digest"
+    },
+    "sql_digest": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sql Digest"
+    },
+    "dataset_id": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dataset Id"
+    },
+    "error_type": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorType"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "proof_chain": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ProofChain"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "execution_id",
+    "task_id",
+    "task_version",
+    "attempt_number",
+    "execution_backend",
+    "snapshot_id",
+    "catalog_version",
+    "vector_index_version",
+    "semantic_model_version",
+    "policy_version"
+  ],
+  "title": "ExecutionAttemptRecord",
+  "type": "object"
+}

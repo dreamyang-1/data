@@ -1,0 +1,435 @@
+{
+  "contract": "multiturn-transition-evaluation-v1",
+  "component": "V2_RAW_TURN_PLANNER",
+  "mode": "LIVE_MODEL_PLAN_ONLY",
+  "cases": 20,
+  "gold_hash": "f9307933e72e2c85fe189dcdad6855edfa09dce85926e761539beee2f621f825",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "metrics": {
+    "canonical_metrics": {
+      "passed": 1,
+      "denominator": 1,
+      "unobserved": 0,
+      "value": 1.0
+    },
+    "dataset_route": {
+      "passed": 0,
+      "denominator": 3,
+      "unobserved": 3,
+      "value": 0.0
+    },
+    "dimension_operations": {
+      "passed": 2,
+      "denominator": 3,
+      "unobserved": 1,
+      "value": 0.6666666666666666
+    },
+    "dimension_surfaces": {
+      "passed": 2,
+      "denominator": 3,
+      "unobserved": 1,
+      "value": 0.6666666666666666
+    },
+    "metric_clarification_required": {
+      "passed": 0,
+      "denominator": 1,
+      "unobserved": 1,
+      "value": 0.0
+    },
+    "metric_operations": {
+      "passed": 3,
+      "denominator": 3,
+      "unobserved": 0,
+      "value": 1.0
+    },
+    "metric_surfaces": {
+      "passed": 5,
+      "denominator": 16,
+      "unobserved": 11,
+      "value": 0.3125
+    },
+    "pending_action": {
+      "passed": 0,
+      "denominator": 1,
+      "unobserved": 1,
+      "value": 0.0
+    },
+    "region_operations": {
+      "passed": 0,
+      "denominator": 3,
+      "unobserved": 3,
+      "value": 0.0
+    },
+    "region_values": {
+      "passed": 0,
+      "denominator": 7,
+      "unobserved": 7,
+      "value": 0.0
+    },
+    "target_task": {
+      "passed": 5,
+      "denominator": 17,
+      "unobserved": 12,
+      "value": 0.29411764705882354
+    },
+    "time_grain": {
+      "passed": 0,
+      "denominator": 1,
+      "unobserved": 1,
+      "value": 0.0
+    },
+    "time_relation": {
+      "passed": 0,
+      "denominator": 3,
+      "unobserved": 3,
+      "value": 0.0
+    },
+    "turn_relation": {
+      "passed": 2,
+      "denominator": 9,
+      "unobserved": 6,
+      "value": 0.2222222222222222
+    }
+  },
+  "safety": {
+    "cross_scope_dataset_reuse": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    },
+    "cross_scope_pending_reuse": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    },
+    "pending_hijack": {
+      "required_or_supplied_observations": 1,
+      "violations": 0,
+      "unobserved": 1,
+      "gate": "NOT_EVALUATED"
+    },
+    "scope_expansion": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    },
+    "unsafe_truncated_ranking": {
+      "required_or_supplied_observations": 3,
+      "violations": 0,
+      "unobserved": 3,
+      "gate": "NOT_EVALUATED"
+    },
+    "wrong_inheritance": {
+      "required_or_supplied_observations": 17,
+      "violations": 0,
+      "unobserved": 17,
+      "gate": "NOT_EVALUATED"
+    },
+    "wrong_silent_auto_accept": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    }
+  },
+  "unlabeled_safety_checks": [
+    "cross_scope_dataset_reuse",
+    "cross_scope_pending_reuse",
+    "scope_expansion",
+    "wrong_silent_auto_accept"
+  ],
+  "full_pipeline_accuracy": "NOT_ESTABLISHED_BY_COMPONENT_RESULTS",
+  "production_cutover_pass": false,
+  "details": [
+    {
+      "case_id": "S81-001",
+      "axes": {
+        "metric_surfaces": "PASS",
+        "canonical_metrics": "PASS",
+        "turn_relation": "PASS",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "OK"
+    },
+    {
+      "case_id": "S81-002",
+      "axes": {
+        "metric_surfaces": "PASS",
+        "turn_relation": "FAIL",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "OK"
+    },
+    {
+      "case_id": "S81-003",
+      "axes": {
+        "metric_surfaces": "PASS",
+        "turn_relation": "PASS",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "OK"
+    },
+    {
+      "case_id": "S81-004",
+      "axes": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "time_relation": "NOT_OBSERVED",
+        "time_grain": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-005",
+      "axes": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "time_relation": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-006",
+      "axes": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "region_operations": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-007",
+      "axes": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "region_operations": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-008",
+      "axes": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "region_operations": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-009",
+      "axes": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-010",
+      "axes": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-011",
+      "axes": {
+        "metric_surfaces": "PASS",
+        "dimension_surfaces": "PASS",
+        "target_task": "PASS",
+        "dimension_operations": "PASS"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "OK"
+    },
+    {
+      "case_id": "S81-012",
+      "axes": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "dimension_surfaces": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "dimension_operations": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-013",
+      "axes": {
+        "metric_surfaces": "PASS",
+        "dimension_surfaces": "PASS",
+        "target_task": "PASS",
+        "dimension_operations": "PASS"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "OK"
+    },
+    {
+      "case_id": "S81-014",
+      "axes": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "time_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-015",
+      "axes": {
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "metric_clarification_required": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-016",
+      "axes": {
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "metric_surfaces": "NOT_OBSERVED",
+        "pending_action": "NOT_OBSERVED"
+      },
+      "safety": {
+        "pending_hijack": "NOT_OBSERVED",
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "NOT_RUN"
+    },
+    {
+      "case_id": "S81-017",
+      "axes": {
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "metric_surfaces": "NOT_OBSERVED"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "FAILED"
+    },
+    {
+      "case_id": "S81-018",
+      "axes": {
+        "dataset_route": "NOT_OBSERVED"
+      },
+      "safety": {
+        "unsafe_truncated_ranking": "NOT_OBSERVED"
+      },
+      "observation_status": "NOT_RUN"
+    },
+    {
+      "case_id": "S81-019",
+      "axes": {
+        "dataset_route": "NOT_OBSERVED"
+      },
+      "safety": {
+        "unsafe_truncated_ranking": "NOT_OBSERVED"
+      },
+      "observation_status": "NOT_RUN"
+    },
+    {
+      "case_id": "S81-020",
+      "axes": {
+        "dataset_route": "NOT_OBSERVED"
+      },
+      "safety": {
+        "unsafe_truncated_ranking": "NOT_OBSERVED"
+      },
+      "observation_status": "NOT_RUN"
+    }
+  ],
+  "model": "qwen3.7-max",
+  "thinking": false,
+  "real_model_calls": 48,
+  "model_transport_requests": 48,
+  "source_value_reads_denied": 0,
+  "source_value_observations_replayed": 6,
+  "source_observations_hash": "5da05463c521b88eeec4c06b83b456df68ec623eaed0c5dd458a529f1950d24d",
+  "source_value_evidence_mode": "FROZEN_READ_ONLY_CAPTURE",
+  "source_SQL_executions": 0,
+  "production_external_writes": 0,
+  "catalog_storage_mode": "FROZEN_CATALOG_IN_MEMORY_PUBLICATION",
+  "query_vector_quality_evaluated": false,
+  "prompt_version": "v2-current-recognition-v8",
+  "current_turn_prompt_hash": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+  "current_turn_schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+  "semantic_edit_prompt_hash": "446b110d7b3411d585858c8e6919dafc7739c5152b5d3934127908e91ff1122d",
+  "history_policy": "STOP_ON_UNRESOLVED_OR_FAILED_HISTORY; NO_SUCCESS_INJECTION",
+  "network_policy": "ONLY_VALIDATED_MODEL_TRANSPORT_CAN_CONNECT",
+  "max_model_requests": 100,
+  "private_diagnostics_enabled": true,
+  "private_capture_turns": 24,
+  "observed_turns": 24,
+  "observation_counts": {
+    "OK": 5,
+    "FAILED": 11,
+    "NOT_RUN": 4
+  }
+}

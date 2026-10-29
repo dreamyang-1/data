@@ -207,37 +207,21 @@ _CONTRACTS = {
 }
 
 
-_MULTIDIMENSIONAL_SIGNALS = ("多维", "各维度", "多个维度", "逐层下钻", "维度下钻")
-_RATIO_SIGNALS = ("率", "占比", "转化", "客单价")
-
-
 def multidimensional_operator_for_question(question: str) -> str | None:
-    compact = question.replace(" ", "")
-    if not any(token in compact for token in _MULTIDIMENSIONAL_SIGNALS):
-        return None
-    return (
-        "multidimensional_ratio_attribution"
-        if any(token in compact for token in _RATIO_SIGNALS)
-        else "multidimensional_attribution"
-    )
+    """Deprecated text API: no operator may be selected from a question."""
+    from app.analysis.tools.plans import AnalysisToolPlanRequired
+    raise AnalysisToolPlanRequired('ANALYSIS_TOOL_PLAN_REQUIRED')
 
 
 def contract_for_request(request: CanonicalAnalysisRequest) -> AnalysisDataContractSpec | None:
-    question = request.original_question.replace(" ", "")
-    name = None
-    if request.primary_intent == PrimaryIntent.ROOT_CAUSE_ANALYSIS:
-        if "量价" in question:
-            name = "price_volume_decomposition"
-        elif multidimensional := multidimensional_operator_for_question(question):
-            name = multidimensional
-        else:
-            name = "dimension_contribution_decomposition"
-    elif request.primary_intent == PrimaryIntent.COMPOSITION_ANALYSIS and "漏斗" in question:
-        name = "funnel_conversion_analysis"
-    elif request.primary_intent == PrimaryIntent.COMPOSITION_ANALYSIS and any(
-        token in question for token in ("结构变化", "结构变动", "份额变化", "份额变动")
-    ):
-        name = "structural_share_shift"
+    from app.analysis.tools.registry import registered_operator, chain_for_intent
+    if chain_for_intent(request.primary_intent) is None:
+        return None
+    from app.analysis.tool_selection import selected_for
+    selected = selected_for(request)
+    name = registered_operator(request._analysis_contract.get('tool_selection'))
+    if name is None and 'dimension_contribution' in selected:
+        name = 'dimension_contribution_decomposition'
     return _CONTRACTS.get(name)
 
 

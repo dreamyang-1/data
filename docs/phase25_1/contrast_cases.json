@@ -1,0 +1,3267 @@
+[
+  {
+    "id": "contrast:LIMIT_RANK:0",
+    "category": "LIMIT_RANK",
+    "left": "展示前5条",
+    "right": "显示销售額前5名",
+    "parameter": 1,
+    "left_contract": {
+      "operation_type": "LIMIT",
+      "limit": 5,
+      "preserve_existing_order": true
+    },
+    "right_contract": {
+      "rank_by": {
+        "catalog_type": "METRIC",
+        "semantic_role": "MEASURE",
+        "canonical_id": "fixture:sales",
+        "canonical_code": "sales",
+        "display_name": "sales",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "direction": "DESC",
+      "limit": 5,
+      "ties_policy": "EXCLUDE_TIES",
+      "nulls_policy": "EXCLUDE",
+      "stable_tiebreakers": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LIMIT_RANK:1",
+    "category": "LIMIT_RANK",
+    "left": "保留前10条",
+    "right": "取销量前10名",
+    "parameter": 2,
+    "left_contract": {
+      "operation_type": "LIMIT",
+      "limit": 10,
+      "preserve_existing_order": true
+    },
+    "right_contract": {
+      "rank_by": {
+        "catalog_type": "METRIC",
+        "semantic_role": "MEASURE",
+        "canonical_id": "fixture:volume",
+        "canonical_code": "volume",
+        "display_name": "volume",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "direction": "DESC",
+      "limit": 10,
+      "ties_policy": "EXCLUDE_TIES",
+      "nulls_policy": "EXCLUDE",
+      "stable_tiebreakers": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LIMIT_RANK:2",
+    "category": "LIMIT_RANK",
+    "left": "前3条记录",
+    "right": "销量最低3名",
+    "parameter": 3,
+    "left_contract": {
+      "operation_type": "LIMIT",
+      "limit": 3,
+      "preserve_existing_order": true
+    },
+    "right_contract": {
+      "rank_by": {
+        "catalog_type": "METRIC",
+        "semantic_role": "MEASURE",
+        "canonical_id": "fixture:volume",
+        "canonical_code": "volume",
+        "display_name": "volume",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "direction": "ASC",
+      "limit": 3,
+      "ties_policy": "EXCLUDE_TIES",
+      "nulls_policy": "EXCLUDE",
+      "stable_tiebreakers": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LIMIT_RANK:3",
+    "category": "LIMIT_RANK",
+    "left": "先展示2条",
+    "right": "销售额最高2名",
+    "parameter": 4,
+    "left_contract": {
+      "operation_type": "LIMIT",
+      "limit": 2,
+      "preserve_existing_order": true
+    },
+    "right_contract": {
+      "rank_by": {
+        "catalog_type": "METRIC",
+        "semantic_role": "MEASURE",
+        "canonical_id": "fixture:sales",
+        "canonical_code": "sales",
+        "display_name": "sales",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "direction": "DESC",
+      "limit": 2,
+      "ties_policy": "EXCLUDE_TIES",
+      "nulls_policy": "EXCLUDE",
+      "stable_tiebreakers": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LIMIT_RANK:4",
+    "category": "LIMIT_RANK",
+    "left": "当前结果前8条",
+    "right": "所有医院销售额前8名",
+    "parameter": 5,
+    "left_contract": {
+      "operation_type": "LIMIT",
+      "limit": 8,
+      "preserve_existing_order": true
+    },
+    "right_contract": {
+      "rank_by": {
+        "catalog_type": "METRIC",
+        "semantic_role": "MEASURE",
+        "canonical_id": "fixture:sales",
+        "canonical_code": "sales",
+        "display_name": "sales",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "direction": "DESC",
+      "limit": 8,
+      "ties_policy": "EXCLUDE_TIES",
+      "nulls_policy": "EXCLUDE",
+      "stable_tiebreakers": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:METRIC:0",
+    "category": "METRIC",
+    "left": "查询销售额",
+    "right": "查询销售量",
+    "parameter": 1,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales_amount",
+          "canonical_code": "sales_amount",
+          "display_name": "sales_amount",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales_quantity",
+          "canonical_code": "sales_quantity",
+          "display_name": "sales_quantity",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:METRIC:1",
+    "category": "METRIC",
+    "left": "销售金额趋势",
+    "right": "销售数量趋势",
+    "parameter": 2,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:monthly_sales_amount",
+          "canonical_code": "monthly_sales_amount",
+          "display_name": "monthly_sales_amount",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:monthly_sales_quantity",
+          "canonical_code": "monthly_sales_quantity",
+          "display_name": "monthly_sales_quantity",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:METRIC:2",
+    "category": "METRIC",
+    "left": "医院销售额",
+    "right": "医院销售量",
+    "parameter": 3,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:hospital_sales_amount",
+          "canonical_code": "hospital_sales_amount",
+          "display_name": "hospital_sales_amount",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:hospital_sales_quantity",
+          "canonical_code": "hospital_sales_quantity",
+          "display_name": "hospital_sales_quantity",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:METRIC:3",
+    "category": "METRIC",
+    "left": "商品收入",
+    "right": "商品销量",
+    "parameter": 4,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:product_sales_amount",
+          "canonical_code": "product_sales_amount",
+          "display_name": "product_sales_amount",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:product_sales_quantity",
+          "canonical_code": "product_sales_quantity",
+          "display_name": "product_sales_quantity",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:METRIC:4",
+    "category": "METRIC",
+    "left": "季度销售金额",
+    "right": "季度销售数量",
+    "parameter": 5,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:quarterly_sales_amount",
+          "canonical_code": "quarterly_sales_amount",
+          "display_name": "quarterly_sales_amount",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:quarterly_sales_quantity",
+          "canonical_code": "quarterly_sales_quantity",
+          "display_name": "quarterly_sales_quantity",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:ADD_REPLACE:0",
+    "category": "ADD_REPLACE",
+    "left": "再加销售量",
+    "right": "改成销售量",
+    "parameter": 1,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:volume",
+          "canonical_code": "volume",
+          "display_name": "volume",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:volume",
+          "canonical_code": "volume",
+          "display_name": "volume",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:ADD_REPLACE:1",
+    "category": "ADD_REPLACE",
+    "left": "同时显示利润",
+    "right": "只保留利润",
+    "parameter": 2,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:profit",
+          "canonical_code": "profit",
+          "display_name": "profit",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:profit",
+          "canonical_code": "profit",
+          "display_name": "profit",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:ADD_REPLACE:2",
+    "category": "ADD_REPLACE",
+    "left": "补充订单笔数",
+    "right": "改为订单笔数",
+    "parameter": 3,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:order_count",
+          "canonical_code": "order_count",
+          "display_name": "order_count",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:order_count",
+          "canonical_code": "order_count",
+          "display_name": "order_count",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:ADD_REPLACE:3",
+    "category": "ADD_REPLACE",
+    "left": "加上退货数量",
+    "right": "只看退货数量",
+    "parameter": 4,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:return_quantity",
+          "canonical_code": "return_quantity",
+          "display_name": "return_quantity",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:return_quantity",
+          "canonical_code": "return_quantity",
+          "display_name": "return_quantity",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:ADD_REPLACE:4",
+    "category": "ADD_REPLACE",
+    "left": "保留销售额并增加成本",
+    "right": "把销售额换成成本",
+    "parameter": 5,
+    "left_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:cost",
+          "canonical_code": "cost",
+          "display_name": "cost",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "right_contract": {
+      "subject": null,
+      "metrics": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:cost",
+          "canonical_code": "cost",
+          "display_name": "cost",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "dimensions": [],
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "filter_expression": null,
+      "time_spec": null,
+      "ranking_spec": null,
+      "comparison_spec": null,
+      "relationship_spec": null,
+      "source_dataset_ref": null,
+      "delivery_spec": {
+        "modes": [
+          "TABLE"
+        ],
+        "export_format": null,
+        "report_template_id": null,
+        "chart_preferences": null
+      },
+      "analysis_goals": [],
+      "policy_decisions": []
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:FOLLOWUP_NEW:0",
+    "category": "FOLLOWUP_NEW",
+    "left": "还有呢",
+    "right": "换个问题",
+    "parameter": 1,
+    "left_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [
+        "ELLIPSIS"
+      ],
+      "followup_signals": [],
+      "topic_shift_signals": [],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "right_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:FOLLOWUP_NEW:1",
+    "category": "FOLLOWUP_NEW",
+    "left": "继续看这些医院",
+    "right": "新问题：查库存",
+    "parameter": 2,
+    "left_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [
+        "ELLIPSIS"
+      ],
+      "followup_signals": [],
+      "topic_shift_signals": [],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "right_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:FOLLOWUP_NEW:2",
+    "category": "FOLLOWUP_NEW",
+    "left": "那它呢",
+    "right": "重新开始查询",
+    "parameter": 3,
+    "left_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [
+        "ELLIPSIS"
+      ],
+      "followup_signals": [],
+      "topic_shift_signals": [],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "right_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:FOLLOWUP_NEW:3",
+    "category": "FOLLOWUP_NEW",
+    "left": "上面这些还有吗",
+    "right": "另外查询供应商",
+    "parameter": 4,
+    "left_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [
+        "ELLIPSIS"
+      ],
+      "followup_signals": [],
+      "topic_shift_signals": [],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "right_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:FOLLOWUP_NEW:4",
+    "category": "FOLLOWUP_NEW",
+    "left": "接着展示",
+    "right": "切换话题",
+    "parameter": 5,
+    "left_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [
+        "ELLIPSIS"
+      ],
+      "followup_signals": [],
+      "topic_shift_signals": [],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "right_contract": {
+      "mentions": [],
+      "dialogue_act_candidates": [],
+      "operation_markers": [],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:TREND_COMPARE:0",
+    "category": "TREND_COMPARE",
+    "left": "销售额月度趋势",
+    "right": "销售额同比去年",
+    "parameter": 1,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "TIME_SERIES"
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "COMPARISON",
+      "comparison": {
+        "comparison_type": "YOY",
+        "baseline": {
+          "baseline_type": "TIME",
+          "range": null,
+          "relative_period": "PREVIOUS_YEAR"
+        },
+        "current_period": null,
+        "comparison_period": null,
+        "calculation": "GROWTH_RATE",
+        "output_metrics": [
+          {
+            "catalog_type": "METRIC",
+            "semantic_role": "MEASURE",
+            "canonical_id": "fixture:sales",
+            "canonical_code": "sales",
+            "display_name": "sales",
+            "catalog_version": "fixture-catalog-v1",
+            "semantic_model_id": "fixture-model",
+            "business_domain_ids": [
+              "fixture-domain"
+            ],
+            "source_mention_ids": [],
+            "resolution_source": "DECLARED_TEST_CATALOG"
+          }
+        ]
+      }
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:TREND_COMPARE:1",
+    "category": "TREND_COMPARE",
+    "left": "销售量走势",
+    "right": "销售量环比上期",
+    "parameter": 2,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:volume",
+          "canonical_code": "volume",
+          "display_name": "volume",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "TIME_SERIES"
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:volume",
+          "canonical_code": "volume",
+          "display_name": "volume",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "COMPARISON",
+      "comparison": {
+        "comparison_type": "MOM",
+        "baseline": {
+          "baseline_type": "TIME",
+          "range": null,
+          "relative_period": "PREVIOUS_PERIOD"
+        },
+        "current_period": null,
+        "comparison_period": null,
+        "calculation": "GROWTH_RATE",
+        "output_metrics": [
+          {
+            "catalog_type": "METRIC",
+            "semantic_role": "MEASURE",
+            "canonical_id": "fixture:volume",
+            "canonical_code": "volume",
+            "display_name": "volume",
+            "catalog_version": "fixture-catalog-v1",
+            "semantic_model_id": "fixture-model",
+            "business_domain_ids": [
+              "fixture-domain"
+            ],
+            "source_mention_ids": [],
+            "resolution_source": "DECLARED_TEST_CATALOG"
+          }
+        ]
+      }
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:TREND_COMPARE:2",
+    "category": "TREND_COMPARE",
+    "left": "近一年收入变化",
+    "right": "今年收入同比去年",
+    "parameter": 3,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:income",
+          "canonical_code": "income",
+          "display_name": "income",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "TIME_SERIES"
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:income",
+          "canonical_code": "income",
+          "display_name": "income",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "COMPARISON",
+      "comparison": {
+        "comparison_type": "YOY",
+        "baseline": {
+          "baseline_type": "TIME",
+          "range": null,
+          "relative_period": "PREVIOUS_YEAR"
+        },
+        "current_period": null,
+        "comparison_period": null,
+        "calculation": "GROWTH_RATE",
+        "output_metrics": [
+          {
+            "catalog_type": "METRIC",
+            "semantic_role": "MEASURE",
+            "canonical_id": "fixture:income",
+            "canonical_code": "income",
+            "display_name": "income",
+            "catalog_version": "fixture-catalog-v1",
+            "semantic_model_id": "fixture-model",
+            "business_domain_ids": [
+              "fixture-domain"
+            ],
+            "source_mention_ids": [],
+            "resolution_source": "DECLARED_TEST_CATALOG"
+          }
+        ]
+      }
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:TREND_COMPARE:3",
+    "category": "TREND_COMPARE",
+    "left": "订单数季度趋势",
+    "right": "订单数季度同比",
+    "parameter": 4,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:orders",
+          "canonical_code": "orders",
+          "display_name": "orders",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "TIME_SERIES"
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:orders",
+          "canonical_code": "orders",
+          "display_name": "orders",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "COMPARISON",
+      "comparison": {
+        "comparison_type": "YOY",
+        "baseline": {
+          "baseline_type": "TIME",
+          "range": null,
+          "relative_period": "PREVIOUS_YEAR"
+        },
+        "current_period": null,
+        "comparison_period": null,
+        "calculation": "GROWTH_RATE",
+        "output_metrics": [
+          {
+            "catalog_type": "METRIC",
+            "semantic_role": "MEASURE",
+            "canonical_id": "fixture:orders",
+            "canonical_code": "orders",
+            "display_name": "orders",
+            "catalog_version": "fixture-catalog-v1",
+            "semantic_model_id": "fixture-model",
+            "business_domain_ids": [
+              "fixture-domain"
+            ],
+            "source_mention_ids": [],
+            "resolution_source": "DECLARED_TEST_CATALOG"
+          }
+        ]
+      }
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:TREND_COMPARE:4",
+    "category": "TREND_COMPARE",
+    "left": "利润历史走势",
+    "right": "本月利润环比",
+    "parameter": 5,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:profit",
+          "canonical_code": "profit",
+          "display_name": "profit",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "TIME_SERIES"
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:profit",
+          "canonical_code": "profit",
+          "display_name": "profit",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": {
+        "anchor": {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "TIME_FIELD",
+          "canonical_id": "fixture:transaction_date",
+          "canonical_code": "transaction_date",
+          "display_name": "transaction_date",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        },
+        "range": {
+          "start": "2025-09-01T00:00:00Z",
+          "end_exclusive": "2026-09-01T00:00:00Z"
+        },
+        "grain": "MONTH",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "timezone": "Asia/Shanghai",
+        "calendar": "NATURAL",
+        "source": "USER_EXPLICIT",
+        "as_of": "2026-09-07T00:00:00Z",
+        "data_watermark": null,
+        "fiscal_calendar_id": null,
+        "calendar_policy_version": null,
+        "default_policy_id": null,
+        "default_policy_version": null,
+        "include_incomplete_period": false,
+        "missing_period_policy": "LEAVE_MISSING",
+        "comparison": null
+      },
+      "group_by": [],
+      "payload_type": "COMPARISON",
+      "comparison": {
+        "comparison_type": "MOM",
+        "baseline": {
+          "baseline_type": "TIME",
+          "range": null,
+          "relative_period": "PREVIOUS_PERIOD"
+        },
+        "current_period": null,
+        "comparison_period": null,
+        "calculation": "GROWTH_RATE",
+        "output_metrics": [
+          {
+            "catalog_type": "METRIC",
+            "semantic_role": "MEASURE",
+            "canonical_id": "fixture:profit",
+            "canonical_code": "profit",
+            "display_name": "profit",
+            "catalog_version": "fixture-catalog-v1",
+            "semantic_model_id": "fixture-model",
+            "business_domain_ids": [
+              "fixture-domain"
+            ],
+            "source_mention_ids": [],
+            "resolution_source": "DECLARED_TEST_CATALOG"
+          }
+        ]
+      }
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LIST_GROUP:0",
+    "category": "LIST_GROUP",
+    "left": "列出医院名单",
+    "right": "按医院统计销售额",
+    "parameter": 1,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [
+          {
+            "output_field_id": "hospital",
+            "ref": {
+              "catalog_type": "ATTRIBUTE",
+              "semantic_role": "PROJECTION_FIELD",
+              "canonical_id": "fixture:hospital",
+              "canonical_code": "hospital",
+              "display_name": "hospital",
+              "catalog_version": "fixture-catalog-v1",
+              "semantic_model_id": "fixture-model",
+              "business_domain_ids": [
+                "fixture-domain"
+              ],
+              "source_mention_ids": [],
+              "resolution_source": "DECLARED_TEST_CATALOG"
+            },
+            "role": "PROJECTION_FIELD",
+            "display_label": null,
+            "alias_policy": "STABLE_ID",
+            "position": 0
+          }
+        ],
+        "default_display_policy_id": null
+      },
+      "payload_type": "DETAIL_ROWS",
+      "source_entity": {
+        "catalog_type": "ENTITY",
+        "semantic_role": "SOURCE_ENTITY",
+        "canonical_id": "fixture:hospital",
+        "canonical_code": "hospital",
+        "display_name": "hospital",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "limit": null
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": null,
+      "group_by": [
+        {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "GROUP_BY",
+          "canonical_id": "fixture:hospital",
+          "canonical_code": "hospital",
+          "display_name": "hospital",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "payload_type": "GROUPED_AGGREGATE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LIST_GROUP:1",
+    "category": "LIST_GROUP",
+    "left": "列出供应商",
+    "right": "按供应商统计销量",
+    "parameter": 2,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [
+          {
+            "output_field_id": "hospital",
+            "ref": {
+              "catalog_type": "ATTRIBUTE",
+              "semantic_role": "PROJECTION_FIELD",
+              "canonical_id": "fixture:hospital",
+              "canonical_code": "hospital",
+              "display_name": "hospital",
+              "catalog_version": "fixture-catalog-v1",
+              "semantic_model_id": "fixture-model",
+              "business_domain_ids": [
+                "fixture-domain"
+              ],
+              "source_mention_ids": [],
+              "resolution_source": "DECLARED_TEST_CATALOG"
+            },
+            "role": "PROJECTION_FIELD",
+            "display_label": null,
+            "alias_policy": "STABLE_ID",
+            "position": 0
+          }
+        ],
+        "default_display_policy_id": null
+      },
+      "payload_type": "DETAIL_ROWS",
+      "source_entity": {
+        "catalog_type": "ENTITY",
+        "semantic_role": "SOURCE_ENTITY",
+        "canonical_id": "fixture:hospital",
+        "canonical_code": "hospital",
+        "display_name": "hospital",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "limit": null
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": null,
+      "group_by": [
+        {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "GROUP_BY",
+          "canonical_id": "fixture:hospital",
+          "canonical_code": "hospital",
+          "display_name": "hospital",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "payload_type": "GROUPED_AGGREGATE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LIST_GROUP:2",
+    "category": "LIST_GROUP",
+    "left": "商品名单",
+    "right": "按商品汇总收入",
+    "parameter": 3,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [
+          {
+            "output_field_id": "hospital",
+            "ref": {
+              "catalog_type": "ATTRIBUTE",
+              "semantic_role": "PROJECTION_FIELD",
+              "canonical_id": "fixture:hospital",
+              "canonical_code": "hospital",
+              "display_name": "hospital",
+              "catalog_version": "fixture-catalog-v1",
+              "semantic_model_id": "fixture-model",
+              "business_domain_ids": [
+                "fixture-domain"
+              ],
+              "source_mention_ids": [],
+              "resolution_source": "DECLARED_TEST_CATALOG"
+            },
+            "role": "PROJECTION_FIELD",
+            "display_label": null,
+            "alias_policy": "STABLE_ID",
+            "position": 0
+          }
+        ],
+        "default_display_policy_id": null
+      },
+      "payload_type": "DETAIL_ROWS",
+      "source_entity": {
+        "catalog_type": "ENTITY",
+        "semantic_role": "SOURCE_ENTITY",
+        "canonical_id": "fixture:hospital",
+        "canonical_code": "hospital",
+        "display_name": "hospital",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "limit": null
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": null,
+      "group_by": [
+        {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "GROUP_BY",
+          "canonical_id": "fixture:hospital",
+          "canonical_code": "hospital",
+          "display_name": "hospital",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "payload_type": "GROUPED_AGGREGATE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LIST_GROUP:3",
+    "category": "LIST_GROUP",
+    "left": "城市列表",
+    "right": "按城市统计订单数",
+    "parameter": 4,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [
+          {
+            "output_field_id": "hospital",
+            "ref": {
+              "catalog_type": "ATTRIBUTE",
+              "semantic_role": "PROJECTION_FIELD",
+              "canonical_id": "fixture:hospital",
+              "canonical_code": "hospital",
+              "display_name": "hospital",
+              "catalog_version": "fixture-catalog-v1",
+              "semantic_model_id": "fixture-model",
+              "business_domain_ids": [
+                "fixture-domain"
+              ],
+              "source_mention_ids": [],
+              "resolution_source": "DECLARED_TEST_CATALOG"
+            },
+            "role": "PROJECTION_FIELD",
+            "display_label": null,
+            "alias_policy": "STABLE_ID",
+            "position": 0
+          }
+        ],
+        "default_display_policy_id": null
+      },
+      "payload_type": "DETAIL_ROWS",
+      "source_entity": {
+        "catalog_type": "ENTITY",
+        "semantic_role": "SOURCE_ENTITY",
+        "canonical_id": "fixture:hospital",
+        "canonical_code": "hospital",
+        "display_name": "hospital",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "limit": null
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": null,
+      "group_by": [
+        {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "GROUP_BY",
+          "canonical_id": "fixture:hospital",
+          "canonical_code": "hospital",
+          "display_name": "hospital",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "payload_type": "GROUPED_AGGREGATE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LIST_GROUP:4",
+    "category": "LIST_GROUP",
+    "left": "科室名单",
+    "right": "按科室统计销售额",
+    "parameter": 5,
+    "left_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [
+          {
+            "output_field_id": "hospital",
+            "ref": {
+              "catalog_type": "ATTRIBUTE",
+              "semantic_role": "PROJECTION_FIELD",
+              "canonical_id": "fixture:hospital",
+              "canonical_code": "hospital",
+              "display_name": "hospital",
+              "catalog_version": "fixture-catalog-v1",
+              "semantic_model_id": "fixture-model",
+              "business_domain_ids": [
+                "fixture-domain"
+              ],
+              "source_mention_ids": [],
+              "resolution_source": "DECLARED_TEST_CATALOG"
+            },
+            "role": "PROJECTION_FIELD",
+            "display_label": null,
+            "alias_policy": "STABLE_ID",
+            "position": 0
+          }
+        ],
+        "default_display_policy_id": null
+      },
+      "payload_type": "DETAIL_ROWS",
+      "source_entity": {
+        "catalog_type": "ENTITY",
+        "semantic_role": "SOURCE_ENTITY",
+        "canonical_id": "fixture:hospital",
+        "canonical_code": "hospital",
+        "display_name": "hospital",
+        "catalog_version": "fixture-catalog-v1",
+        "semantic_model_id": "fixture-model",
+        "business_domain_ids": [
+          "fixture-domain"
+        ],
+        "source_mention_ids": [],
+        "resolution_source": "DECLARED_TEST_CATALOG"
+      },
+      "limit": null
+    },
+    "right_contract": {
+      "filters": null,
+      "projection_spec": {
+        "mode": "EXPLICIT",
+        "items": [],
+        "default_display_policy_id": null
+      },
+      "measures": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "time": null,
+      "group_by": [
+        {
+          "catalog_type": "DIMENSION",
+          "semantic_role": "GROUP_BY",
+          "canonical_id": "fixture:hospital",
+          "canonical_code": "hospital",
+          "display_name": "hospital",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ],
+      "payload_type": "GROUPED_AGGREGATE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LINEAGE_DEFINITION:0",
+    "category": "LINEAGE_DEFINITION",
+    "left": "医院名称来自哪个表",
+    "right": "销售额怎么计算",
+    "parameter": 1,
+    "left_contract": {
+      "payload_type": "LINEAGE",
+      "lineage_target": {
+        "target_type": "FIELD",
+        "ref": {
+          "catalog_type": "ATTRIBUTE",
+          "semantic_role": "SOURCE_ENTITY",
+          "canonical_id": "fixture:name",
+          "canonical_code": "name",
+          "display_name": "name",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      },
+      "direction": "BOTH"
+    },
+    "right_contract": {
+      "payload_type": "METRIC_DEFINITION",
+      "metric_refs": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ]
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LINEAGE_DEFINITION:1",
+    "category": "LINEAGE_DEFINITION",
+    "left": "amount_with_tax上游是什么",
+    "right": "含税销售額是什么口径",
+    "parameter": 2,
+    "left_contract": {
+      "payload_type": "LINEAGE",
+      "lineage_target": {
+        "target_type": "FIELD",
+        "ref": {
+          "catalog_type": "ATTRIBUTE",
+          "semantic_role": "SOURCE_ENTITY",
+          "canonical_id": "fixture:name",
+          "canonical_code": "name",
+          "display_name": "name",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      },
+      "direction": "BOTH"
+    },
+    "right_contract": {
+      "payload_type": "METRIC_DEFINITION",
+      "metric_refs": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ]
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LINEAGE_DEFINITION:2",
+    "category": "LINEAGE_DEFINITION",
+    "left": "商品名称来源字段",
+    "right": "订单数指标含义",
+    "parameter": 3,
+    "left_contract": {
+      "payload_type": "LINEAGE",
+      "lineage_target": {
+        "target_type": "FIELD",
+        "ref": {
+          "catalog_type": "ATTRIBUTE",
+          "semantic_role": "SOURCE_ENTITY",
+          "canonical_id": "fixture:name",
+          "canonical_code": "name",
+          "display_name": "name",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      },
+      "direction": "BOTH"
+    },
+    "right_contract": {
+      "payload_type": "METRIC_DEFINITION",
+      "metric_refs": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ]
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LINEAGE_DEFINITION:3",
+    "category": "LINEAGE_DEFINITION",
+    "left": "库存字段来源",
+    "right": "库存金额指标定义",
+    "parameter": 4,
+    "left_contract": {
+      "payload_type": "LINEAGE",
+      "lineage_target": {
+        "target_type": "FIELD",
+        "ref": {
+          "catalog_type": "ATTRIBUTE",
+          "semantic_role": "SOURCE_ENTITY",
+          "canonical_id": "fixture:name",
+          "canonical_code": "name",
+          "display_name": "name",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      },
+      "direction": "BOTH"
+    },
+    "right_contract": {
+      "payload_type": "METRIC_DEFINITION",
+      "metric_refs": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ]
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:LINEAGE_DEFINITION:4",
+    "category": "LINEAGE_DEFINITION",
+    "left": "订单表上游",
+    "right": "订单金额计算公式",
+    "parameter": 5,
+    "left_contract": {
+      "payload_type": "LINEAGE",
+      "lineage_target": {
+        "target_type": "FIELD",
+        "ref": {
+          "catalog_type": "ATTRIBUTE",
+          "semantic_role": "SOURCE_ENTITY",
+          "canonical_id": "fixture:name",
+          "canonical_code": "name",
+          "display_name": "name",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      },
+      "direction": "BOTH"
+    },
+    "right_contract": {
+      "payload_type": "METRIC_DEFINITION",
+      "metric_refs": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "fixture:sales",
+          "canonical_code": "sales",
+          "display_name": "sales",
+          "catalog_version": "fixture-catalog-v1",
+          "semantic_model_id": "fixture-model",
+          "business_domain_ids": [
+            "fixture-domain"
+          ],
+          "source_mention_ids": [],
+          "resolution_source": "DECLARED_TEST_CATALOG"
+        }
+      ]
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:REFRESH_REVISE:0",
+    "category": "REFRESH_REVISE",
+    "left": "刷新这个结果",
+    "right": "将指标改为销量",
+    "parameter": 1,
+    "left_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REFRESH"
+    },
+    "right_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REVISE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:REFRESH_REVISE:1",
+    "category": "REFRESH_REVISE",
+    "left": "用最新数据重跑",
+    "right": "更改筛选条件",
+    "parameter": 2,
+    "left_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REFRESH"
+    },
+    "right_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REVISE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:REFRESH_REVISE:2",
+    "category": "REFRESH_REVISE",
+    "left": "重试同一查询",
+    "right": "时间改为去年",
+    "parameter": 3,
+    "left_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REFRESH"
+    },
+    "right_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REVISE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:REFRESH_REVISE:3",
+    "category": "REFRESH_REVISE",
+    "left": "重新获取相同口径结果",
+    "right": "把月度改为季度",
+    "parameter": 4,
+    "left_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REFRESH"
+    },
+    "right_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REVISE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  },
+  {
+    "id": "contrast:REFRESH_REVISE:4",
+    "category": "REFRESH_REVISE",
+    "left": "保持口径刷新",
+    "right": "只保留利润指标",
+    "parameter": 5,
+    "left_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REFRESH"
+    },
+    "right_contract": {
+      "payload_type": "CONTROL",
+      "control_action": "REVISE"
+    },
+    "ground_truth_scope": [
+      "DECLARED_CONTRACT_DIFFERENCE"
+    ],
+    "annotation_status": "PARTIAL",
+    "unlabeled_fields": [
+      "current_turn_model_parse",
+      "production_catalog_binding"
+    ],
+    "current_turn_model_parse": null,
+    "production_catalog_binding": null
+  }
+]

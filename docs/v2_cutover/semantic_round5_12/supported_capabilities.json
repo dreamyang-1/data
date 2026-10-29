@@ -1,0 +1,41 @@
+{
+  "contract": "v2-limited-scalar-deployment-capabilities-v1",
+  "authorized_scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [205],
+    "data_source_id": 58,
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "accepted_only_when_all_gates_pass": [
+    "RawTurnPlanner produces a current authorized plan",
+    "payload_type is SCALAR_AGGREGATE",
+    "native ASL2 lowering is SUPPORTED_PLAN_ONLY",
+    "Catalog, vector index, source bundle, scope and data-source pins match",
+    "bounded time predicates have the field-bound Asia/Shanghai storage contract",
+    "pinned SQL validation succeeds",
+    "strict read-only snapshot execution returns exactly one complete row",
+    "result columns, numeric types, timeout proof, snapshot proof and result contract pass"
+  ],
+  "observed_supported_examples_from_round_5_11": [
+    "COUNT(DISTINCT sales_order.order_key) with province and bounded annual time filters",
+    "SUM(sales_order.amount_with_tax) with exact Decimal preservation"
+  ],
+  "not_blanket_certified": [
+    "all metrics",
+    "all scalar aggregates",
+    "all filters or relationships",
+    "all historical time storage"
+  ],
+  "rejected_before_business_sql": [
+    "GROUPED_AGGREGATE",
+    "DETAIL_ROWS",
+    "RANKING",
+    "Dataset follow-up",
+    "unsupported ASL2 aggregate, filter, relationship, time, ordering or source plan",
+    "missing or mismatched scope, Catalog pin, time evidence, source digest or data source",
+    "incomplete or conflicting persisted state"
+  ],
+  "fallback_to_v1": false,
+  "question_string_allowlist": false,
+  "public_contract_changes": 0
+}

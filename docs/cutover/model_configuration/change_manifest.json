@@ -1,0 +1,84 @@
+{
+  "baseline_commit": "2cd4d93de8ce151f0b859e8252db3f0ed7ce141c",
+  "feature_branch": "cutover-qwen37-config-20260909t031200z",
+  "files": [
+    {
+      "repository_path": "app/config.py",
+      "development_sha256": "a284ce9799b14864228156519c762dc5fdc166de4cc3420dec67186753c4d20a",
+      "normalized_sha256": "a284ce9799b14864228156519c762dc5fdc166de4cc3420dec67186753c4d20a",
+      "baseline_sha256": "d4e1a778feb0874c7a30ff62a246a55afee302da5c24e558548b6142b97de129"
+    },
+    {
+      "repository_path": ".env.example",
+      "development_sha256": "b204b412cc15b8fa4d2311c6a0ef03e6135d43edfbbbcd6a27789905bbdc1806",
+      "normalized_sha256": "b204b412cc15b8fa4d2311c6a0ef03e6135d43edfbbbcd6a27789905bbdc1806",
+      "baseline_sha256": "36bd28afacc48cf4600f67d0a30e1846ca0a845d2a26422f6e6d9b5e3810a25c"
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.json",
+      "development_sha256": "e2e44a12fcfcfa247461e9172bc10b4305dc82a79bf8df3b17a301b91bd1fd06",
+      "normalized_sha256": "4a526657fa434cb89546991aa0654649d4076bcbd5309b0ce01e67824c49fe75",
+      "baseline_sha256": "614bd0d1b4f0de58bd47fcf3d71b8c3a697210fa32a53534ce4aaf6f6d83ffb8"
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.csv",
+      "development_sha256": "7ee4255bab55f5cdc95bc9c3d539019eeceb7558f138eb95c9162c631c0a649a",
+      "normalized_sha256": "bccd3b4a0e5dada0a94f3307232633b4d2a3d26e1d77c9cd8e1674eb62382ac7",
+      "baseline_sha256": "3dc0bb5a7ee90ed56f46428cace263ea74b5be3eabb868e7f461b7c7c1dbb514"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.json",
+      "development_sha256": "b2432beac00145d78bff41fa08dde7be18973e5a4ce4548ed6e5220270b74124",
+      "normalized_sha256": "e5cc3d8b614412d66deb430a8f8e4169443902fba08ba54c91874c6ddeab9ab7",
+      "baseline_sha256": "39b00675586aa1bd0273135449bf6cef8af9fd3c53e9e7dc580753e2081635b5"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.csv",
+      "development_sha256": "28bda17d7db6675d36fce002d0b4685d81ae250acdba5b513e580f6cc1575ca9",
+      "normalized_sha256": "30b48ab5c2c43d661a0d2e682109d560725211f78e0ba994546b6f1e9d13787f",
+      "baseline_sha256": "a3d99e1482fa96d0c9ecab92160a7a4dbeb950c9bdab8325cffca5274cc83bd9"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.md",
+      "development_sha256": "1a7aa8cb25e089861e8149128dbc552a773f1bc4ec8032fc6a4b2f89d2d4d3f4",
+      "normalized_sha256": "f61e5a07a50a9cadadeabb216932e9c1358feb8e7ca14f5a943abf18cfd989b8",
+      "baseline_sha256": "22bbd168e5ab7f07254e6c47208f95167789376c514bed1ae6075b51a48e1f62"
+    },
+    {
+      "repository_path": "docs/cutover/closure_report.md",
+      "development_sha256": "e7c0801bee739d2af7a89f9cb6f5cee425f494acfe92082c7feb76ac1903e606",
+      "normalized_sha256": "bf27a66dd3476f73ca1bcc55d12bd44760ae39534b2424302925a1dcc06117a4",
+      "baseline_sha256": "550082fd5c05f3fa2fc9afc63854a0ab04f22beda08912d44241f07818c0faf4"
+    },
+    {
+      "repository_path": "docs/cutover/model_configuration/closure_report.md",
+      "development_sha256": "6874b8d54900f559937fde7add81c63ac5f65a2ce6e44ef2d21de7023d0926ea",
+      "normalized_sha256": "cd8d6249254de79d3e88ef800e6e81e17c11bcb43c817e5990eb59765c145c7d",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/model_configuration/configuration_receipt.json",
+      "development_sha256": "9baa13aea190f68d52037ea277364ba620cd70629e23de04b9e37f3fe478e739",
+      "normalized_sha256": "fae86846c3087f627f779c2c243325182615e43dfa25b184a1253feffeaa86f3",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/model_configuration/smoke.json",
+      "development_sha256": "a70eba2497f4f577bb643a5cdf228868252baa93298586f1e1e054d794757c17",
+      "normalized_sha256": "8ee29e5c762bf36aedb881195550f15b1896f835af9e620cbd7f8c60602fbfb8",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/model_configuration/test_delta.json",
+      "development_sha256": "0103340d7d62ecbac1a528f35c6e599be70a7fc393f183a1e9a265eecc5d8faa",
+      "normalized_sha256": "6b5f9e3796e881af8226c5dadaa0e871afc9804cd1ecd9b4ea78227bc5be00fe",
+      "baseline_sha256": null
+    }
+  ],
+  "normalization": "CRLF to LF only",
+  "runtime_files_changed": [
+    "app/config.py"
+  ],
+  "v1_routing_changed": false,
+  "private_snapshot_or_credentials_copied": false
+}

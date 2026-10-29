@@ -1,0 +1,227 @@
+{
+  "date": "2026-10-27",
+  "root_cause_classification": "PROVEN",
+  "root_cause": "模型已经给出完整计划，boundary_targets仍把任务question中的下游用途说明与本步交付物混合匹配，错误地把原子成分认成复合指标，导致后处理再次展开。",
+  "application_files": [
+    "app/planning/task_plan_stages.py"
+  ],
+  "change": "明确交付物中登记的指标作为本步目标，结合现有完整计划和依赖关系识别已齐备的成分；仅在交付物未命名指标且不是依赖明细查询时，从任务问题识别目标。删除原先混合扫描两段文字的路径。",
+  "preserved": [
+    "当前回退版任务规划提示词及参数提取提示词",
+    "独立条件和时间范围",
+    "业务员ID与销售员编码的字段来源隔离",
+    "真正需要拆公式的任务",
+    "全局意图、授权和ASL校验",
+    "配置及无关未提交改动"
+  ],
+  "offline": {
+    "new_cases": 21,
+    "new_cases_passed": 21,
+    "baseline": {
+      "passed": 6297,
+      "failed": 277,
+      "errors": 7
+    },
+    "final": {
+      "passed": 6318,
+      "failed": 277,
+      "errors": 7
+    },
+    "new_regressions": [],
+    "initial_full_run": {
+      "passed": 6317,
+      "failed": 278,
+      "errors": 7
+    },
+    "timing_failure_triage": [
+      {
+        "case": "tests.test_api::test_progress_delivery_is_not_blocked_by_slow_telemetry",
+        "classification": "TIMING_FLAKE_UNRELATED_CALL_PATH",
+        "raw_failure": "30 ms asyncio deadline exceeded once in full-final",
+        "unchanged_test_reruns": {
+          "timing-baseline": 20,
+          "timing-final": 20
+        },
+        "action": "No application/test changes; keep the original failed run in evidence."
+      }
+    ],
+    "note": "全量不是全绿，277项既有失败和7项既有错误未改动；第一次全量另有一次30毫秒计时失败，原断言在前后版本各20次复测通过，第二次全量亦通过该项。"
+  },
+  "recorded_model_output_replay": {
+    "runs": 36,
+    "company_broken_outline_before": 8,
+    "company_broken_outline_after": 4,
+    "coverage_broken_outlines_before": 9,
+    "coverage_broken_outlines_after": 3,
+    "all_company_plans_four_tasks": true,
+    "all_coverage_plans_three_tasks": true,
+    "limit": "回放实际保存的模型输出，只验证任务后处理；真实端到端验收另列。"
+  },
+  "deployment": {
+    "target": "49",
+    "method": "仅合并boundary_targets函数差异；备份部署前文件，保留远端其他代码及配置。",
+    "live": "UP",
+    "ready": "READY",
+    "prompt_unchanged": true,
+    "protected_files_unchanged": true,
+    "deployed_sha256": "f5e15d379c226832d7dfd6b7353765d68a133ec364b04e7c95a69f0c1047b57c"
+  },
+  "original_question": {
+    "question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+    "verdict": "CONTENT_CHECK_PASSED",
+    "task_count": 4,
+    "all_tasks_completed": true,
+    "checks": {
+      "five_unique_people": true,
+      "five_unique_company_rows": true,
+      "company_cohort_matches": true,
+      "company_name_present": true,
+      "amounts_descending": true,
+      "averages_match": true,
+      "all_five_names_in_answer": true,
+      "all_companies_in_answer": true,
+      "name_per_code_matches": true
+    },
+    "actual_sql": {
+      "executions": 3,
+      "component_date_2025": true,
+      "components_not_limited": true,
+      "company_has_join": true,
+      "company_has_no_date": true,
+      "company_filter_count": 5,
+      "company_filter_exact_top5": true
+    },
+    "attachment_rows": [
+      5,
+      5
+    ],
+    "attachment_notes_page": false,
+    "unit_check": "聊天表头分别含元、笔、元；平均每单销售金额的登记单位为元。",
+    "model_output_in_this_run": "模型给出排名和公司两项业务目标，后处理展开为4项；已拆好的4项不再重复展开由真实历史输出回放验证。"
+  },
+  "historical_regression": {
+    "concurrency": 2,
+    "independent_conversations": true,
+    "executed": 10,
+    "execution_completed": 9,
+    "execution_partial": 1,
+    "all_content_passed": false,
+    "cases": [
+      {
+        "id": "company_top5",
+        "question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+        "before_status": "COMPLETED",
+        "after_status": "COMPLETED",
+        "content_verdict": "CONTENT_CHECK_PASSED",
+        "note": "已核对当前问题对应的最终回答、实际SQL及适用附件。"
+      },
+      {
+        "id": "shanghai_coverage",
+        "question": "统计上海市区域医院覆盖率",
+        "before_status": "COMPLETED",
+        "after_status": "COMPLETED",
+        "content_verdict": "EXISTING_ISSUE",
+        "note": "修改前后均返回589个经销商的覆盖率，未交付上海整体覆盖率；解释文字仍有个/家和缺少有限数值的错误说明。"
+      },
+      {
+        "id": "hospital_sales_products",
+        "question": "2025年9月到12月期间针对上海交通大学医学院附属新华医院销售订单金额最多的销售员是谁?销售了哪些产品?",
+        "before_status": "PARTIAL_SUCCESS",
+        "after_status": "PARTIAL_SUCCESS",
+        "content_verdict": "EXISTING_ISSUE",
+        "note": "修改前后均查到销售额最高的人员，但产品明细因上游结果无法编译为下游精确过滤而未执行。"
+      },
+      {
+        "id": "semantic_entities",
+        "question": "当前语义模型中建立了哪些实体",
+        "before_status": "COMPLETED",
+        "after_status": "COMPLETED",
+        "content_verdict": "CONTENT_CHECK_PASSED",
+        "note": "已核对当前问题对应的最终回答、实际SQL及适用附件。"
+      },
+      {
+        "id": "orthopedics",
+        "question": "看看骨科那边卖得怎么样",
+        "before_status": "COMPLETED",
+        "after_status": "COMPLETED",
+        "content_verdict": "CONTENT_CHECK_PASSED",
+        "note": "已核对当前问题对应的最终回答、实际SQL及适用附件。"
+      },
+      {
+        "id": "longest_cooperation",
+        "question": "合作时间最长的销售商是哪家?",
+        "before_status": "COMPLETED",
+        "after_status": "COMPLETED",
+        "content_verdict": "CONTENT_CHECK_PASSED",
+        "note": "已核对当前问题对应的最终回答、实际SQL及适用附件。"
+      },
+      {
+        "id": "cooperation_over_three_months",
+        "question": "合作时长大于3个月的经销商有哪些",
+        "before_status": "COMPLETED",
+        "after_status": "COMPLETED",
+        "content_verdict": "PARTIALLY_VERIFIED",
+        "note": "超过90天的SQL筛选、返回字段和附件数据通过核对；LIMIT 1000下不能确认名单完整，回答中完整返回的表述仍未经证实。"
+      },
+      {
+        "id": "dealer_duration_exact",
+        "question": "查询筛选合作时长超3个月的经销商",
+        "before_status": "COMPLETED",
+        "after_status": "COMPLETED",
+        "content_verdict": "PARTIALLY_VERIFIED",
+        "note": "超过90天的SQL筛选、返回字段和附件数据通过核对；LIMIT 1000下不能确认名单完整，回答中完整返回的表述仍未经证实。"
+      },
+      {
+        "id": "dealer_duration_recent",
+        "question": "查询合作时间长大与3个月的经销商",
+        "before_status": "COMPLETED",
+        "after_status": "COMPLETED",
+        "content_verdict": "PARTIALLY_VERIFIED",
+        "note": "超过90天的SQL筛选、返回字段和附件数据通过核对；LIMIT 1000下不能确认名单完整，回答中完整返回的表述仍未经证实。"
+      },
+      {
+        "id": "supplier_first_cooperation",
+        "question": "合作时长最长的供应商有哪些?第一次合作是什么时间?",
+        "before_status": "COMPLETED",
+        "after_status": "COMPLETED",
+        "content_verdict": "EXISTING_ISSUE",
+        "note": "修改前后均额外限制首次合作日期在最近一年，且返回整个范围名单；未回答历史全量合作时长最长的对象。"
+      }
+    ]
+  },
+  "relation_request": {
+    "id": "relation_model122",
+    "code": 500,
+    "verdict": "BLOCKED_BY_CURRENT_CATALOG",
+    "note": "原参数仍返回实体类型不存在，未记为关系推荐验收通过。"
+  },
+  "unverified_context": [
+    {
+      "id": "department_hospital_relation",
+      "request": "医院与科室多对多判断",
+      "missing": "原文实体ID已省略，缺少完整实体ID及模型范围"
+    },
+    {
+      "id": "city_province_relation",
+      "request": "城市跟省份为什么没有推荐关系",
+      "missing": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "company_salesperson_relation",
+      "request": "国药公司和销售员这两个表有相同字段，为什么没有推荐",
+      "missing": "原请求模型、业务域和实体ID"
+    },
+    {
+      "id": "huashan_attachment",
+      "request": "2025华山医院Top1及产品的附件",
+      "missing": "截图未包含完整原问题，不能重构原文代替验收"
+    },
+    {
+      "id": "publication_error",
+      "request": "发布失败报错中文化",
+      "missing": "发布操作的完整原始参数；不在本轮只读查询回归范围内"
+    }
+  ],
+  "review": "只有一个目标识别实现；未合并不同条件的独立任务，未把不同ID或编码字段当作相同字段；没有新增业务拦截或改写提示词。",
+  "limitations": "历史回归仍有既有失败、名单完整性未确认以及缺少原始上下文的案例，不宣称全部历史功能通过。"
+}

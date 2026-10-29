@@ -1,0 +1,456 @@
+[
+  {
+    "case_id": "S81-001",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "OK",
+    "axes": {
+      "metric_surfaces": [
+        "订单笔数",
+        "含税销售总额",
+        "销售总数量"
+      ],
+      "dimension_surfaces": [],
+      "canonical_metrics": [
+        "METRIC:order_count",
+        "METRIC:sales_total_including_tax",
+        "METRIC:sales_total_quantity"
+      ],
+      "canonical_dimensions": [],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "ADD"
+      ],
+      "metric_operations": [
+        "ADD"
+      ],
+      "dimension_operations": []
+    },
+    "safety": {},
+    "evidence": {
+      "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+      "backend_mode": "SHADOW_ONLY",
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "state_version": 2,
+      "full_pipeline_executed": false
+    }
+  },
+  {
+    "case_id": "S81-002",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+  },
+  {
+    "case_id": "S81-003",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "OK",
+    "axes": {
+      "metric_surfaces": [
+        "含税销售总额"
+      ],
+      "dimension_surfaces": [],
+      "canonical_metrics": [
+        "METRIC:sales_total_including_tax"
+      ],
+      "canonical_dimensions": [],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "REMOVE"
+      ],
+      "metric_operations": [
+        "REMOVE"
+      ],
+      "dimension_operations": []
+    },
+    "safety": {},
+    "evidence": {
+      "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+      "backend_mode": "SHADOW_ONLY",
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "state_version": 2,
+      "full_pipeline_executed": false
+    }
+  },
+  {
+    "case_id": "S81-004",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-005",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-006",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-007",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-008",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-009",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-010",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-011",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "OK",
+    "axes": {
+      "metric_surfaces": [
+        "含税销售总额"
+      ],
+      "dimension_surfaces": [
+        "城市",
+        "医院"
+      ],
+      "canonical_metrics": [
+        "METRIC:sales_total_including_tax"
+      ],
+      "canonical_dimensions": [
+        "DIMENSION:city",
+        "DIMENSION:hospital"
+      ],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "ADD"
+      ],
+      "metric_operations": [],
+      "dimension_operations": [
+        "ADD"
+      ]
+    },
+    "safety": {},
+    "evidence": {
+      "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+      "backend_mode": "SHADOW_ONLY",
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "state_version": 2,
+      "full_pipeline_executed": false
+    }
+  },
+  {
+    "case_id": "S81-012",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-013",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "OK",
+    "axes": {
+      "metric_surfaces": [
+        "含税销售总额"
+      ],
+      "dimension_surfaces": [
+        "城市"
+      ],
+      "canonical_metrics": [
+        "METRIC:sales_total_including_tax"
+      ],
+      "canonical_dimensions": [
+        "DIMENSION:city"
+      ],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "REMOVE"
+      ],
+      "metric_operations": [],
+      "dimension_operations": [
+        "REMOVE"
+      ]
+    },
+    "safety": {},
+    "evidence": {
+      "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+      "backend_mode": "SHADOW_ONLY",
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "state_version": 2,
+      "full_pipeline_executed": false
+    }
+  },
+  {
+    "case_id": "S81-014",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-015",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "HISTORY_PRECONDITION_FAILED"
+  },
+  {
+    "case_id": "S81-016",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "NOT_RUN",
+    "axes": {},
+    "safety": {},
+    "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED"
+  },
+  {
+    "case_id": "S81-017",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "FAILED",
+    "axes": {},
+    "safety": {},
+    "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+  },
+  {
+    "case_id": "S81-018",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "NOT_RUN",
+    "axes": {},
+    "safety": {},
+    "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED"
+  },
+  {
+    "case_id": "S81-019",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "NOT_RUN",
+    "axes": {},
+    "safety": {},
+    "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED"
+  },
+  {
+    "case_id": "S81-020",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "NOT_RUN",
+    "axes": {},
+    "safety": {},
+    "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED"
+  }
+]

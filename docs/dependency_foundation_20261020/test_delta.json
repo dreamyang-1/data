@@ -1,0 +1,32 @@
+{
+  "baseline_counts": {
+    "passed": 5279,
+    "failed": 237
+  },
+  "final_counts": {
+    "passed": 5291,
+    "failed": 236
+  },
+  "baseline_collection_errors": 0,
+  "final_collection_errors": 0,
+  "old_pass_new_fail": [],
+  "old_fail_new_pass": [
+    "tests/test_complex_question_planning.py::test_rejected_recognized_plan_does_not_become_a_single_query"
+  ],
+  "new_tests": {
+    "tests/test_dependency_foundation_e2e.py::test_ranked_question_feeds_two_queries_then_key_aligned_calculation[complete]": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_ranked_question_feeds_two_queries_then_key_aligned_calculation[empty]": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_ranked_question_feeds_two_queries_then_key_aligned_calculation[failed]": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_entity_grain_does_not_invent_extra_detail_columns": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_empty_optional_computation_object_is_absent[\\u8ba1\\u7b97\\u7ed1\\u5b9a]": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_empty_optional_computation_object_is_absent[\\u7ed3\\u679c\\u64cd\\u4f5c]": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_empty_optional_computation_object_is_absent[\\u8ba1\\u7b97\\u5f85\\u786e\\u8ba4]": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_new_related_fields_override_an_invented_local_metric_projection": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_invalid_local_operation_is_replanned_once_before_execution": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_rejected_multi_task_plan_never_falls_through_to_one_query": "passed",
+    "tests/test_dependency_foundation_e2e.py::test_planning_rejection_stream_keeps_seven_stages": "passed"
+  },
+  "critical_counts": {
+    "passed": 331
+  }
+}

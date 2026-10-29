@@ -1,0 +1,94 @@
+{
+  "base_commit": "6b75574bada27c68190590b7fed134862acbe50e",
+  "stage": "aggregate_delivery",
+  "configuration_changed": false,
+  "semantic_database_changed": false,
+  "index_rebuild": false,
+  "runtime_route_changed": false,
+  "files": [
+    {
+      "git_sha256": "630cfc4b9582bb421edb828ac2b05eca92c8080c3135ea4fa4934cfc7e0fa29c",
+      "deployment_sha256": "630cfc4b9582bb421edb828ac2b05eca92c8080c3135ea4fa4934cfc7e0fa29c",
+      "file": "Oagnet/structured_binding.py",
+      "workspace_sha256": "630cfc4b9582bb421edb828ac2b05eca92c8080c3135ea4fa4934cfc7e0fa29c",
+      "remote_baseline_sha256": "ae04441e42adae2f4dcd2cbca0bf8a5d8b5d0adc3b3d2be8a094f2b23906ae01"
+    },
+    {
+      "git_sha256": "e94eb25020e771c98fd3124ca2b4c26da1093f8839b7394e436e5bbd365a6c34",
+      "deployment_sha256": "5d6a689d7f7648c20078cf642695aa07505c8c2cb7222df7021b10de42fea759",
+      "file": "Oagnet/agent.py",
+      "workspace_sha256": "e94eb25020e771c98fd3124ca2b4c26da1093f8839b7394e436e5bbd365a6c34",
+      "remote_baseline_sha256": "fb04916ab4a7ec766cafdd071936ddaf0b22858cfe5aa912b7f01e88950a956a"
+    },
+    {
+      "git_sha256": "687880b4736095adfe9cf03e29ec14c263f5b3d255fa26f371b1430655ebaf9c",
+      "deployment_sha256": "687880b4736095adfe9cf03e29ec14c263f5b3d255fa26f371b1430655ebaf9c",
+      "file": "sql-translator/sql_translator_prod.py",
+      "workspace_sha256": "687880b4736095adfe9cf03e29ec14c263f5b3d255fa26f371b1430655ebaf9c",
+      "remote_baseline_sha256": "2072129922ef91648eb3a495c9a6bfb59abdd70051cc66b1c4ca95f6d69ff946"
+    },
+    {
+      "git_sha256": "53f53abf683b174deffb9476cfdf55d4aae5ea77845a018f0bf5dcbb35b6bab3",
+      "deployment_sha256": "53f53abf683b174deffb9476cfdf55d4aae5ea77845a018f0bf5dcbb35b6bab3",
+      "file": "app/adapters/http.py",
+      "workspace_sha256": "53f53abf683b174deffb9476cfdf55d4aae5ea77845a018f0bf5dcbb35b6bab3",
+      "remote_baseline_sha256": "6e1b8b9de94fa3771d4c964aa191dba12ff76be4d515887d80f540087057e377"
+    },
+    {
+      "git_sha256": "a741d063fcb4c7a22b46148a2a73324ceb356a28a3cd1ee49ca76aeb549ef647",
+      "deployment_sha256": "8b420f1f33322161b364f5455b8a98f1980b888c0bba28b197c92e7e702d165f",
+      "file": "app/planning/task_dag.py",
+      "workspace_sha256": "a741d063fcb4c7a22b46148a2a73324ceb356a28a3cd1ee49ca76aeb549ef647",
+      "remote_baseline_sha256": "9dacbc41732339c7b6fa0d78d107ff2486bfc9a50d3303202b432e9259c924bb"
+    },
+    {
+      "git_sha256": "bd0d64a40973f8835afd7699504821982f6f34d331a54737c9f55afd564c83e1",
+      "deployment_sha256": "bd0d64a40973f8835afd7699504821982f6f34d331a54737c9f55afd564c83e1",
+      "file": "app/services/dataset_followup.py",
+      "workspace_sha256": "bd0d64a40973f8835afd7699504821982f6f34d331a54737c9f55afd564c83e1",
+      "remote_baseline_sha256": "6ecdd62d31987b23b2733ce77c83b30f1d8db48626d0ac0c1bb9123d8e06e6d4"
+    },
+    {
+      "git_sha256": "90cabcc971a23567ce8054a270707cf9330a082154e9de9877b754dd71918b36",
+      "deployment_sha256": "eb3833dc3179cb8045549cb6492f5de1933ae0edc27f7aab57c4ce60ca73f019",
+      "file": "app/services/orchestrator.py",
+      "workspace_sha256": "90cabcc971a23567ce8054a270707cf9330a082154e9de9877b754dd71918b36",
+      "remote_baseline_sha256": "f9a33134522f7f7c015d48cfffec9cf99978f7996997cb183e02ebe784a5c5a5"
+    },
+    {
+      "git_sha256": "be861a25b8ce9d206a887017daf8cdf5b9275cbdeb59797b3dc3391bd4617c29",
+      "deployment_sha256": "be861a25b8ce9d206a887017daf8cdf5b9275cbdeb59797b3dc3391bd4617c29",
+      "file": "app/services/computation_delivery.py",
+      "workspace_sha256": "be861a25b8ce9d206a887017daf8cdf5b9275cbdeb59797b3dc3391bd4617c29",
+      "remote_baseline_sha256": null
+    },
+    {
+      "git_sha256": "9425ba6b6a60efbfd2ce9af92a93fbaad35681b65e66df7dddb7d34a69162146",
+      "deployment_sha256": "9425ba6b6a60efbfd2ce9af92a93fbaad35681b65e66df7dddb7d34a69162146",
+      "file": "app/presentation/root_report.py",
+      "workspace_sha256": "9425ba6b6a60efbfd2ce9af92a93fbaad35681b65e66df7dddb7d34a69162146",
+      "remote_baseline_sha256": "2a0b401e7dc4ed0bfc4f3a9e2fafd4dad2dbecb7d412cbaa1731a2e3f56ccc2a"
+    },
+    {
+      "git_sha256": "a251ff1af25577e7d56788c5fe6d9e77a9cd67185b898004a73edf85222bfaac",
+      "deployment_sha256": "a251ff1af25577e7d56788c5fe6d9e77a9cd67185b898004a73edf85222bfaac",
+      "file": "app/planning/calculation_targets.py",
+      "workspace_sha256": "a251ff1af25577e7d56788c5fe6d9e77a9cd67185b898004a73edf85222bfaac",
+      "remote_baseline_sha256": null
+    },
+    {
+      "git_sha256": "1b602df3e412e6243417480499d474828d5599bc957bb3e3e8a42a8cf42eb8b4",
+      "deployment_sha256": "1b602df3e412e6243417480499d474828d5599bc957bb3e3e8a42a8cf42eb8b4",
+      "file": "app/analysis/engine.py",
+      "workspace_sha256": "1b602df3e412e6243417480499d474828d5599bc957bb3e3e8a42a8cf42eb8b4",
+      "remote_baseline_sha256": "68a918480fcf1f2613bf65cbffe3b69fc632b5feaca8c911a03c3863b8998933"
+    }
+  ],
+  "tests": [
+    "Oagnet/tests/test_aggregate_display_fields.py",
+    "sql-translator/test_aggregate_display_fields.py",
+    "tests/test_computation_delivery.py",
+    "tests/test_aggregate_ranking_label.py"
+  ],
+  "remote_merge": "Preserve existing remote behavior using baseline-aware three-way merge; reviewed task-planner conflict is limited to new planning rules, declared calculation targets and rank-goal recognition."
+}

@@ -1,0 +1,304 @@
+{
+  "model": "qwen3.7-max",
+  "evaluator": {
+    "evaluator_version": "runtime-evaluation-harness-v1",
+    "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+    "evaluator_files": {
+      "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+      "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+      "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+      "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+      "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+      "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+      "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+      "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+      "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+      "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+      "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+      "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+      "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+      "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+      "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+      "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+      "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+    }
+  },
+  "real_model_requests": 340,
+  "HTTP_status_counts": {
+    "200": 337,
+    "None": 3
+  },
+  "transport_error_counts": {
+    "MODEL_TIMEOUT": 3
+  },
+  "temperature": 0,
+  "seed": "NOT_SENT_SUPPORT_UNVERIFIED",
+  "top_p": "NOT_SENT_PROVIDER_DEFAULT",
+  "thinking": false,
+  "retry_policy": {
+    "max_retries": 0
+  },
+  "timeout": 30.0,
+  "max_tokens": "NOT_SENT_PROVIDER_DEFAULT",
+  "randomness": "NONDETERMINISTIC_PROVIDER_NOT_SEEDED_OR_CERTIFIED",
+  "repeated_identical_request_groups": [
+    {
+      "request_body_hash": "59aa2db41041dd22c73e3a5b7b718d47a53e45c8b0f849f0edd26b2168d03342",
+      "stage": "v2_current_turn",
+      "N": 3,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "d1cb6a4ba9c0e79ba614d4ce48493a4520ebaa1a4756dcb09cb8e3bf8c6d65d9",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "88491a16d92e9d7ebcc77555b399504bf455cc3d79915bb382f572fad6a89fd0",
+      "stage": "v2_current_turn",
+      "N": 5,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 3
+    },
+    {
+      "request_body_hash": "315531f6d5970fb9a3c3dccdb488dcc1bed0a7a9c28fbb3b8435313668b67753",
+      "stage": "v2_semantic_edits",
+      "N": 3,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 3
+    },
+    {
+      "request_body_hash": "b6a0cb7ba5117eac54dec31a71b079f300c2d3e4f6e5579404264b52750cfa41",
+      "stage": "v2_current_turn",
+      "N": 3,
+      "distinct_raw_response_hashes": 3,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "afd8a72b50eacde00364dcfca0d2f9b600a4da9496c9df03e1d4d45406afd4cd",
+      "stage": "v2_current_turn",
+      "N": 3,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "f81415c3268929192ecd6b556615efa1819ba067431bf8c9e7f9435888c8b99d",
+      "stage": "v2_current_turn",
+      "N": 3,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 3
+    },
+    {
+      "request_body_hash": "5ae29d9ee383963c7d749882484aef48a6e05df4e72011759d2250ade1c7ec60",
+      "stage": "v2_semantic_edits",
+      "N": 3,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 3
+    },
+    {
+      "request_body_hash": "6456730a6f227bbf9484a93690b58120d3ba88e95a7df510128f385d644ea81e",
+      "stage": "v2_current_turn",
+      "N": 3,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "c5184a47d1f39f43cf28dcce993521f4ccf2cc024f6e6daae1798c1410a15b0d",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "88f102b37896208c0e2f34b3521ba954ae3d011a5e5f3bc66c13488de9ce9d87",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "f036214831446c7346970190ebd2fb36b83078b879de857a74736be115fe5082",
+      "stage": "v2_current_turn",
+      "N": 5,
+      "distinct_raw_response_hashes": 4,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "e8a852abaf43ac5b4e7cb3d264440ff5dab2d827751e5d4a4ea24fecaf8305ca",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "ca3a6d8407038b10262ab38603937625d38c028955c3a11faaa7303a424e0f1d",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "17ef681fcb37e73b7b97a6d863b716c0329de4f619300925153464cd5629a93f",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "91a09d159278c1a9b0b5a53326a5280ef4269ddbae56ad1d2b62420f300f1ced",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "311020f281d9e5b9281e6c3e063d681c0175dc449bbfcaf1488e609c377456d9",
+      "stage": "v2_current_turn",
+      "N": 3,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "b60431d81adca2b6e8d3263b9e0f48bb36af989b01489afae296b0711e3eddaa",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "6c99c23f7bcfc4e057d1997fd293628b692ef8cc79763c00e53d96fe9d09ace4",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "f6b3eda1f35729a914a41634c3e82cd06fc23419f688ac00a105429959a8f093",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "5db1f01c92bca53ebcc1fde7e9f20d03b6ea80afeb263eee727de242ff1ac0eb",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "3e074d6709ff4ba324f65c9717a7725e0e12ef69fb30ebe83d51f9d9ee64e21b",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "029466e872f5eabf2dcc5b322ba00620f2a6cab9bc4e01698cb075c54a07aab5",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "6effe096fb856b9990b02a6f75a2814f6326d1fc3fd392d18750f70b03ab6388",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "22b93e6930e95e5000d65a34ee7c739ab2f21df81bc440cfcf51aaf5ea080d64",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "9e30ec5cd5221a82cef64bdb943442e84b4feb1b5a8b50b20782ab7fe486b39e",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "ef75d3399bf0ece1c5da8d42e112f17c2b6ec01b65560dfb18484ab1602c84c4",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "50c0f69325630f0a03cf85249e35c4da38dbaa84d950fb63c6fd5b18c9e139b5",
+      "stage": "v2_current_turn",
+      "N": 4,
+      "distinct_raw_response_hashes": 3,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "5db15f9172b5032b2736c58abc9b0b80a329af7b84024d57264d3e4b90990663",
+      "stage": "v2_semantic_edits",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "6d7e4c05d4d8d2015f952f4859afd82ea2beb6d1034b56c19a5d3654841132b3",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "dc6bb09c45023d863b6ca5096da2e28a03c9183e8d1b5cfcb91058297f9e457b",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "4bdb83de902cc59eac7adcfcca1e022f116f3c2ea1da8f0db312829de3d412f8",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "c8a9ed9c110fb360bc4a0f0f81cb7611c0a58ad1711ed1bd94c8b96ab4f2195a",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "50850265e3b4c7f450dc74c81d8923c299a83ca44905fcc6d676490d2a28b51d",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 2,
+      "largest_identical_response_count": 1
+    },
+    {
+      "request_body_hash": "2505951d7fb951061144debc6d3e88d17814872e1fd851560f5bfe0db5492b70",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    },
+    {
+      "request_body_hash": "703615ed89ae472bf64d289fa7d801d632591cb8fa90c23a8230fda159c5ab39",
+      "stage": "v2_current_turn",
+      "N": 2,
+      "distinct_raw_response_hashes": 1,
+      "largest_identical_response_count": 2
+    }
+  ],
+  "stability_limit": "Raw response representation stability on opportunistic repeated inputs, not semantic accuracy or controlled independent N-run stability.",
+  "formal_model_benchmark": false,
+  "new_SQL_calls": 0,
+  "new_Milvus_calls": 0,
+  "production_writes": 0
+}

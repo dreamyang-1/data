@@ -1,0 +1,139 @@
+{
+  "date": "2026-10-26",
+  "target": "按实际失败原因生成简明中文错误说明，删除统一改写问题的错误展示逻辑。",
+  "status": "VERIFIED_ERROR_EXPLANATIONS",
+  "llm_added": false,
+  "root_causes": [
+    "HTTP边界将连接失败、超时及响应格式错误合并为服务不可用，丢失具体类别。",
+    "结构化参数错误已有具体原因，但展示层按槽位类型改写成笼统的字段匹配失败。",
+    "SQL服务返回的字段不存在等信息未保留在用户说明中。"
+  ],
+  "changes": [
+    "保留失败阶段与错误类别；数据库已知错误翻译为中文。",
+    "展示直接使用本次诊断中的实际原因，不再统一要求换个说法；无足够证据时明确无法确定根因。",
+    "普通与流式异常说明一致；错误原始编码及诊断仍留在内部记录，不向用户输出原始堆栈和连接信息。",
+    "未改变授权、查询绑定、校验、重试规则或回答总时限。"
+  ],
+  "real_failure_example": "系统无法确定每条查询结果应该对应哪个“经销商名称”，直接显示可能配错，因此本次没有继续查询。需要维护人员核对名称与查询对象的对应关系。",
+  "tests": {
+    "full_before_last_wording_tweak": {
+      "counts": {
+        "passed": 6263,
+        "failed": 277,
+        "error": 7,
+        "skipped": 0
+      },
+      "old_pass_new_fail": [],
+      "new_failures": [],
+      "removed": []
+    },
+    "final_server_candidate_passed": 108,
+    "final_server_live_passed": 108,
+    "final_repo_error_tests_passed": 64,
+    "note": "最后仅将真实诊断中的统计粒度等术语改写为通俗说明，新增1项真实案例回归，并在最终服务器版本跑108项专项。全量中18项新测试，最终共19项新增测试。",
+    "first_full_review": "15项仅断言旧统一文案的测试按新产品要求更新；另发现上海市归属提示漏掉取值，已修复并保留原断言。无新增全量失败。",
+    "fault_injection": "连接、超时、断开、返回格式、内部异常和数据库报错通过离线/Mock验证，未人为中断生产服务。"
+  },
+  "business_regression": {
+    "entry": "最终部署版本；正常agent_chat入口；原问题原文；模型130；独立会话；并发2。",
+    "results": [
+      {
+        "id": "longest_cooperation",
+        "status": "NEEDS_CLARIFICATION",
+        "missing_slots": [
+          "semantic_ambiguity"
+        ],
+        "elapsed": 77.1,
+        "error": null
+      },
+      {
+        "id": "cooperation_over_three_months",
+        "status": "NEEDS_CLARIFICATION",
+        "missing_slots": [
+          "semantic_ambiguity"
+        ],
+        "elapsed": 98.9,
+        "error": null
+      },
+      {
+        "id": "company_top5",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 242.6,
+        "error": null
+      },
+      {
+        "id": "shanghai_coverage",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 120.0,
+        "error": null
+      },
+      {
+        "id": "hospital_sales_products",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 141.1,
+        "error": null
+      },
+      {
+        "id": "semantic_entities",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 14.7,
+        "error": null
+      },
+      {
+        "id": "orthopedics",
+        "status": "COMPLETED",
+        "missing_slots": [],
+        "elapsed": 70.1,
+        "error": null
+      }
+    ],
+    "all_business_queries_passed": false,
+    "error_explanation_verified_for": [
+      "longest_cooperation",
+      "cooperation_over_three_months"
+    ],
+    "company_verification": {
+      "status": "COMPLETED",
+      "tasks": [
+        [
+          "task-1",
+          "COMPLETED"
+        ],
+        [
+          "task-2",
+          "COMPLETED"
+        ],
+        [
+          "task-3",
+          "COMPLETED"
+        ],
+        [
+          "task-4",
+          "COMPLETED"
+        ]
+      ],
+      "attachment_sheets": [
+        "章节1",
+        "章节2"
+      ],
+      "five_rows_each": true,
+      "cohort_matches": true,
+      "companies_present": true,
+      "descending": true
+    },
+    "remaining": [
+      "两条合作时长问题仍受名称与查询对象对应关系校验阻塞。本次仅修复错误解释，不宣称查询逻辑已修好。",
+      "前一轮最长合作时间曾完成，最终重跑又失败，表明原问题仍不稳定，不能以单次成功宣称修复。",
+      "实体推荐原参数返回实体类型不存在；其他缺少完整模型/实体/原问题上下文的历史案例未验证。",
+      "未对所有返回数值独立重算；医院数据仍有原有时间水位限制。",
+      "覆盖率说明仍有缺少有限数值的提示，不能据执行完成判定业务答案全部正确。",
+      "上海覆盖率本次返回781条经销商粒度结果，市级汇总预期仍待独立核对。"
+    ]
+  },
+  "deployment": "按精确差异合并到49，备份、重启并验证UP/READY。最终源码与保护配置哈希均核对，未改.env。真实历史回归在最终部署版本执行。",
+  "private_evidence": "完整问题响应及日志保留在私有诊断目录，不提交签名下载链接、凭据或原始业务数据。"
+}

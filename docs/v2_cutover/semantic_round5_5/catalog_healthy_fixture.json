@@ -1,0 +1,83 @@
+{
+  "status": "PASS",
+  "fixture_sha256": "721d18f2ca0749f9accc24694c8e9ea5d88f0226285499c56f1d36522d605f75",
+  "case_hash": "76ac74bbfa8c8ef44323bdaf96b0596cf1b98f90a154c2e1403b7ac8e7d2d6f0",
+  "case_count": 3,
+  "declared_turns": 11,
+  "catalog_health": {
+    "status": "CATALOG_HEALTHY_FIXTURE",
+    "metrics": {
+      "order_count": {
+        "name": "订单笔数",
+        "time_anchor": "sales_order.created_date",
+        "formula": "order_count=COUNT(DISTINCT sales_order.order_key)",
+        "time_field": "sales_order.created_date",
+        "business_definition": "指定时间范围内全部销售记录按业务订单键去重后的订单数量"
+      },
+      "sales_total_quantity": {
+        "name": "销售总数量",
+        "time_anchor": "sales_order.created_date",
+        "formula": "sales_total_quantity=SUM(sales_order.quantity)",
+        "time_field": "sales_order.created_date",
+        "business_definition": "指定时间范围内全部销售记录的商品数量净额合计；退货或冲销按源数据负值抵减"
+      }
+    },
+    "fields": {
+      "province": "dim_province.province_name",
+      "city": "dim_city.city_name"
+    },
+    "source_values": "CERTIFIED_FROZEN_EXACT_OBSERVATIONS",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ]
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "snapshot_hash": "fdfa44add8a3cb6c0e10970faeb54a3ef79d670a16e39643c778b7bef74dd4b7",
+    "sales_amount_time_gap": true,
+    "boundary": "Planning metadata and source proof; no executed SQL or entity-count identity certification",
+    "relation_evidence": {
+      "sales_order_belongs_to_hospital": {
+        "relation_code": "sales_order_belongs_to_hospital",
+        "relation_name": "归属采购医院",
+        "relation_type": "N:1",
+        "target_entity": "hospital",
+        "relation_semantic": "销售订单按订单中的医院标识归属实际采购医院。",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "sales_order.hospital_id",
+          "target_field": "hospital.hospital_id"
+        },
+        "description": "销售订单按订单中的医院标识归属实际采购医院。"
+      },
+      "hospital_located_in_province": {
+        "relation_code": "hospital_located_in_province",
+        "relation_name": "所在",
+        "relation_type": "N:1",
+        "target_entity": "province",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "hospital.province_id",
+          "target_field": "dim_province.province_id"
+        },
+        "description": ""
+      }
+    },
+    "relation_boundary": "Declared sales_order -> hospital -> province path; semantic-plan coverage only, not executed SQL or certification of every alternative attribution path"
+  },
+  "model_calls": 0,
+  "catalog_pin_validation": "PASS",
+  "provider_settings_captured_before_fixture_imports": true,
+  "fresh_fixture_hash": "5e041a6236271f87b06910cc19a5e96132267e053e98745be448f43f7ab71dd3",
+  "continuation_fixture_hash": "721d18f2ca0749f9accc24694c8e9ea5d88f0226285499c56f1d36522d605f75",
+  "inputs_not_from_model": true,
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ]
+  },
+  "snapshot_boundary": "Frozen certified source observations match current read-only catalog version; no live source SQL during chain"
+}

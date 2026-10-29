@@ -1,0 +1,595 @@
+{
+  "evaluator": {
+    "evaluator_version": "runtime-evaluation-harness-v1",
+    "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+    "evaluator_files": {
+      "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+      "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+      "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+      "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+      "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+      "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+      "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+      "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+      "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+      "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+      "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+      "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+      "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+      "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+      "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+      "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+      "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+    }
+  },
+  "root_family_count": 10,
+  "families": [
+    {
+      "root_family": "TASK_OPERATION",
+      "title": "Current-turn edit evidence and operation producer/consumer contract",
+      "case_count": 21,
+      "case_ids": [
+        "G81-001",
+        "G81-003",
+        "G81-008",
+        "G81-009",
+        "G81-010",
+        "G81-012",
+        "G81-040",
+        "G81-058",
+        "G81-059",
+        "G81-060",
+        "G81-061",
+        "G81-066",
+        "G81-070",
+        "G81-075",
+        "G81-078",
+        "G81-092",
+        "G81-093",
+        "G81-096",
+        "S81-012",
+        "PV81-010",
+        "PV81-016"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_EXPLICIT_OPERATION_DROPPED": [
+          "G81-001",
+          "G81-003",
+          "G81-008",
+          "G81-009",
+          "G81-010",
+          "G81-012",
+          "G81-058",
+          "G81-059",
+          "G81-060",
+          "G81-061",
+          "G81-066",
+          "PV81-010",
+          "PV81-016"
+        ],
+        "V2_SLOT_OPERATION_CONFLICT": [
+          "G81-040",
+          "G81-078",
+          "G81-092",
+          "S81-012"
+        ],
+        "V2_BINDING_OUTSIDE_EDIT_EVIDENCE": [
+          "G81-070"
+        ],
+        "V2_FILTER_CURRENT_EVIDENCE_REQUIRED": [
+          "G81-075"
+        ],
+        "V2_EXPLICIT_SLOT_DROPPED": [
+          "G81-093"
+        ],
+        "V2_CONTRACT_VALIDATION_FAILURE": [
+          "G81-096"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Verify generic SET/ADD/REPLACE/REMOVE/CLEAR evidence coverage; preserve runtime guards.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "MENTION_BOUNDARY",
+      "title": "Mention boundary/compound surface contract",
+      "case_count": 13,
+      "case_ids": [
+        "G81-002",
+        "G81-004",
+        "G81-005",
+        "G81-006",
+        "G81-011",
+        "G81-013",
+        "G81-029",
+        "G81-030",
+        "G81-033",
+        "G81-034",
+        "G81-094",
+        "PV81-021",
+        "PV81-024"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "CATALOG_RELATIONSHIP_REQUIRED": [
+          "G81-002",
+          "G81-004",
+          "G81-011",
+          "G81-013"
+        ],
+        "LABELED_AXIS_MISMATCH": [
+          "G81-005",
+          "G81-006"
+        ],
+        "V2_EXPLICIT_OPERATION_DROPPED": [
+          "G81-029",
+          "G81-030",
+          "G81-033"
+        ],
+        "V2_RELATION_BINDING_ROLE_CONFLICT": [
+          "G81-034"
+        ],
+        "V2_SOURCE_VALUE_FIELD_ROLE_INVALID": [
+          "G81-094"
+        ],
+        "CONTRACT_OR_HARNESS_FAILURE": [
+          "PV81-021",
+          "PV81-024"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Review exact spans and governed compound names; observed failures include downstream catalog/edit errors.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": false,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "CATALOG_GAP",
+      "title": "Relationship evidence requested by the selected payload",
+      "case_count": 6,
+      "case_ids": [
+        "G81-007",
+        "G81-056",
+        "G81-062",
+        "G81-063",
+        "G81-064",
+        "G81-065"
+      ],
+      "severity": "P1_UNKNOWN_OWNER",
+      "source_signatures": {
+        "CATALOG_RELATIONSHIP_REQUIRED": [
+          "G81-007",
+          "G81-056",
+          "G81-062",
+          "G81-063",
+          "G81-064",
+          "G81-065"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Not yet proof the catalog is defective: distinguish unsupported requested relationship from wrong selected query shape.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "QUERY_SHAPE",
+      "title": "Parse query-shape versus selected payload contract",
+      "case_count": 6,
+      "case_ids": [
+        "G81-014",
+        "G81-050",
+        "G81-051",
+        "G81-052",
+        "G81-057",
+        "G81-085"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_QUERY_SHAPE_CONFLICT": [
+          "G81-014",
+          "G81-050",
+          "G81-051",
+          "G81-052",
+          "G81-057",
+          "G81-085"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Compare independent business shape with actual parse and draft, without relaxing agreement guards.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "SEMANTIC_QUERY_IR",
+      "title": "Typed payload completeness and unresolved semantic state",
+      "case_count": 9,
+      "case_ids": [
+        "G81-053",
+        "G81-081",
+        "G81-099",
+        "PV81-001",
+        "PV81-004",
+        "PV81-009",
+        "PV81-013",
+        "PV81-019",
+        "PV81-022"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_CONTRACT_VALIDATION_FAILURE": [
+          "G81-053"
+        ],
+        "V2_CATALOG_AMBIGUITY_NOT_PROVEN": [
+          "G81-081"
+        ],
+        "V2_RECOGNITION_UNRESOLVED": [
+          "G81-099",
+          "PV81-001",
+          "PV81-004",
+          "PV81-013",
+          "PV81-019",
+          "PV81-022"
+        ],
+        "V2_PAYLOAD_WOULD_DROP_BINDING": [
+          "PV81-009"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Distinct rejected schemas and unresolved states need causal evidence before a generic production change.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "CANONICAL_BINDING",
+      "title": "Entity occurrence alias and governed relation-path binding",
+      "case_count": 3,
+      "case_ids": [
+        "G81-054",
+        "G81-055",
+        "G81-098"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_ENTITY_ALIAS_REQUIRES_PATH": [
+          "G81-054",
+          "G81-055",
+          "G81-098"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Require actual relation-path identity for field aliases.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "ENTITY_VALUE_GROUNDING",
+      "title": "Entity-value field selection and deferred request consumption",
+      "case_count": 14,
+      "case_ids": [
+        "G81-068",
+        "G81-069",
+        "G81-074",
+        "G81-080",
+        "G81-087",
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-015",
+        "S81-016"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED": [
+          "G81-068",
+          "G81-069",
+          "G81-087",
+          "S81-004",
+          "S81-005",
+          "S81-006",
+          "S81-009",
+          "S81-010",
+          "S81-015"
+        ],
+        "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED": [
+          "G81-074",
+          "G81-080",
+          "S81-007",
+          "S81-008",
+          "S81-016"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Measure field hypotheses, source candidate cardinality and request-consumption invariants; do not increase query scope or value limits.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "TURN_RESOLUTION",
+      "title": "Active follow-up versus historical-return reference contract",
+      "case_count": 15,
+      "case_ids": [
+        "G81-082",
+        "S81-002",
+        "PV81-002",
+        "PV81-003",
+        "PV81-005",
+        "PV81-006",
+        "PV81-008",
+        "PV81-011",
+        "PV81-012",
+        "PV81-014",
+        "PV81-015",
+        "PV81-017",
+        "PV81-018",
+        "PV81-020",
+        "PV81-023"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_SLOT_OPERATION_CONFLICT": [
+          "G81-082"
+        ],
+        "LABELED_AXIS_MISMATCH": [
+          "S81-002",
+          "PV81-005"
+        ],
+        "V2_EXPLICIT_SLOT_DROPPED": [
+          "PV81-002",
+          "PV81-003",
+          "PV81-006",
+          "PV81-008",
+          "PV81-011",
+          "PV81-012",
+          "PV81-014",
+          "PV81-015",
+          "PV81-017",
+          "PV81-018",
+          "PV81-020",
+          "PV81-023"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Keep active task references distinct from historical task selection; preserve labels and inspect actual task/state effects.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": false,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "TIME_NORMALIZATION",
+      "title": "Explicit temporal edit without valid prior temporal base",
+      "case_count": 2,
+      "case_ids": [
+        "G81-084",
+        "G81-090"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_TEMPORAL_BASE_REQUIRED": [
+          "G81-084",
+          "G81-090"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Separate time-base requirement from slot merge and from clock drift.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "SEMANTIC_ROLE",
+      "title": "Relation endpoint binding role contract",
+      "case_count": 1,
+      "case_ids": [
+        "PV81-007"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_RELATION_BINDING_ROLE_CONFLICT": [
+          "PV81-007"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Role must be governed at the relation boundary.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    }
+  ],
+  "TOP_3_NEXT_PRODUCTION_ROOT_CAUSES": [
+    {
+      "root_family": "TASK_OPERATION",
+      "title": "Current-turn edit evidence and operation producer/consumer contract",
+      "case_count": 21,
+      "case_ids": [
+        "G81-001",
+        "G81-003",
+        "G81-008",
+        "G81-009",
+        "G81-010",
+        "G81-012",
+        "G81-040",
+        "G81-058",
+        "G81-059",
+        "G81-060",
+        "G81-061",
+        "G81-066",
+        "G81-070",
+        "G81-075",
+        "G81-078",
+        "G81-092",
+        "G81-093",
+        "G81-096",
+        "S81-012",
+        "PV81-010",
+        "PV81-016"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_EXPLICIT_OPERATION_DROPPED": [
+          "G81-001",
+          "G81-003",
+          "G81-008",
+          "G81-009",
+          "G81-010",
+          "G81-012",
+          "G81-058",
+          "G81-059",
+          "G81-060",
+          "G81-061",
+          "G81-066",
+          "PV81-010",
+          "PV81-016"
+        ],
+        "V2_SLOT_OPERATION_CONFLICT": [
+          "G81-040",
+          "G81-078",
+          "G81-092",
+          "S81-012"
+        ],
+        "V2_BINDING_OUTSIDE_EDIT_EVIDENCE": [
+          "G81-070"
+        ],
+        "V2_FILTER_CURRENT_EVIDENCE_REQUIRED": [
+          "G81-075"
+        ],
+        "V2_EXPLICIT_SLOT_DROPPED": [
+          "G81-093"
+        ],
+        "V2_CONTRACT_VALIDATION_FAILURE": [
+          "G81-096"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Verify generic SET/ADD/REPLACE/REMOVE/CLEAR evidence coverage; preserve runtime guards.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "TURN_RESOLUTION",
+      "title": "Active follow-up versus historical-return reference contract",
+      "case_count": 15,
+      "case_ids": [
+        "G81-082",
+        "S81-002",
+        "PV81-002",
+        "PV81-003",
+        "PV81-005",
+        "PV81-006",
+        "PV81-008",
+        "PV81-011",
+        "PV81-012",
+        "PV81-014",
+        "PV81-015",
+        "PV81-017",
+        "PV81-018",
+        "PV81-020",
+        "PV81-023"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_SLOT_OPERATION_CONFLICT": [
+          "G81-082"
+        ],
+        "LABELED_AXIS_MISMATCH": [
+          "S81-002",
+          "PV81-005"
+        ],
+        "V2_EXPLICIT_SLOT_DROPPED": [
+          "PV81-002",
+          "PV81-003",
+          "PV81-006",
+          "PV81-008",
+          "PV81-011",
+          "PV81-012",
+          "PV81-014",
+          "PV81-015",
+          "PV81-017",
+          "PV81-018",
+          "PV81-020",
+          "PV81-023"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Keep active task references distinct from historical task selection; preserve labels and inspect actual task/state effects.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": false,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    },
+    {
+      "root_family": "ENTITY_VALUE_GROUNDING",
+      "title": "Entity-value field selection and deferred request consumption",
+      "case_count": 14,
+      "case_ids": [
+        "G81-068",
+        "G81-069",
+        "G81-074",
+        "G81-080",
+        "G81-087",
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-015",
+        "S81-016"
+      ],
+      "severity": "P1",
+      "source_signatures": {
+        "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED": [
+          "G81-068",
+          "G81-069",
+          "G81-087",
+          "S81-004",
+          "S81-005",
+          "S81-006",
+          "S81-009",
+          "S81-010",
+          "S81-015"
+        ],
+        "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED": [
+          "G81-074",
+          "G81-080",
+          "S81-007",
+          "S81-008",
+          "S81-016"
+        ]
+      },
+      "independent_bug_count": "UNKNOWN_UNTIL_CAUSAL_REPLAY_OR_CONTRACT_PROOF",
+      "evidence_level": "PROVEN_OBSERVED_DIVERGENCE; ROOT_MERGE_HIGH_CONFIDENCE_OR_UNKNOWN",
+      "recommended_generic_work": "Measure field hypotheses, source candidate cardinality and request-consumption invariants; do not increase query scope or value limits.",
+      "silent_wrong_result_proven": false,
+      "current_rejection_is_fail_closed": true,
+      "current_rejection_note": "Cases without runtime error are labeled-axis disagreements on accepted artifacts; no proven silent wrong query inferred from an intermediate tag."
+    }
+  ],
+  "ranking_basis": "Observed coverage x state/query risk x generic-contract applicability. No claim that stage count equals independent bugs or that one patch fixes all family cases.",
+  "production_patches_in_this_stage": 0
+}

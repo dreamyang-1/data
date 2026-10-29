@@ -1,0 +1,175 @@
+{
+  "failures": [
+    {
+      "failure_id": "MG-01",
+      "source": "PR #14 DM-A01 observation and this-stage boundary replays",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "first_divergence_stage": "RULE_PARSE",
+      "reinjection_stage": "STRUCTURED_INTENT",
+      "failure_signature": "RULE_PARSE|METRIC_QUERY|ADD|semantic_entity_mentions|operation fragment admitted as entity",
+      "history": [
+        "查询2026年7月销售额和销售量，地区上海"
+      ],
+      "current_utterance": "再加订单笔数",
+      "expected": "Edit only the metric set; preserve Shanghai/July and do not add an entity constraint",
+      "actual_before": {
+        "entity_mentions": [
+          "上海市",
+          "再加"
+        ],
+        "metrics_operation": "correct"
+      },
+      "final": {
+        "entity_mentions": [
+          "上海市"
+        ],
+        "following_time_turn": "August preserves edited metrics and Shanghai"
+      },
+      "owning_service": "DataAnalysis_Agent",
+      "repeatability": "DETERMINISTIC",
+      "evidence": [
+        "app/intent/classifier.py::_apply_semantic_catalog_guardrails",
+        "app/intent/classifier.py::sanitize_semantic_entity_mentions",
+        "app/intent/structured.py::_grounded_current_entity_values",
+        "app/services/orchestrator.py::_handle",
+        "app/adapters/http.py::_validate_semantic_entity_mentions",
+        "tests/test_metric_edit_grounding_contract.py"
+      ]
+    },
+    {
+      "failure_id": "MG-02",
+      "source": "PR #14 DM-A01 observation and this-stage boundary replays",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "first_divergence_stage": "RULE_PARSE",
+      "reinjection_stage": "STRUCTURED_INTENT",
+      "failure_signature": "RULE_PARSE|METRIC_QUERY|REMOVE|semantic_entity_mentions|operation fragment admitted as entity",
+      "history": [
+        "查询2026年7月销售额和销售量，地区上海"
+      ],
+      "current_utterance": "不要销售量",
+      "expected": "Edit only the metric set; preserve Shanghai/July and do not add an entity constraint",
+      "actual_before": {
+        "entity_mentions": [
+          "上海市",
+          "不要"
+        ],
+        "metrics_operation": "correct"
+      },
+      "final": {
+        "entity_mentions": [
+          "上海市"
+        ],
+        "following_time_turn": "August preserves edited metrics and Shanghai"
+      },
+      "owning_service": "DataAnalysis_Agent",
+      "repeatability": "DETERMINISTIC",
+      "evidence": [
+        "app/intent/classifier.py::_apply_semantic_catalog_guardrails",
+        "app/intent/classifier.py::sanitize_semantic_entity_mentions",
+        "app/intent/structured.py::_grounded_current_entity_values",
+        "app/services/orchestrator.py::_handle",
+        "app/adapters/http.py::_validate_semantic_entity_mentions",
+        "tests/test_metric_edit_grounding_contract.py"
+      ]
+    }
+  ],
+  "unique_failure_signatures": 2,
+  "root_cause_families": 1,
+  "proof_variants": 4,
+  "p0_before": 2,
+  "p0_fixed": 2,
+  "p0_remaining_in_this_stage": 0,
+  "independent_reproductions": [
+    {
+      "attempt": 1,
+      "baseline_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_fallback_reaches_http_without_operator_entity[rewrite-disabled-\\u518d\\u52a0\\u8ba2\\u5355\\u7b14\\u6570-expected0]",
+      "final_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_reaches_http_without_operator_entity[no-rewriter-\\u518d\\u52a0\\u8ba2\\u5355\\u7b14\\u6570-expected0]",
+      "baseline": "failed",
+      "final": "passed",
+      "path": "optional_constructor_without_rewriter"
+    },
+    {
+      "attempt": 2,
+      "baseline_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_fallback_reaches_http_without_operator_entity[rewrite-disabled-\\u518d\\u52a0\\u8ba2\\u5355\\u7b14\\u6570-expected0]",
+      "final_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_reaches_http_without_operator_entity[no-rewriter-\\u518d\\u52a0\\u8ba2\\u5355\\u7b14\\u6570-expected0]",
+      "baseline": "failed",
+      "final": "passed",
+      "path": "optional_constructor_without_rewriter"
+    },
+    {
+      "attempt": 1,
+      "baseline_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_fallback_reaches_http_without_operator_entity[rewrite-disabled-\\u4e0d\\u8981\\u9500\\u552e\\u91cf-expected1]",
+      "final_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_reaches_http_without_operator_entity[no-rewriter-\\u4e0d\\u8981\\u9500\\u552e\\u91cf-expected1]",
+      "baseline": "failed",
+      "final": "passed",
+      "path": "optional_constructor_without_rewriter"
+    },
+    {
+      "attempt": 2,
+      "baseline_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_fallback_reaches_http_without_operator_entity[rewrite-disabled-\\u4e0d\\u8981\\u9500\\u552e\\u91cf-expected1]",
+      "final_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_reaches_http_without_operator_entity[no-rewriter-\\u4e0d\\u8981\\u9500\\u552e\\u91cf-expected1]",
+      "baseline": "failed",
+      "final": "passed",
+      "path": "optional_constructor_without_rewriter"
+    },
+    {
+      "attempt": 1,
+      "baseline_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_fallback_reaches_http_without_operator_entity[model-entity-\\u518d\\u52a0\\u8ba2\\u5355\\u7b14\\u6570-expected0]",
+      "final_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_reaches_http_without_operator_entity[model-entity-\\u518d\\u52a0\\u8ba2\\u5355\\u7b14\\u6570-expected0]",
+      "baseline": "failed",
+      "final": "passed",
+      "path": "production_rewriter_plus_model_role_error"
+    },
+    {
+      "attempt": 2,
+      "baseline_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_fallback_reaches_http_without_operator_entity[model-entity-\\u518d\\u52a0\\u8ba2\\u5355\\u7b14\\u6570-expected0]",
+      "final_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_reaches_http_without_operator_entity[model-entity-\\u518d\\u52a0\\u8ba2\\u5355\\u7b14\\u6570-expected0]",
+      "baseline": "failed",
+      "final": "passed",
+      "path": "production_rewriter_plus_model_role_error"
+    },
+    {
+      "attempt": 1,
+      "baseline_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_fallback_reaches_http_without_operator_entity[model-entity-\\u4e0d\\u8981\\u9500\\u552e\\u91cf-expected1]",
+      "final_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_reaches_http_without_operator_entity[model-entity-\\u4e0d\\u8981\\u9500\\u552e\\u91cf-expected1]",
+      "baseline": "failed",
+      "final": "passed",
+      "path": "production_rewriter_plus_model_role_error"
+    },
+    {
+      "attempt": 2,
+      "baseline_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_fallback_reaches_http_without_operator_entity[model-entity-\\u4e0d\\u8981\\u9500\\u552e\\u91cf-expected1]",
+      "final_nodeid": "tests/test_metric_edit_grounding_contract.py::test_orchestrator_reaches_http_without_operator_entity[model-entity-\\u4e0d\\u8981\\u9500\\u552e\\u91cf-expected1]",
+      "baseline": "failed",
+      "final": "passed",
+      "path": "production_rewriter_plus_model_role_error"
+    }
+  ],
+  "qualification": "The earliest raw-rule result accepts operation fragments; successful rewriting can repair them. A schema-valid model entity proposal reintroduces them in the production rewriter path. The same sanitizer owns both boundaries.",
+  "fixture_corrections": "The initial None-return model fixture was invalid and discarded, not counted as a product failure. Model unavailability uses the actual caught RuntimeError contract. The optional constructor path was relabeled no-rewriter because production DI always supplies a rewriter.",
+  "validation_boundary": "Real Hybrid, deterministic QuestionRewriter and orchestrator; actual HTTP ASL payload with only mock metric identifiers cleared. No real model, deployed catalog or generated SQL claim.",
+  "passing_baseline_contrasts": "Clean structured output with rewriter, including genuine model-unavailable fallback, and direct Legacy merge-to-HTTP path already passed before edits.",
+  "review_resolutions": [
+    "Recognize a whole metric edit rather than globally banning operation-word entity names",
+    "Keep typed filter literals and admitted inherited entity values",
+    "Escape current/known metric labels and extract complete longest-label boundaries"
+  ],
+  "unresolved_observations": [
+    {
+      "id": "DM-A02",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "Other filter-family mutations and unmarked regrouping retain their previous evidence requirement"
+    },
+    {
+      "id": "MG-A01",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "Other discourse operations, compound commands and model-proposed typed filters need separate semantic/contract evidence; the new guard does not guess their roles"
+    }
+  ]
+}

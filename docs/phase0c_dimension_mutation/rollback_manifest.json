@@ -1,0 +1,11 @@
+{
+  "baseline_commit": "098c3ed9489de925b44eb4f814b98c686683acc7",
+  "feature_branch": "phase0c-dimension-mutation-20260908-01",
+  "runtime_files": ["app/services/turn_admission.py"],
+  "rollback": "Use a reviewed new revert commit, preserve unrelated edits, rerun dimension/admission/multi-turn/scope regressions and explicitly synchronize the reviewed files. Do not rewrite history.",
+  "public_schema_migration": false,
+  "persisted_state_schema_migration": false,
+  "external_data_rollback_required": false,
+  "production_v2_routing_changed": false,
+  "forbidden": ["reset --hard", "clean", "force push", "whole-directory overwrite", "automatic merge"]
+}

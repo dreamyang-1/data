@@ -1,6 +1,3 @@
-import json
-
-import httpx
 import pytest
 
 from app.adapters import build_mock_adapters
@@ -8,18 +5,10 @@ from app.config import Settings
 from app.domain.models import ChatRequest, PrimaryIntent, TrustedIdentity
 from app.intent import RuleBasedIntentClassifier
 from app.services import DataAnalysisOrchestrator
-from app.services.chat_responder import QwenChatResponder
 from app.stores import InMemorySessionStore
 
 
 IDENTITY = TrustedIdentity(tenant_id="t1", user_id="u1")
-
-
-class GentleFakeResponder:
-    async def respond(self, question: str, history=None) -> str:
-        assert question == "我想吃西瓜"
-        assert history == []
-        return "听起来很清爽呀，适量吃一点就好，也别忘了正常吃饭。"
 
 
 def test_everyday_food_turn_is_classified_as_chat():
@@ -59,7 +48,7 @@ async def test_chat_mode_switch_does_not_resurrect_previous_data_task():
     )
     conversation_id = "data-then-food-chat"
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="27", conversation_id=conversation_id,
             message_id="m1", question="查询空心纤维血液透析器产品合作的经销商名单。",
         ),
@@ -72,7 +61,7 @@ async def test_chat_mode_switch_does_not_resurrect_previous_data_task():
         start=2,
     ):
         response = await agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="27", conversation_id=conversation_id,
                 message_id=f"m{index}", question=question,
             ),
@@ -93,17 +82,16 @@ def test_business_question_containing_want_is_not_swallowed_as_chat():
 
 
 @pytest.mark.asyncio
-async def test_chat_intent_uses_controlled_gentle_responder():
+async def test_chat_intent_replies_fixed_greeting():
     agent = DataAnalysisOrchestrator(
         settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
         classifier=RuleBasedIntentClassifier(),
         adapters=build_mock_adapters(),
         sessions=InMemorySessionStore(),
-        chat_responder=GentleFakeResponder(),
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="27",
             conversation_id="gentle-chat",
             message_id="m1",
@@ -114,48 +102,4 @@ async def test_chat_intent_uses_controlled_gentle_responder():
 
     assert response.status == "COMPLETED"
     assert response.intent == PrimaryIntent.CHAT
-    assert "清爽" in response.answer
-    assert response.reliability.gates["controlled_chat_model"] is True
-
-
-@pytest.mark.asyncio
-async def test_qwen_chat_request_is_bounded_and_thinking_disabled():
-    captured = {}
-
-    async def handler(request: httpx.Request) -> httpx.Response:
-        captured.update(json.loads(request.content))
-        return httpx.Response(200, json={
-            "choices": [{"message": {"content": "  **好呀**，西瓜很清爽。  "}}]
-        })
-
-    settings = Settings(
-        env="test",
-        adapter_mode="mock",
-        intent_model_api_key="test-key",
-    )
-    responder = QwenChatResponder(
-        settings, transport=httpx.MockTransport(handler)
-    )
-
-    answer = await responder.respond(
-        "我想吃西瓜",
-        history=[
-            {"role": "user", "content": "你好"},
-            {"role": "assistant", "content": "你好呀"},
-        ],
-    )
-
-    assert captured["enable_thinking"] is False
-    assert captured["max_tokens"] == 240
-    assert captured["temperature"] == 0.5
-    assert len(captured["messages"][0]["content"]) < 1000
-    assert [item["role"] for item in captured["messages"]] == [
-        "system", "user", "assistant", "user",
-    ]
-    assert answer == "好呀，西瓜很清爽。"
-
-
-def test_chat_output_is_hard_limited():
-    answer = QwenChatResponder._sanitize("好" * 300)
-    assert len(answer) <= 181
-    assert answer.endswith("。")
+    assert response.answer == "你好！我是您的专属数据智能体，随时准备为您进行业务数据的查询与分析。"

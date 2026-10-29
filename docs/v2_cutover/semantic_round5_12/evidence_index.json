@@ -1,0 +1,101 @@
+{
+  "status": "LIMITED_SCALAR_DEPLOYMENT_PREPARATION_PARTIAL",
+  "baseline": "6b3a6e91e06ee5897a44ca2fd5d28532ecb68a79",
+  "branch": "v2-limited-scalar-deployment-ready-20260910T164141Z",
+  "release": {
+    "candidate_code_commit": "f700b624536b448607e70c5ed54679e6e10c82a2",
+    "draft_pr": 71,
+    "draft_pr_url": "https://github.com/dreamyang-1/data/pull/71",
+    "final_evidence_commit": "resolve via git_commit_manifest.json"
+  },
+  "recovery": {
+    "interrupted_remote_compaction_was_business_failure": false,
+    "recovered_uncommitted_files": 9,
+    "parallel_round_processes": 0,
+    "checkpoint": "recovery_checkpoint.md"
+  },
+  "runtime": {
+    "default_mode": "V1",
+    "candidate_mode": "V2_LIMITED_SCALAR",
+    "request_can_change_mode": false,
+    "silent_v1_fallback": false,
+    "eval_private_runtime_dependency": false,
+    "startup_business_sql": 0,
+    "startup_model_calls": 0
+  },
+  "store": {
+    "schema": "limited-scalar-session-v1",
+    "namespace_mode": "STABLE_DEPLOYMENT",
+    "default_session_ttl_seconds": 86400,
+    "default_idempotency_ttl_seconds": 604800,
+    "max_messages": 100,
+    "max_envelope_bytes": 4194304,
+    "semantic_state_version_separate_from_envelope_revision": true,
+    "unknown_outcome_auto_retry": false
+  },
+  "real_redis_isolated_receipt": {
+    "run_id": "r51220260911t0240",
+    "processes": 2,
+    "cross_process_restore": true,
+    "review_required_restored": true,
+    "stale_cas_rejected": true,
+    "guard_survived_session_expiry": true,
+    "incompatible_envelope_rejected": true,
+    "exact_keys_deleted_during_verify": 2,
+    "exact_keys_deleted_during_cleanup": 1,
+    "remaining": 0,
+    "scan_used": false,
+    "flush_used": false,
+    "model_calls": 0,
+    "business_sql_calls": 0
+  },
+  "actual_dependency_preflight": {
+    "catalog": "BLOCKED_CATALOG_COLLECTION_NOT_INITIALIZED",
+    "redis_runtime_available": true,
+    "redis_persistence": "UNPROVEN_NO_AOF_NO_RDB_SCHEDULE_NO_REPLICA_OR_RESTORE_RECEIPT",
+    "candidate_configuration_active": false
+  },
+  "dry_run": {
+    "check": "PASS_EXPECTED_V1_NOT_SELECTED",
+    "enable_plan": "GENERATED_NO_PROCESS_CHANGE",
+    "rollback_plan": "GENERATED_NO_PROCESS_CHANGE",
+    "execute_flag": "DISABLED_PENDING_LATER_APPROVAL"
+  },
+  "tests": {
+    "focused": "31 passed within the final affected run",
+    "affected": "239 passed",
+    "agent_full": "3563 passed / 27 same pre-existing failed / 0 collection errors",
+    "old_pass_to_new_fail": 0
+  },
+  "runtime_processes": {
+    "unchanged": true,
+    "agent": {"pid": 26572, "port": 8088},
+    "oagnet": {"pid": 27968, "port": 8021},
+    "sql_translator": {"pid": 26172, "port": 48000},
+    "started_at": "2026-09-10T19:26:39+08:00"
+  },
+  "runtime_sha256": {
+    ".env.example": "ddc72ad241b51b6afb86639887c60a23a625900d58777e82036c26de71913fb7",
+    "app/api.py": "3129e4bdfcf8f1af1a871a6ebad10338712c52d00750322a155f518d1fde9b66",
+    "app/config.py": "9c09a9ef188dcd52c5a2b3af9991cd4ede272922c4733ef594afd560019757b8",
+    "app/main.py": "96369698dbb8266772604a0c2e7a27efbcbfabfdf3a9558db6ab18d1084df218",
+    "app/semantic_v2/limited_scalar_runtime.py": "e0c95dabbd849b4aae5846dd4b9ed61764e353b06ecc614a803c0b4116ddeb61",
+    "app/semantic_v2/persisted_scalar_api.py": "1c5b3915265601887e3543ad3ff5f414c8a6bea96580973301b63c0334dc2bcd"
+  },
+  "safety": {
+    "real_model_calls": 0,
+    "business_sql_calls": 0,
+    "production_state_writes": 0,
+    "configuration_changes": 0,
+    "service_restarts": 0,
+    "v1_routing_changes": 0,
+    "blind_access": 0
+  },
+  "gates": {
+    "READY_FOR_LIMITED_SCALAR_DEPLOYMENT_APPROVAL": "NO",
+    "CONTEXT_FOLLOWUP_READY": "NOT_READY_FULL_GATE",
+    "INTERNAL_DEMO_SEMANTIC_READY": "NO",
+    "READY_FOR_USER_APPROVAL": "NO",
+    "QUESTION_COMPLETION_CONTRACT_GAP": "OPEN_USER_VISIBLE_LIMITATION"
+  }
+}

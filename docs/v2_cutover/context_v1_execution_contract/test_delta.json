@@ -1,0 +1,32 @@
+{
+  "status": "PASS",
+  "focused_offline": {
+    "passed": 91,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "isolated_full_offline": {
+    "passed": 3630,
+    "existing_failed": 91,
+    "collection_errors": 0,
+    "old_pass_to_new_fail": 0,
+    "real_model_calls": 0,
+    "production_external_writes": 0
+  },
+  "live_8088": {
+    "runtime_mode": "V2_CONTEXT_V1_EXECUTION",
+    "first_turn": "COMPLETED",
+    "followup_turn": "COMPLETED",
+    "task_versions": [1, 2],
+    "v1_execution_called": [true, true],
+    "query_result_evidence": 2,
+    "sql_writes": 0,
+    "catalog_writes": 0,
+    "configuration_changes": 0
+  },
+  "unrelated_workspace_drift": {
+    "path": "app/api.py",
+    "effect": "two test_api heading assertions",
+    "included_in_change": false
+  }
+}

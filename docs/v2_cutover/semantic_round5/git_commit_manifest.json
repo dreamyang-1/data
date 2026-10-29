@@ -1,0 +1,24 @@
+{
+  "baseline_commit": "899b7b692f7ff06a8660fe99361ba39f8528b1f1",
+  "parent_draft_pr": 58,
+  "base_branch": "semantic-context-proposal-round4-20260910t004000z",
+  "feature_branch": "semantic-context-production-wiring-round5-20260910t015554z",
+  "planned_commits": [
+    {
+      "title": "v2: wire bounded context proposals into raw recognition",
+      "scope": "Four V2 production files, protocol fixtures, bounded evaluation tools and evidence"
+    }
+  ],
+  "final_commit": {
+    "resolution": "Commit introducing this manifest; no recursive self-SHA",
+    "command": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5/git_commit_manifest.json"
+  },
+  "publication": {
+    "remote": "https://github.com/dreamyang-1/data",
+    "head": "semantic-context-production-wiring-round5-20260910t015554z",
+    "base": "semantic-context-proposal-round4-20260910t004000z",
+    "draft": true,
+    "auto_merge": false,
+    "receipt": "Local post-publication receipt outside committed tree"
+  }
+}

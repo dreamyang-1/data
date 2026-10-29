@@ -1,0 +1,375 @@
+{
+  "changed_files": [
+    "app/semantic_v2/clarification.py",
+    "app/semantic_v2/enums.py",
+    "app/semantic_v2/legacy_adapter.py",
+    "app/semantic_v2/models.py",
+    "app/semantic_v2/result_contract.py",
+    "app/semantic_v2/slot_reducer.py",
+    "app/semantic_v2/state_machine.py",
+    "tools/phase25/run_semantic_v2_shadow.py"
+  ],
+  "added_files": [
+    "app/semantic_v2/migration.py",
+    "app/semantic_v2/pipeline.py",
+    "app/semantic_v2/registries.py",
+    "docs/phase25_1/baseline_test_gate.json",
+    "docs/phase25_1/contract_boundaries_and_rollback.md",
+    "docs/phase25_1/contrast_cases.json",
+    "docs/phase25_1/current_code_baseline_audit.md",
+    "docs/phase25_1/dataset_ancestry_fixture.json",
+    "docs/phase25_1/gold_v0_2_1.jsonl",
+    "docs/phase25_1/legacy_parser_freeze_policy.md",
+    "docs/phase25_1/long_conversations/dealer_orders.json",
+    "docs/phase25_1/long_conversations/department_purchases.json",
+    "docs/phase25_1/long_conversations/hospital_sales.json",
+    "docs/phase25_1/long_conversations/product_returns.json",
+    "docs/phase25_1/long_conversations/warehouse_stock.json",
+    "docs/phase25_1/magic_string_audit.json",
+    "docs/phase25_1/magic_string_control_plane_audit.md",
+    "docs/phase25_1/metamorphic_cases.json",
+    "docs/phase25_1/payload_contract_registry.md",
+    "docs/phase25_1/plan_axis_compatibility_matrix.csv",
+    "docs/phase25_1/preexisting_workspace_drift.json",
+    "docs/phase25_1/semantic_v2_import_audit.json",
+    "docs/phase25_1/source_inventory.json",
+    "docs/phase25_1/test_gate_comparison.json",
+    "docs/phase25_1/verified_final_test_gate.json",
+    "specs/semantic_v2/0.2.1/CandidateSelectionDecision.schema.json",
+    "specs/semantic_v2/0.2.1/ConversationState.schema.json",
+    "specs/semantic_v2/0.2.1/CurrentTurnParseResult.schema.json",
+    "specs/semantic_v2/0.2.1/CurrentTurnSemanticParse.schema.json",
+    "specs/semantic_v2/0.2.1/ExecutablePlan.schema.json",
+    "specs/semantic_v2/0.2.1/ExecutionAttemptRecord.schema.json",
+    "specs/semantic_v2/0.2.1/LogicalPlan.schema.json",
+    "specs/semantic_v2/0.2.1/PlanEnvelope.schema.json",
+    "specs/semantic_v2/0.2.1/TaskSemanticState.schema.json",
+    "specs/semantic_v2/0.2.1/TurnResolutionResult.schema.json",
+    "tests/test_phase25_1_contracts.py",
+    "tests/test_phase25_1_scenarios.py",
+    "tools/phase25_1/audit_workspace.py",
+    "tools/phase25_1/closure_audit.py",
+    "tools/phase25_1/fixtures.py",
+    "tools/phase25_1/materialize.py",
+    "tools/phase25_1/run_gate.py",
+    "tools/phase25_1/scenarios.py",
+    "tools/phase25_1/sync_batch.py"
+  ],
+  "deleted_files": [],
+  "files": [
+    {
+      "path": "app/semantic_v2/clarification.py",
+      "sha256": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+      "previous_git_sha256": "e47c444fd6705711ac776a8412fc03a133df3f781e53101416a02fe7f2767961",
+      "change": "changed"
+    },
+    {
+      "path": "app/semantic_v2/enums.py",
+      "sha256": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+      "previous_git_sha256": "02ed58d06086f34db43263e1fee4071c9e64209a32609366c9dad10ffbceccc7",
+      "change": "changed"
+    },
+    {
+      "path": "app/semantic_v2/legacy_adapter.py",
+      "sha256": "28067a1cdfd06f4039ce000265362b4131fed1228b013a9fa4a2cfb6f5c27621",
+      "previous_git_sha256": "a6511fce20f2e6ee15ed6c8054c8f111f1229b84d026894d25d0b30333fdb519",
+      "change": "changed"
+    },
+    {
+      "path": "app/semantic_v2/migration.py",
+      "sha256": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "app/semantic_v2/models.py",
+      "sha256": "ea4be3ce4605e17153be9076ceab40e9d3e75747b9b3f1578b22385562e2d6e2",
+      "previous_git_sha256": "0ae495cd55ca0a1bc4b8906c3b435b22569e3276d9cadecdf85af0e05ef84a4a",
+      "change": "changed"
+    },
+    {
+      "path": "app/semantic_v2/pipeline.py",
+      "sha256": "a37732615f58c12f2730c516a4eb1968ac05f49d12780c9ed37c94cac7f85eea",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "app/semantic_v2/registries.py",
+      "sha256": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "app/semantic_v2/result_contract.py",
+      "sha256": "7a6fcc078f2e63b274b7f9e80d61403cebd686d5de34868b6b6538ae4e104fe0",
+      "previous_git_sha256": "92ba9a6bd966008f5a44c31c650d09873342d1368d5d14a6d9caeb4aa77629df",
+      "change": "changed"
+    },
+    {
+      "path": "app/semantic_v2/slot_reducer.py",
+      "sha256": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+      "previous_git_sha256": "98c1f6daa032d175ac5b9fb1cec24df180cdb10c2aa3ff4d2afc00c7e69f2949",
+      "change": "changed"
+    },
+    {
+      "path": "app/semantic_v2/state_machine.py",
+      "sha256": "6fa7412eed16252188b48fca774856438d3c52aeb2f96e4dfadcf043527feab6",
+      "previous_git_sha256": "32a5d66f5e0376f5453e3e42fc320b0121b1241fd53908b2c0cba6ccb31b9648",
+      "change": "changed"
+    },
+    {
+      "path": "docs/phase25_1/baseline_test_gate.json",
+      "sha256": "30c590bafff08bf027689954606c4e2e6f3d1cc58dd12dec1706427da8fe2b8e",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/contract_boundaries_and_rollback.md",
+      "sha256": "feacef7a34ff67292ae70780a198988b514c0a85be82d386df48809ad45657c2",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/contrast_cases.json",
+      "sha256": "feba836dbc890e1a0656f3f35044a96232c65ab31d7460a5424c494f395211e7",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/current_code_baseline_audit.md",
+      "sha256": "b68950c3534c173c2b77f5553874cca23c2b6b9a6a62ec7e641a74807921521f",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/dataset_ancestry_fixture.json",
+      "sha256": "344da13ab73ed2b507b42d259413e1f7a5597ac39750937c9de76874525c6acd",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/gold_v0_2_1.jsonl",
+      "sha256": "df5baa3374055e0243fa3ae3f70e0f6d4bc5e2c28b311933728718dd6663a273",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/legacy_parser_freeze_policy.md",
+      "sha256": "9836fa1394d5497665b08607d758e57450b37b6710dfeee5df9eca842e593a19",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/dealer_orders.json",
+      "sha256": "f1f8e76ecaf64a61424e15cff76f1c7a0f9b913b7f5d902c3faf900df32bd6fd",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/department_purchases.json",
+      "sha256": "68d575ac2863b212eddca8d9be0d0926f5f5d657e292c0af4c97ecf0a4ad09aa",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/hospital_sales.json",
+      "sha256": "3178e6ad1d0a865e46ee666ef8e09ebb862058a7ebc2752e0ebb974f3c713b9a",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/product_returns.json",
+      "sha256": "90f5c980edc7ac51dbf83467dda5a5a681bc3c668d3456ee6bdd3e244f47932c",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/long_conversations/warehouse_stock.json",
+      "sha256": "73e03fdde63743e01b5d70c1150937fcaa3acf7335dce9cfa3f276ffc6396c05",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/magic_string_audit.json",
+      "sha256": "d1a8456bba06c56ffab73f7a52cb19dcb8adb4e660ebc64b1ac192cee1918558",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/magic_string_control_plane_audit.md",
+      "sha256": "d9156ce1ac933ad8b73d4768f7b98ed88edb34cede59f06a5e910652fc63846f",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/metamorphic_cases.json",
+      "sha256": "573d9f98613f9c66d69daccbab7d0fa191f81820e3108a5746111998a86bcf31",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/payload_contract_registry.md",
+      "sha256": "11c3338b90d4590daed6edd07c7eb564274cafd3fa81fb31edc8783ba18582e2",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/plan_axis_compatibility_matrix.csv",
+      "sha256": "ef2c96815a5f4d78dd826ad5659ef6e6a44b041e68be985b41afca0fca8828f4",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/preexisting_workspace_drift.json",
+      "sha256": "a6fb566b0e763e8e8845e3e188f58fa6d9e63172367dec7569cab5f5b133b3a6",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/semantic_v2_import_audit.json",
+      "sha256": "40bea79c6e27b085afede3b67a6933d82ed677500fee1035e5d9045a3e669996",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/source_inventory.json",
+      "sha256": "178f978be85832560578c06cc1774146d7731d387093d48052c2e0d8de239756",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/test_gate_comparison.json",
+      "sha256": "2c1406298d466cf1983aeeeb381af6945fb3b469e5d0c0dc8a72d324dd23e6d8",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/verified_final_test_gate.json",
+      "sha256": "0a5021d2c3212957ccd86bbabadeb2c4dacfe3c0ef2a2c265dadccb385959d54",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/CandidateSelectionDecision.schema.json",
+      "sha256": "b4c3c8b19a527ae90421ddd0c3b2dfe13805e652c9d5393085ea413b48fcd5de",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/ConversationState.schema.json",
+      "sha256": "9b958e4fc08bec6f79cf8351df68f4af004d705c3bd887b69eb96c68861ef5bf",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/CurrentTurnParseResult.schema.json",
+      "sha256": "32032fc14b6dc2ba449c7a62a533249a95ebf7fd4ef9f7806ad00c90437745d4",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/CurrentTurnSemanticParse.schema.json",
+      "sha256": "3ab9403726507d56d40ce6334619145770e32eba4e4dd740c00da74023f9a93c",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/ExecutablePlan.schema.json",
+      "sha256": "b2852d5b9a374008a9d91f97b097c1bd11bbb1efa274be1f6ff47392f00b6732",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/ExecutionAttemptRecord.schema.json",
+      "sha256": "c375b608fd0b18353785d48b738e60cb20e0f5813af24eea30bd14e395e846ef",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/LogicalPlan.schema.json",
+      "sha256": "c30d82ce705c467ea604f04b3ccc4d9856a49afd2d4774e9afc2bf8f01544da3",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/PlanEnvelope.schema.json",
+      "sha256": "6d7bd6cce5311333cb6f137007bd98b277250c7f79f19343f09ed96e5b448580",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/TaskSemanticState.schema.json",
+      "sha256": "7c4b9e2112cf62bd292c925239536ace57f8b8f690c68b178fcf725c1f02dc79",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "specs/semantic_v2/0.2.1/TurnResolutionResult.schema.json",
+      "sha256": "44b2211a9cc3f85c4086bd3834e20b8b5cb0828a895099d3488d06019fb5601f",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "tests/test_phase25_1_contracts.py",
+      "sha256": "ba607cf2bcb89cb7bade9917641ef8221397384b73253062e5334a8df926e8f6",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "tests/test_phase25_1_scenarios.py",
+      "sha256": "f372a76666762e31ab46fa6a5893de40bfd8436a95d4c488b97c7f63e98b3147",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "tools/phase25/run_semantic_v2_shadow.py",
+      "sha256": "85e1b38047e72545a5b4d6caadf849c06bc0366280628490ca19f285d309b9da",
+      "previous_git_sha256": "bc40fabe4b2e4c6d16be29bc27e3ce7ab702c82f0dd0fffe3f8d7b0123dc3415",
+      "change": "changed"
+    },
+    {
+      "path": "tools/phase25_1/audit_workspace.py",
+      "sha256": "897185b858130a196ad961160ba98cf0e9737458d56026962f990b0806b5992d",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "tools/phase25_1/closure_audit.py",
+      "sha256": "c83a8e43d78473718674e87c7dbffe069e4bec463394c2c136ce0df4ff1ef522",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "tools/phase25_1/fixtures.py",
+      "sha256": "aa214965a4b5d1658dca8dd54506e4539023eabf97d6274be5d900aa825d3ebb",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "tools/phase25_1/materialize.py",
+      "sha256": "18e2cfe095fe6a311cf211341865ae804ef0369bdcf80d7f2560fb046f17dcdb",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "tools/phase25_1/run_gate.py",
+      "sha256": "77ec9e81ed867c161983baba36498887ccd80c81b5c9514b9d82ed3623bbfe1c",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "tools/phase25_1/scenarios.py",
+      "sha256": "b89a7ac1b93a1454cc3b5c5e2666479640264fdab263450a923cf01bb3664177",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "tools/phase25_1/sync_batch.py",
+      "sha256": "4e6084cf5d4da63c857d6a5086bd3a8f0100757aaf4c9dac463c6ab62f24d437",
+      "previous_git_sha256": null,
+      "change": "added"
+    }
+  ],
+  "sensitive_scan": "PASS",
+  "preexisting_drift_preserved": true
+}

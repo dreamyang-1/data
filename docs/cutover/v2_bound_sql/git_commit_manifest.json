@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "e80132164b4335d38edd7081fd8d884551baa7fe",
+  "feature_branch": "cutover-v2-bound-sql-20260909-01",
+  "base_branch": "cutover-v2-filter-tree-20260909-01",
+  "implementation_commit": "5b454d5477414724ebca3034a7ad20b572b0d734",
+  "service_commits": {
+    "SQL_Translator": "a40aa584dc11a796414840d4dafaa116013c1db1",
+    "DataAnalysis_Agent": "5b454d5477414724ebca3034a7ad20b572b0d734"
+  },
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

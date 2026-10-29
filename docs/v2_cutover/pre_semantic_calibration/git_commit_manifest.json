@@ -1,0 +1,19 @@
+{
+  "baseline_commit": "5aaf64a235ca1766ee5c72bb24997aba924c10e0",
+  "parent_draft_pr": "https://github.com/dreamyang-1/data/pull/53",
+  "base_branch": "evaluation-harness-closure-20260909t083000z",
+  "feature_branch": "pre-semantic-calibration-20260909t111841z",
+  "code_commit": "b2478b5125f2b7d8ce463b0b42b389f1b3462367",
+  "evidence_commit": {
+    "resolution": "Commit introducing this exact manifest; self-hash is not embedded in its own Git tree.",
+    "command": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/pre_semantic_calibration/git_commit_manifest.json"
+  },
+  "publication": {
+    "remote": "https://github.com/dreamyang-1/data",
+    "head": "pre-semantic-calibration-20260909t111841z",
+    "base": "evaluation-harness-closure-20260909t083000z",
+    "draft": true,
+    "auto_merge": false,
+    "verification": "After commit, verify remote head SHA and GitHub open Draft PR head/base; publication receipt stays outside its own commit."
+  }
+}

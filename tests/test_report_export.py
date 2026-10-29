@@ -37,6 +37,7 @@ class Minio:
         assert len(payload) == length
         self.objects[(bucket, name)] = payload
         self.metadata = kwargs.get("metadata")
+        self.content_type = kwargs.get("content_type")
 
     def presigned_get_object(self, bucket, name, expires):
         return f"http://minio/{bucket}/{name}"
@@ -91,9 +92,36 @@ def test_xlsx_export_neutralizes_formula_injection_and_illegal_controls():
         assert workbook["数据"]["A2"].data_type == "s"
         assert workbook["数据"]["A2"].value.startswith("'=")
         assert "\x00" not in workbook["数据"]["A2"].value
-        assert workbook["说明"]["B1"].value == "'+unsafe title"
+        assert workbook.sheetnames == ["数据"]
     finally:
         workbook.close()
+
+
+def test_chart_is_published_as_scoped_svg_with_dataset_provenance():
+    minio = Minio()
+    ref = reference()
+    result = DatasetReportExporter(minio, Store(), bucket="bam").publish_chart(
+        {
+            "chart_type": "LINE",
+            "title": "销售额趋势",
+            "x_field": "月份",
+            "y_fields": ["销售额"],
+            "data": [
+                {"月份": "2026-07", "销售额": 100},
+                {"月份": "2026-08", "销售额": 120},
+            ],
+        },
+        scope=ref.scope,
+        dataset_ids=[ref.dataset_id],
+    )
+
+    payload = minio.objects[("bam", result["object_name"])]
+    assert result["format"] == "svg"
+    assert result["object_name"].startswith("data-analysis/reports/")
+    assert payload.startswith(b"<svg")
+    assert minio.content_type == "image/svg+xml"
+    assert result["dataset_ids"] == [ref.dataset_id]
+    assert result["report_reference"]["scope"]["conversation_id"] == "conversation"
 
 
 def test_composite_xlsx_keeps_independent_datasets_on_separate_sheets():
@@ -120,10 +148,13 @@ def test_composite_xlsx_keeps_independent_datasets_on_separate_sheets():
     payload = minio.objects[("bam", result["object_name"])]
     workbook = load_workbook(BytesIO(payload), data_only=True, read_only=True)
     try:
-        assert workbook.sheetnames == ["报告说明", "章节1", "章节2"]
-        assert workbook["报告说明"]["B3"].value == 2
+        assert workbook.sheetnames == ["章节1", "章节2"]
         assert workbook["章节1"]["B2"].value == "dataset-1"
         assert workbook["章节2"]["B2"].value == "dataset-2"
+        for sheet in workbook:
+            assert list(sheet.values)[3:] == [
+                ("月份", "销售额"), ("2026-07", "100"), ("2026-08", "120"),
+            ]
     finally:
         workbook.close()
     assert result["dataset_ids"] == ["dataset-1", "dataset-2"]

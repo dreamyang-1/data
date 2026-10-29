@@ -1,0 +1,147 @@
+{
+  "baseline_commit": "b5037e7d15ecfd8e733551c853cbf9441be7c4bd",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline": {
+        "passed": 2484,
+        "failed": 27
+      },
+      "final": {
+        "passed": 2523,
+        "failed": 27
+      },
+      "new_tests": [
+        "tests/test_v2_relation_paths.py::test_add_new_condition_to_another_self_occurrence",
+        "tests/test_v2_relation_paths.py::test_alias_changes_semantics_and_survives_nested_serialization",
+        "tests/test_v2_relation_paths.py::test_alias_prefix_stability_does_not_rebind_replacement",
+        "tests/test_v2_relation_paths.py::test_changed_path_rejects_retained_filter_alias",
+        "tests/test_v2_relation_paths.py::test_compile_rederives_path_not_just_ref_receipts[alias]",
+        "tests/test_v2_relation_paths.py::test_compile_rederives_path_not_just_ref_receipts[cardinality]",
+        "tests/test_v2_relation_paths.py::test_compile_rederives_path_not_just_ref_receipts[direction]",
+        "tests/test_v2_relation_paths.py::test_compile_rederives_path_not_just_ref_receipts[endpoint]",
+        "tests/test_v2_relation_paths.py::test_current_path_schemas_match_source_and_frozen_contract_stays_separate",
+        "tests/test_v2_relation_paths.py::test_final_result_rejects_output_id_that_hides_target_occurrence",
+        "tests/test_v2_relation_paths.py::test_followup_filter_membership_preserves_self_occurrence[ADD]",
+        "tests/test_v2_relation_paths.py::test_followup_filter_membership_preserves_self_occurrence[CLEAR]",
+        "tests/test_v2_relation_paths.py::test_followup_filter_membership_preserves_self_occurrence[REMOVE]",
+        "tests/test_v2_relation_paths.py::test_followup_filter_membership_preserves_self_occurrence[REPLACE]",
+        "tests/test_v2_relation_paths.py::test_frozen_plan_rejects_path_and_aliased_variants",
+        "tests/test_v2_relation_paths.py::test_model_cannot_mix_path_and_single_edge[bad0]",
+        "tests/test_v2_relation_paths.py::test_model_cannot_mix_path_and_single_edge[bad1]",
+        "tests/test_v2_relation_paths.py::test_model_cannot_mix_path_and_single_edge[bad2]",
+        "tests/test_v2_relation_paths.py::test_path_append_keeps_source_filter_and_rebinds_display",
+        "tests/test_v2_relation_paths.py::test_path_state_cannot_restore_under_changed_request_scope[new_scope0]",
+        "tests/test_v2_relation_paths.py::test_path_state_cannot_restore_under_changed_request_scope[new_scope1]",
+        "tests/test_v2_relation_paths.py::test_path_state_cannot_restore_under_changed_request_scope[new_scope2]",
+        "tests/test_v2_relation_paths.py::test_raw_directed_paths_bind_nodes_defaults_and_result_occurrence[edges0-names0-cards0]",
+        "tests/test_v2_relation_paths.py::test_raw_directed_paths_bind_nodes_defaults_and_result_occurrence[edges1-names1-cards1]",
+        "tests/test_v2_relation_paths.py::test_raw_directed_paths_bind_nodes_defaults_and_result_occurrence[edges2-names2-cards2]",
+        "tests/test_v2_relation_paths.py::test_raw_filter_and_projection_own_exact_occurrence[False-\\u533b\\u9662\\u540d\\u79f0-node:0]",
+        "tests/test_v2_relation_paths.py::test_raw_filter_and_projection_own_exact_occurrence[False-\\u5546\\u54c1\\u540d\\u79f0-node:2]",
+        "tests/test_v2_relation_paths.py::test_raw_filter_and_projection_own_exact_occurrence[False-\\u8ba2\\u5355\\u540d\\u79f0-node:1]",
+        "tests/test_v2_relation_paths.py::test_raw_filter_and_projection_own_exact_occurrence[True-\\u533b\\u9662\\u540d\\u79f0-node:0]",
+        "tests/test_v2_relation_paths.py::test_raw_filter_and_projection_own_exact_occurrence[True-\\u5546\\u54c1\\u540d\\u79f0-node:2]",
+        "tests/test_v2_relation_paths.py::test_raw_filter_and_projection_own_exact_occurrence[True-\\u8ba2\\u5355\\u540d\\u79f0-node:1]",
+        "tests/test_v2_relation_paths.py::test_raw_invalid_path_or_field_is_bounded[edges0-None-None-PATH_DISCONNECTED]",
+        "tests/test_v2_relation_paths.py::test_raw_invalid_path_or_field_is_bounded[edges1-\\u533b\\u9662\\u540d\\u79f0-None-OCCURRENCE_UNRESOLVED]",
+        "tests/test_v2_relation_paths.py::test_raw_invalid_path_or_field_is_bounded[edges2-\\u533b\\u9662\\u540d\\u79f0-node:1-OCCURRENCE_MISMATCH]",
+        "tests/test_v2_relation_paths.py::test_raw_invalid_path_or_field_is_bounded[edges3-\\u533b\\u9662\\u540d\\u79f0-node:8-ALIAS_NOT_IN_CURRENT_PATH]",
+        "tests/test_v2_relation_paths.py::test_raw_invalid_path_or_field_is_bounded[edges4-\\u533b\\u9662\\u540d\\u79f0-invented-ALIAS_NOT_IN_CURRENT_PATH]",
+        "tests/test_v2_relation_paths.py::test_self_relation_requires_occurrences_even_for_legacy_single_edit",
+        "tests/test_v2_relation_paths.py::test_unique_unaliased_field_remains_resolvable",
+        "tests/test_v2_relation_paths.py::test_unscoped_alias_and_unowned_path_fields_reject_at_compiler"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ]
+    },
+    "Oagnet": {
+      "baseline": {
+        "passed": 560,
+        "failed": 8
+      },
+      "final": {
+        "passed": 560,
+        "failed": 8
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter"
+      ]
+    },
+    "SQL_Translator": {
+      "baseline": {
+        "passed": 200
+      },
+      "final": {
+        "passed": 200
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": []
+    }
+  },
+  "critical_passed": 160,
+  "critical_total": 160,
+  "full_agent_modules": 100,
+  "full_agent_before_test_only_review": {
+    "passed": 2522,
+    "failed": 27
+  },
+  "focused_v2_before_review": 504,
+  "final_review_module": {
+    "passed": 39
+  },
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "final_method": "Full three-service regression, then replace the complete relation-path module after strengthening cross-scope rejection assertions and adding source/schema equality. No source change after full regression.",
+  "source_calls": "Offline network-blocking runners and MockTransport only; separate MySQL read-only capture; no real models or embeddings",
+  "model_calls": 0,
+  "production_external_writes": 0
+}

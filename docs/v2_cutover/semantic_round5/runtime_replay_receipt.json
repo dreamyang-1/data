@@ -1,0 +1,438 @@
+{
+  "cases": 12,
+  "passed": 12,
+  "rows": [
+    {
+      "case_id": "S81-001",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits"
+      ],
+      "failure": null,
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0185544
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0056431
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.0058817
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 0.0001799
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0056251
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "S81-002",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits"
+      ],
+      "failure": null,
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.01382
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0046877
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.0047648
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 3.4e-05
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0044456
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "S81-003",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits"
+      ],
+      "failure": null,
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0128832
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0043694
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.0044322
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 3.96e-05
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0041063
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "S81-011",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits"
+      ],
+      "failure": null,
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0126
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.004599
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.0046679
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 3.38e-05
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0043897
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "S81-012",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits"
+      ],
+      "failure": null,
+      "source": "LIVE_FIRST_WITH_RECORDED_DOWNSTREAM",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0119239
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0044744
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.0045399
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 3.15e-05
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0046243
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "S81-013",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits"
+      ],
+      "failure": null,
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0189405
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.006582
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.006653
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 3.36e-05
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0065301
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "S81-014",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits"
+      ],
+      "failure": null,
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0355219
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0167775
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.017074
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 3.55e-05
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0170233
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "S81-016",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits",
+        "v2_source_value_choice"
+      ],
+      "failure": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "source": "LIVE_FIRST_WITH_RECORDED_DOWNSTREAM",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0046596
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0042436
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.0043097
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 3.4e-05
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "S81-017",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits"
+      ],
+      "failure": null,
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0127569
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0049815
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.005064
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 3.48e-05
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0042567
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "R4L-010",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn",
+        "v2_semantic_edits"
+      ],
+      "failure": null,
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0131407
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0050119
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.0050957
+        },
+        {
+          "stage": "proposal_resolution",
+          "seconds": 3.43e-05
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0041506
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "R4L-011",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn"
+      ],
+      "failure": {
+        "type": "ContextProposalFailure",
+        "reason": "V2_CONTEXT_AMBIGUOUS"
+      },
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0139852
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0043887
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.0044418
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    },
+    {
+      "case_id": "R4L-012",
+      "request_match": true,
+      "semantic_outcome_equal": true,
+      "stage_calls": [
+        "v2_current_turn"
+      ],
+      "failure": null,
+      "source": "LIVE_CAPTURE",
+      "stage_timings": [
+        {
+          "stage": "discover_context",
+          "seconds": 0.0047918
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0055277
+        },
+        {
+          "stage": "accept_proposal",
+          "seconds": 0.0056086
+        },
+        {
+          "stage": "validate_proposal",
+          "seconds": 0.0047748
+        }
+      ],
+      "model_calls": 0,
+      "sql_calls": 0,
+      "production_writes": 0
+    }
+  ],
+  "runtime_source_hashes": {
+    "app\\semantic_v2\\context_contract.py": "8dd90555dd131650edfdda9c9019ce96a76e8c69ef504d54c1b33336a2b46fce",
+    "app\\semantic_v2\\context_proposal.py": "ad5d3d9d88de83f138dc59a868dd44936495eebeba0e2e79c015d2c125c50e84",
+    "app\\semantic_v2\\recognition.py": "a7a24f9e6eeac22a5bc0e384c7f5c3ffdc4e2ce6ed529cda808ba4b80ff21f56",
+    "app\\semantic_v2\\catalog_bridge.py": "1a25820621da70e477a9579908ce1750a2eba5709f6952bb855d2482d5717323"
+  },
+  "version_metadata": "Explicit context parser/resolver tags may differ; semantic payload/patch/state must match",
+  "model_calls": 0,
+  "sql_calls": 0,
+  "production_writes": 0,
+  "blind_access": 0
+}

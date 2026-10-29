@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+  "branch": "cutover-readiness-catalog-20260908-01",
+  "final_commit": "Commit containing this evidence manifest",
+  "source_rollback": "Review git revert of the separate catalog-capture and binding commits; explicitly synchronize manifest paths and rerun their matching tests",
+  "deployment_or_index_rollback_needed": false,
+  "canary_rollback_proven": false,
+  "automatic_merge": false
+}

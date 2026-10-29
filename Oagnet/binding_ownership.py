@@ -1,0 +1,231 @@
+"""Catalog-backed parameter ownership; neither names nor vector rank are IDs."""
+import json
+import re
+import unicodedata
+
+
+def decoded(value):
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except ValueError:
+            pass
+    return value
+
+
+def normalized(value):
+    return re.sub(r'\s+', '', unicodedata.normalize('NFKC', str(value or ''))).casefold()
+
+
+def registered_terms(value):
+    """Flatten published aliases only; never derive terms from descriptions."""
+    value = decoded(value)
+    if isinstance(value, str):
+        return [term.strip() for term in re.split('[,，;；、]', value) if term.strip()]
+    if isinstance(value, (list, tuple, set)):
+        return [term for item in value for term in registered_terms(item)]
+    return []
+
+
+def entity_terms(code, meta):
+    return [code, meta.get('entity_name'), str(meta.get('entity_id') or ''),
+            *registered_terms(meta.get('entity_alias'))]
+
+
+def entity_label_candidates(label, entities):
+    if not isinstance(label, (str, int)) or isinstance(label, bool) or not normalized(label):
+        return set()
+    term = normalized(label)
+    codes = {code for code, meta in entities.items()
+             if term in {normalized(code), normalized(meta.get('entity_id'))}}
+    names = {code for code, meta in entities.items() if term == normalized(meta.get('entity_name'))}
+    return codes or names or {code for code, meta in entities.items()
+        if term in {normalized(alias) for alias in registered_terms(meta.get('entity_alias'))}}
+
+
+def resolve_entities(label, entities):
+    """Prefer canonical code/ID; an alias shared by two entities is not unique."""
+    labels = label if isinstance(label, list) else [label]
+    owners = set()
+    for value in labels:
+        if not isinstance(value, (str, int)) or isinstance(value, bool):
+            return set()
+        term = normalized(value)
+        if not term:
+            return set()
+        matches = entity_label_candidates(value, entities)
+        if len(matches) != 1:
+            return set()
+        owners.update(matches)
+    return owners
+
+
+def field_owners(meta):
+    owners = set(meta.get('owners') or [])
+    owners.update(str(meta[key]) for key in ('owner', 'parent') if meta.get(key))
+    return owners
+
+
+def parameter_owners(original, catalog):
+    if not isinstance(original, dict) or not original.get('entity'):
+        return set()
+    return resolve_entities(original['entity'], catalog['entities'])
+
+
+def matching_dimensions(original, catalog):
+    """Resolve a dimension label only within the current scoped dimension catalog."""
+    label = original.get('name') or original.get('field') if isinstance(original, dict) else original
+    if not isinstance(label, str) or not normalized(label):
+        return []
+    term = normalized(label)
+    dimensions = catalog.get('dimensions') or {}
+    codes = [code for code in dimensions if normalized(code) == term]
+    if codes:
+        return codes
+    return [code for code, meta in dimensions.items()
+            if term in {normalized(value) for value in
+                        [meta.get('dim_name'), *registered_terms(meta.get('synonyms'))] if value}]
+
+
+def matching_fields(original, catalog, *, aliases=True):
+    label = original.get('name') or original.get('field') if isinstance(original, dict) else original
+    if not isinstance(label, str):
+        return []
+    matched = []
+    for field, meta in catalog['fields'].items():
+        terms = [field]
+        for attr in meta.get('attribute_bindings') or [meta]:
+            labels = [attr.get('attr_name'),
+                      *(registered_terms(attr.get('synonyms')) if aliases else [])]
+            terms.extend([attr.get('attr_code'), *labels])
+            for owner in field_owners(attr):
+                for entity in entity_terms(owner, catalog['entities'].get(owner, {})):
+                    if entity and entity_label_candidates(entity, catalog['entities']) == {owner}:
+                        for name in labels:
+                            if name:
+                                terms.extend([str(entity) + str(name), str(entity) + '.' + str(name)])
+        if normalized(label) in {normalized(term) for term in terms if term}:
+            matched.append(field)
+    return matched
+
+
+def parameter_catalog(catalog, original, extraction, target):
+    """Explicit slot owners constrain attributes, not the entire query subject.
+
+    Top-level involved entities are only tie-breaking context. Unowned/wrongly
+    classified values keep existing bounded cross-field recovery. A shared
+    dictionary can still bind through a published edge to the requested owner.
+    Global value IDs remain stable; value matching also checks retained fields.
+    """
+    owners = parameter_owners(original, catalog)
+    dimensions = matching_dimensions(original, catalog)
+    exact = (matching_fields(original, catalog, aliases=False)
+             or matching_fields(original, catalog))
+    if isinstance(original, dict) and original.get('entity') and not owners:
+        # Do not silently substitute the label's entity for a contradictory,
+        # unresolved explicit owner. Legacy field-only grounding is unchanged.
+        candidates = entity_label_candidates(original['entity'], catalog['entities'])
+        return dict(catalog, _parameter_owner_error='指定实体未在当前授权目录中唯一匹配',
+                    _parameter_owner_candidates=sorted(candidates))
+    if not owners and not exact and not dimensions:
+        # A whole entity name/alias used as a slot label supplies its parent,
+        # not an arbitrary same-named attribute on another entity. Explicit
+        # attribute names and explicit slot owners retain their old priority.
+        label = (original.get('field') or original.get('name')) if isinstance(original, dict) else original
+        if label:
+            matches = entity_label_candidates(label, catalog['entities'])
+            if len(matches) > 1:
+                return dict(catalog, _parameter_owner_candidates=sorted(matches))
+            owners = matches
+    if not owners and len(exact) > 1 and not dimensions:
+        hinted = resolve_entities(extraction.get('实体') or [], catalog['entities'])
+        matched_owners = {owner for field in exact for owner in field_owners(catalog['fields'][field])}
+        if len(hinted & matched_owners) == 1:
+            owners = hinted & matched_owners
+    if not owners and target == 'metrics':
+        # Registered metric/dimension homonyms need the same owner tie-break
+        # as physical attributes. Never restrict a unique cross-entity field
+        # merely because the query subject belongs to another entity.
+        label = original.get('name') or original.get('field') if isinstance(original, dict) else original
+        category = 'metrics'
+        name_key = 'metric_name'
+        matches = [meta for key, meta in catalog.get(category, {}).items()
+                   if normalized(label) in {normalized(key), normalized(meta.get(name_key)),
+                       *(normalized(v) for v in registered_terms(meta.get('synonyms')))}]
+        if len(matches) > 1:
+            hinted = resolve_entities(extraction.get('实体') or [], catalog['entities'])
+            matching_owners = set().union(set(), *(semantic_owners(meta, category, catalog) for meta in matches))
+            if len(hinted & matching_owners) == 1:
+                owners = hinted & matching_owners
+    if not owners:
+        return catalog
+    fields = {}
+    for key, meta in catalog['fields'].items():
+        if not field_owners(meta) & owners:
+            continue
+        bindings = [attr for attr in meta.get('attribute_bindings') or [] if field_owners(attr) & owners]
+        fields[key] = dict(meta, **bindings[0], attribute_bindings=bindings) if len(bindings) == 1 else meta
+    direct = [key for key in exact if key in fields]
+    # A textual own attribute (e.g. dealer.name/level) cannot be replaced by a
+    # same-named attribute on a neighbor. FK dictionary labels are different:
+    # a province name can be bound through dealer.province_id, not hospital's.
+    identifiers = all(key.rsplit('.', 1)[-1].casefold().endswith(('_id', '_code', '_key')) for key in direct)
+    if target == 'filters' and (not direct or identifiers):
+        fields.update({key: catalog['fields'][key] for key, candidates in catalog.get('_dictionary_owners', {}).items()
+                       if candidates & owners and key in catalog['fields']
+                       and (not direct or '_dictionary_choices' not in catalog or any(
+                           choice['field'] in direct and choice['owner_entity'] in owners
+                           for choice in catalog['_dictionary_choices'].get(key, [])))})
+    result = dict(catalog, fields=fields, _parameter_owners=owners)
+    for category in ('metrics', 'dimensions'):
+        result[category] = {key: meta for key, meta in catalog.get(category, {}).items()
+                            if semantic_owners(meta, category, catalog) & owners
+                            or (category == 'dimensions' and key in owners)}
+    return result
+
+
+def semantic_owners(meta, category, catalog):
+    """Read registered ownership, never infer it from names or vector rank."""
+    if category == 'metrics':
+        dependency = decoded(meta.get('source_dependency')) or {}
+        return resolve_entities(decoded(dependency.get('bind_entity')) or [], catalog['entities']) if isinstance(dependency, dict) else set()
+    owners = set()
+    bindings = decoded(meta.get('bind_entities')) or []
+    for binding in bindings if isinstance(bindings, list) else []:
+        if not isinstance(binding, dict):
+            continue
+        owners.update(resolve_entities(binding.get('entity') or binding.get('entity_code'), catalog['entities']))
+        field = f"{binding.get('mappingTable')}.{binding.get('mappingColumn')}"
+        owners.update(field_owners(catalog['fields'].get(field, {})))
+    mapping = decoded(meta.get('field_mapping'))
+    if isinstance(mapping, dict):
+        mapping = f"{mapping.get('mappingTable')}.{mapping.get('mappingColumn')}"
+    if isinstance(mapping, str):
+        owners.update(field_owners(catalog['fields'].get(mapping, {})))
+    return owners
+
+
+def bound_filter_catalog(catalog, field):
+    """Use the resolved field and its published dictionary edges for values.
+
+    The pre-binding pool may contain several attributes of the same entity.
+    Once a field is selected, sibling attributes are no longer alternatives.
+    Keep global value IDs stable so existing model selections can be checked.
+    """
+    owners = catalog.get('_parameter_owners') or set()
+    allowed = {field}
+    for name, choices in catalog.get('_dictionary_choices', {}).items():
+        if any(choice.get('field') == field
+               and (not owners or choice.get('owner_entity') in owners)
+               for choice in choices):
+            allowed.add(name)
+    return dict(catalog, fields={key: meta for key, meta in catalog['fields'].items()
+                                 if key in allowed})
+
+
+def value_allowed(record, catalog):
+    """Keep stable global IDs while checking the selected logical parent."""
+    owners = catalog.get('_parameter_owners') or set()
+    declared = (catalog.get('_value_owners') or {}).get(record.get('id')) or set()
+    dictionary = (catalog.get('_dictionary_owners') or {}).get(record.get('field')) or set()
+    return record.get('field') in catalog['fields'] and (not owners or not declared or bool(owners & (declared | dictionary)))

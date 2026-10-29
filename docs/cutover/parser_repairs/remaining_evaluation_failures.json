@@ -1,0 +1,249 @@
+[
+  {
+    "case_id": "G81-001",
+    "failed_labeled_axes": [
+      "query_shape",
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-002",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-004",
+    "failed_labeled_axes": [
+      "query_shape",
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-005",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-006",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-009",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-013",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-029",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-030",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-060",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-061",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "RULE_PARSE",
+    "status": "UNKNOWN_NEEDS_EXACT_REFERENCE_EVIDENCE",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {
+      "invalid_surface_spans": 0,
+      "foreign_turn_mentions": 0,
+      "duplicate_mention_ids": 0,
+      "missing_mention_references": 1
+    },
+    "next_action": "Capture the exact rejected reference before repairing; current diagnostics identify one missing mention ID only."
+  },
+  {
+    "case_id": "G81-072",
+    "failed_labeled_axes": [
+      "turn_relation"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-080",
+    "failed_labeled_axes": [
+      "operation"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-082",
+    "failed_labeled_axes": [
+      "turn_relation",
+      "operation"
+    ],
+    "first_divergence_stage": "RULE_PARSE",
+    "status": "UNKNOWN_NEEDS_EXACT_REFERENCE_EVIDENCE",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {
+      "invalid_surface_spans": 0,
+      "foreign_turn_mentions": 0,
+      "duplicate_mention_ids": 0,
+      "missing_mention_references": 1
+    },
+    "next_action": "Capture the exact rejected reference before repairing; current diagnostics identify one missing mention ID only."
+  },
+  {
+    "case_id": "G81-091",
+    "failed_labeled_axes": [
+      "query_shape"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-093",
+    "failed_labeled_axes": [
+      "query_shape"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-094",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "STRUCTURED_INTENT",
+    "status": "MEASURED_SEMANTIC_MISMATCH",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Review fixed Gold span/role/shape/operation evidence against captured prediction; do not silently relabel or infer downstream correctness."
+  },
+  {
+    "case_id": "G81-096",
+    "failed_labeled_axes": [
+      "mentions"
+    ],
+    "first_divergence_stage": "MODEL_TRANSPORT",
+    "status": "EXTERNAL_AUTHENTICATION_FAILURE",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Restore configured provider access through existing local secret configuration; no key is requested in reports."
+  },
+  {
+    "case_id": "G81-097",
+    "failed_labeled_axes": [
+      "query_shape",
+      "mentions"
+    ],
+    "first_divergence_stage": "MODEL_TRANSPORT",
+    "status": "EXTERNAL_AUTHENTICATION_FAILURE",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Restore configured provider access through existing local secret configuration; no key is requested in reports."
+  },
+  {
+    "case_id": "G81-098",
+    "failed_labeled_axes": [
+      "query_shape",
+      "mentions"
+    ],
+    "first_divergence_stage": "MODEL_TRANSPORT",
+    "status": "EXTERNAL_AUTHENTICATION_FAILURE",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Restore configured provider access through existing local secret configuration; no key is requested in reports."
+  },
+  {
+    "case_id": "G81-100",
+    "failed_labeled_axes": [
+      "query_shape",
+      "mentions"
+    ],
+    "first_divergence_stage": "MODEL_TRANSPORT",
+    "status": "EXTERNAL_AUTHENTICATION_FAILURE",
+    "evidence": "benchmark_final.json and predictions_final.jsonl",
+    "diagnostics": {},
+    "next_action": "Restore configured provider access through existing local secret configuration; no key is requested in reports."
+  }
+]

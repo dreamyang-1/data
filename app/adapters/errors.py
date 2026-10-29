@@ -85,7 +85,6 @@ async def safe_call(
     source: str,
     retries: int = 2,
     base_delay: float = 0.2,
-    timeout: float = 10.0,
 ) -> T:
     """三级兜底：重试 → 降级（抛 AdapterError）→ 调用方安全终止。
 
@@ -96,7 +95,7 @@ async def safe_call(
     last_error: AdapterError | None = None
     for attempt in range(retries + 1):
         try:
-            return await asyncio.wait_for(fn(), timeout=timeout)
+            return await fn()
         except AdapterError as exc:
             last_error = exc
         except Exception as exc:  # noqa: BLE001

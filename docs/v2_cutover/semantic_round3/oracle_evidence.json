@@ -1,0 +1,150 @@
+{
+  "experiments": [
+    {
+      "case_id": "G81-082",
+      "variant": "A_RELATION_LABEL",
+      "source_capture_hash": "a380e1b5a08efe015db0223d86fc8d659c4438010ea6b2db5bfd878429792bcd",
+      "before": "V2_SLOT_OPERATION_CONFLICT",
+      "after": "V2_SLOT_OPERATION_CONFLICT",
+      "same_target": true,
+      "state_comparison_status": "BOTH_NOT_PUBLISHED",
+      "same_state_hash": true,
+      "same_patch_hash": true,
+      "changed_model_stages": [
+        false,
+        false
+      ],
+      "model_context_matches": [
+        true,
+        true
+      ],
+      "native_validators_retained": true,
+      "formal_Gold_pass": false
+    },
+    {
+      "case_id": "S81-002",
+      "variant": "A_RELATION_LABEL",
+      "source_capture_hash": "36c4ff2ebb58da025ccf5ad7c3c54ddc31696f62354ded7cec3b817e06f0103d",
+      "before": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "after": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "same_target": true,
+      "state_comparison_status": "COMPARABLE",
+      "same_state_hash": true,
+      "same_patch_hash": true,
+      "changed_model_stages": [
+        false,
+        false
+      ],
+      "model_context_matches": [
+        true,
+        true
+      ],
+      "native_validators_retained": true,
+      "formal_Gold_pass": false
+    },
+    {
+      "case_id": "PV81-002",
+      "variant": "A_RELATION_LABEL",
+      "source_capture_hash": "9734fdd4f726fbe49b55a4bbf6ae22b99c41770f1bc4617eecdc045b006c8420",
+      "before": "V2_EXPLICIT_SLOT_DROPPED",
+      "after": "V2_EXPLICIT_SLOT_DROPPED",
+      "same_target": true,
+      "state_comparison_status": "BOTH_NOT_PUBLISHED",
+      "same_state_hash": true,
+      "same_patch_hash": true,
+      "changed_model_stages": [
+        false,
+        false
+      ],
+      "model_context_matches": [
+        true,
+        true
+      ],
+      "native_validators_retained": true,
+      "formal_Gold_pass": false
+    },
+    {
+      "case_id": "PV81-002",
+      "variant": "C_REFERENCE_DECLARATION",
+      "source_capture_hash": "9734fdd4f726fbe49b55a4bbf6ae22b99c41770f1bc4617eecdc045b006c8420",
+      "before": "V2_EXPLICIT_SLOT_DROPPED",
+      "after": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "same_target": true,
+      "state_comparison_status": "ONLY_ORACLE_PUBLISHED",
+      "same_state_hash": false,
+      "same_patch_hash": false,
+      "changed_model_stages": [
+        true,
+        false
+      ],
+      "model_context_matches": [
+        true,
+        false
+      ],
+      "native_validators_retained": true,
+      "formal_Gold_pass": false
+    },
+    {
+      "case_id": "PV81-003",
+      "variant": "A_RELATION_LABEL",
+      "source_capture_hash": "144771c855057c6d24f83a6806fb1ddb66f4d4c3d05b5cd3034b7997b5e3c0a7",
+      "before": "V2_EXPLICIT_SLOT_DROPPED",
+      "after": "V2_EXPLICIT_SLOT_DROPPED",
+      "same_target": true,
+      "state_comparison_status": "BOTH_NOT_PUBLISHED",
+      "same_state_hash": true,
+      "same_patch_hash": true,
+      "changed_model_stages": [
+        false,
+        false
+      ],
+      "model_context_matches": [
+        true,
+        true
+      ],
+      "native_validators_retained": true,
+      "formal_Gold_pass": false
+    },
+    {
+      "case_id": "PV81-003",
+      "variant": "C_REFERENCE_DECLARATION",
+      "source_capture_hash": "144771c855057c6d24f83a6806fb1ddb66f4d4c3d05b5cd3034b7997b5e3c0a7",
+      "before": "V2_EXPLICIT_SLOT_DROPPED",
+      "after": "ACCEPTED_DIAGNOSTIC_ONLY",
+      "same_target": true,
+      "state_comparison_status": "ONLY_ORACLE_PUBLISHED",
+      "same_state_hash": false,
+      "same_patch_hash": false,
+      "changed_model_stages": [
+        true,
+        false
+      ],
+      "model_context_matches": [
+        true,
+        false
+      ],
+      "native_validators_retained": true,
+      "formal_Gold_pass": false
+    }
+  ],
+  "D_RULE_VETO_REMOVAL": {
+    "kind": "CONTROLLED_RESOLVER_SEAM",
+    "test": "test_act_only_ablation_exposes_unconsumed_model_signal_without_changing_production",
+    "n": 5,
+    "effect": "Current fails at prior-plan identity; model-evidence arm retains same active task and canonical ADD while hard validators remain. Existing 15-case cluster does not exhibit this cause.",
+    "proof_limit": "Operation acts are not a standalone calibrated relation decision. These controls demonstrate contract expressivity/precedence risk, not five live model bugs."
+  },
+  "B_TARGET_ONLY": "NOT_APPLICABLE: all 15 original cases selected expected task; no incorrect target to repair. Existing forged-task guards remain regression controls.",
+  "E_ALLOWED_INHERITANCE": "NOT_APPLICABLE: 13 rejected before state publication; accepted two preserve labeled state. Do not fabricate an inheritance intervention.",
+  "F_PENDING_NEW_TASK": {
+    "kind": "CONTROLLED_PARSE_ONLY",
+    "n": 2,
+    "changed_artifact": "CurrentTurnParse.topic_shift_signals only",
+    "result": "NEW_TASK act with exact pending option resumes pending unless EXPLICIT_NEW_TASK shift is also set; with shift creates new task and suspends old pending.",
+    "test": "test_pending_new_act_conflict_is_visible_and_parse_only_oracle_is_bounded",
+    "limit": "The identical short raw answer is ambiguous; not proof of a real-user Pending Hijack, not a production repair."
+  },
+  "gate": "NO_FROZEN_CASE_SOFT_RULE_VETO_CAUSAL_DEFECT_CONFIRMED",
+  "raw_captures_changed": false,
+  "no_gold_score_credit": true
+}

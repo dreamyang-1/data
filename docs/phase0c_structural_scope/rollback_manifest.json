@@ -1,0 +1,11 @@
+{
+  "baseline_commit": "b9d6dc9ed46e819b2f34055256be00a95910d207",
+  "feature_branch": "phase0c-structural-scope-20260908-01",
+  "runtime_files": ["app/intent/classifier.py"],
+  "rollback": "Use a reviewed new revert commit, preserve unrelated edits, rerun structural-scope/intent/multi-turn/scope regressions and explicitly synchronize the reviewed files. Do not rewrite history.",
+  "public_schema_migration": false,
+  "persisted_state_schema_migration": false,
+  "external_data_rollback_required": false,
+  "production_v2_routing_changed": false,
+  "forbidden": ["reset --hard", "clean", "force push", "whole-directory overwrite", "automatic merge"]
+}

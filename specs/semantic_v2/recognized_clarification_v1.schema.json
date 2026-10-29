@@ -1,0 +1,1126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AuthorizedScopeContext": {
+      "additionalProperties": false,
+      "description": "Construct only from the current trusted transport at the service boundary.",
+      "properties": {
+        "authority": {
+          "const": "TRUSTED_UPSTREAM_BACKEND",
+          "default": "TRUSTED_UPSTREAM_BACKEND",
+          "title": "Authority",
+          "type": "string"
+        },
+        "authorized_scope": {
+          "$ref": "#/$defs/AuthorizedSemanticScope"
+        },
+        "state_namespace": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "State Namespace",
+          "type": "string"
+        },
+        "catalog_pin": {
+          "$ref": "#/$defs/CatalogPinIdentity"
+        }
+      },
+      "required": [
+        "authorized_scope",
+        "state_namespace",
+        "catalog_pin"
+      ],
+      "title": "AuthorizedScopeContext",
+      "type": "object"
+    },
+    "AuthorizedSemanticScope": {
+      "additionalProperties": false,
+      "properties": {
+        "semantic_model_id": {
+          "exclusiveMinimum": 0,
+          "title": "Semantic Model Id",
+          "type": "integer"
+        },
+        "business_domain_ids": {
+          "default": [],
+          "items": {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "title": "Business Domain Ids",
+          "type": "array"
+        },
+        "scope_mode": {
+          "enum": [
+            "MODEL_WIDE",
+            "EXPLICIT_DOMAINS"
+          ],
+          "title": "Scope Mode",
+          "type": "string"
+        },
+        "database_id": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Database Id"
+        },
+        "knowledge_base_names": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Knowledge Base Names",
+          "type": "array"
+        },
+        "source": {
+          "const": "TRUSTED_UPSTREAM_BACKEND",
+          "default": "TRUSTED_UPSTREAM_BACKEND",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "semantic_model_id",
+        "scope_mode"
+      ],
+      "title": "AuthorizedSemanticScope",
+      "type": "object"
+    },
+    "BooleanValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "BOOLEAN",
+          "default": "BOOLEAN",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "BooleanValue",
+      "type": "object"
+    },
+    "BoundSemanticRef": {
+      "additionalProperties": false,
+      "description": "Accepted catalog identity. Scope is proved again at the plan boundary.",
+      "properties": {
+        "catalog_type": {
+          "$ref": "#/$defs/CatalogType"
+        },
+        "semantic_role": {
+          "$ref": "#/$defs/SemanticRole"
+        },
+        "canonical_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Canonical Id",
+          "type": "string"
+        },
+        "canonical_code": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Canonical Code",
+          "type": "string"
+        },
+        "display_name": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "catalog_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "semantic_model_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Semantic Model Id",
+          "type": "string"
+        },
+        "business_domain_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Business Domain Ids",
+          "type": "array"
+        },
+        "source_mention_ids": {
+          "default": [],
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Mention Ids",
+          "type": "array"
+        },
+        "resolution_source": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Resolution Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "catalog_type",
+        "semantic_role",
+        "canonical_id",
+        "canonical_code",
+        "display_name",
+        "catalog_version",
+        "semantic_model_id",
+        "business_domain_ids",
+        "resolution_source"
+      ],
+      "title": "BoundSemanticRef",
+      "type": "object"
+    },
+    "CatalogPinIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "catalog_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "vector_index_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Vector Index Version",
+          "type": "string"
+        },
+        "catalog_publish_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Catalog Publish Id",
+          "type": "string"
+        },
+        "activation_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Activation Id",
+          "type": "string"
+        },
+        "target_identity_hash": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Target Identity Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "catalog_version",
+        "vector_index_version",
+        "catalog_publish_id",
+        "activation_id",
+        "target_identity_hash"
+      ],
+      "title": "CatalogPinIdentity",
+      "type": "object"
+    },
+    "CatalogType": {
+      "enum": [
+        "ENTITY",
+        "METRIC",
+        "DIMENSION",
+        "ATTRIBUTE",
+        "ENTITY_VALUE",
+        "RELATION",
+        "DATASET",
+        "REPORT",
+        "PHYSICAL_TABLE",
+        "PHYSICAL_COLUMN"
+      ],
+      "title": "CatalogType",
+      "type": "string"
+    },
+    "ClarificationDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "decision_type": {
+          "const": "CLARIFICATION",
+          "default": "CLARIFICATION",
+          "title": "Decision Type",
+          "type": "string"
+        },
+        "reason_type": {
+          "const": "USER_AMBIGUITY",
+          "default": "USER_AMBIGUITY",
+          "title": "Reason Type",
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "$ref": "#/$defs/ClarificationOption"
+          },
+          "title": "Options",
+          "type": "array"
+        },
+        "blocker": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReadinessBlocker"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "selected_option_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selected Option Id"
+        },
+        "blocking": {
+          "title": "Blocking",
+          "type": "boolean"
+        },
+        "affected_plan_paths": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Affected Plan Paths",
+          "type": "array"
+        },
+        "candidate_answers": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Candidate Answers",
+          "type": "array"
+        },
+        "information_gain": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Information Gain",
+          "type": "number"
+        },
+        "already_asked": {
+          "default": false,
+          "title": "Already Asked",
+          "type": "boolean"
+        },
+        "asked_slots": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Asked Slots",
+          "type": "array"
+        },
+        "fallback_available": {
+          "default": false,
+          "title": "Fallback Available",
+          "type": "boolean"
+        },
+        "assumption_available": {
+          "default": false,
+          "title": "Assumption Available",
+          "type": "boolean"
+        },
+        "base_task_version": {
+          "minimum": 0,
+          "title": "Base Task Version",
+          "type": "integer"
+        },
+        "state_version": {
+          "minimum": 0,
+          "title": "State Version",
+          "type": "integer"
+        },
+        "create_pending": {
+          "default": false,
+          "title": "Create Pending",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "blocking",
+        "base_task_version",
+        "state_version"
+      ],
+      "title": "ClarificationDecision",
+      "type": "object"
+    },
+    "ClarificationDecisionTrace": {
+      "additionalProperties": false,
+      "properties": {
+        "conversation_id": {
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "message_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message Id"
+        },
+        "source_stage": {
+          "title": "Source Stage",
+          "type": "string"
+        },
+        "reason_type": {
+          "enum": [
+            "MISSING_USER_SLOT",
+            "USER_SEMANTIC_AMBIGUITY",
+            "USER_REFERENCE_AMBIGUITY",
+            "CATALOG_GOVERNANCE_GAP",
+            "SYSTEM_FAILURE",
+            "REPEATED_QUESTION"
+          ],
+          "title": "Reason Type",
+          "type": "string"
+        },
+        "blocking_slot": {
+          "title": "Blocking Slot",
+          "type": "string"
+        },
+        "expected_answer_type": {
+          "title": "Expected Answer Type",
+          "type": "string"
+        },
+        "candidate_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidate Ids",
+          "type": "array"
+        },
+        "already_asked": {
+          "default": false,
+          "title": "Already Asked",
+          "type": "boolean"
+        },
+        "base_task_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Task Reference"
+        },
+        "pending_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pending Reference"
+        },
+        "evidence_codes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Codes",
+          "type": "array"
+        },
+        "is_user_ambiguity": {
+          "title": "Is User Ambiguity",
+          "type": "boolean"
+        },
+        "system_repair_possible": {
+          "title": "System Repair Possible",
+          "type": "boolean"
+        },
+        "safe_default_available": {
+          "default": false,
+          "title": "Safe Default Available",
+          "type": "boolean"
+        },
+        "decision": {
+          "enum": [
+            "ASK",
+            "SUPPRESS"
+          ],
+          "title": "Decision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "conversation_id",
+        "source_stage",
+        "reason_type",
+        "blocking_slot",
+        "expected_answer_type",
+        "is_user_ambiguity",
+        "system_repair_possible",
+        "decision"
+      ],
+      "title": "ClarificationDecisionTrace",
+      "type": "object"
+    },
+    "ClarificationOption": {
+      "additionalProperties": false,
+      "properties": {
+        "option_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Option Id",
+          "type": "string"
+        },
+        "display_label": {
+          "minLength": 1,
+          "title": "Display Label",
+          "type": "string"
+        },
+        "canonical_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "typed_value": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN": "#/$defs/BooleanValue",
+                  "DATE": "#/$defs/DateValue",
+                  "DATETIME": "#/$defs/DateTimeValue",
+                  "ENTITY_REF": "#/$defs/EntityValueRef",
+                  "ENUM": "#/$defs/EnumValue",
+                  "LIST": "#/$defs/ListValue",
+                  "NULL": "#/$defs/NullValue",
+                  "NUMBER": "#/$defs/NumberValue",
+                  "RANGE": "#/$defs/RangeValue",
+                  "STRING": "#/$defs/StringValue"
+                },
+                "propertyName": "value_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/StringValue"
+                },
+                {
+                  "$ref": "#/$defs/NumberValue"
+                },
+                {
+                  "$ref": "#/$defs/BooleanValue"
+                },
+                {
+                  "$ref": "#/$defs/DateValue"
+                },
+                {
+                  "$ref": "#/$defs/DateTimeValue"
+                },
+                {
+                  "$ref": "#/$defs/EnumValue"
+                },
+                {
+                  "$ref": "#/$defs/EntityValueRef"
+                },
+                {
+                  "$ref": "#/$defs/ListValue"
+                },
+                {
+                  "$ref": "#/$defs/RangeValue"
+                },
+                {
+                  "$ref": "#/$defs/NullValue"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Typed Value"
+        },
+        "evidence": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "option_id",
+        "display_label",
+        "evidence"
+      ],
+      "title": "ClarificationOption",
+      "type": "object"
+    },
+    "DateTimeValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "DATETIME",
+          "default": "DATETIME",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "format": "date-time",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "DateTimeValue",
+      "type": "object"
+    },
+    "DateValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "DATE",
+          "default": "DATE",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "format": "date",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "DateValue",
+      "type": "object"
+    },
+    "EntityValueRef": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "ENTITY_REF",
+          "default": "ENTITY_REF",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "EntityValueRef",
+      "type": "object"
+    },
+    "EnumValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "ENUM",
+          "default": "ENUM",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "enum_code": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Enum Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "enum_code"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "ErrorType": {
+      "enum": [
+        "USER_AMBIGUITY",
+        "SURFACE_PARSE_FAILURE",
+        "SEMANTIC_RESOLUTION_FAILURE",
+        "PLAN_VALIDATION_FAILURE",
+        "ASL_CONTRACT_FAILURE",
+        "SQL_PLAN_FAILURE",
+        "EXECUTION_FAILURE",
+        "RESULT_CONTRACT_FAILURE",
+        "NO_DATA",
+        "PERMISSION_DENIED",
+        "DATA_NOT_READY"
+      ],
+      "title": "ErrorType",
+      "type": "string"
+    },
+    "JsonValue": {},
+    "ListValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "LIST",
+          "default": "LIST",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "BOOLEAN": "#/$defs/BooleanValue",
+                "DATE": "#/$defs/DateValue",
+                "DATETIME": "#/$defs/DateTimeValue",
+                "ENTITY_REF": "#/$defs/EntityValueRef",
+                "ENUM": "#/$defs/EnumValue",
+                "NULL": "#/$defs/NullValue",
+                "NUMBER": "#/$defs/NumberValue",
+                "STRING": "#/$defs/StringValue"
+              },
+              "propertyName": "value_type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/StringValue"
+              },
+              {
+                "$ref": "#/$defs/NumberValue"
+              },
+              {
+                "$ref": "#/$defs/BooleanValue"
+              },
+              {
+                "$ref": "#/$defs/DateValue"
+              },
+              {
+                "$ref": "#/$defs/DateTimeValue"
+              },
+              {
+                "$ref": "#/$defs/EnumValue"
+              },
+              {
+                "$ref": "#/$defs/EntityValueRef"
+              },
+              {
+                "$ref": "#/$defs/NullValue"
+              }
+            ]
+          },
+          "maxItems": 1000,
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "values"
+      ],
+      "title": "ListValue",
+      "type": "object"
+    },
+    "NullValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "NULL",
+          "default": "NULL",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "default": null,
+          "title": "Value",
+          "type": "null"
+        }
+      },
+      "title": "NullValue",
+      "type": "object"
+    },
+    "NumberValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "NUMBER",
+          "default": "NUMBER",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "NumberValue",
+      "type": "object"
+    },
+    "RangeValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "RANGE",
+          "default": "RANGE",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "start": {
+          "discriminator": {
+            "mapping": {
+              "BOOLEAN": "#/$defs/BooleanValue",
+              "DATE": "#/$defs/DateValue",
+              "DATETIME": "#/$defs/DateTimeValue",
+              "ENTITY_REF": "#/$defs/EntityValueRef",
+              "ENUM": "#/$defs/EnumValue",
+              "NULL": "#/$defs/NullValue",
+              "NUMBER": "#/$defs/NumberValue",
+              "STRING": "#/$defs/StringValue"
+            },
+            "propertyName": "value_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/NumberValue"
+            },
+            {
+              "$ref": "#/$defs/BooleanValue"
+            },
+            {
+              "$ref": "#/$defs/DateValue"
+            },
+            {
+              "$ref": "#/$defs/DateTimeValue"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/EntityValueRef"
+            },
+            {
+              "$ref": "#/$defs/NullValue"
+            }
+          ],
+          "title": "Start"
+        },
+        "end": {
+          "discriminator": {
+            "mapping": {
+              "BOOLEAN": "#/$defs/BooleanValue",
+              "DATE": "#/$defs/DateValue",
+              "DATETIME": "#/$defs/DateTimeValue",
+              "ENTITY_REF": "#/$defs/EntityValueRef",
+              "ENUM": "#/$defs/EnumValue",
+              "NULL": "#/$defs/NullValue",
+              "NUMBER": "#/$defs/NumberValue",
+              "STRING": "#/$defs/StringValue"
+            },
+            "propertyName": "value_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/NumberValue"
+            },
+            {
+              "$ref": "#/$defs/BooleanValue"
+            },
+            {
+              "$ref": "#/$defs/DateValue"
+            },
+            {
+              "$ref": "#/$defs/DateTimeValue"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/EntityValueRef"
+            },
+            {
+              "$ref": "#/$defs/NullValue"
+            }
+          ],
+          "title": "End"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "RangeValue",
+      "type": "object"
+    },
+    "ReadinessBlocker": {
+      "additionalProperties": false,
+      "properties": {
+        "blocker_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Blocker Id",
+          "type": "string"
+        },
+        "plan_path": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Plan Path",
+          "type": "string"
+        },
+        "blocker_type": {
+          "$ref": "#/$defs/ErrorType"
+        },
+        "source_stage": {
+          "enum": [
+            "PARSE",
+            "RESOLUTION",
+            "PLAN",
+            "PERMISSION",
+            "DATA",
+            "ASL",
+            "SQL",
+            "RESULT"
+          ],
+          "title": "Source Stage",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity",
+          "default": "BLOCKING"
+        },
+        "user_action_required": {
+          "default": false,
+          "title": "User Action Required",
+          "type": "boolean"
+        },
+        "expected_answer_type": {
+          "default": "NONE",
+          "enum": [
+            "OPTION_ID",
+            "SEMANTIC_REF",
+            "TYPED_VALUE",
+            "NONE"
+          ],
+          "title": "Expected Answer Type",
+          "type": "string"
+        },
+        "candidate_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Candidate Ids",
+          "type": "array"
+        },
+        "system_repairable": {
+          "default": false,
+          "title": "System Repairable",
+          "type": "boolean"
+        },
+        "message_code": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Message Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "blocker_id",
+        "plan_path",
+        "blocker_type",
+        "source_stage",
+        "message_code"
+      ],
+      "title": "ReadinessBlocker",
+      "type": "object"
+    },
+    "ScopedArtifact": {
+      "additionalProperties": false,
+      "description": "Internal trusted-store envelope. Digest detects corruption, not provenance.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "PENDING",
+            "TASK_FRAME",
+            "LAST_REQUEST",
+            "DAG_RESUME",
+            "RESPONSE_CACHE",
+            "DATASET",
+            "RESULT_ARTIFACT",
+            "SEMANTIC_BINDINGS",
+            "CONVERSATION"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/$defs/AuthorizedScopeContext"
+        },
+        "payload": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "payload_digest": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Payload Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "context",
+        "payload",
+        "payload_digest"
+      ],
+      "title": "ScopedArtifact",
+      "type": "object"
+    },
+    "SemanticRole": {
+      "enum": [
+        "MEASURE",
+        "GROUP_BY",
+        "FILTER_FIELD",
+        "FILTER_VALUE",
+        "SOURCE_ENTITY",
+        "TARGET_ENTITY",
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD",
+        "RELATIONSHIP",
+        "RELATION_TARGET",
+        "TIME_FIELD",
+        "TIME_RANGE",
+        "TIME_GRAIN",
+        "COMPARISON_BASELINE",
+        "ORDER_BY",
+        "SORT_DIRECTION",
+        "LIMIT",
+        "DATASET_SOURCE",
+        "DELIVERY_TARGET"
+      ],
+      "title": "SemanticRole",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "BLOCKING",
+        "ADVISORY"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "StringValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "STRING",
+          "default": "STRING",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "StringValue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "decision": {
+      "$ref": "#/$defs/ClarificationDecision"
+    },
+    "trace": {
+      "$ref": "#/$defs/ClarificationDecisionTrace"
+    },
+    "next_state": {
+      "$ref": "#/$defs/ScopedArtifact"
+    },
+    "pending_state": {
+      "$ref": "#/$defs/ScopedArtifact"
+    },
+    "question": {
+      "title": "Question",
+      "type": "string"
+    },
+    "plan": {
+      "default": null,
+      "title": "Plan",
+      "type": "null"
+    }
+  },
+  "required": [
+    "decision",
+    "trace",
+    "next_state",
+    "pending_state",
+    "question"
+  ],
+  "title": "RecognizedClarification",
+  "type": "object"
+}

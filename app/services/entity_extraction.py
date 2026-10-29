@@ -32,7 +32,6 @@ class HttpEntityCandidateExtractor:
         *,
         url: str,
         threshold: float = 0.72,
-        timeout_seconds: float = 0.8,
         maximum_candidates: int = 8,
         labels: tuple[str, ...] | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
@@ -41,14 +40,13 @@ class HttpEntityCandidateExtractor:
             raise ValueError("entity extractor URL must use http or https")
         self.url = url
         self.threshold = min(1.0, max(0.0, threshold))
-        self.timeout_seconds = max(0.05, timeout_seconds)
         self.maximum_candidates = max(1, min(maximum_candidates, 32))
         self.labels = labels or GLiNERCandidateExtractor.DEFAULT_LABELS
         self.transport = transport
 
     async def extract(self, text: str) -> list[EntityCandidate]:
         async with httpx.AsyncClient(
-            timeout=self.timeout_seconds, transport=self.transport
+            timeout=None, transport=self.transport
         ) as client:
             response = await client.post(
                 self.url,
@@ -87,14 +85,12 @@ class GLiNERCandidateExtractor:
         *,
         model_name: str,
         threshold: float = 0.72,
-        timeout_seconds: float = 0.8,
         maximum_candidates: int = 8,
         maximum_chars: int = 1000,
         labels: tuple[str, ...] | None = None,
     ) -> None:
         self.model_name = model_name
         self.threshold = min(1.0, max(0.0, threshold))
-        self.timeout_seconds = max(0.05, timeout_seconds)
         self.maximum_candidates = max(1, min(maximum_candidates, 32))
         self.maximum_chars = max(32, min(maximum_chars, 4000))
         self.labels = labels or self.DEFAULT_LABELS
@@ -109,15 +105,12 @@ class GLiNERCandidateExtractor:
         model = self._ready_model_or_start_loading()
         if model is None:
             return []
-        raw = await asyncio.wait_for(
-            asyncio.to_thread(
+        raw = await asyncio.to_thread(
                 model.predict_entities,
                 source,
                 list(self.labels),
                 threshold=self.threshold,
-            ),
-            timeout=self.timeout_seconds,
-        )
+            )
         return self._validate(source, raw)
 
     def _ready_model_or_start_loading(self) -> Any | None:
@@ -220,18 +213,15 @@ def build_gliner_extractor_from_environment() -> tuple[str, EntityCandidateExtra
         raise RuntimeError("DATA_AGENT_GLINER_MODEL must not be empty")
     try:
         threshold = float(os.getenv("DATA_AGENT_GLINER_THRESHOLD", "0.72"))
-        timeout_seconds = float(os.getenv("DATA_AGENT_GLINER_TIMEOUT_SECONDS", "0.8"))
     except ValueError as exc:
-        raise RuntimeError("GLiNER threshold and timeout must be numeric") from exc
+        raise RuntimeError("GLiNER threshold must be numeric") from exc
     service_url = os.getenv("DATA_AGENT_ENTITY_EXTRACTOR_URL", "").strip()
     if service_url:
         return mode, HttpEntityCandidateExtractor(
             url=service_url,
             threshold=threshold,
-            timeout_seconds=timeout_seconds,
         )
     return mode, GLiNERCandidateExtractor(
         model_name=model_name,
         threshold=threshold,
-        timeout_seconds=timeout_seconds,
     )

@@ -1,0 +1,26 @@
+# Oagnet 项目依赖
+# 安装: pip install -r requirements.txt
+
+# Web 服务
+fastapi==0.136.3
+uvicorn==0.48.0
+pydantic==2.13.4
+python-multipart==0.0.30
+
+# 向量存储
+chromadb==1.5.9
+pymilvus==2.6.17
+
+# Embedding & LLM
+openai==2.36.0
+
+# LangChain & Agent
+langchain==1.2.18
+langchain-core==1.4.0
+langchain-openai==1.2.1
+deepagents==0.5.9
+
+# 数据库
+PyMySQL==1.2.0
+python-dotenv==1.2.2
+redis==6.4.0

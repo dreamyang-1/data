@@ -1,0 +1,40 @@
+{
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "field_mapping_hashes": [
+    "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016",
+    "12c6d69f9a19c4186deaa267a0992771e739fd5852441c5890830f0b905386de"
+  ],
+  "observed_at": "2026-09-09T07:17:30.097426+00:00",
+  "limit": 64,
+  "source_SQL_executions": 2,
+  "production_writes": 0,
+  "source_rows": 34,
+  "status": "BOUNDED_READ_ONLY_PAIR_OBSERVATION",
+  "pairs_hash": "b48dd4090cf816585bed4519018c45db8249204bc46c13c71a19179e7690c54c",
+  "catalog_before_after_match": true,
+  "nonempty_alias_rows": 34,
+  "distinct_aliases": 34,
+  "ambiguous_alias_groups": 0,
+  "named_gold_alias_results": {
+    "上海": {
+      "matches": 0,
+      "agrees_with_existing_business_normalization": false
+    },
+    "北京": {
+      "matches": 0,
+      "agrees_with_existing_business_normalization": false
+    },
+    "江苏": {
+      "matches": 0,
+      "agrees_with_existing_business_normalization": false
+    }
+  },
+  "governance": "Observed same-row field pairs only; no alias policy published or runtime mapping installed"
+}

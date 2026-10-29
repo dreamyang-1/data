@@ -1,0 +1,47 @@
+{
+  "status": "SEMANTIC_TRIAGE_COMPLETE",
+  "audited_commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
+  "case_counts": {
+    "FAIL": 37,
+    "PASS": 79,
+    "NOT_RUN": 4,
+    "BLOCKED": 0
+  },
+  "first_divergence_case_count": 41,
+  "root_cause_groups": 11,
+  "semantic_groups": 8,
+  "evaluator_fixture_groups": 3,
+  "semantic_cases": 31,
+  "evaluator_fixture_cases": 10,
+  "inventory_complete_for_observed_gold": true,
+  "complete_unknown_failure_universe_proven": false,
+  "top_three": [
+    {
+      "rank": 1,
+      "root_cause_id": "RC-EVAL-TURN-PROXY",
+      "primary_cases": 5,
+      "coverage_impact": "All100parser records must be distinguished from actual runtime verdicts; use one faithful semantic entry/observation contract, including existing native REMOVE/CLEAR logic."
+    },
+    {
+      "rank": 2,
+      "root_cause_id": "RC-FIXTURE-STATE-ENTRY",
+      "primary_cases": 4,
+      "coverage_impact": "Unblocks all4critical NOT_RUN records, Pending hijack and truncated Dataset safety. Prioritize infrastructure before semantic production changes."
+    },
+    {
+      "rank": 3,
+      "root_cause_id": "RC-BOUNDARY-METRIC",
+      "primary_cases": 4,
+      "coverage_impact": "Highest generic silent-formula risk among currently observed semantic causes: preserve exact governed compound metric spans. Reconfirm on faithful entry/holdout before any code change."
+    }
+  ],
+  "ranking": "Mandatory evaluator/fixture readiness first per user. Then silent-query risk, reusable-contract scope and primary-case coverage. Lists have9cases but lower observed severity; easiest-case order is not used.",
+  "overfit_risk": true,
+  "freeze_gate": "FAIL",
+  "next_stage": "EVALUATOR_AND_FIXTURE_CLOSURE_AFTER_USER_CHECKPOINT",
+  "production_code_changes": 0,
+  "model_calls": 0,
+  "source_SQL": 0,
+  "production_writes": 0,
+  "V1_routing_changed": false
+}

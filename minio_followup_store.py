@@ -112,9 +112,12 @@ class DatasetScope:
     user_id: str
     application_id: str
     conversation_id: str
+    authorized_semantic_scope_fingerprint: str = ''
 
     def validate(self) -> None:
         for name, value in asdict(self).items():
+            if name == 'authorized_semantic_scope_fingerprint' and value == '':
+                continue  # Legacy standalone store records cannot match a scoped request.
             if not isinstance(value, str) or not value.strip() or len(value) > 128:
                 raise ValueError(f"{name} must be a non-empty string of at most 128 characters")
 
@@ -156,6 +159,40 @@ class DatasetReference:
 class LoadedDataset:
     reference: DatasetReference
     rows: tuple[dict[str, Any], ...]
+
+
+def dataset_source_complete(reference: DatasetReference | Mapping[str, Any], loaded_row_count: int) -> bool:
+    """Check population coverage, not merely successful loading of a small view.
+
+    Limits retain only a slice even when every persisted slice row was loaded.
+    Completeness cannot be restored by subsequent filtering, aggregation or joins.
+    Old joined snapshots without input coverage evidence deliberately fail closed.
+    """
+    value = reference.to_dict() if isinstance(reference, DatasetReference) else reference
+    if loaded_row_count != value.get('row_count'):
+        return False
+
+    def complete(operation: Mapping[str, Any]) -> bool:
+        if not isinstance(operation, Mapping):
+            return False
+        if any(key in operation and operation[key] is not False for key in ('truncated', 'source_truncated')):
+            return False
+        kind = str(operation.get('type') or '').lower()
+        if kind == 'pipeline':
+            steps = operation.get('operations')
+            return isinstance(steps, list) and bool(steps) and all(complete(step) for step in steps)
+        if kind == 'inner_join':
+            return operation.get('source_truncated') is False
+        return kind in {'query_provenance', 'filter', 'select', 'sort', 'derive', 'aggregate'}
+
+    log = value.get('transformation_log', ())
+    if not isinstance(log, (list, tuple)) or (value.get('parent_dataset_ids') and not log):
+        return False
+    if value.get('source_type') == 'JOINED_DATASET' and not any(
+        isinstance(item, Mapping) and str(item.get('type') or '').lower() == 'inner_join' for item in log
+    ):
+        return False
+    return all(complete(operation) for operation in log)
 
 
 @dataclass(frozen=True)
@@ -207,7 +244,10 @@ def _canonical_json(value: Any) -> bytes:
 
 
 def _scope_digest(scope: DatasetScope) -> str:
-    raw = "\x1f".join(asdict(scope).values()).encode("utf-8")
+    values = asdict(scope)
+    if not scope.authorized_semantic_scope_fingerprint:
+        values.pop('authorized_semantic_scope_fingerprint')
+    raw = "\x1f".join(values.values()).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:32]
 
 
@@ -1172,6 +1212,7 @@ def _join_with_store(
             ref.scope.tenant_id != current_scope.tenant_id
             or ref.scope.user_id != current_scope.user_id
             or ref.scope.application_id != current_scope.application_id
+            or ref.scope.authorized_semantic_scope_fingerprint != current_scope.authorized_semantic_scope_fingerprint
         ):
             raise DatasetScopeMismatch("joined datasets must belong to the same tenant, user and application")
     # Branch datasets intentionally have distinct internal conversation ids.
@@ -1239,6 +1280,7 @@ def _join_with_store(
     conservative_as_of = min(source_times)
     transformation = {
         "type": "INNER_JOIN",
+        "source_truncated": any(not dataset_source_complete(item.reference, len(item.rows)) for item in loaded),
         "join_keys": list(keys),
         "cardinality_guard": "RIGHT_UNIQUE_EACH_STEP",
         "source_row_counts": {
@@ -1315,7 +1357,12 @@ def apply_followup_operation(
         field_name = _require_column(operation.get("field"), declared)
         operator = str(operation.get("operator", "eq")).lower()
         target = operation.get("value")
-        rows = [row for row in rows if _compare(row.get(field_name), operator, target)]
+        if 'value_field' in operation:
+            if 'value' in operation:raise InvalidFollowupOperation('filter cannot mix value and value_field')
+            other=_require_column(operation['value_field'],declared)
+            rows=[row for row in rows if _compare(row.get(field_name),operator,row.get(other))]
+        else:
+            rows = [row for row in rows if _compare(row.get(field_name), operator, target)]
         return declared, rows
 
     if op == "select":
@@ -1407,19 +1454,42 @@ def apply_followup_operation(
         return (result_field,), [{result_field: max(values) - min(values)}]
 
     if op == "derive":
-        left = _require_column(operation.get("left_field"), declared)
-        right = _require_column(operation.get("right_field"), declared)
+        arithmetic = str(operation.get("operator", "")).lower()
+        legacy = arithmetic in {'add','subtract','multiply','divide'} and 'left_field' in operation and 'right_field' in operation
+        if legacy:
+            _require_column(operation['left_field'],declared)
+            _require_column(operation['right_field'],declared)
+        else:
+            try:
+                from app.numeric_operations import validate_derive, derive_operands, evaluate
+            except ImportError as exc:
+                raise InvalidFollowupOperation('advanced arithmetic helper is unavailable') from exc
+            try:
+                roles = validate_derive(operation)
+            except ValueError as exc:
+                raise InvalidFollowupOperation(str(exc)) from exc
+            for role in roles:
+                key = 'field' if role == 'input' else role + '_field'
+                if key in operation:
+                    _require_column(operation[key], declared)
         result_field = str(operation.get("result_field", "")).strip()
         if not result_field or result_field in declared or len(result_field) > 128:
             raise InvalidFollowupOperation("result_field must be a new non-empty column")
-        arithmetic = str(operation.get("operator", "")).lower()
-        if arithmetic not in {"add", "subtract", "multiply", "divide"}:
-            raise InvalidFollowupOperation("derive operator must be add/subtract/multiply/divide")
         for row in rows:
-            row[result_field] = _arithmetic(row.get(left), row.get(right), arithmetic)
+            # Preserve the established null/zero behavior of standalone legacy
+            # dataset transforms. Task execution validates its numeric inputs.
+            if legacy:
+                row[result_field] = _arithmetic(row.get(operation['left_field']), row.get(operation['right_field']), arithmetic)
+            else:
+                try:
+                    row[result_field] = evaluate(arithmetic, *derive_operands(operation,row), digits=operation.get('digits',0))
+                except ValueError as exc:
+                    raise InvalidFollowupOperation(str(exc)) from exc
         return (*declared, result_field), rows
 
     if op == "aggregate":
+        retain=operation.get('retain_rows',False)
+        if type(retain) is not bool:raise InvalidFollowupOperation('retain_rows must be boolean')
         group_by = tuple(
             _require_column(value, declared) for value in operation.get("group_by", ())
         )
@@ -1427,19 +1497,28 @@ def apply_followup_operation(
         if not isinstance(specs, list) or not specs:
             raise InvalidFollowupOperation("aggregations must be a non-empty list")
         output_names = list(group_by)
-        validated_specs: list[tuple[str, str, str]] = []
+        validated_specs: list[tuple[str, str, str, dict]] = []
         for spec in specs:
             if not isinstance(spec, Mapping):
                 raise InvalidFollowupOperation("each aggregation must be an object")
             function = str(spec.get("function", "")).lower()
             source = _require_column(spec.get("field"), declared)
             alias = str(spec.get("alias") or f"{function}_{source}").strip()
-            if function not in {"count", "sum", "avg", "min", "max"}:
-                raise InvalidFollowupOperation("unsupported aggregation function")
+            if function not in {'count','sum','avg','min','max'}:
+                try:
+                    from app.numeric_operations import validate_aggregation
+                except ImportError as exc:
+                    raise InvalidFollowupOperation('advanced arithmetic helper is unavailable') from exc
+                try:
+                    validate_aggregation({**spec,'function':function})
+                except ValueError as exc:
+                    raise InvalidFollowupOperation(str(exc)) from exc
+            if 'other_field' in spec:
+                _require_column(spec['other_field'], declared)
             if not alias or alias in output_names:
                 raise InvalidFollowupOperation("aggregation aliases must be non-empty and unique")
             output_names.append(alias)
-            validated_specs.append((function, source, alias))
+            validated_specs.append((function, source, alias, dict(spec)))
         grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
         for row in rows:
             grouped.setdefault(tuple(row.get(key) for key in group_by), []).append(row)
@@ -1448,9 +1527,21 @@ def apply_followup_operation(
         output: list[dict[str, Any]] = []
         for key, group_rows in grouped.items():
             result = dict(zip(group_by, key))
-            for function, source, alias in validated_specs:
-                result[alias] = _aggregate(group_rows, source, function)
+            for function, source, alias, spec in validated_specs:
+                if function in {'count','sum','avg','min','max'}:
+                    result[alias] = _aggregate(group_rows, source, function)
+                else:
+                    from app.numeric_operations import aggregate_numeric
+                    try:
+                        result[alias] = aggregate_numeric(group_rows,{**spec,'function':function})
+                    except (ValueError, ArithmeticError) as exc:
+                        raise InvalidFollowupOperation(str(exc)) from exc
             output.append(result)
+        if retain:
+            additions=[alias for _,_,alias,_ in validated_specs]
+            if any(alias in declared for alias in additions):raise InvalidFollowupOperation('retained aggregation aliases must be new columns')
+            lookup={tuple(item[key] for key in group_by):item for item in output}
+            return (*declared,*additions),[{**row,**{alias:lookup[tuple(row.get(key) for key in group_by)][alias] for alias in additions}} for row in rows]
         return tuple(output_names), output
 
     raise InvalidFollowupOperation(
@@ -1498,13 +1589,19 @@ def _compare(actual: Any, operator: str, target: Any) -> bool:
 def _as_number(value: Any) -> Decimal:
     if value is None or isinstance(value, bool):
         raise InvalidFollowupOperation("arithmetic fields must contain numbers")
+    text = str(value).replace(',', '')
+    percent = text.endswith('%')
+    if percent:
+        text = text[:-1]
+    if '%' in text:
+        raise InvalidFollowupOperation("arithmetic fields must contain numbers")
     try:
-        number = Decimal(str(value))
+        number = Decimal(text)
     except Exception as exc:
         raise InvalidFollowupOperation("arithmetic fields must contain numbers") from exc
     if not number.is_finite():
         raise InvalidFollowupOperation("arithmetic result must be finite")
-    return number
+    return number / 100 if percent else number
 
 
 def _numeric_or_none(value: Any) -> Decimal | None:
@@ -1526,7 +1623,7 @@ def _arithmetic(left: Any, right: Any, operator: str) -> float | None:
         "multiply": lambda: first * second,
         "divide": lambda: first / second,
     }[operator]()
-    return float(result)
+    return _finite_number(result)
 
 
 def _aggregate(rows: Sequence[Mapping[str, Any]], field_name: str, function: str) -> Any:
@@ -1544,4 +1641,11 @@ def _aggregate(rows: Sequence[Mapping[str, Any]], field_name: str, function: str
     result = sum(numbers, Decimal(0))
     if function == "avg":
         result /= len(numbers)
-    return float(result)
+    return _finite_number(result)
+
+
+def _finite_number(value):
+    result = float(value)
+    if not math.isfinite(result):
+        raise InvalidFollowupOperation('arithmetic result must be finite')
+    return result

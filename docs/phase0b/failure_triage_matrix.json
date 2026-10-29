@@ -1,0 +1,1132 @@
+{
+  "counts": {
+    "observations": 81,
+    "source_observations": {
+      "CURRENT_PYTEST": 32,
+      "HISTORICAL": 30,
+      "CRITICAL": 15,
+      "CLOSURE_AUDIT": 4
+    },
+    "acceptance_controls": 3,
+    "unique_failure_signatures": 35,
+    "categories": {
+      "STALE_TEST": 4,
+      "REAL_PRODUCTION_BUG": 17,
+      "UNKNOWN_NEEDS_EVIDENCE": 11,
+      "LEGACY_BEHAVIOR_DEBT": 1,
+      "CATALOG_GOVERNANCE_GAP": 1,
+      "EXTERNAL_SERVICE_CONTRACT_BUG": 1
+    },
+    "real_production_bugs": 17,
+    "p0_before": 17,
+    "p0_fixed": 16,
+    "p0_remaining": 1,
+    "deterministic_current": 32,
+    "flaky": 0,
+    "environment": 0,
+    "baseline_passed": 1696,
+    "baseline_failed": 32,
+    "final_passed": 1763,
+    "final_failed": 29,
+    "collection_errors": 0,
+    "old_pass_to_new_fail": 0,
+    "new_regression_tests": 64,
+    "critical_scenarios": 15,
+    "critical_passed": 15,
+    "clarification_coverage": {
+      "public_clarification_responses": 23,
+      "with_reason_trace": 23,
+      "untraced": 0,
+      "unsafe_asks": 0
+    },
+    "readiness": "CONDITIONALLY_READY_FOR_PHASE_0C",
+    "highest_blocker": "SECURITY_P0: fixed trusted identity; catalog/default-display and typed lineage contracts also await owners"
+  },
+  "signatures": [
+    {
+      "signature_id": "d66d459e5938b7c9",
+      "failure_signature": "RESULT_VALIDATION|QUERY|QUERY|response|additive_option_details",
+      "failure_ids": [
+        "pytest-01"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P2",
+      "status": "STALE_EXPECTATION_RETAINED",
+      "evidence_need": [],
+      "evidence": [
+        "app/domain/models.py:ClarificationItem",
+        "docs/phase0b/independent_runs/failure-01-run-1.json",
+        "docs/phase0b/independent_runs/failure-01-run-2.json"
+      ]
+    },
+    {
+      "signature_id": "b35d04b34c90986a",
+      "failure_signature": "RULE_PARSE|QUERY|QUERY|time_range|obsolete_mandatory_period",
+      "failure_ids": [
+        "pytest-02",
+        "pytest-03",
+        "pytest-04",
+        "pytest-11",
+        "pytest-12",
+        "pytest-27"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "status": "STALE_EXPECTATION_RETAINED",
+      "evidence_need": [],
+      "evidence": [
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range",
+        "docs/phase0b/independent_runs/failure-02-run-1.json",
+        "docs/phase0b/independent_runs/failure-02-run-2.json",
+        "docs/phase0b/independent_runs/failure-03-run-1.json",
+        "docs/phase0b/independent_runs/failure-03-run-2.json",
+        "docs/phase0b/independent_runs/failure-04-run-1.json",
+        "docs/phase0b/independent_runs/failure-04-run-2.json",
+        "docs/phase0b/independent_runs/failure-11-run-1.json",
+        "docs/phase0b/independent_runs/failure-11-run-2.json",
+        "docs/phase0b/independent_runs/failure-12-run-1.json",
+        "docs/phase0b/independent_runs/failure-12-run-2.json",
+        "docs/phase0b/independent_runs/failure-27-run-1.json",
+        "docs/phase0b/independent_runs/failure-27-run-2.json"
+      ]
+    },
+    {
+      "signature_id": "b4b3cf546693bb46",
+      "failure_signature": "RULE_PARSE|QUERY|QUERY|query_subject|structural_text_becomes_product_filter",
+      "failure_ids": [
+        "pytest-05",
+        "pytest-06"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_clarification_quality.py::test_model_cannot_invent_detail_fields_or_entity_not_in_user_text",
+        "tests/test_clarification_quality.py::test_negated_dimension_is_replaced_by_explicit_new_dimension"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-05-run-1.json",
+        "docs/phase0b/independent_runs/failure-05-run-2.json",
+        "docs/phase0b/independent_runs/failure-06-run-1.json",
+        "docs/phase0b/independent_runs/failure-06-run-2.json",
+        "tests/test_clarification_quality.py; app/intent/classifier.py"
+      ]
+    },
+    {
+      "signature_id": "a814ad126303cff9",
+      "failure_signature": "RULE_PARSE|FORECAST|QUERY|time_range|forecast_history_default_policy",
+      "failure_ids": [
+        "pytest-07"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Owner must confirm whether an automatic historical window counts as supplied forecast history; parser output alone is not a business contract."
+      ],
+      "evidence": [
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range",
+        "docs/phase0b/independent_runs/failure-07-run-1.json",
+        "docs/phase0b/independent_runs/failure-07-run-2.json"
+      ]
+    },
+    {
+      "signature_id": "bfb8618e94a24136",
+      "failure_signature": "SESSION_STATE|QUERY|QUERY|events|events_absent",
+      "failure_ids": [
+        "pytest-08",
+        "pytest-24",
+        "pytest-26"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "SESSION_STATE",
+      "root_cause_class": "LEGACY_BEHAVIOR_DEBT",
+      "severity": "P2",
+      "status": "DEFERRED_P2",
+      "evidence_need": [],
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-08-run-1.json",
+        "docs/phase0b/independent_runs/failure-08-run-2.json",
+        "docs/phase0b/independent_runs/failure-24-run-1.json",
+        "docs/phase0b/independent_runs/failure-24-run-2.json",
+        "docs/phase0b/independent_runs/failure-26-run-1.json",
+        "docs/phase0b/independent_runs/failure-26-run-2.json",
+        "tests/test_memory_manager.py; app/services/orchestrator.py:_append_session_event",
+        "tests/test_session_event_log.py",
+        "tests/test_tracing_evaluation.py"
+      ]
+    },
+    {
+      "signature_id": "6f73a67c4be9c777",
+      "failure_signature": "SESSION_STATE|QUERY|QUERY|identity|fixed_trusted_identity",
+      "failure_ids": [
+        "pytest-09",
+        "pytest-10"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_openapi_contract.py::test_openapi_marks_always_required_trusted_identity_headers",
+        "tests/test_openapi_contract.py::test_openapi_marks_application_header_required_in_production"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "SESSION_STATE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "SECURITY_P0_OWNER_BLOCKER",
+      "evidence_need": [],
+      "evidence": [
+        "app/api.py:trusted_identity; user section 32",
+        "app/api.py:trusted_identity; user section 32: register separately, do not refactor",
+        "docs/phase0b/independent_runs/failure-09-run-1.json",
+        "docs/phase0b/independent_runs/failure-09-run-2.json",
+        "docs/phase0b/independent_runs/failure-10-run-1.json",
+        "docs/phase0b/independent_runs/failure-10-run-2.json"
+      ]
+    },
+    {
+      "signature_id": "2b542e44b71c3161",
+      "failure_signature": "UNKNOWN|QUERY|QUERY|time_range|pending_terminal_call_count",
+      "failure_ids": [
+        "pytest-13"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Pending-transition test starts from obsolete missing-period setup; terminal-call count needs isolated state replay before assigning the downstream cause."
+      ],
+      "evidence": [
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range",
+        "docs/phase0b/independent_runs/failure-13-run-1.json",
+        "docs/phase0b/independent_runs/failure-13-run-2.json"
+      ]
+    },
+    {
+      "signature_id": "5a4268b48e5c2d18",
+      "failure_signature": "UNKNOWN|QUERY|QUERY|time_range|pending_metric_negation_fixture",
+      "failure_ids": [
+        "pytest-14"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Pending setup and backend ambiguity behavior interact; need an isolated governed candidate fixture before assigning the later negation cause."
+      ],
+      "evidence": [
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range",
+        "docs/phase0b/independent_runs/failure-14-run-1.json",
+        "docs/phase0b/independent_runs/failure-14-run-2.json"
+      ]
+    },
+    {
+      "signature_id": "758e38083933e9b1",
+      "failure_signature": "TURN_ADMISSION|QUERY|QUERY|dimensions|correction_loses_context",
+      "failure_ids": [
+        "pytest-15"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_pending_execution_transition.py::test_correction_after_completed_turn_replaces_old_dimension"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "TURN_ADMISSION",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-15-run-1.json",
+        "docs/phase0b/independent_runs/failure-15-run-2.json",
+        "tests/test_pending_execution_transition.py; current business slot mutation requirement"
+      ]
+    },
+    {
+      "signature_id": "224717a404640213",
+      "failure_signature": "RESULT_VALIDATION|QUERY|QUERY|display|governed_display_label",
+      "failure_ids": [
+        "pytest-16"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P2",
+      "status": "STALE_EXPECTATION_RETAINED",
+      "evidence_need": [],
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-16-run-1.json",
+        "docs/phase0b/independent_runs/failure-16-run-2.json",
+        "tests/test_runtime_regressions.py:test_query_answer_uses_business_markdown_table_and_hides_physical_prefix"
+      ]
+    },
+    {
+      "signature_id": "5d4e124c4c5af3ab",
+      "failure_signature": "RULE_PARSE|REPORT|QUERY|time_range|obsolete_mandatory_period",
+      "failure_ids": [
+        "pytest-17",
+        "pytest-18",
+        "pytest-19",
+        "pytest-20",
+        "pytest-21",
+        "pytest-22",
+        "pytest-23"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "status": "STALE_EXPECTATION_RETAINED",
+      "evidence_need": [],
+      "evidence": [
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range",
+        "docs/phase0b/independent_runs/failure-17-run-1.json",
+        "docs/phase0b/independent_runs/failure-17-run-2.json",
+        "docs/phase0b/independent_runs/failure-18-run-1.json",
+        "docs/phase0b/independent_runs/failure-18-run-2.json",
+        "docs/phase0b/independent_runs/failure-19-run-1.json",
+        "docs/phase0b/independent_runs/failure-19-run-2.json",
+        "docs/phase0b/independent_runs/failure-20-run-1.json",
+        "docs/phase0b/independent_runs/failure-20-run-2.json",
+        "docs/phase0b/independent_runs/failure-21-run-1.json",
+        "docs/phase0b/independent_runs/failure-21-run-2.json",
+        "docs/phase0b/independent_runs/failure-22-run-1.json",
+        "docs/phase0b/independent_runs/failure-22-run-2.json",
+        "docs/phase0b/independent_runs/failure-23-run-1.json",
+        "docs/phase0b/independent_runs/failure-23-run-2.json"
+      ]
+    },
+    {
+      "signature_id": "3e1e2d95209ae7eb",
+      "failure_signature": "RULE_PARSE|REPORT|QUERY|time_range|report_shared_period_policy",
+      "failure_ids": [
+        "pytest-25"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Report owner must confirm whether every master-data facet shares transaction time or retains all-history scope."
+      ],
+      "evidence": [
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range",
+        "docs/phase0b/independent_runs/failure-25-run-1.json",
+        "docs/phase0b/independent_runs/failure-25-run-2.json"
+      ]
+    },
+    {
+      "signature_id": "a60ff466efcbc22b",
+      "failure_signature": "RESULT_VALIDATION|ANALYSIS|QUERY|status|partial_success_vs_fallback",
+      "failure_ids": [
+        "pytest-28",
+        "pytest-29",
+        "pytest-30",
+        "pytest-31",
+        "pytest-32"
+      ],
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Analysis contract owner must settle partial-success vs terminal-fallback policy with representative dataset evidence.",
+        "Analysis contract owner must settle partial-success vs terminal-fallback policy with representative dataset evidence.",
+        "Analysis contract owner must settle partial-success vs terminal-fallback policy with representative dataset evidence.",
+        "Analysis contract owner must settle partial-success vs terminal-fallback policy with representative dataset evidence.",
+        "Analysis contract owner must settle partial-success vs terminal-fallback policy with representative dataset evidence."
+      ],
+      "evidence": [
+        "Need analysis contract owner to confirm partial-result policy; do not change expectation",
+        "docs/phase0b/independent_runs/failure-28-run-1.json",
+        "docs/phase0b/independent_runs/failure-28-run-2.json",
+        "docs/phase0b/independent_runs/failure-29-run-1.json",
+        "docs/phase0b/independent_runs/failure-29-run-2.json",
+        "docs/phase0b/independent_runs/failure-30-run-1.json",
+        "docs/phase0b/independent_runs/failure-30-run-2.json",
+        "docs/phase0b/independent_runs/failure-31-run-1.json",
+        "docs/phase0b/independent_runs/failure-31-run-2.json",
+        "docs/phase0b/independent_runs/failure-32-run-1.json",
+        "docs/phase0b/independent_runs/failure-32-run-2.json"
+      ]
+    },
+    {
+      "signature_id": "05c8e082b9571eb6",
+      "failure_signature": "UNKNOWN|ANALYSIS|ADD|metrics|metric_set_not_preserved",
+      "failure_ids": [
+        "real-001",
+        "real-004",
+        "real-014",
+        "real-015",
+        "real-021"
+      ],
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-001",
+        "real-004",
+        "real-014",
+        "real-015",
+        "real-021"
+      ],
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P0",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only."
+      ],
+      "evidence": [
+        "Historical proposed stage (not proved): SLOT_MERGE",
+        "Need original state, stage outputs, catalog and dataset snapshots",
+        "docs/data_agent_failure_cases.jsonl#real-001",
+        "docs/data_agent_failure_cases.jsonl#real-004",
+        "docs/data_agent_failure_cases.jsonl#real-014",
+        "docs/data_agent_failure_cases.jsonl#real-015",
+        "docs/data_agent_failure_cases.jsonl#real-021",
+        "docs/phase2/failure_trace_replay.jsonl#real-001",
+        "docs/phase2/failure_trace_replay.jsonl#real-004",
+        "docs/phase2/failure_trace_replay.jsonl#real-014",
+        "docs/phase2/failure_trace_replay.jsonl#real-015",
+        "docs/phase2/failure_trace_replay.jsonl#real-021"
+      ]
+    },
+    {
+      "signature_id": "2fab9442b18e997b",
+      "failure_signature": "UNKNOWN|ANALYSIS|NEW_TASK|clarification|unnecessary_question_candidate",
+      "failure_ids": [
+        "real-002",
+        "real-005",
+        "real-022"
+      ],
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-002",
+        "real-005",
+        "real-022"
+      ],
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P0",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only."
+      ],
+      "evidence": [
+        "Historical proposed stage (not proved): STRUCTURED_INTENT",
+        "Need original state, stage outputs, catalog and dataset snapshots",
+        "docs/data_agent_failure_cases.jsonl#real-002",
+        "docs/data_agent_failure_cases.jsonl#real-005",
+        "docs/data_agent_failure_cases.jsonl#real-022",
+        "docs/phase2/failure_trace_replay.jsonl#real-002",
+        "docs/phase2/failure_trace_replay.jsonl#real-005",
+        "docs/phase2/failure_trace_replay.jsonl#real-022"
+      ]
+    },
+    {
+      "signature_id": "84e2b44d10bede4a",
+      "failure_signature": "UNKNOWN|ANALYSIS|REPLACE|time_grain|grain_not_reconciled",
+      "failure_ids": [
+        "real-003",
+        "real-007",
+        "real-011",
+        "real-024"
+      ],
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-003",
+        "real-007",
+        "real-011",
+        "real-024"
+      ],
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P0",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only."
+      ],
+      "evidence": [
+        "Historical proposed stage (not proved): ASL",
+        "Historical proposed stage (not proved): UNKNOWN_ASL_OR_RESULT",
+        "Need original state, stage outputs, catalog and dataset snapshots",
+        "docs/data_agent_failure_cases.jsonl#real-003",
+        "docs/data_agent_failure_cases.jsonl#real-007",
+        "docs/data_agent_failure_cases.jsonl#real-011",
+        "docs/data_agent_failure_cases.jsonl#real-024",
+        "docs/phase2/failure_trace_replay.jsonl#real-003",
+        "docs/phase2/failure_trace_replay.jsonl#real-007",
+        "docs/phase2/failure_trace_replay.jsonl#real-011",
+        "docs/phase2/failure_trace_replay.jsonl#real-024"
+      ]
+    },
+    {
+      "signature_id": "2c784b257dc2659c",
+      "failure_signature": "UNKNOWN|ANALYSIS|NEW_TASK|fields|analysis_projection_alignment",
+      "failure_ids": [
+        "real-006",
+        "real-008",
+        "real-009",
+        "real-010",
+        "real-012",
+        "real-013",
+        "real-023",
+        "real-025",
+        "real-026"
+      ],
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-006",
+        "real-008",
+        "real-009",
+        "real-010",
+        "real-012",
+        "real-013",
+        "real-023",
+        "real-025",
+        "real-026"
+      ],
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P0",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only."
+      ],
+      "evidence": [
+        "Historical proposed stage (not proved): ASL",
+        "Historical proposed stage (not proved): UNKNOWN",
+        "Need original state, stage outputs, catalog and dataset snapshots",
+        "docs/data_agent_failure_cases.jsonl#real-006",
+        "docs/data_agent_failure_cases.jsonl#real-008",
+        "docs/data_agent_failure_cases.jsonl#real-009",
+        "docs/data_agent_failure_cases.jsonl#real-010",
+        "docs/data_agent_failure_cases.jsonl#real-012",
+        "docs/data_agent_failure_cases.jsonl#real-013",
+        "docs/data_agent_failure_cases.jsonl#real-023",
+        "docs/data_agent_failure_cases.jsonl#real-025",
+        "docs/data_agent_failure_cases.jsonl#real-026",
+        "docs/phase2/failure_trace_replay.jsonl#real-006",
+        "docs/phase2/failure_trace_replay.jsonl#real-008",
+        "docs/phase2/failure_trace_replay.jsonl#real-009",
+        "docs/phase2/failure_trace_replay.jsonl#real-010",
+        "docs/phase2/failure_trace_replay.jsonl#real-012",
+        "docs/phase2/failure_trace_replay.jsonl#real-013",
+        "docs/phase2/failure_trace_replay.jsonl#real-023",
+        "docs/phase2/failure_trace_replay.jsonl#real-025",
+        "docs/phase2/failure_trace_replay.jsonl#real-026"
+      ]
+    },
+    {
+      "signature_id": "3b7de2f0d6d82d05",
+      "failure_signature": "UNKNOWN|RELATIONSHIP|NEW_TASK|fields|relationship_projection_alignment",
+      "failure_ids": [
+        "real-016",
+        "real-018",
+        "real-019",
+        "real-028"
+      ],
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-016",
+        "real-018",
+        "real-019",
+        "real-028"
+      ],
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P0",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only."
+      ],
+      "evidence": [
+        "Historical proposed stage (not proved): ASL",
+        "Historical proposed stage (not proved): UNKNOWN_ASL_OR_RESULT",
+        "Need original state, stage outputs, catalog and dataset snapshots",
+        "docs/data_agent_failure_cases.jsonl#real-016",
+        "docs/data_agent_failure_cases.jsonl#real-018",
+        "docs/data_agent_failure_cases.jsonl#real-019",
+        "docs/data_agent_failure_cases.jsonl#real-028",
+        "docs/phase2/failure_trace_replay.jsonl#real-016",
+        "docs/phase2/failure_trace_replay.jsonl#real-018",
+        "docs/phase2/failure_trace_replay.jsonl#real-019",
+        "docs/phase2/failure_trace_replay.jsonl#real-028"
+      ]
+    },
+    {
+      "signature_id": "f8eca0a595afa690",
+      "failure_signature": "UNKNOWN|ANALYSIS|DISPLAY_LIMIT|dataset|limit_or_projection_not_preserved",
+      "failure_ids": [
+        "real-017",
+        "real-020",
+        "real-027",
+        "real-029",
+        "real-030"
+      ],
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-017",
+        "real-020",
+        "real-027",
+        "real-029",
+        "real-030"
+      ],
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P0",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "evidence_need": [
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only.",
+        "Original scoped pending/task/dataset state, structured intent, governed catalog version/candidates, ASL/SQL and validated result. Historical proposed stages are inferences only."
+      ],
+      "evidence": [
+        "Historical proposed stage (not proved): DATASET_TRANSFORM",
+        "Need original state, stage outputs, catalog and dataset snapshots",
+        "docs/data_agent_failure_cases.jsonl#real-017",
+        "docs/data_agent_failure_cases.jsonl#real-020",
+        "docs/data_agent_failure_cases.jsonl#real-027",
+        "docs/data_agent_failure_cases.jsonl#real-029",
+        "docs/data_agent_failure_cases.jsonl#real-030",
+        "docs/phase2/failure_trace_replay.jsonl#real-017",
+        "docs/phase2/failure_trace_replay.jsonl#real-020",
+        "docs/phase2/failure_trace_replay.jsonl#real-027",
+        "docs/phase2/failure_trace_replay.jsonl#real-029",
+        "docs/phase2/failure_trace_replay.jsonl#real-030"
+      ]
+    },
+    {
+      "signature_id": "c19d3188adc16682",
+      "failure_signature": "RULE_PARSE|LEGACY|NEW_TASK|filters|structural_text_becomes_product_filter",
+      "failure_ids": [
+        "critical-02"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c02_complete_new_hospital_task_does_not_inherit_sales"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 2",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c02_complete_new_hospital_task_does_not_inherit_sales"
+      ]
+    },
+    {
+      "signature_id": "7ae375172b551089",
+      "failure_signature": "SLOT_MERGE|LEGACY|ADD|metrics|add_becomes_replace",
+      "failure_ids": [
+        "critical-03"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c03_add_preserves_both_previous_metrics"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "SLOT_MERGE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 3",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c03_add_preserves_both_previous_metrics"
+      ]
+    },
+    {
+      "signature_id": "6594ea85bab05022",
+      "failure_signature": "SLOT_MERGE|LEGACY|REMOVE|metrics|removed_metric_restored",
+      "failure_ids": [
+        "critical-05"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c05_remove_metric_does_not_remove_remaining_metric"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "SLOT_MERGE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 5",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c05_remove_metric_does_not_remove_remaining_metric"
+      ]
+    },
+    {
+      "signature_id": "6f53e225c9109516",
+      "failure_signature": "SLOT_MERGE|LEGACY|CLEAR|region|clear_loses_base_or_resurrects_filter",
+      "failure_ids": [
+        "critical-06"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c06_clear_region_survives_next_grain_turn"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "SLOT_MERGE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 6",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c06_clear_region_survives_next_grain_turn"
+      ]
+    },
+    {
+      "signature_id": "fc1411d4041047d8",
+      "failure_signature": "PENDING_ADMISSION|LEGACY|NEW_TASK|relation|pending_hijack",
+      "failure_ids": [
+        "critical-07"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c07_pending_cannot_capture_complete_new_task_with_missing_execution_slot"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "PENDING_ADMISSION",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 7",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c07_pending_cannot_capture_complete_new_task_with_missing_execution_slot"
+      ]
+    },
+    {
+      "signature_id": "03e1c8c8361b576f",
+      "failure_signature": "RULE_PARSE|LEGACY|NEW_TASK|lineage_target|lineage_requires_metric",
+      "failure_ids": [
+        "critical-08"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c08_field_lineage_does_not_require_metric"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 8",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c08_field_lineage_does_not_require_metric"
+      ]
+    },
+    {
+      "signature_id": "bb66d68ebecb957c",
+      "failure_signature": "SEMANTIC_GROUNDING|LEGACY|NEW_TASK|fields|catalog_default_display_gap",
+      "failure_ids": [
+        "critical-09"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c09_governed_default_display_is_used_without_field_question"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "SEMANTIC_GROUNDING",
+      "root_cause_class": "CATALOG_GOVERNANCE_GAP",
+      "severity": "P0",
+      "status": "CATALOG_OWNER_BLOCKER",
+      "evidence_need": [
+        "Publish a versioned permitted default_display_attributes policy for hospital/entity lists; offline fixture proves consumption only."
+      ],
+      "evidence": [
+        "User Critical Multi-turn Scenario 9",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c09_governed_default_display_is_used_without_field_question"
+      ]
+    },
+    {
+      "signature_id": "a9240d5ad7d840f8",
+      "failure_signature": "DATASET_FOLLOWUP|LEGACY|FOLLOW_UP|limit|display_limit_unrecognized",
+      "failure_ids": [
+        "critical-10"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c10_display_limit_preserves_row_order"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "DATASET_FOLLOWUP",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 10",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c10_display_limit_preserves_row_order"
+      ]
+    },
+    {
+      "signature_id": "e50b96526de8bb35",
+      "failure_signature": "DATASET_FOLLOWUP|LEGACY|FOLLOW_UP|ranking|ranking_count_ignored",
+      "failure_ids": [
+        "critical-11"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c11_ranking_uses_requested_count_and_order"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "DATASET_FOLLOWUP",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 11",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c11_ranking_uses_requested_count_and_order"
+      ]
+    },
+    {
+      "signature_id": "34557a597b12af99",
+      "failure_signature": "DATASET_FOLLOWUP|LEGACY|FOLLOW_UP|completeness|explicit_completeness_guard_missing",
+      "failure_ids": [
+        "critical-12"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c12_truncated_dataset_cannot_establish_global_top5"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "DATASET_FOLLOWUP",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "Baseline orchestrator persisted no source_truncated provenance and could reuse explicit incomplete rows; baseline TypeError alone is an acceptance API gap, not the root-cause evidence.",
+        "User Critical Multi-turn Scenario 12",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c12_truncated_dataset_cannot_establish_global_top5"
+      ]
+    },
+    {
+      "signature_id": "d4efecf1a82f6db7",
+      "failure_signature": "RULE_PARSE|LEGACY|NEW_TASK|fields|explicit_attribute_lost",
+      "failure_ids": [
+        "critical-14"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c14_product_name_role_depends_on_requested_operation"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 14",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c14_product_name_role_depends_on_requested_operation"
+      ]
+    },
+    {
+      "signature_id": "a5992e53c912b53b",
+      "failure_signature": "TURN_ADMISSION|LEGACY|NEW_TASK|time_range|readiness_pollutes_relation",
+      "failure_ids": [
+        "critical-15"
+      ],
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c15_default_time_cannot_determine_turn_relation"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "TURN_ADMISSION",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "User Critical Multi-turn Scenario 15",
+        "docs/phase0b/critical_before.json",
+        "docs/phase0b/final_verified_test_gate.json",
+        "tests/test_phase0b_critical.py::test_c15_default_time_cannot_determine_turn_relation"
+      ]
+    },
+    {
+      "signature_id": "4155d78a105e99c2",
+      "failure_signature": "INTENT_ASL_CONTRACT|LEGACY|QUERY|clarification|missing_reason_trace",
+      "failure_ids": [
+        "trace-01"
+      ],
+      "source": [
+        "CLOSURE_SOURCE_AUDIT"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_regressions.py::test_final_clarification_has_scoped_reason_without_raw_text"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "INTENT_ASL_CONTRACT",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "docs/phase0b/final_verified_test_gate.json",
+        "e4d3bb5:app/domain/models.py:AgentResponse lacked ClarificationDecisionTrace"
+      ]
+    },
+    {
+      "signature_id": "52eef5f2700e0193",
+      "failure_signature": "PENDING_ADMISSION|LEGACY|QUERY|clarification|repeated_pending_question",
+      "failure_ids": [
+        "trace-02"
+      ],
+      "source": [
+        "CLOSURE_SOURCE_AUDIT"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_regressions.py::test_root_dag_mapping_question_is_not_repeated",
+        "tests/test_phase0b_regressions.py::test_same_pending_question_is_suppressed_and_state_retained"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "PENDING_ADMISSION",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "docs/phase0b/final_verified_test_gate.json",
+        "e4d3bb5:app/services/orchestrator.py:_request_clarification and _resume_task_plan unconditionally reissued questions"
+      ]
+    },
+    {
+      "signature_id": "7b7dec8819f86659",
+      "failure_signature": "INTENT_ASL_CONTRACT|LEGACY|QUERY|clarification|backend_failure_becomes_user_question",
+      "failure_ids": [
+        "trace-03"
+      ],
+      "source": [
+        "CLOSURE_SOURCE_AUDIT"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_regressions.py::test_backend_failure_cannot_be_rephrased_as_missing_user_metric"
+      ],
+      "historical_case_ids": [],
+      "first_divergence_stage": "INTENT_ASL_CONTRACT",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "status": "FIXED",
+      "evidence_need": [],
+      "evidence": [
+        "docs/phase0b/final_verified_test_gate.json",
+        "e4d3bb5:app/services/orchestrator.py:ASL_AMBIGUOUS/SQL_AMBIGUOUS flowed directly to clarification"
+      ]
+    },
+    {
+      "signature_id": "f7b54b26fd0733d6",
+      "failure_signature": "SQL_TRANSLATOR|LEGACY|QUERY|lineage|metric_only_lineage_endpoint",
+      "failure_ids": [
+        "external-01"
+      ],
+      "source": [
+        "CLOSURE_SOURCE_AUDIT"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [],
+      "first_divergence_stage": "SQL_TRANSLATOR",
+      "root_cause_class": "EXTERNAL_SERVICE_CONTRACT_BUG",
+      "severity": "P0",
+      "status": "EXTERNAL_OWNER_BLOCKER",
+      "evidence_need": [],
+      "evidence": [
+        "E:/YouoAgent/sql-translator/api_server_prod.py:194-196,264-270",
+        "E:/YouoAgent/sql-translator/sql_translator_prod.py:495",
+        "app/adapters/base.py:SemanticAdapter.lineage"
+      ]
+    }
+  ]
+}

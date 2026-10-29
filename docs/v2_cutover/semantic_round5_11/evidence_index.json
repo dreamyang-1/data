@@ -1,0 +1,294 @@
+{
+  "status": "SCALAR_RESULT_AND_PERSISTED_API_CLOSURE_COMPLETE",
+  "started_at": "2026-09-10T23:04:46+08:00",
+  "hard_deadline": "2026-09-11T01:34:00+08:00",
+  "completed_at": "2026-09-11T00:08:00.682846+08:00",
+  "baseline": {
+    "commit": "dd1e5a766f5fb4c73bc6376bf0e284a179194531",
+    "branch": "v2-scalar-live-e2e-20260910t133335z",
+    "draft_pr": 69,
+    "pr_state_at_start": "OPEN_DRAFT_UNMERGED"
+  },
+  "branch": "v2-scalar-persisted-api-20260910T230446Z",
+  "release": {
+    "commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_11/evidence_index.json",
+    "draft_pr_base": "v2-scalar-live-e2e-20260910t133335z",
+    "auto_merge": false
+  },
+  "authorized_scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS",
+    "data_source_id": 58
+  },
+  "catalog": {
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "source": "FROZEN_CERTIFIED_SNAPSHOT",
+    "live_vector_quality": "NOT_EVALUATED"
+  },
+  "model": {
+    "name": "qwen3.7-max",
+    "thinking": false,
+    "temperature": 0,
+    "retries": 0,
+    "requests": 10,
+    "target_max": 8,
+    "hard_max": 12,
+    "target_met": false,
+    "hard_gate": "PASS"
+  },
+  "result_contract": {
+    "encoding_version": "typed-scalar-result-v1",
+    "count_internal_type": "int",
+    "money_internal_type": "Decimal",
+    "money_float_roundtrip": false,
+    "public_representation": "existing AgentResponse.answer string",
+    "public_field_type_changes": 0,
+    "digest_typed_and_stable": true,
+    "non_finite_rejected": true,
+    "v1_default_decimal_behavior_changed": false
+  },
+  "redis_isolation": {
+    "run_id": "r51120260910t230900z",
+    "namespace": "youo:data-analysis:v2:isolated:round5-11:<run_id>",
+    "ttl_seconds": 7200,
+    "cross_process_restore": true,
+    "state_version": 6,
+    "tasks": 1,
+    "attempts": 2,
+    "datasets": 2,
+    "task_versions": [
+      1,
+      2
+    ],
+    "latest_dataset_is_p2": true,
+    "p1_receipt_preserved": true,
+    "resource_count": 6,
+    "existing_before_cleanup": 6,
+    "deleted": 6,
+    "remaining_after_cleanup": 0,
+    "scan_used": false,
+    "flush_used": false,
+    "production_prefix_write": false
+  },
+  "live_cases": {
+    "P1": {
+      "route": "/agent_chat",
+      "status": "PASS",
+      "value_type": "int",
+      "state_version": 3,
+      "model_calls": 2,
+      "transport_calls": 1,
+      "api_seconds": 22.531,
+      "same_snapshot_reference": "PASS_EXACT"
+    },
+    "P2": {
+      "route": "/agent_chat/stream",
+      "status": "PASS",
+      "value_type": "int",
+      "state_version": 6,
+      "model_calls": 2,
+      "transport_calls": 1,
+      "api_seconds": 11.953,
+      "same_snapshot_reference": "PASS_EXACT",
+      "sse_complete": 1,
+      "sse_error": 0
+    },
+    "P2_REPEAT": {
+      "route": "/agent_chat",
+      "status": "PASS_IDEMPOTENT",
+      "model_delta": 0,
+      "sql_delta": 0,
+      "transport_delta": 0,
+      "state_mutation": false
+    },
+    "AMOUNT": {
+      "route": "/agent_chat",
+      "status": "PASS",
+      "value_type": "Decimal",
+      "model_calls": 2,
+      "transport_calls": 1,
+      "api_seconds": 11.5,
+      "same_snapshot_reference": "PASS_EXACT"
+    },
+    "UNSUPPORTED": {
+      "route": "/agent_chat",
+      "status": "PASS_SAFE_REJECT",
+      "error_code": "EXECUTION_PAYLOAD_UNSUPPORTED",
+      "model_calls": 0,
+      "sql_submissions": 0,
+      "v1_fallback": false
+    }
+  },
+  "independent_verification": {
+    "round5_10_status_preserved": "BUSINESS_VALUE_INDEPENDENTLY_UNVERIFIED",
+    "round5_11_status": "PASS_SAME_TRANSACTION_SNAPSHOT",
+    "groups": [
+      "P1",
+      "P2",
+      "AMOUNT"
+    ],
+    "same_connection": true,
+    "same_transaction_snapshot": true,
+    "exact_matches": 3,
+    "evidence_saved_before_summary": true,
+    "financial_statement_audit": false
+  },
+  "budgets": {
+    "sql_attempts": 10,
+    "sql_database_submissions": 6,
+    "sql_success": 6,
+    "sql_failure_after_submission": 0,
+    "sql_unknown": 0,
+    "sql_rejected_before_connection": 4,
+    "sql_hard_max": 12,
+    "sql_gate": "PASS",
+    "metadata_requests": 6,
+    "metadata_max": 8,
+    "metadata_gate": "PASS"
+  },
+  "failure_and_concurrency": {
+    "failed_amount_preflight_messages": 2,
+    "failed_attempt_datasets": 0,
+    "same_message_different_request": "HTTP_409_CONFLICT",
+    "running_duplicate": "PENDING_REVIEW_NO_SECOND_TRANSPORT",
+    "timeout": "FAILED_NO_DATASET",
+    "state_conflict": "NO_FALSE_SUCCESS",
+    "strict_exactly_once_claimed": false,
+    "crash_recovery": "QUARANTINE_NO_REEXECUTION_UNTIL_MANUAL_REVIEW_OR_TTL"
+  },
+  "api_contract": {
+    "application_factory_used": true,
+    "original_json_route": true,
+    "original_sse_route": true,
+    "new_routes": 0,
+    "new_request_fields": 0,
+    "new_response_fields": 0,
+    "new_sse_types": 0,
+    "authentication_bypassed": false,
+    "scope_bypassed": false,
+    "isolated_asgi_only": true,
+    "browser_or_8088_deployed": false
+  },
+  "tests": {
+    "affected": {
+      "passed": 131,
+      "failed": 0,
+      "collection_errors": 0
+    },
+    "agent_full": {
+      "passed": 3552,
+      "failed": 27,
+      "collection_errors": 0,
+      "collected": 3579
+    },
+    "agent_baseline": {
+      "passed": 3532,
+      "failed": 27,
+      "collection_errors": 0,
+      "collected": 3559
+    },
+    "same_failure_nodeids": true,
+    "old_pass_to_new_fail": 0,
+    "new_agent_tests": 20,
+    "old_test_expectation_changes": 0,
+    "sql_translator_full": {
+      "passed": 400,
+      "failed": 0,
+      "collection_errors": 0
+    },
+    "new_sql_translator_tests": 4,
+    "oagnet": "690 passed / 8 pre-existing failed; reused because source was not changed",
+    "real_model_calls_from_tests": 0,
+    "business_database_calls_from_tests": 0
+  },
+  "runtime_processes": {
+    "unchanged": true,
+    "agent": {
+      "pid": 26572,
+      "port": 8088
+    },
+    "oagnet": {
+      "pid": 27968,
+      "port": 8021
+    },
+    "sql_translator": {
+      "pid": 26172,
+      "port": 48000
+    },
+    "all_started_at": "2026-09-10T19:26:39+08:00",
+    "service_restarts": 0
+  },
+  "safety_counts": {
+    "sql_writes": 0,
+    "catalog_writes": 0,
+    "production_state_writes": 0,
+    "configuration_changes": 0,
+    "blind_access": 0,
+    "ui_changes": 0,
+    "production_route_changes": 0
+  },
+  "gates": {
+    "SCALAR_EXACT_VALUE_CONTRACT": "PASS_LIMITED_SCALAR_PATH",
+    "BUSINESS_VALUE_INDEPENDENT_VERIFICATION": "PASS_NEW_ROUND511_SAME_SNAPSHOT; ROUND510_UNVERIFIED_PRESERVED",
+    "SCALAR_PERSISTED_STATE_CONTINUITY": "PASS_ISOLATED_REDIS_CROSS_PROCESS",
+    "SCALAR_API_SSE_INTEGRATION": "PASS_ISOLATED_ORIGINAL_ROUTES",
+    "UNSUPPORTED_CAPABILITY_HANDLING": "PASS_PRE_SQL_SAFE_REJECT",
+    "SCALAR_INTERNAL_PLATFORM_CANDIDATE": "READY_FOR_DEPLOYMENT_REVIEW",
+    "CONTEXT_FOLLOWUP_READY": "NOT_READY_FULL_GATE",
+    "INTERNAL_DEMO_SEMANTIC_READY": "NO",
+    "QUESTION_COMPLETION_CONTRACT_GAP": "OPEN_UNCHANGED",
+    "READY_FOR_USER_APPROVAL": "NO"
+  },
+  "next_action": "LIMITED_SCALAR_ADAPTER_DEPLOYMENT_AND_ROLLBACK_DESIGN_REVIEW_WITH_PRODUCTION_STORE_LIFECYCLE_AND_RUNNING_OUTCOME_OPERATIONS",
+  "runtime_files_sha256": {
+    "app/api.py": "285a2fbf6e2985c8a6203815b33278ef2c85b73891b1b6ffd1db8618a3b5a748",
+    "app/main.py": "1506727e870ebe5dfb297b29f28735677be99b5e26dbc77e1d7e1227ccb15a2d",
+    "app/semantic_v2/isolated_execution.py": "81db3b5ed7d7f93c89c0e72bcb7d1d8050095a2896eb71356e698fec336b8620",
+    "app/semantic_v2/persisted_scalar_api.py": "350b22f72fd50b26002bf1a9d7d11e151b407438a95f7b7fd833e0c4814536cf",
+    "tests/test_v2_isolated_execution.py": "79d1e65997a05a644f78de683793e16173fbdc1ae5d481d7b9b83f228c94f7e2",
+    "tests/test_v2_persisted_scalar_api.py": "bb52cce5420afc97b00abb4882c58154fcbd98e906acf295c34f7597d0ee07f4",
+    "tools/cutover/scalar_persisted_api_round5_11.py": "2f66e39490fcff7621cb1ec375ceb9357d235bf67e02bdd648d15fc423c4d7b0",
+    "sql-translator/sql_translator_prod.py": "9b090bacba4155d6b5b644e0535d01e95ebfd2034e92ff31cfad3bbcb19417cb",
+    "sql-translator/test_required_execution_snapshot.py": "435d10922ec82ace39603f74e37dd94f64ead165e56bc3ea43ed7d52e539de6d"
+  },
+  "private_evidence": {
+    "root": ".eval_private/scalar-persisted-api-round5-11-20260910T230900Z",
+    "isolation_and_budget.json": "28e3002075a5ad8fd72a7515f9d41bac0d2d8bb8666bba17c68520c133f1cbd2",
+    "p1_api_receipt.json": "5cff51807e4f3d4a8f35dbbb4790bf9ce20524ee40e62d59b19a90e17cce3144",
+    "p2_api_receipt.json": "200c1865d86d789826ac4f9682376e566c08ef48d6eaaaaaead5c03b8f33cd47",
+    "amount_final_api_receipt.json": "f89213ceca86c0d21e1e0f72afa9f40882f20b8965b0fecd289a2d5e965c5723",
+    "unsupported_api_receipt.json": "afac255b4bb7764bca6365b87b9bedcc56ee16e33960179036b9045e379d7305",
+    "p1_same_snapshot_verification.json": "b8db984003a8a41bdb747b14f8aee9cb34e63a86177223e0490d61c1abf844c9",
+    "p2_same_snapshot_verification.json": "ba8f58ef5ec2e89cbfe11f50e7ef63b691949aea97bef9abcad78f3730cb7fe5",
+    "amount_final_same_snapshot_verification.json": "eb50b0eebe2ed33a4400bbfb5c03ebdb8f4808dc973380abd61d2273d14cc8ae",
+    "live_verification_summary.json": "8bfad8eee7b997959835aacc9b895474b4105eaa95531261426b9b469fa54cb2",
+    "failure_delta.json": "09c96e8d98ba172b1de8662d312d19e3c81abe3cbcb4934a8132c2d307c033fd",
+    "test_summary.json": "369763fb9cd8e044fbd4e1c26cb10a3ab998eb916b0d73f094761adec865bd00",
+    "redis_resources.json": "c50e22d6380253df15d47e194a7fc738499ad5adfe41d5b46126468c2703fa7d",
+    "redis_cleanup_receipt.json": "7687833b44c40818c2535ac7d0e0216bc3d39c0341dbb4a4a0fa460fdd6dd884",
+    "amount_planning.json": "6e02505bdcff1521f752859cb7abdcdede82e6698b1f5d1bb233d3556f7375d5",
+    "amount_recheck_planning.json": "e616b7804ba2c691b6d516362ed16c9792c0c9fd69b778b321773f7a87d08177"
+  },
+  "changed_files": [
+    "app/api.py",
+    "app/main.py",
+    "app/semantic_v2/isolated_execution.py",
+    "app/semantic_v2/persisted_scalar_api.py",
+    "tests/test_v2_isolated_execution.py",
+    "tests/test_v2_persisted_scalar_api.py",
+    "tools/cutover/scalar_persisted_api_round5_11.py",
+    "sql-translator/sql_translator_prod.py",
+    "sql-translator/test_required_execution_snapshot.py",
+    "docs/v2_cutover/semantic_round5_11/closure_report.md",
+    "docs/v2_cutover/semantic_round5_11/evidence_index.json",
+    "docs/v2_cutover/semantic_round5_11/rollback.md",
+    "docs/v2_cutover/semantic_round5_11/isolation_resources.md"
+  ],
+  "production_semantic_changes": 0,
+  "prompt_changes": 0,
+  "model_schema_changes": 0,
+  "v1_production_routing_changed": false
+}

@@ -1,0 +1,37 @@
+{
+  "status": "ROUND_2_3_CONCRETE_ENTITY_CLOSURE_PARTIAL_SAFE",
+  "baseline_commit": "a2b5f4b1367209832ec4cd9ad170b6dc3d0b9f3e",
+  "branch": "v2-entity-instance-preservation-r2-3-20260912T030038Z",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [205]
+  },
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "specific_entity_first_divergence": "CURRENT_TURN_ENTITY_INSTANCE_LOST",
+  "pre_targeted_gate": "FAIL",
+  "offline_replay": {
+    "status": "SAFE_BLOCKED_MISSING_FROZEN_INSTANCE_PROOF",
+    "private_receipt_sha256": "cf43f9a52e57dfe8aab097a6e35c02418983d6ce4f42e4fc6b3cad7377834db6",
+    "round22_case_receipt_sha256": "55768bf2e13dae0280d7bfeadad34bd1ad5d71f4bc55ab54265f08bf79489408",
+    "round22_current_turn_exchange_sha256": "b1df50706aa0cd4c4fadc97c51e0df359b95847b1709d915464d667953a1cc89",
+    "round22_semantic_edits_exchange_sha256": "0a7e0e1dd997250913b225cf853bf66eb304ac527b2f0df26bd269dde899242c",
+    "new_model_calls": 0,
+    "sql_calls": 0,
+    "production_writes": 0
+  },
+  "frozen_inputs": {
+    "catalog_file_sha256": "c35e2561e6630f4b1a4c65babe2570c1e1cf9d3446f9ba10ab2be06f7a63c453",
+    "catalog_snapshot_sha256": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+    "source_observation_file_sha256": "a33a5842f2cd7a0c29d10de8fe85309efcb70174cbc986a971384fca4cde62f6"
+  },
+  "candidate_file_sha256": {
+    "app/semantic_v2/source_value_recognition.py": "ff5e2d04f3e3167bc98e67007e2dda1f63983b9d374fd2e77b89381b32040438",
+    "app/semantic_v2/recognition.py": "6b6dea9c2f2950882adb9921f816802b260e2202e86da0f308dd965bb03dd96b",
+    "tests/test_v2_entity_instance_preservation_round23.py": "4dc2a5d39b6a67ecfed035d844da2f6ea4042e08e1fd333303c952f6d1b07739"
+  },
+  "benchmark_scores_changed": false,
+  "prompt_changes": 0,
+  "provider_changes": 0,
+  "dynamic_schema_changes": 0
+}

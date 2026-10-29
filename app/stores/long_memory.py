@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from app.domain.state_identity import has_stable_user_principal
 
 
 def utc_now() -> datetime:
@@ -43,6 +44,12 @@ class MemoryScope(BaseModel):
     tenant_id: str = Field(min_length=1, max_length=64)
     user_id: str = Field(min_length=1, max_length=128)
     application_id: str = Field(min_length=1, max_length=100)
+
+    @model_validator(mode='after')
+    def require_personal_principal(self):
+        if not has_stable_user_principal(self.tenant_id, self.user_id):
+            raise ValueError('STABLE_USER_PRINCIPAL_REQUIRED')
+        return self
 
 
 class MemoryCandidate(BaseModel):
@@ -407,8 +414,8 @@ class MySQLLongTermMemoryStore:
                 cursorclass=pymysql.cursors.DictCursor,
                 autocommit=False,
                 connect_timeout=connect_timeout,
-                read_timeout=read_timeout,
-                write_timeout=write_timeout,
+                read_timeout=None,
+                write_timeout=None,
             )
 
         return cls(connect, logical_key_lock_timeout=logical_key_lock_timeout)

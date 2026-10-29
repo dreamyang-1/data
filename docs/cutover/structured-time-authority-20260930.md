@@ -1,0 +1,136 @@
+# Structured time authority repair
+
+## Evidence and first divergence
+
+- PROVEN: the inspected production conversation has two first-quarter requests
+  stopping at ASL binding with `未匹配到授权的时间字段`. Its structured time is
+  `2026年第一季度`, and the upstream understood interval is already January 1
+  through March 31. Fourth-quarter requests in that conversation completed.
+- PROVEN: read-only recall against the current scoped server vector catalog
+  returned both a first-order date and an order date but no business-time
+  dimension for that structured quarter input. The time-dimension recall trigger
+  returned false. It recognized selected natural-language relative phrases,
+  rather than the presence of the structured time slot.
+- PROVEN: the binder accepted model-supplied date ranges, relative amounts and
+  calendar modes. Its grain repair required a recognized model grain; omitted,
+  malformed and unrequested grains could still be lost or become clarification.
+- UNKNOWN: the failed historical model's exact raw time object is not retained in
+  the inspected response cache. Do not claim a particular hallucinated field.
+
+## Changes and boundaries
+
+- `Oagnet/structured_time.py`: compile only the planner's declared time slot;
+  calendar quarters, years, months, days, explicit ranges, half-years, rolling
+  periods and calendar-relative periods use deterministic date arithmetic.
+  Unsupported/ambiguous expressions require explicit bounds, not invented dates.
+- `Oagnet/structured_binding.py`: remove model date/grain write authority from
+  the prompt and assembly. Model time fields other than a catalog anchor are
+  ignored. Aggregation grain comes from the declared grouping only; date detail
+  columns and ordinary dimensions never acquire a model-generated grain.
+  Published time-dimension mappings can supply their authorized physical fields.
+- Anchor binding uses explicit declarations, selected metric time caliber,
+  selected time dimensions and reachable published time fields. It does not pick
+  an arbitrary alphabetically first date or a field merely containing `created`.
+  Genuine catalog/meaning gaps explain what is missing without asking for the
+  already known interval again. Catalog field disambiguation remains a model
+  capability; dates, operators, limits and sorting direction do not.
+- `Oagnet/prompt_build.py`: structured time slots trigger same-scope time-dimension
+  recall regardless of spelling/period; recalled temporal candidates are not
+  discarded by unrelated top-k labels. No scope expansion or index rebuild.
+- `Oagnet/query_binding_review.py`: delete unused model-controlled `_time_value`.
+  Existing filter ownership review is unchanged.
+- No API/SSE schema, node order, runtime routing, business SQL translator, result
+  pagination, semantic database or vector data was changed.
+
+## Validation and delta
+
+- New time-contract tests: 86. Against old binding/recall, 57 fail and 29 pass;
+  after the repair all 86 pass. Covers missing/wrong/malformed model time,
+  Q1/Q4 follow-ups, range versus grouping, month/quarter/year/week units, leap
+  dates, month ends, absent/default time, authorization and other parameter values.
+- Oagnet focused contracts: 230 passed. SQL time/snapshot/hardening: 130 passed.
+- DataAnalysis critical/API/task DAG: 259 passed; full suite: 4,504 passed.
+- Oagnet full baseline: 1,108 passed, 2 failed. Initial final: 1,194 passed,
+  the same 2 failed. After the stale fixture correction below: 1,196 passed;
+  no collection errors or unresolved new regressions.
+- STALE_TEST: the missing-anchor fixture now actually lacks an authorized time
+  field, instead of expecting a bad model field to block a uniquely bindable
+  declared range. The relative-time integration test fixes today's date rather
+  than trusting the model's historical hardcoded start/end. Assertions remain.
+- STALE_TEST (release review): the two specification cases called only scalar
+  literal preparation, despite specifications being catalog identity attributes
+  that require standard-value grounding. The user explicitly requires catalog
+  matching and permits correcting an upstream name/model field guess. The tests
+  now exercise literal preparation followed by scoped standard-value matching,
+  assert that the catalog matcher was used, and retain the original exact final
+  field/operator/value assertions. No runtime code was changed to make them pass.
+  The literal-constraint file has 52 passing tests.
+- Read-only server candidate probe uses the real scoped vector catalog, model
+  and SQL translation service for both requested quarters. Both ASLs bind
+  `sales_order.created_date`, retain the single name projection, and translate
+  into the correct half-open quarter boundaries. This checks ASL/SQL time
+  alignment, not business-data execution or all join semantics.
+- Production has additional independent edits in the same binder. A temporary
+  candidate preserves those edits and replaces only the time path for the probe;
+  it also removes the old relative-time/first-date fallback. No active service
+  file was replaced and no service was restarted.
+
+## Release blocker and remaining scope
+
+The local blocker is resolved. A fresh server hash check confirms the independent
+remote binder edits have not changed since the investigation snapshot. Testing
+the remote-preserving candidate gives 275 passed and 7 failed. The exact same
+seven failures reproduce against untouched active server code (a targeted run
+has 2 passed, 7 failed, 36 deselected):
+
+- unbound filter subject recovery;
+- missing filter slot;
+- unrequested dimension handling;
+- missing filter with partial display;
+- numeric non-group identity projection;
+- metric subject/source selection;
+- category field/value binding.
+
+These are `REMOTE_BASELINE_DIVERGENCE`, not new time regressions. On September 30,
+the user explicitly authorized retaining these seven existing failures and
+deploying/restarting only the time repair. The release gate compares exact JUnit
+failure identities with the untouched remote baseline; any additional failure
+or collection error still blocks deployment. Independent server code and the
+paused full-result task are not overwritten. No production cutover is involved. The server
+candidate also removes a remote-only prompt example that still instructed the
+model to calculate dates, contradicting the new anchor-only time contract.
+
+Paused full-result-return work in the HTTP adapter and SQL export files is not
+included. Temporary server probes/cached diagnostics are not release artifacts.
+
+## Time-only deployment completed
+
+- Release: `structured-time-20260930-215139`; feature commit `b516e77`, test and
+  approval record `4ae5d0a`, pushed to the existing feature branch (no PR merge).
+- Only four Oagnet runtime files were installed. The remote binder and prompt
+  retain independent remote changes; this is not a wholesale local overwrite.
+- Installed-code regression: 275 passed, the same seven explicitly accepted
+  baseline failures, zero additional failures, zero collection errors. Exact
+  JUnit failure identities were compared before allowing the restart.
+- Service restart: September 30, 2026, 21:53:31 China Standard Time. Main PID
+  changed from 1476384 to 2924398; active state confirmed. Oagnet health returned
+  HTTP 200 / UP, DataAnalysis readiness returned HTTP 200 / READY.
+- Existing environment files were hash-checked unchanged. Pre-deploy file
+  backups and the hash manifest are retained under the release identifier.
+- Post-restart requests through the actual ASL HTTP service and SQL translator
+  passed for both quarters: Q1 2026 is January 1 through March 31; Q4 2025 is
+  October 1 through December 31. SQL uses the corresponding exclusive next-day
+  end bound. Both select the authorized order-date field and add no time grouping
+  to the detail query. This is ASL/translation verification, not a business-data
+  execution or a full conversation UI test.
+- No other service was restarted; the seven existing binding failures and
+  paused full-result-return work remain outside this release.
+
+Installed SHA-256:
+
+| File | SHA-256 |
+| --- | --- |
+| structured_binding.py | cba5573f407c0b8d2781f78a5af68cba194f7684d4ec05cca598d41712940ae7 |
+| prompt_build.py | 204ebd25ae1b4bc448b0a4f7ac49985b11c766b5d969ba5c42756e7ed1c8f438 |
+| query_binding_review.py | fdaa9cde0cf2d1f0fbab7d51bc2be366455dee3b87f3fa9c513a90a751b97e87 |
+| structured_time.py | 813afba8c3ad183009a298ce1cf9164d1a1852bda7c163540e7d4c58c41251c0 |

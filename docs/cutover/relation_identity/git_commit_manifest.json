@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "011a7193f5eafda1101255209129b4d4e2ad4f94",
+  "feature_branch": "cutover-relation-identity-evidence-20260909-01",
+  "base_branch": "cutover-pinned-relation-endpoints-20260909-01",
+  "final_commit": "Commit containing this manifest",
+  "audit_only": true,
+  "runtime_source_changed": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "draft_pr": true,
+  "auto_merge": false,
+  "production_writes": 0
+}

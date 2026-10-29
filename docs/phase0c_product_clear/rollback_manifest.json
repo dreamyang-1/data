@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "c2fa1411d1909a6380f924ebe1bb4723a2518df8",
+  "feature_branch": "phase0c-product-clear-20260908-01",
+  "final_commit": "Commit containing this manifest",
+  "procedure": "Review git revert of this stage commit; synchronize only manifest paths and rerun matching offline tests",
+  "production_rollbacks_required": false,
+  "index_rollbacks_required": false,
+  "automatic_merge": false,
+  "v1_replacement": "Not ready; user confirmation required before any switch"
+}

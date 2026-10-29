@@ -1,0 +1,568 @@
+{
+  "cases": [
+    {
+      "case_id": "G81-001",
+      "surface": "列出产品线名单",
+      "mention": "产品线",
+      "raw_model_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-0"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-0",
+            "operation_hint": "ADD",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "DERIVED_DEFAULT_DISPLAY",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "RELATION_LIST"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "CATALOG_RELATIONSHIP_REQUIRED",
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": false,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-003",
+      "surface": "列出城市名单",
+      "mention": "城市",
+      "raw_model_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-turn-0-0"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-turn-0-0",
+            "operation_hint": "ADD",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "DERIVED_DEFAULT_DISPLAY",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "DETAIL_ROWS",
+        "draft": "DETAIL_ROWS"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": null,
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": false,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-008",
+      "surface": "列出生产厂家名单",
+      "mention": "生产厂家",
+      "raw_model_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-turn-0-1"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-turn-0-1",
+            "operation_hint": "ADD",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "DERIVED_DEFAULT_DISPLAY",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "RELATION_LIST"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "CATALOG_RELATIONSHIP_REQUIRED",
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": false,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-009",
+      "surface": "列出销售项目名单",
+      "mention": "名单",
+      "raw_model_role": [
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-1"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-1",
+            "operation_hint": "SET",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "PRESENTATION_OR_QUERY_SHAPE_CUE",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "DETAIL_ROWS"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "V2_QUERY_SHAPE_CONFLICT",
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": false,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-010",
+      "surface": "列出销售公司名单",
+      "mention": "名单",
+      "raw_model_role": [
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-1"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-1",
+            "operation_hint": "SET",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "PRESENTATION_OR_QUERY_SHAPE_CUE",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "RELATION_LIST"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "CATALOG_RELATIONSHIP_REQUIRED",
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": false,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-012",
+      "surface": "列出省份名单",
+      "mention": "省份",
+      "raw_model_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-province"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-province",
+            "operation_hint": "ADD",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "DERIVED_DEFAULT_DISPLAY",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "RELATION_LIST"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "CATALOG_RELATIONSHIP_REQUIRED",
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": false,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-058",
+      "surface": "列出销售项目名单",
+      "mention": "名单",
+      "raw_model_role": [
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m1"
+        ],
+        "markers": [
+          {
+            "mention_id": "m1",
+            "operation_hint": "SET",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "PRESENTATION_OR_QUERY_SHAPE_CUE",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "DETAIL_ROWS"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "V2_QUERY_SHAPE_CONFLICT",
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": true,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-059",
+      "surface": "列出销售项目名单",
+      "mention": "名单",
+      "raw_model_role": [
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m1"
+        ],
+        "markers": [
+          {
+            "mention_id": "m1",
+            "operation_hint": "SET",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "PRESENTATION_OR_QUERY_SHAPE_CUE",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "DETAIL_ROWS"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "V2_QUERY_SHAPE_CONFLICT",
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": true,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-060",
+      "surface": "列出销售公司名单",
+      "mention": "名单",
+      "raw_model_role": [
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-1"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-1",
+            "operation_hint": "SET",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "PRESENTATION_OR_QUERY_SHAPE_CUE",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "RELATION_LIST"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "CATALOG_RELATIONSHIP_REQUIRED",
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": true,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-061",
+      "surface": "列出销售公司名单",
+      "mention": "名单",
+      "raw_model_role": [
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-1"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-1",
+            "operation_hint": "SET",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "PRESENTATION_OR_QUERY_SHAPE_CUE",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "RELATION_LIST"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "CATALOG_RELATIONSHIP_REQUIRED",
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": true,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "G81-066",
+      "surface": "列出市名单",
+      "mention": "市名单",
+      "raw_model_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-city-list"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-city-list",
+            "operation_hint": "SET",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "DERIVED_DEFAULT_DISPLAY",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "RELATION_LIST",
+        "draft": "DETAIL_ROWS"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": "V2_QUERY_SHAPE_CONFLICT",
+      "classification": "MENTION_BOUNDARY",
+      "role_subtype": null,
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": true,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "PV81-010",
+      "surface": "请给出销售总成本的汇总值。",
+      "mention": "汇总值",
+      "raw_model_role": [
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-turn0-1"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-turn0-1",
+            "operation_hint": "ADD",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "PRESENTATION_OR_QUERY_SHAPE_CUE",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "SCALAR_AGGREGATE",
+        "draft": "SCALAR_AGGREGATE"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": null,
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": false,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    },
+    {
+      "case_id": "PV81-016",
+      "surface": "请给出合作时长的汇总值。",
+      "mention": "汇总值",
+      "raw_model_role": [
+        "PROJECTION_FIELD"
+      ],
+      "normalized_role": [
+        "PROJECTION_FIELD"
+      ],
+      "projection_declaration": {
+        "explicit_slot_mentions": [
+          "m-1"
+        ],
+        "markers": [
+          {
+            "mention_id": "m-1",
+            "operation_hint": "ADD",
+            "slot_name": "projection_spec"
+          }
+        ]
+      },
+      "binding_status": "NO_SELECTED_PROJECTION_BINDING; legitimate subject/metric bound",
+      "explicitness_type": "PRESENTATION_OR_QUERY_SHAPE_CUE",
+      "declaration_is_grounded": false,
+      "normalizer_introduced_declaration": false,
+      "query_shape": {
+        "parse": "SCALAR_AGGREGATE",
+        "draft": "SCALAR_AGGREGATE"
+      },
+      "first_rejection": "V2_EXPLICIT_OPERATION_DROPPED",
+      "downstream_rejection": null,
+      "classification": "MODEL_ROLE",
+      "role_subtype": "MODEL_OUTPUT_ROLE_DEFECT",
+      "cutover_relevance": "BASE_TASK_BLOCKER",
+      "impact": "FIRST_TURN_ONLY",
+      "followup_prefix_blocked": false,
+      "wrong_target_or_inheritance_observed": false,
+      "risk": "SAFE_REJECT",
+      "before": "FAIL",
+      "after": "FAIL"
+    }
+  ],
+  "distribution": {
+    "MODEL_ROLE": 12,
+    "MENTION_BOUNDARY": 1
+  },
+  "generic_projection_contract_defect_proven": false,
+  "automatic_role_to_marker_conversion": false,
+  "obligation_precedes_binding": true,
+  "model_misassertion_precedes_runtime": true
+}

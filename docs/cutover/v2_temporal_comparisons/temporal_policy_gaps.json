@@ -1,0 +1,31 @@
+{
+  "status": "EXPLICIT_UNRESOLVED_POLICY_GAPS",
+  "items": [
+    {
+      "reason": "V2_COMPARISON_CALENDAR_MAPPING_UNDEFINED",
+      "example": "February 29 shifted to a non-leap year; March 31 shifted to February",
+      "evidence": "No governed clamp/drop/day-matching policy in the inspected comparison contract",
+      "required": "Business owner/calendar policy or an explicitly specified baseline range"
+    },
+    {
+      "reason": "V2_COMPARISON_WEEK_YEAR_POLICY_REQUIRED",
+      "example": "Weekly year-over-year: ISO week versus calendar-date year shift",
+      "evidence": "Natural week parsing exists, but prior-year week alignment is not governed here",
+      "required": "Governed week-year alignment"
+    },
+    {
+      "reason": "V2_COMPARISON_CALENDAR_POLICY_UNSUPPORTED",
+      "example": "FISCAL or ROLLING calendar comparison",
+      "evidence": "TimeSpec can name these calendars; this stage has no governed comparison mapping for them",
+      "required": "Calendar-specific policy and evidence, not an LLM-created policy ID"
+    },
+    {
+      "reason": "V2_COMPARISON_LOCAL_TIME_POLICY_REQUIRED",
+      "example": "A newly derived local boundary falls in a DST gap or fold",
+      "evidence": "ZoneInfo round-trip gives zero or two valid instants",
+      "required": "Governed disambiguation policy or explicit instant"
+    }
+  ],
+  "disposition": "Keep bounded system reasons; never silently clamp, invent dates or ask for an unrelated metric. These are not accepted cutover coverage.",
+  "owner_decisions_inferred": false
+}

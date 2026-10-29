@@ -1,0 +1,24 @@
+{
+  "nodeid": "test_api_contract.py::APIContractTests::test_route_matching_is_exact",
+  "initial_counts": {
+    "passed": 380,
+    "failed": 1
+  },
+  "initial_failure": "Ephemeral loopback HTTP connection reset, WinError 10054",
+  "independent_repeats": [
+    {
+      "passed": 1
+    },
+    {
+      "passed": 1
+    }
+  ],
+  "whole_suite_repeat": {
+    "passed": 381
+  },
+  "classification": "FLAKY_CONCURRENCY_BUG",
+  "root_cause_confidence": "UNKNOWN precise socket-close timing; source unchanged",
+  "source_patch_performed": false,
+  "test_expectation_changed": false,
+  "initial_receipt_sha256": "22a9d59a800ce26eafea8d036a7e44479fa4404ecab4c1e5709edcef0487ccad"
+}

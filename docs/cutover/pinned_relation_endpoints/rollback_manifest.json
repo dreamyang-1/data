@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "2881cd7e52a7d8ca21bbb66e808746bd4566e137",
+  "feature_branch": "cutover-pinned-relation-endpoints-20260909-01",
+  "source_rollback": "Review/revert the SQL implementation commit and explicitly resync listed files. Preserve unrelated work.",
+  "runtime_rollback_proven": false,
+  "native_publication_performed": false,
+  "production_v2_routing_changed": false
+}

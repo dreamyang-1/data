@@ -1,0 +1,275 @@
+{
+  "stage_baseline_commit": "ec48f654d6bcaa48ed09d41d7aca4fcbaedcd82e",
+  "evaluator_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "feature_branch": "evaluation-harness-closure-20260909t083000z",
+  "files": [
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/candidate_retrieval_receipt.json",
+      "normalized_sha256": "2d0ebfc5d2b72b932cd94db608739c8c850b5421a3f29425c68e3598aca445ec"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/candidate_snapshot_manifest.json",
+      "normalized_sha256": "2cd69d9e0c2a300d2cf073c9af107ee741e4315d5152d29feaefd139d78d96f9"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/checkpoint_summary.json",
+      "normalized_sha256": "c3c0ed0fd674273dcb989b0f6c1a27b31cf32500cda5437d536479ec09e922b0"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/closure_report.md",
+      "normalized_sha256": "48aae6b9e29b8032bb321e3f8633d537faf5269b04ed8d35c04002970c660b15"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/critical_safety_report.json",
+      "normalized_sha256": "fa5cad33853d23c5d0b96fe3aedd814333fc9f1d398ce7ffa2f09f8f724d91b1"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/evaluation_baseline_manifest.json",
+      "normalized_sha256": "4c3825c7e8c1235c55396a103e502d0e03c48d627e5f68d9b898e0562f7b5227"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/evaluator_validation_report.json",
+      "normalized_sha256": "52846f9a8bbf9854cd6f03412ed1906db6f1022232bcea88e095dd2c7b73667d"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/private_validation/capture_manifest.json",
+      "normalized_sha256": "02c66bd092a89bab2f2f1ab68fa520a7f3813564b1031719f1c30fcf0411d973"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/private_validation/dry_plan_receipts.json",
+      "normalized_sha256": "3cbb8e47cb372305c0e003644a954cd27ccbb1a736e404e202800aa6561b8d36"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/private_validation/evaluation.json",
+      "normalized_sha256": "34d8a4b10e92d5ab2ab6aa5f562ad53255b220552f55b26e925881c8190a49db"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/private_validation/replay_receipts.json",
+      "normalized_sha256": "2faee98f769c9cb14a574b740034f03064de90d2c5e0f29dc630ce07cf0cac4a"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/public_dev/capture_manifest.json",
+      "normalized_sha256": "b90c40cd3745da4b7731449e4d55e719b8f53fa622b6a1efa1d27456cbbce3b6"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/public_dev/dry_plan_receipts.json",
+      "normalized_sha256": "6726466e96de2fffd2d768d60bfad39b08cc2ac7f86ff30e972fa3afafa1ec0c"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/public_dev/evaluation.json",
+      "normalized_sha256": "c49099b222b923eb995e7787104b894cccb71abfdb002d82c89f9356f402361e"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/public_dev/replay_receipts.json",
+      "normalized_sha256": "1663b8602c24433b492ad1bdf431bb0e4aaecb5e7ccdea772a8f2a2b20bc4a34"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/transition/capture_manifest.json",
+      "normalized_sha256": "59f863d936dfc877bf0366d5f83b3e97aec2105fee093bc877d1617267f9d372"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/transition/dry_plan_receipts.json",
+      "normalized_sha256": "543a8e7f2ed9c1cf57d9ff29c495cca5540a28643ad1aedb7d112a6e67146e4e"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/transition/evaluation.json",
+      "normalized_sha256": "64c26a90f1ceb79d22c53a1601f6daf22ca86ea985f2618d5e8a3288af4a9367"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/final/transition/replay_receipts.json",
+      "normalized_sha256": "39f5796911348a6d3920733f8c7e580497b1337f83d8975d4ffa5501941bb94c"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/gold_group_status.json",
+      "normalized_sha256": "34053aeb63811f0a9729544f04082d6fd09cc6aac7f55f32b024797b4676791c"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/gold_metadata.json",
+      "normalized_sha256": "e20560747abe9206984710f914de7a4ae45ad2dc6b43a0512cc7bdd1df046cf5"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/historical_replay_inventory.json",
+      "normalized_sha256": "03aae591671be2a8729120888b119105915af27f326e24bcaa8ab24447623047"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/metric_claim_limits.json",
+      "normalized_sha256": "c7563d871ad8eac87c81249f7d911973634123c7603e1c883d53be1ec52c385b"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/model_call_and_stability_receipt.json",
+      "normalized_sha256": "198940fa76fd15008bd71232cc486151112b85aeecb14f60cca56b3068e6cf65"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/oracle_and_pre_harness_inventory.json",
+      "normalized_sha256": "66e1b521d2cc780596c3a851ceb9e066fc0654cc6bf017d2af779ed9470605c0"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/post_harness_case_inventory.json",
+      "normalized_sha256": "759c7bfe077000ab1cb7cb1988271f5d2b2dd423f2b51cbdbb153f330e88843b"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/post_harness_first_divergence.csv",
+      "normalized_sha256": "8fb00346db6db01383cfebd64d7fa714f6ca8acf049bfacdaaa2094998a372b1"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/post_harness_first_divergence.json",
+      "normalized_sha256": "91a831f4e583838bc21f71a8f248febc35d2f8c5dca0296d85fdb4b762eded9d"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/process_completion_receipt.json",
+      "normalized_sha256": "b224918bfc7a1643ecaafec9d5d232deccc2c7031bacc4a7a7b6103e8cb60faf"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/prompt_freeze_overfit_audit.json",
+      "normalized_sha256": "c54206246913d4e7ad46666b1d55cb2e67e5dd378d915878937264c46623213c"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/raw_capture_input_manifest.json",
+      "normalized_sha256": "caf56ac853718b2843d439aa30c84a138d8616d4735023de3936e542896f82b1"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/remaining_harness_gaps.json",
+      "normalized_sha256": "d022e819a81bad6de49923811b15293dfff36134efd28d8fcbf5f92d4c5b39e4"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/replay_calibration.json",
+      "normalized_sha256": "e22f911f96623acabbbea5d853d131b8c2fa56ed5359df460ee69fa9a884958b"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/root_cause_inventory.json",
+      "normalized_sha256": "343bcf1811ae4c14ef031799dcd98e45d3da1ba6ba64e96a769ffd6cb6fac863"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/runtime_evaluator_parity_matrix.json",
+      "normalized_sha256": "3b7313583327250af986bfa65cadca051a3373201fbcf0d6baf9f834bf0e7e7c"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/runtime_evaluator_parity_matrix.md",
+      "normalized_sha256": "6a84cc6769abd69b88a669bf14e93ca42a11067a34b51c7736fc4fbf92ecc434"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/runtime_harness_contract.md",
+      "normalized_sha256": "072f5b2dfe240a68ad06c165ae3dccae1ffa128d507668ca2dbff87f82df3e47"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/semantic_freeze_gate.json",
+      "normalized_sha256": "5f083ce5cfc8f661f64870da04ee60d11871a60bd68c461d68557d6f565a29af"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/source_value_snapshot_manifest.json",
+      "normalized_sha256": "f3c8b35574c27da3a9409d0b6416d2ebf027fd67d9b9eff2c3063f06dd8b72a7"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/split_access_receipt.json",
+      "normalized_sha256": "b52639d40885bd6579e933bfac3284b441dc5b9eeb2aef2806184aca8e423b2c"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/split_manifest.json",
+      "normalized_sha256": "a54b109c83f30b1a17cddb3cee0d67e9613e73b9c2cf4a4d7f535afb1a8ee525"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/stage_observation_coverage.json",
+      "normalized_sha256": "950d5ace11af3e66a6b1fdec388371dbaa4867a3fe1f7083a6d8898c1bc0b442"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/test_delta.json",
+      "normalized_sha256": "f417e6430ce99014918d307c398032582fa67dda30d040c43ca52fee26e492d5"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/v1_v2_common_set_report.json",
+      "normalized_sha256": "8be82155df34b89da25713e499b63ec02cf30fe8944aaf98c8bef18c5fdf7342"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/validation_receipt.json",
+      "normalized_sha256": "19f608c02c76083afb5d7290b2b2375e8236229f27d9ebd303a9a9799abc0373"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/verify_closure.py",
+      "normalized_sha256": "3425ca2bef26676248ae07ee468d9e93da2d730b1e2be843091330883eab463b"
+    },
+    {
+      "repository_path": "tests/test_cutover_harness_contract.py",
+      "normalized_sha256": "f595d5756c8747007843899dcdbda6a107db36161d98e53a2410f5c9e6ce24b2"
+    },
+    {
+      "repository_path": "tests/test_cutover_harness_fixtures.py",
+      "normalized_sha256": "14de0ebe16085bf65cee14f194a66d206b6bf7a050cfb97a59c47c6534399b0a"
+    },
+    {
+      "repository_path": "tests/test_cutover_harness_manifest_safety.py",
+      "normalized_sha256": "7482e405212660b9dc9028e41dab5bc083a0e6d309c6867479ca863c7abffb3b"
+    },
+    {
+      "repository_path": "tests/test_cutover_harness_replay_splits.py",
+      "normalized_sha256": "0116931370409e47d95400bc383e1d6fbd9e003bd9cbba4d5a6a52b7fc5548b0"
+    },
+    {
+      "repository_path": "tests/test_cutover_harness_runtime.py",
+      "normalized_sha256": "06aecc03fd7b3ed9f13fb72015c862937eebf28f956a1d77feb156d328d62dec"
+    },
+    {
+      "repository_path": "tests/test_cutover_harness_transport_replay.py",
+      "normalized_sha256": "fdec5527d635c5d6e6a1c4b295dba6aec53a806f88f43ed8afd8c3c4914292f3"
+    },
+    {
+      "repository_path": "tools/cutover/harness_cli.py",
+      "normalized_sha256": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755"
+    },
+    {
+      "repository_path": "tools/cutover/harness_contract.py",
+      "normalized_sha256": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd"
+    },
+    {
+      "repository_path": "tools/cutover/harness_corpus.py",
+      "normalized_sha256": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454"
+    },
+    {
+      "repository_path": "tools/cutover/harness_dryplan.py",
+      "normalized_sha256": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009"
+    },
+    {
+      "repository_path": "tools/cutover/harness_fixtures.py",
+      "normalized_sha256": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b"
+    },
+    {
+      "repository_path": "tools/cutover/harness_manifest.py",
+      "normalized_sha256": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4"
+    },
+    {
+      "repository_path": "tools/cutover/harness_observation.py",
+      "normalized_sha256": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b"
+    },
+    {
+      "repository_path": "tools/cutover/harness_replay.py",
+      "normalized_sha256": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64"
+    },
+    {
+      "repository_path": "tools/cutover/harness_replay_corpus.py",
+      "normalized_sha256": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be"
+    },
+    {
+      "repository_path": "tools/cutover/harness_runtime.py",
+      "normalized_sha256": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba"
+    },
+    {
+      "repository_path": "tools/cutover/harness_safety.py",
+      "normalized_sha256": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3"
+    },
+    {
+      "repository_path": "tools/cutover/harness_splits.py",
+      "normalized_sha256": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f"
+    },
+    {
+      "repository_path": "tools/cutover/harness_transport_replay.py",
+      "normalized_sha256": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832"
+    },
+    {
+      "repository_path": "tools/cutover/run_raw_transition_benchmark.py",
+      "normalized_sha256": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2"
+    }
+  ],
+  "normalization": "CRLF to LF only",
+  "production_semantic_source_changes": 0,
+  "V1_routing_changes": 0,
+  "private_files_copied": false
+}

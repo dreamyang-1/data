@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 import pytest
 
@@ -10,7 +11,16 @@ from app.analysis.contracts import (
     validate_contract,
 )
 from app.config import Settings
-from app.domain.models import CanonicalAnalysisRequest, PrimaryIntent, TrustedIdentity
+from app.domain.models import (
+    CanonicalAnalysisRequest,
+    ChatRequest,
+    DataQueryResult,
+    Dataset,
+    PlannerExtraction,
+    PrimaryIntent,
+    TrustedIdentity,
+)
+from app.services import orchestrator as orchestrator_module
 from app.services.orchestrator import DataAnalysisOrchestrator
 
 
@@ -228,3 +238,109 @@ async def test_open_report_sends_and_verifies_exploration_requirements():
     )
     assert client.calls[0][2]["exploration_requirements"] == requirements
     assert result.dataset.rows[0]["sales"] == 10
+
+
+def detail_result():
+    dataset = Dataset(
+        columns=["科室名称"],
+        rows=[{"科室名称": "内科"}, {"科室名称": "内科"}, {"科室名称": "外科"}],
+        snapshot_id="s1",
+        data_as_of=datetime(2026, 9, 29, tzinfo=timezone.utc),
+        row_count=3,
+    )
+    return DataQueryResult(asl={}, sql="SELECT 1", dataset=dataset)
+
+
+def detail_request(structured):
+    request = analysis_request(PrimaryIntent.DETAIL_QUERY, "查询商品使用科室")
+    request._planner_extraction = PlannerExtraction(
+        intent=PrimaryIntent.DETAIL_QUERY, structured=structured,
+    )
+    return request
+
+
+def test_detail_dedup_applies_when_marked_yes():
+    result = detail_result()
+    request = detail_request({"意图": "明细查询", "是否去重": "是"})
+    out = DataAnalysisOrchestrator._dedup_detail_result(None, request, result)
+    assert out.dataset.rows == [{"科室名称": "内科"}, {"科室名称": "外科"}]
+    assert out.dataset.row_count == 2
+    assert out.dataset.total_row_count == 2
+
+
+def test_detail_dedup_skipped_without_mark_or_intent():
+    result = detail_result()
+    request = detail_request({"意图": "明细查询", "是否去重": "否"})
+    out = DataAnalysisOrchestrator._dedup_detail_result(None, request, result)
+    assert out.dataset.row_count == 3
+
+    result2 = detail_result()
+    request2 = detail_request({"意图": "统计查询", "是否去重": "是"})
+    out2 = DataAnalysisOrchestrator._dedup_detail_result(None, request2, result2)
+    assert out2.dataset.row_count == 3
+
+
+def test_danger_keyword_hits():
+    hits = orchestrator_module.danger_keyword_hits("帮我删除这条记录")
+    assert "删除" in hits
+    assert orchestrator_module.danger_keyword_hits("DROP TABLE users") == [
+        "drop"
+    ]
+    assert orchestrator_module.danger_keyword_hits("统计上个月的订单数量") == []
+    # 英文词边界：recreated 不包含独立的 create
+    assert orchestrator_module.danger_keyword_hits("recreated report") == []
+    # 英文不区分大小写
+    assert orchestrator_module.danger_keyword_hits("Delete it") == ["delete"]
+    # 已知业务词里的字眼不拦
+    assert orchestrator_module.danger_keyword_hits("查一下区域医院覆盖率") == []
+    assert orchestrator_module.danger_keyword_hits("新增经销商有多少家") == []
+    assert orchestrator_module.danger_keyword_hits("统计被修改过的订单数") == []
+    # 非业务词组合的正常拦截
+    assert orchestrator_module.danger_keyword_hits("把现有报表覆盖掉") == [
+        "覆盖"
+    ]
+
+
+def _danger_chat(question: str) -> ChatRequest:
+    return ChatRequest(
+        conversation_id="c1",
+        message_id="m1",
+        question=question,
+        application_id="app",
+        semantic_model_id=81,
+    )
+
+
+def test_danger_entry_intercepts_any_keyword_question():
+    # 只要原始问题命中词表就拦截，与是否进入分析流程无关
+    chat = _danger_chat("把销售订单表里的数据删掉")
+    response = DataAnalysisOrchestrator._danger_entry_intercept(chat)
+    assert response is not None
+    assert response.status == "COMPLETED"
+    assert response.intent_source == "SAFETY_GUARD"
+    assert response.answer == (
+        "您当前的问题涉及数据的危险操作。为了保障数据安全，"
+        "当前系统仅支持数据的查询、统计与分析，"
+        "无法执行任何修改或删除指令。"
+    )
+    # 英文关键词同样拦截
+    assert (
+        DataAnalysisOrchestrator._danger_entry_intercept(
+            _danger_chat("DROP TABLE users")
+        )
+        is not None
+    )
+    # 未命中词表放行
+    assert (
+        DataAnalysisOrchestrator._danger_entry_intercept(
+            _danger_chat("统计上个月的订单数量")
+        )
+        is None
+    )
+
+
+def test_danger_entry_intercept_flag_from_v2_off_topic():
+    # V2 语义识别段已对原始问题做过词表匹配，凭标记兜底拦截
+    chat = _danger_chat("统计上个月的订单数量")
+    chat._danger_keyword_intercept = True
+    assert DataAnalysisOrchestrator._danger_entry_intercept(chat) is not None

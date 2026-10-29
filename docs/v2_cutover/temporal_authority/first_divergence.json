@@ -1,0 +1,25 @@
+{
+  "status": "PROVEN_BY_EXECUTED_COUNTEREXAMPLES",
+  "range_and_grain_before": {
+    "counts": {
+      "failed": 2
+    },
+    "receipt_sha256": "097b878803e81fc0366242180fea01fe043e6f18f4e6b04a54659700268e37b0",
+    "actual": "User 2026 accepted model 1990; user quarter accepted model YEAR",
+    "first_divergence": "structured_edits.temporal_edits accepted model values through type validation without current expression normalization"
+  },
+  "explicit_comparison_before": {
+    "counts": {
+      "failed": 1
+    },
+    "receipt_sha256": "8ccb0fc444b761cda9e75ec07d514428d27a4f4470131cd5796a9267a2e46742",
+    "actual": "User literal March 2020 comparison accepted model 1990",
+    "first_divergence": "temporal_comparisons._baseline(EXPLICIT) used the typed model baseline_range as authority"
+  },
+  "after": "All three counterexamples pass with program-derived current-expression values; relevant old test assertions unchanged",
+  "legacy_initial_path": "Read-only call-chain audit found TIME_FIELD-only whole time mentions bypassed normalization; added deterministic full range/grain consumption and regression",
+  "review_correction": "Three old malformed temporal input tests initially changed error code. Restored original type validation before normalization; no test assertion changed and no invalid model shape accepted.",
+  "real_model_calls": 0,
+  "source_SQL_executions": 0,
+  "production_writes": 0
+}

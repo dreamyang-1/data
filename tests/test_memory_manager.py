@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 
 from app.adapters import build_mock_adapters
@@ -101,19 +103,38 @@ async def test_orchestrator_records_memory_write_and_recall_events():
         event_store=events,
     )
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app", conversation_id="conversation", message_id="m1",
             question="记住，以后默认使用销售额指标，查询本月销售额",
             use_longterm_memory=True,
         ),
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
-    recorded = await events.list_events(
-        "tenant", "user", "app", "conversation", trace_id="m1"
+    recorded_all = await events.list_events(
+        "tenant", "user", "app", "conversation", limit=500
     )
+    mine = [item for item in recorded_all if item.message_id == "m1"]
+    assert mine, "an enabled memory request must append lifecycle events"
+    # Formal contract: one external request owns exactly one canonical
+    # request-UUID trace id; the user-facing message id stays an
+    # independent per-event correlation field.
+    trace_ids = {item.trace_id for item in mine}
+    assert len(trace_ids) == 1
+    canonical_trace = next(iter(trace_ids))
+    uuid.UUID(canonical_trace)
+    assert canonical_trace != "m1"
+    recorded = await events.list_events(
+        "tenant", "user", "app", "conversation", trace_id=canonical_trace
+    )
+    assert len(recorded) == len(mine)
     event_types = [item.event_type for item in recorded]
-    assert SessionEventType.MEMORY_WRITE in event_types
-    assert SessionEventType.MEMORY_RECALL in event_types
+    assert event_types.count(SessionEventType.MEMORY_WRITE) == 1
+    assert event_types.count(SessionEventType.MEMORY_RECALL) == 1
+    # Structural admission/merge events remain part of the replayable
+    # sequence and the closing summary is always the last event.
+    assert event_types[0] == SessionEventType.TURN_ADMISSION
+    assert SessionEventType.CONTEXT_MERGE in event_types
+    assert event_types[-1] == SessionEventType.TRACE_SUMMARY
     assert {"metric": "销售额"} in [
         item.value for item in await store.list_active(SCOPE)
     ]

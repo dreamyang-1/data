@@ -1,0 +1,291 @@
+{
+  "stage": "bounded V1 calculation contract repair; current bridge unchanged",
+  "root_cause": "PROVEN: formula and result-operation contracts were not consumed by the shared task executor",
+  "test_delta": {
+    "baseline": {
+      "passed": 5153,
+      "failed": 255
+    },
+    "final": {
+      "passed": 5203,
+      "failed": 246
+    },
+    "old_pass_new_fail": [],
+    "old_fail_new_pass": [
+      "tests/test_calculation_method_pending.py::test_planner_sanitizer_keeps_the_unresolved_calculation_as_an_internal_contract",
+      "tests/test_complex_execution_correctness.py::test_ratio_uses_declared_columns_not_last_numeric_column[False]",
+      "tests/test_complex_execution_correctness.py::test_ratio_does_not_guess_or_upgrade_incomplete_inputs[kwargs0]",
+      "tests/test_complex_execution_correctness.py::test_ratio_does_not_guess_or_upgrade_incomplete_inputs[kwargs1]",
+      "tests/test_complex_execution_correctness.py::test_ratio_does_not_guess_or_upgrade_incomplete_inputs[kwargs2]",
+      "tests/test_complex_execution_correctness.py::test_ratio_loads_response_dataset_not_a_later_same_conversation_artifact",
+      "tests/test_complex_execution_correctness.py::test_invalid_denominator_is_not_a_success[True]",
+      "tests/test_complex_execution_correctness.py::test_structured_operand_binding_supports_numeric_scalar_average",
+      "tests/test_complex_execution_correctness.py::test_dependency_response_cannot_load_another_scope",
+      "tests/test_complex_execution_correctness.py::test_warn_inputs_do_not_become_high_quality_computation",
+      "tests/test_complex_question_planning.py::test_calculation_binding_survives_sanitizing_and_maps_local_sources",
+      "tests/test_computation_query_output_binding.py::test_monthly_growth_binds_real_query_columns_and_preserves_same_named_identities[False]",
+      "tests/test_computation_query_output_binding.py::test_monthly_growth_binds_real_query_columns_and_preserves_same_named_identities[True]",
+      "tests/test_monthly_growth_execution.py::test_explicit_growth_method_runs_on_actual_complete_persisted_months[arithmetic-expected0]",
+      "tests/test_monthly_growth_execution.py::test_explicit_growth_method_runs_on_actual_complete_persisted_months[compound-expected1]",
+      "tests/test_monthly_growth_execution.py::test_query_operation_requests_one_additional_month_for_the_comparison_base",
+      "tests/test_monthly_growth_execution.py::test_missing_model_dates_are_compiled_from_explicit_complete_natural_months",
+      "tests/test_monthly_growth_execution.py::test_compiled_comparison_base_passes_the_real_router_grounding_guard"
+    ],
+    "newly_collected_failed": [
+      "tests/test_declared_calculation_planning.py::test_unknown_binding_does_not_turn_catalog_data_request_into_greeting[\\u6700\\u8fd1\\u54ea\\u51e0\\u5bb6\\u5408\\u4f5c\\u7ec4\\u7ec7\\u7684\\u8ba2\\u9605\\u589e\\u957f\\u6700\\u5feb\\uff1f-True]",
+      "tests/test_declared_calculation_planning.py::test_unknown_binding_does_not_turn_catalog_data_request_into_greeting[\\u6700\\u8fd1\\u8ba2\\u9605\\u6570\\u589e\\u901f\\u9760\\u524d\\u7684\\u662f\\u54ea\\u4e9b\\u5408\\u4f5c\\u7ec4\\u7ec7\\uff1f-True]",
+      "tests/test_declared_calculation_planning.py::test_unknown_binding_does_not_turn_catalog_data_request_into_greeting[\\u6700\\u8fd1\\u8ba2\\u9605\\u6570\\u589e\\u901f\\u6700\\u9ad8\\u7684\\u524d\\u4e09\\u5bb6\\u5408\\u4f5c\\u7ec4\\u7ec7\\u662f\\u8c01\\uff1f-True]",
+      "tests/test_declared_calculation_planning.py::test_unknown_binding_does_not_turn_catalog_data_request_into_greeting[\\u7eed\\u8d39\\u7b14\\u6570\\u6700\\u591a\\u7684\\u662f\\u54ea\\u5bb6\\u5408\\u4f5c\\u7ec4\\u7ec7\\uff1f-True]",
+      "tests/test_declared_calculation_planning.py::test_cross_entity_details_cannot_hide_a_required_metric_ranking_in_prose",
+      "tests/test_declared_calculation_planning.py::test_rejected_complete_plan_gets_one_correction_before_any_execution[valid]",
+      "tests/test_declared_calculation_planning.py::test_rejected_complete_plan_gets_one_correction_before_any_execution[invalid]",
+      "tests/test_declared_calculation_planning.py::test_rejected_complete_plan_gets_one_correction_before_any_execution[transport_failure]",
+      "tests/test_declared_calculation_planning.py::test_local_detail_projection_requires_its_input_owner[\\u5408\\u540c-True]"
+    ],
+    "newly_collected_passed": [
+      "tests/test_bound_result_operations.py::test_query_declared_result_operation_is_planned_before_execution",
+      "tests/test_bound_result_operations.py::test_single_query_self_result_index_becomes_a_real_predecessor",
+      "tests/test_bound_result_operations.py::test_model_can_preserve_a_tentative_operation_while_requesting_business_clarification",
+      "tests/test_bound_result_operations.py::test_operation_source_is_materialized_in_the_local_task_namespace",
+      "tests/test_bound_result_operations.py::test_monthly_ratio_then_mean_is_200_and_not_overall_ratio_250",
+      "tests/test_bound_result_operations.py::test_declared_pipeline_does_not_average_away_an_invalid_operand[0]",
+      "tests/test_bound_result_operations.py::test_declared_pipeline_does_not_average_away_an_invalid_operand[None]",
+      "tests/test_bound_result_operations.py::test_declared_pipeline_does_not_average_away_an_invalid_operand[True]",
+      "tests/test_bound_result_operations.py::test_declared_pipeline_does_not_average_away_an_invalid_operand[NaN]",
+      "tests/test_bound_result_operations.py::test_result_operation_cannot_select_a_later_unrelated_dataset",
+      "tests/test_bound_result_operations.py::test_same_source_percentage_binds_each_rows_denominator",
+      "tests/test_calculation_task_contract.py::test_original_and_similar_questions_execute_complete_three_task_dag[\\u7ed9\\u51fa2025\\u5e74\\u8ba2\\u5355\\u5e73\\u5747\\u91d1\\u989d\\u6700\\u9ad8\\u7684\\u524d\\u4e94\\u4f4d\\u9500\\u552e\\u4eba\\u5458\\uff0c\\u4ee5\\u53ca\\u4ed6\\u4eec\\u6240\\u5728\\u7684\\u9500\\u552e\\u516c\\u53f8-True-5-\\u5e73\\u5747\\u6bcf\\u5355\\u9500\\u552e\\u91d1\\u989d]",
+      "tests/test_calculation_task_contract.py::test_original_and_similar_questions_execute_complete_three_task_dag[\\u5217\\u51fa2025\\u5e74\\u6bcf\\u5355\\u5e73\\u5747\\u91d1\\u989d\\u6700\\u4f4e\\u7684\\u524d\\u4e09\\u4f4d\\u9500\\u552e\\u4eba\\u5458\\u53ca\\u6240\\u5c5e\\u516c\\u53f8-False-3-\\u5e73\\u5747\\u6bcf\\u5355\\u9500\\u552e\\u91d1\\u989d]",
+      "tests/test_calculation_task_contract.py::test_original_and_similar_questions_execute_complete_three_task_dag[\\u7edf\\u8ba12025\\u5e74\\u5404\\u4e1a\\u52a1\\u5458\\u7684\\u6bcf\\u5355\\u5747\\u989d\\uff0c\\u6309\\u91d1\\u989d\\u4ece\\u9ad8\\u5230\\u4f4e\\u53d6\\u524d4\\u540d\\u5e76\\u5c55\\u793a\\u516c\\u53f8-True-4-\\u6bcf\\u5355\\u5747\\u989d]",
+      "tests/test_calculation_task_contract.py::test_two_scalar_calculation_is_independent_of_task_number[task-2]",
+      "tests/test_calculation_task_contract.py::test_two_scalar_calculation_is_independent_of_task_number[task-3]",
+      "tests/test_calculation_task_contract.py::test_two_scalar_calculation_is_independent_of_task_number[task-4]",
+      "tests/test_calculation_task_contract.py::test_growth_pipeline_executes_in_order_without_asking_model_to_calculate",
+      "tests/test_calculation_task_contract.py::test_structured_ranking_is_enforced_when_calculation_text_omits_it",
+      "tests/test_calculation_task_contract.py::test_wrong_source_reference_cannot_select_another_task_dataset",
+      "tests/test_calculation_task_contract.py::test_formula_roles_follow_registered_expression_instead_of_component_order",
+      "tests/test_calculation_task_contract.py::test_formula_binding_is_grounded_in_the_current_description[False]",
+      "tests/test_calculation_task_contract.py::test_formula_binding_is_grounded_in_the_current_description[True]",
+      "tests/test_calculation_task_contract.py::test_model_plan_without_a_formula_gets_a_bound_three_task_plan",
+      "tests/test_calculation_task_contract.py::test_real_query_string_metric_metadata_and_proven_code_alias_are_accepted",
+      "tests/test_calculation_task_contract.py::test_calculation_sources_follow_query_deduplication",
+      "tests/test_calculation_task_contract.py::test_subtraction_and_model_order_limit_spellings_execute_the_same_bounded_contract",
+      "tests/test_declared_calculation_planning.py::test_unregistered_division_is_planned_as_query_then_bound_computation",
+      "tests/test_declared_calculation_planning.py::test_declared_row_division_uses_fields_with_an_unseen_output_label",
+      "tests/test_declared_calculation_planning.py::test_unknown_binding_does_not_turn_catalog_data_request_into_greeting[\\u8ba2\\u9605\\u6570\\u7684\\u53e3\\u5f84\\u662f\\u4ec0\\u4e48\\uff1f-False]",
+      "tests/test_declared_calculation_planning.py::test_unknown_binding_does_not_turn_catalog_data_request_into_greeting[\\u5199\\u4e00\\u9996\\u5173\\u4e8e\\u8ba2\\u9605\\u589e\\u957f\\u7684\\u8bd7-False]",
+      "tests/test_declared_calculation_planning.py::test_local_detail_projection_requires_its_input_owner[\\u7ec4\\u7ec7-False]"
+    ],
+    "baseline_collection_errors": [
+      "tests/test_bound_result_operations.py",
+      "tests/test_declared_calculation_planning.py"
+    ],
+    "final_collection_errors": [],
+    "assertions_changed": false,
+    "baseline_commit": "d2a1069"
+  },
+  "critical_passed": 249,
+  "merged_runtime_passed": 16,
+  "native_cases": [
+    {
+      "question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+      "status": "PARTIAL_SUCCESS",
+      "task_statuses": [
+        {
+          "task_id": "task-1",
+          "status": "COMPLETED"
+        },
+        {
+          "task_id": "task-2",
+          "status": "COMPLETED"
+        },
+        {
+          "task_id": "task-3",
+          "status": "SKIPPED"
+        }
+      ],
+      "main_headings": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ]
+    },
+    {
+      "question": "给出2025年平均每单销售金额最高的前五位业务员",
+      "status": "COMPLETED",
+      "task_statuses": [
+        {
+          "task_id": "task-1",
+          "status": "COMPLETED"
+        },
+        {
+          "task_id": "task-2",
+          "status": "COMPLETED"
+        },
+        {
+          "task_id": "task-3",
+          "status": "COMPLETED"
+        }
+      ],
+      "main_headings": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ]
+    },
+    {
+      "question": "按业务员统计2025年平均每单销售金额，按该金额升序返回前三位",
+      "status": "COMPLETED",
+      "task_statuses": [
+        {
+          "task_id": "task-1",
+          "status": "COMPLETED"
+        },
+        {
+          "task_id": "task-2",
+          "status": "COMPLETED"
+        },
+        {
+          "task_id": "task-3",
+          "status": "COMPLETED"
+        }
+      ],
+      "main_headings": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ]
+    },
+    {
+      "question": "2025年平均每单销售金额是多少？",
+      "status": "COMPLETED",
+      "task_statuses": [
+        {
+          "task_id": "task-1",
+          "status": "COMPLETED"
+        },
+        {
+          "task_id": "task-2",
+          "status": "COMPLETED"
+        },
+        {
+          "task_id": "task-3",
+          "status": "COMPLETED"
+        }
+      ],
+      "main_headings": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ]
+    },
+    {
+      "question": "统计2025年各业务员的含税销售总额和销售总成本，用含税销售总额减去销售总成本计算差额，按差额降序取前三位",
+      "status": "PARTIAL_SUCCESS",
+      "task_statuses": [
+        {
+          "task_id": "task-1",
+          "status": "COMPLETED"
+        },
+        {
+          "task_id": "task-2",
+          "status": "FAILED"
+        }
+      ],
+      "main_headings": [
+        "意图识别",
+        "任务拆分与规划",
+        "解析校验",
+        "调度执行",
+        "结果校验",
+        "数据洞察分析",
+        "最终输出"
+      ]
+    }
+  ],
+  "synthetic_original_and_similar": "Three complete query/query/calculate DAG cases pass with company fields, identity alignment and TopN",
+  "independent_oracle": "Top5, bottom3 and scalar mean match independent Decimal arithmetic on complete inputs",
+  "known_blockers": [
+    "Company-key join has zero matches for the current source; the original company-inclusive request is not accepted as passed.",
+    "All 60000 order rows lack cost values; revenue-minus-cost cannot be computed from this source.",
+    "Existing failing tests and previously uncollectable unrelated planner expectations remain recorded."
+  ],
+  "production_business_records_included": false,
+  "credentials_included": false,
+  "catalog_modified": false,
+  "indexes_rebuilt": false,
+  "v2_cutover": false,
+  "deployment": {
+    "status": "DEPLOYED_HEALTHY",
+    "restarted_services": [
+      "Agent"
+    ],
+    "health": {
+      "Agent": 200,
+      "AgentLive": 200
+    },
+    "configurations_unchanged": true,
+    "unrelated_sources_preserved": true,
+    "targets": [
+      {
+        "path": "app/services/orchestrator.py",
+        "before": "a8ba0ce6f417ceb0e8c676f92aa80c19ee724d721cc1af78035ea94ab4cc84b9",
+        "after": "f54bc4eebb4089f20ae181b6f435c6f60fb67c48e7722f9e9e04f5d4ea0dc40d"
+      },
+      {
+        "path": "app/services/computation_delivery.py",
+        "before": "be861a25b8ce9d206a887017daf8cdf5b9275cbdeb59797b3dc3391bd4617c29",
+        "after": "ca54e360c0a2b588d7149a00dbd039af8935a085953d2f8831a51610d2878528"
+      },
+      {
+        "path": "app/planning/task_dag.py",
+        "before": "0f48b650d07f5858f0d373601a2ebd3ecfc0321f5181e0dfcbf217ddd0447faf",
+        "after": "34047350d74b5cc24aaf56493e0e639fd0f02921fce285af4b924de17e0f040d"
+      },
+      {
+        "path": "app/planning/compound_question.py",
+        "before": "0d8904c64ab3a1fac78a4017a59b9cb4224d6698d5020b6fdcdb8a46a529a41f",
+        "after": "28f488205af7121defd58c6217d6e676cdcf85308c8b2c2c397143ebaf340460"
+      },
+      {
+        "path": "app/planning/calculation_bindings.py",
+        "before": "b02a7eaf4a02a8a8db2d9a31ea7b7a587f9193bba465567de122055ce5aa62a4",
+        "after": "4d3b8add5842e859e4f6925490d04507fcc2a311b8cfb11e0fe956c822e43371"
+      },
+      {
+        "path": "app/services/calculation_execution.py",
+        "before": null,
+        "after": "09a8734d9dc8438450ae1e2e4e7697a8bdcd2856ee37109e8101ebbff2475b86"
+      }
+    ],
+    "runtime_merge_preserved": [
+      "existing conversation question log",
+      "existing disjunctive time ranges",
+      "existing period-series planning"
+    ]
+  },
+  "production_postcheck": {
+    "source_hashes_match": true,
+    "top5_tasks_completed": true,
+    "top5_result_rows": 5,
+    "original_company_case": "PARTIAL_SUCCESS: empty company-joined sources; computation skipped",
+    "headings_match_frozen_order": true,
+    "business_records_saved": false
+  }
+}

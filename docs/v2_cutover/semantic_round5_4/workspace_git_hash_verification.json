@@ -1,0 +1,60 @@
+{
+  "baseline": "116ffe06d12812f849ba60eaa644df17cbc89f8a",
+  "baseline_tracked_files": 1620,
+  "originally_modified_files": [
+    "app/semantic_v2/recognition.py"
+  ],
+  "new_files": [
+    "app/semantic_v2/filter_generation_schema.py",
+    "docs/v2_cutover/semantic_round5_4/CURRENT_FILTER_OPERATION_PATH.md",
+    "docs/v2_cutover/semantic_round5_4/catalog_healthy_fixture.json",
+    "docs/v2_cutover/semantic_round5_4/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/closure_report.md",
+    "docs/v2_cutover/semantic_round5_4/filter_root_evidence.json",
+    "docs/v2_cutover/semantic_round5_4/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/live_coverage.json",
+    "docs/v2_cutover/semantic_round5_4/performance_receipt.json",
+    "docs/v2_cutover/semantic_round5_4/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/round5_4_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/test_delta.json",
+    "docs/v2_cutover/semantic_round5_4/validation_receipt.json",
+    "docs/v2_cutover/semantic_round5_4/verify_round5_4.py",
+    "docs/v2_cutover/semantic_round5_4/workspace_git_hash_verification.json",
+    "tests/test_round54_plan_checks.py",
+    "tests/test_round54_preflight.py",
+    "tests/test_v2_filter_generation_contract.py",
+    "tools/cutover/round54_healthy_fixture.py",
+    "tools/cutover/round54_live_slice.py",
+    "tools/cutover/round54_plan_checks.py"
+  ],
+  "final_tracked_files_expected": 1641,
+  "synchronized_payload_hashes": {
+    "app/semantic_v2/filter_generation_schema.py": "3a48a1dcc4641315c460526a6c39ec32179f29375060cf04039a0d734689466e",
+    "app/semantic_v2/recognition.py": "313a87427cbd554cc279c32ef5ac847608187dbf29dcb15207e2ef991bc4aa6e",
+    "docs/v2_cutover/semantic_round5_4/CURRENT_FILTER_OPERATION_PATH.md": "fee373993e701fdf91707301d7db8d068673edb69ebfdf5b667413386db79403",
+    "docs/v2_cutover/semantic_round5_4/catalog_healthy_fixture.json": "b235c230f63043daccb15b0fda653fe28589daa8ed791c0759084058428ae1b1",
+    "docs/v2_cutover/semantic_round5_4/closure_report.md": "e8ed578f5f032c85decd6a4c65d81521edc6a43b90ec5ef01958c96eecd9b4f8",
+    "docs/v2_cutover/semantic_round5_4/filter_root_evidence.json": "726352b1be52034e726911acb3e9f654edddbbe08da91d35a461adceaaf10122",
+    "docs/v2_cutover/semantic_round5_4/live_coverage.json": "eab74b846e666a208df7c331514d11aea39221e928403724ec08a70c0b962867",
+    "docs/v2_cutover/semantic_round5_4/performance_receipt.json": "2b49d262838e89943630fcd171a3ab4ed2a99670d6d0225d42b2f96fdb2443f2",
+    "docs/v2_cutover/semantic_round5_4/round5_4_manifest.json": "fa35236eb93380b0dd307fe010d06a549c92f0a21f93fb190a0f19d14d35a457",
+    "docs/v2_cutover/semantic_round5_4/test_delta.json": "08fd975e8e1eef79dac485dacc0c0bfffa6a298bec29db36e74d09cec80907f6",
+    "docs/v2_cutover/semantic_round5_4/validation_receipt.json": "f5a78a1b7acffc7cc00cbd347ecef7414f773ba9b9c578f48539b31a19598b5d",
+    "docs/v2_cutover/semantic_round5_4/verify_round5_4.py": "bdda957a6f059d2098cc976da1c83424589af5d27ba7fb88f657510a6858e9a9",
+    "tests/test_round54_plan_checks.py": "30dabecec07d64129b73c139895e264c9f013f74a14ca895e33e8f9a4e2f8dc8",
+    "tests/test_round54_preflight.py": "ea33353e5c770429ed6f95941fefd4501ab66d80fbaadf542708d8c2bbbf0bb0",
+    "tests/test_v2_filter_generation_contract.py": "c8cf96a862fc60e11088f1eba737f516364171aa40b74b80cd5a33d5dfad2a8b",
+    "tools/cutover/round54_healthy_fixture.py": "1631e903678c94a8bda113d6b2f88ceb031ecc5b9d32fa3c66acc475c7c45e98",
+    "tools/cutover/round54_live_slice.py": "19625bf7e9bf194601c0aa0dae756470190065c220ec24cfdaca688934ffbf56",
+    "tools/cutover/round54_plan_checks.py": "3fc8ce0cb7c4ef33175e49537259b92cc9d3680b40720728eecb498a6de1dd25"
+  },
+  "manifest_files": [
+    "docs/v2_cutover/semantic_round5_4/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/workspace_git_hash_verification.json"
+  ],
+  "unexpected_source_drift": 0,
+  "hash_mode": "SHA256 normalized CRLF to LF; committed blobs verified after commit",
+  "credentials_env_private_not_synchronized": true
+}

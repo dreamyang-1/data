@@ -1,0 +1,15 @@
+{
+  "status": "PASS_PRECOMMIT_WORKSPACE_ALIGNMENT",
+  "baseline_commit": "ff389dc4cd3fe4e0dabe1c665e3672b80b445330",
+  "implementation_commit": "87fedb4710e1a9d41cddc3ee066efc08b79b0b10",
+  "service_commits": {
+    "DataAnalysis_Agent": "87fedb4710e1a9d41cddc3ee066efc08b79b0b10",
+    "Oagnet": "b2259c3677585828ba52cc3704c73a51c9f038b8"
+  },
+  "feature_branch": "cutover-v2-source-value-binding-20260908-01",
+  "tracked_and_manifest_files": 1024,
+  "unexpected_source_drift": 0,
+  "normalization": "Development CRLF normalized to published LF; exact hashes in change_manifest.json",
+  "final_commit": "Commit containing this report",
+  "final_commit_gate": "Post-commit verification checks every Git blob, development file, clean tree and original Oagnet staged diff"
+}

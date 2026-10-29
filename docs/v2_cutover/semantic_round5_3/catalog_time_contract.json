@@ -1,0 +1,101 @@
+{
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "current_read_matches_frozen": true,
+  "current_read_receipt_hash": "6aeee821cc87397ab2d721f8c4cbbf07249ce7c29253382573b14eea81c8bb63",
+  "classification": "CATALOG_GAP",
+  "reason_code": "CATALOG_TIME_CONTRACT_GAP",
+  "sales_time_anchor": null,
+  "sales_bound_dimensions": [
+    "hospital"
+  ],
+  "governed_time_dimension_not_bound_to_sales": true,
+  "evidence": [
+    {
+      "metric_code": "sales_total_including_tax",
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": null,
+        "special_rule": null
+      },
+      "source_dependency": {
+        "bind_entity": [
+          "sales_order"
+        ]
+      },
+      "calculation_rule": {
+        "calc_formula": "annual_total_sales=SUM(sales_order.amount_with_tax)",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "hospital"
+      ]
+    },
+    {
+      "metric_code": "sales_total_quantity",
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": "sales_order.created_date",
+        "special_rule": null
+      },
+      "source_dependency": {
+        "bind_entity": [
+          "sales_order"
+        ]
+      },
+      "calculation_rule": {
+        "calc_formula": "sales_total_quantity=SUM(sales_order.quantity)",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "hospital_level",
+        "transaction_date",
+        "product",
+        "dealer",
+        "hospital",
+        "salesperson",
+        "province",
+        "city"
+      ]
+    },
+    {
+      "metric_code": "order_count",
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": "sales_order.created_date",
+        "special_rule": null
+      },
+      "source_dependency": {
+        "bind_entity": [
+          "sales_order"
+        ]
+      },
+      "calculation_rule": {
+        "calc_formula": "order_count=COUNT(DISTINCT sales_order.order_key)",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "hospital_level",
+        "transaction_date",
+        "product",
+        "dealer",
+        "hospital",
+        "salesperson",
+        "city"
+      ]
+    }
+  ],
+  "producer": "Oagnet/mysql_tool.py:get_metric reads semantic_model_dimension.indicator + entity_attribute; one declared anchor only",
+  "propagation": "Catalog records retain metric metadata; V2 explicit_time.metric_anchor reads the same time_caliber",
+  "asl_contract": "Existing ASL field validity does not define the business default time anchor; V1 output not used as truth",
+  "owner_decision_needed": "Declare which business date applies to sales_total_including_tax, then publish the reviewed catalog contract",
+  "catalog_writes": 0,
+  "code_default_added": false,
+  "engine_bridge_loss_proven": false
+}

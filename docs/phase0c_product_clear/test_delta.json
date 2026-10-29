@@ -1,0 +1,252 @@
+{
+  "baseline_commit": "c2fa1411d1909a6380f924ebe1bb4723a2518df8",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline_counts": {
+        "passed": 2159,
+        "failed": 27
+      },
+      "final_counts": {
+        "passed": 2203,
+        "failed": 27
+      },
+      "old_pass_to_new_fail": [],
+      "missing_nodeids": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": [
+        "tests/test_product_clear_contract.py::test_clear_barriers_survive_other_condition_and_time_edits[questions0]",
+        "tests/test_product_clear_contract.py::test_clear_barriers_survive_other_condition_and_time_edits[questions1]",
+        "tests/test_product_clear_contract.py::test_clear_barriers_survive_other_condition_and_time_edits[questions2]",
+        "tests/test_product_clear_contract.py::test_clear_barriers_survive_other_condition_and_time_edits[questions3]",
+        "tests/test_product_clear_contract.py::test_clear_cannot_restore_state_from_a_different_scope[update0]",
+        "tests/test_product_clear_contract.py::test_clear_cannot_restore_state_from_a_different_scope[update1]",
+        "tests/test_product_clear_contract.py::test_clear_cannot_restore_state_from_a_different_scope[update2]",
+        "tests/test_product_clear_contract.py::test_clear_cannot_restore_state_from_a_different_scope[update3]",
+        "tests/test_product_clear_contract.py::test_clear_cannot_restore_state_from_a_different_scope[update4]",
+        "tests/test_product_clear_contract.py::test_clear_removes_product_binding_and_reindexes_other_bindings",
+        "tests/test_product_clear_contract.py::test_clearing_business_filter_keeps_current_authorized_scope[domains0]",
+        "tests/test_product_clear_contract.py::test_clearing_business_filter_keeps_current_authorized_scope[domains1]",
+        "tests/test_product_clear_contract.py::test_clearing_product_does_not_answer_an_unrelated_pending_slot[missing0]",
+        "tests/test_product_clear_contract.py::test_clearing_product_does_not_answer_an_unrelated_pending_slot[missing1]",
+        "tests/test_product_clear_contract.py::test_complete_clear_commands_preserve_other_slots_and_trace[ \\u4e0d\\u9650 \\u4ea7\\u54c1\\uff01]",
+        "tests/test_product_clear_contract.py::test_complete_clear_commands_preserve_other_slots_and_trace[\\u4e0d\\u9650\\u4ea7\\u54c1]",
+        "tests/test_product_clear_contract.py::test_complete_clear_commands_preserve_other_slots_and_trace[\\u4e0d\\u9650\\u5236\\u4ea7\\u54c1]",
+        "tests/test_product_clear_contract.py::test_complete_clear_commands_preserve_other_slots_and_trace[\\u4e0d\\u9650\\u5236\\u5546\\u54c1]",
+        "tests/test_product_clear_contract.py::test_complete_clear_commands_preserve_other_slots_and_trace[\\u4e0d\\u9650\\u5546\\u54c1]",
+        "tests/test_product_clear_contract.py::test_complete_clear_commands_preserve_other_slots_and_trace[\\u5220\\u9664\\u5546\\u54c1\\u7b5b\\u9009\\u6761\\u4ef6]",
+        "tests/test_product_clear_contract.py::test_complete_clear_commands_preserve_other_slots_and_trace[\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+        "tests/test_product_clear_contract.py::test_complete_clear_commands_preserve_other_slots_and_trace[\\u53d6\\u6d88\\u4ea7\\u54c1\\u8fc7\\u6ee4\\u6761\\u4ef6]",
+        "tests/test_product_clear_contract.py::test_complete_clear_commands_preserve_other_slots_and_trace[\\u79fb\\u9664\\u5546\\u54c1\\u7b5b\\u9009]",
+        "tests/test_product_clear_contract.py::test_explicit_product_after_clear_can_open_a_new_constraint[\\u67e5\\u8be2TDC-4\\u4ea7\\u54c1\\u9500\\u552e\\u989d\\uff0c2026\\u5e748\\u6708\\uff0c\\u5730\\u533a\\u4e0a\\u6d77-TDC-4]",
+        "tests/test_product_clear_contract.py::test_explicit_product_after_clear_can_open_a_new_constraint[\\u90a3TDC-3\\u4ea7\\u54c1\\u5462\\uff1f-TDC-3]",
+        "tests/test_product_clear_contract.py::test_explicit_product_after_clear_can_open_a_new_constraint[\\u90a3TDC-4\\u4ea7\\u54c1\\u5462\\uff1f-TDC-4]",
+        "tests/test_product_clear_contract.py::test_late_restore_cannot_reintroduce_a_cleared_product_filter",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u4e0d\\u8981\\u4ea7\\u54c1]",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u4e0d\\u9650\\u4ea7\\u54c1\\u4f46\\u53ea\\u770bTDC-3]",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u4e0d\\u9650\\u4ea7\\u54c1\\u7684\\u9500\\u552e\\u989d\\u662f\\u591a\\u5c11]",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u53bb\\u6389\\u4ea7\\u54c1\\u6570\\u91cf]",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6\\u518d\\u52a0TDC-4]",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6\\uff0c\\u5730\\u533a\\u6c5f\\u82cf]",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u53bb\\u6389\\u54c1\\u724c\\u6761\\u4ef6]",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u53d6\\u6d88\\u4ea7\\u54c1\\u7ef4\\u5ea6]",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u67e5\\u8be2\\u4e0d\\u9650\\u4ea7\\u54c1\\u724c\\u9500\\u552e\\u989d]",
+        "tests/test_product_clear_contract.py::test_other_requests_are_not_consumed_as_product_clear[\\u67e5\\u8be2\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6\\u4ea7\\u54c1\\u9500\\u552e\\u989d]",
+        "tests/test_product_clear_contract.py::test_product_clear_does_not_change_existing_grouping_on_real_turns",
+        "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+        "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+        "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+        "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+        "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u4e0d\\u9650\\u4ea7\\u54c1]",
+        "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]"
+      ],
+      "remaining_failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ],
+      "collection_errors": 0
+    },
+    "Oagnet": {
+      "baseline_counts": {
+        "passed": 343,
+        "failed": 10
+      },
+      "final_counts": {
+        "passed": 343,
+        "failed": 10
+      },
+      "old_pass_to_new_fail": [],
+      "missing_nodeids": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": [],
+      "remaining_failures": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+        "tests/test_relational_semantic_scope.py::test_relationship_code_filter_with_name_value_uses_unique_authorized_name_field",
+        "tests/test_relational_semantic_scope.py::test_relationship_name_filter_resolves_one_field_among_multiple_endpoint_names"
+      ],
+      "collection_errors": 0
+    },
+    "SQL_Translator": {
+      "baseline_counts": {
+        "passed": 200
+      },
+      "final_counts": {
+        "passed": 200
+      },
+      "old_pass_to_new_fail": [],
+      "missing_nodeids": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": [],
+      "remaining_failures": [],
+      "collection_errors": 0
+    }
+  },
+  "critical_passed": 160,
+  "critical_total": 160,
+  "new_contract_passed": 44,
+  "new_contract_total": 44,
+  "focused_passed": 446,
+  "proof_variants": 6,
+  "unique_failure_signatures": 2,
+  "p0_before": 2,
+  "p0_fixed": 2,
+  "p0_remaining_in_this_stage": 0,
+  "independent_reproductions": [
+    {
+      "failure_id": "PC-01",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-01",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-02",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-02",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-01",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-01",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-02",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-02",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-01",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u4e0d\\u9650\\u4ea7\\u54c1]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-01",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u4e0d\\u9650\\u4ea7\\u54c1]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-02",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed"
+    },
+    {
+      "failure_id": "PC-02",
+      "nodeid": "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed"
+    }
+  ],
+  "baseline_adoption": "833 tracked files and Git blobs matched; clean checkout; PR #15 verified open/draft at baseline SHA; prior full suites adopted",
+  "full_suite_mode": "14 established serial offline batches plus conversation, dataset lineage, semantic choice, candidate integrity task recall structural scope dimension mutation metric edit grounding and product clear contract modules; controlled classifier clock",
+  "test_modules": 93,
+  "public_schema_sha256": {
+    "dataset_reference_fields": "e7a6e2f3e6017d76003a431884c58a8a72cd1973eb584a42f6c99da3fc591046",
+    "openapi": "6c4cc5eab731efd8eff47a62426c6410b85923a5f2c74b96eb662fe6a2d45a22",
+    "schemas": "8107fc825fb6bc38d3693e122d4e72e9c8d722f4791368c907a1c0a92177f421"
+  },
+  "public_schemas_equal": true,
+  "old_test_expectation_changes": 0,
+  "prompt_changes": 0,
+  "regex_changes": 0,
+  "command_grammar": "Exact complete clear-command compositions from existing operation and product-role words; see closure report",
+  "clarification_coverage": {
+    "public_clarification_responses": 84,
+    "with_reason_trace": 84
+  },
+  "real_model_calls": 0,
+  "production_external_writes": 0,
+  "index_publications": 0,
+  "prior_sql_transient": "Prior PR #15 loopback abort retained in historical report; this turn SQL full suite passed 200/200"
+}

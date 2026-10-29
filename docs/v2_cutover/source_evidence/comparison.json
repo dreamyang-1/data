@@ -1,0 +1,106 @@
+{
+  "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
+  "gold_hash": "f9307933e72e2c85fe189dcdad6855edfa09dce85926e761539beee2f621f825",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "before": "../replacement_oracle/live_final_evaluation.json",
+  "after_observation_counts": {
+    "OK": 5,
+    "FAILED": 11,
+    "NOT_RUN": 4
+  },
+  "first_observed_rejections": [
+    {
+      "case_id": "S81-004",
+      "turn_index": 0,
+      "phase": "HISTORY",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+    },
+    {
+      "case_id": "S81-005",
+      "turn_index": 0,
+      "phase": "HISTORY",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+    },
+    {
+      "case_id": "S81-006",
+      "turn_index": 0,
+      "phase": "HISTORY",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+    },
+    {
+      "case_id": "S81-007",
+      "turn_index": 0,
+      "phase": "HISTORY",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+    },
+    {
+      "case_id": "S81-008",
+      "turn_index": 0,
+      "phase": "HISTORY",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+    },
+    {
+      "case_id": "S81-009",
+      "turn_index": 0,
+      "phase": "HISTORY",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+    },
+    {
+      "case_id": "S81-010",
+      "turn_index": 0,
+      "phase": "HISTORY",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+    },
+    {
+      "case_id": "S81-012",
+      "turn_index": 1,
+      "phase": "CURRENT",
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 0,
+      "phase": "HISTORY",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+    },
+    {
+      "case_id": "S81-015",
+      "turn_index": 0,
+      "phase": "HISTORY",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 2,
+      "phase": "CURRENT",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+    }
+  ],
+  "source_fixture_hash": "5da05463c521b88eeec4c06b83b456df68ec623eaed0c5dd458a529f1950d24d",
+  "six_exact_queries_returned_empty": true,
+  "low_cardinality_probe": {
+    "province_distinct": 34,
+    "city_distinct": 396,
+    "limit": 64,
+    "city_values_enumerated": false
+  },
+  "name_evidence": "The private bounded province probe contains the full administrative forms of the three short Gold mentions. This proves stored values, not an automatic alias policy or an entity identity.",
+  "source_executions_during_separate_read_only_capture": 6,
+  "source_executions_during_separate_controlled_probe": 3,
+  "source_executions_during_model_evaluation": 0,
+  "production_external_writes": 0,
+  "S81_002_current_parse": {
+    "dialogue_act_candidates": [
+      "REPLACE"
+    ],
+    "reference_signals": [
+      "HISTORICAL"
+    ],
+    "followup_signals": [
+      "MODIFY"
+    ]
+  },
+  "S81_002_historical_handle_selected": true,
+  "gold_or_prompt_changed": false,
+  "production_cutover_pass": false
+}

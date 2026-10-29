@@ -1,0 +1,15 @@
+{
+  "phase": "0C",
+  "baseline_commit": "3b3d60ccdd2698887ba57e2b849564861adf7e7c",
+  "implementation_commit": "1c28cd64e0422c98ad4bb3b0222701f63845984f",
+  "closure_commit": "CONTAINING_COMMIT",
+  "closure_commit_resolution": "git log -1 --format=%H -- docs/phase0c/git_commit_manifest.json",
+  "branch": "phase0c-trust-semantic-scope-20260908-01",
+  "parent_branch": "phase0b-legacy-multiturn-p0-closure-20260907-01",
+  "github_repository": "https://github.com/dreamyang-1/data",
+  "draft_pr": "https://github.com/dreamyang-1/data/pull/3",
+  "source_manifest": "source_snapshot.json",
+  "implementation_change_manifest": "verification_update_manifest.json",
+  "final_test_evidence": "bounded_suite_final/aggregate.json",
+  "auto_merge": false
+}

@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "fc7c5fc2fe63c9dd4284a88d6c268a10b6b72c52",
+  "feature_branch": "cutover-v2-slot-edits-20260908-01",
+  "base_branch": "cutover-v2-pending-20260908-01",
+  "implementation_commit": "7350ea26c7423f035d40e7987784ef32b6a982e0",
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

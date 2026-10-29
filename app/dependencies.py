@@ -14,11 +14,13 @@ from app.intent import HybridIntentClassifier
 from app.services import DataAnalysisOrchestrator
 from app.services.dataset_followup import DatasetLifecycleCleaner
 from app.services.file_ingestion import SpreadsheetFileImporter
+from app.services.agent_prompt_store import AgentPromptStore
+from app.services.upload_file_resolver import PlatformUploadFileResolver
 from app.services.report_export import DatasetReportExporter
 from app.services.question_rewriter import HttpEntityAttributeSearcher, QuestionRewriter
 from app.services.business_question_collector import BusinessQuestionCollector
 from app.services.entity_extraction import build_gliner_extractor_from_environment
-from app.planning import MultiQuestionPlanner
+from app.planning import CompoundQuestionRouter
 from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
 from app.stores import InMemorySessionStore, RedisSessionStore, SessionStore
 from app.stores.events import (
@@ -45,8 +47,11 @@ class Container:
     dataset_store: HybridMinioFollowupStore | None
     dataset_cleaner: DatasetLifecycleCleaner | None
     file_importer: SpreadsheetFileImporter | None
+    upload_file_resolver: PlatformUploadFileResolver | None
+    agent_prompt_store: AgentPromptStore | None
     report_exporter: DatasetReportExporter | None
     business_question_collector: BusinessQuestionCollector | None
+    orchestrator: DataAnalysisOrchestrator
     workflow: object
 
 
@@ -102,8 +107,8 @@ def build_container(settings: Settings) -> Container:
             password=settings.mysql_password.get_secret_value(),
             database=settings.mysql_database,
             connect_timeout=settings.mysql_connect_timeout_seconds,
-            read_timeout=settings.mysql_read_timeout_seconds,
-            write_timeout=settings.mysql_write_timeout_seconds,
+            read_timeout=None,
+            write_timeout=None,
         )
     knowledge_cache = None
     if (
@@ -127,6 +132,42 @@ def build_container(settings: Settings) -> Container:
     dataset_cleaner: DatasetLifecycleCleaner | None = None
     file_importer: SpreadsheetFileImporter | None = None
     report_exporter: DatasetReportExporter | None = None
+    upload_file_resolver: PlatformUploadFileResolver | None = None
+    agent_prompt_store: AgentPromptStore | None = None
+    if (
+        settings.env != "test"
+        and settings.mysql_host
+        and settings.mysql_user
+        and settings.mysql_password
+        and settings.mysql_database
+    ):
+        agent_prompt_store = AgentPromptStore.from_parameters(
+            host=settings.mysql_host,
+            port=settings.mysql_port,
+            user=settings.mysql_user,
+            password=settings.mysql_password.get_secret_value(),
+            database=settings.mysql_database,
+            connect_timeout=settings.mysql_connect_timeout_seconds,
+            read_timeout=None,
+        )
+    if (
+        settings.platform_upload_reference_resolution_enabled
+        and settings.env != "test"
+        and settings.mysql_host
+        and settings.mysql_user
+        and settings.mysql_password
+        and settings.mysql_database
+    ):
+        upload_file_resolver = PlatformUploadFileResolver.from_parameters(
+            host=settings.mysql_host,
+            port=settings.mysql_port,
+            user=settings.mysql_user,
+            password=settings.mysql_password.get_secret_value(),
+            database=settings.mysql_database,
+            connect_timeout=settings.mysql_connect_timeout_seconds,
+            read_timeout=None,
+            max_age_seconds=settings.platform_upload_reference_max_age_seconds,
+        )
     if settings.minio_dataset_enabled and settings.env != "test":
         if not all(
             (
@@ -215,7 +256,6 @@ def build_container(settings: Settings) -> Container:
                 HttpEntityAttributeSearcher(
                     base_url=settings.asl_generator_base_url,
                     path=settings.entity_attribute_search_path,
-                    timeout_seconds=settings.question_rewrite_timeout_seconds,
                     top_k=settings.question_rewrite_top_k,
                     score_threshold=settings.question_rewrite_search_threshold,
                     display_resolve_path=settings.semantic_display_resolve_path,
@@ -233,9 +273,10 @@ def build_container(settings: Settings) -> Container:
                 candidate_mode=entity_candidate_mode,
             )
         ),
-        task_planner=MultiQuestionPlanner(settings),
+        task_planner=CompoundQuestionRouter(settings),
         report_exporter=report_exporter,
         file_importer=file_importer,
+        agent_prompt_store=agent_prompt_store,
     )
     return Container(
         settings=settings,
@@ -246,11 +287,14 @@ def build_container(settings: Settings) -> Container:
         dataset_store=dataset_store,
         dataset_cleaner=dataset_cleaner,
         file_importer=file_importer,
+        upload_file_resolver=upload_file_resolver,
+        agent_prompt_store=agent_prompt_store,
         report_exporter=report_exporter,
         business_question_collector=(
             BusinessQuestionCollector(settings.business_question_document_path)
             if settings.business_question_collection_enabled
             else None
         ),
+        orchestrator=orchestrator,
         workflow=build_workflow(orchestrator),
     )

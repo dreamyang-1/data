@@ -1,0 +1,592 @@
+{
+  "status": "TIME_LOWERING_AND_EXECUTION_PREP_COMPLETE",
+  "as_of": "2026-09-10T13:05:36.340309+00:00",
+  "started_at": "2026-09-10T12:33:52Z",
+  "target_time": "2026-09-10T14:03:52Z",
+  "deadline": "2026-09-10T14:33:52Z",
+  "baseline": "20cb9d50fda03c8594778e766c23a6e4991915a5",
+  "baseline_pr": 67,
+  "branch": "v2-time-lowering-execution-prep-20260910t123352z",
+  "development_workspace": "E:\\YouoAgent\\DataAnalysis_Agent",
+  "git_repository": "E:\\yy",
+  "release": {
+    "commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_9/evidence_index.json",
+    "draft_pr_base": "v2-recovery-typed-execution-prep-20260910t113903z",
+    "post_commit_receipt": ".eval_private/time-execution-round5-9-20260910T123352Z/publication_receipt.json",
+    "auto_merge": false
+  },
+  "initial_tracked_files": 1678,
+  "initial_unexpected_drift": 0,
+  "changed_files": [
+    {
+      "path": "app/semantic_v2/asl2.py",
+      "baseline_normalized_sha256": "b4ab7978bc7b0575cad45db6eb549fa3ba164e0fb02e9691292b86fd88b76759",
+      "final_raw_sha256": "de5aa44eef7595d1b6bc75dd41cdcae5d119fb15ee83b81de9eedd50e6d43831"
+    },
+    {
+      "path": "app/semantic_v2/catalog_bridge.py",
+      "baseline_normalized_sha256": "2c16a2d216254aca64296fe57bf447e5c9a24fa1aede18bb5a1cf585ac39f40e",
+      "final_raw_sha256": "4c8701ec0c9d8d5f394cf59de3bef5b435e68c404d876988ec0edf66ff40926b"
+    },
+    {
+      "path": "app/semantic_v2/time_storage.py",
+      "baseline_normalized_sha256": null,
+      "final_raw_sha256": "9aab48ad7b900afa185bbba63e6f551332ef258e8ac26b51a7f6d16084b07bde"
+    },
+    {
+      "path": "app/semantic_v2/isolated_execution.py",
+      "baseline_normalized_sha256": null,
+      "final_raw_sha256": "1401ee5c5e19b4006e52288bd874acbdfc9c8fc15c6eda1bc2d2411a17cbfb90"
+    },
+    {
+      "path": "tests/test_v2_time_storage_lowering.py",
+      "baseline_normalized_sha256": null,
+      "final_raw_sha256": "c32317cfb2fde15bcfb4d1d2f841034409fcc6e9afde546034b6c58541bad899"
+    },
+    {
+      "path": "tests/test_v2_isolated_execution.py",
+      "baseline_normalized_sha256": null,
+      "final_raw_sha256": "c40ce48abb38a8d81ed62e8189a683bf3f5e6593ed49e4ad7bf47b0b56fe533f"
+    },
+    {
+      "path": "sql-translator/sql_translator_prod.py",
+      "baseline_normalized_sha256": "e84a773a08669d75da09e787f49fa4174c203295f83041b0fbfc1281e3317cbe",
+      "final_raw_sha256": "dbbbaf842043e7076a0e7eb24963e4141a43eb508c7fa53ae38cc4cef91c96cb"
+    },
+    {
+      "path": "sql-translator/test_required_execution_snapshot.py",
+      "baseline_normalized_sha256": null,
+      "final_raw_sha256": "08b0010c7d8e865698681c8d97ca11e167b44e66917357a9522b5fd20b0c49b2"
+    }
+  ],
+  "documentation_files": [
+    "docs/v2_cutover/semantic_round5_9/closure_report.md",
+    "docs/v2_cutover/semantic_round5_9/evidence_index.json"
+  ],
+  "time_audit": {
+    "as_of": "2026-09-10T12:59:18.865312+00:00",
+    "metadata": {
+      "field_id": 24400,
+      "field_name": "created_date",
+      "data_type": "DATETIME",
+      "enum_values": [],
+      "null_flag": "YES",
+      "comment": "创建日期",
+      "description": "创建日期",
+      "table_id": 1880,
+      "semantic_model_id": 81,
+      "data_source_id": 58
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "search_scope": [
+      "youoagent-api Java/XML/SQL",
+      "Oagnet source/scripts",
+      "SQL Translator source/scripts",
+      "frozen catalog81/205"
+    ],
+    "write_chain_found": false,
+    "orm_or_etl_storage_conversion_proven": false,
+    "web_serialization": "Asia/Shanghai; does not prove source storage",
+    "user_declaration": {
+      "text": "北京时间",
+      "source": "USER_REPLY_TO_ROUND59_FIELD_QUESTION",
+      "classification": "DECLARED",
+      "storage_semantics": "LOCAL_WALL_DATETIME",
+      "storage_timezone": "Asia/Shanghai"
+    },
+    "historical_migration_boundary": "UNKNOWN_NOT_ANSWERED",
+    "historical_row_conformance": "NOT_INDEPENDENTLY_VERIFIED",
+    "candidate_applicability": "Named source58/table1880/field24400 and each target plan range only; declaration is not a historical migration audit",
+    "evidence_hashes": {
+      "../youoagent-api/youo-agent-web/src/main/java/com/youotech/web/conf/WebConfiguration.java": "0fed875cca1cef226faf2ff9ef866b3adb334db1dc4d471a51b8fd340449cebe",
+      "../sql-translator/scripts/apply_model81_semantic_foundation.py": "c467f4563cc4836c1e01b83602471f20e45e86ad00d614cadddf62e3a30173a0",
+      "../sql-translator/scripts/apply_model81_metrics_and_time.py": "ef3aada5816fb4c72f60cecbc1cfb0fdb2b8cca95319b97dacbe78d8441fe14e",
+      "../sql-translator/api_server_prod.py": "36b2efd7a4e5f8d3953d4d7914b5413cf022184d3c37450dda109c9e4467d8af",
+      "../sql-translator/semantic_scope.py": "6337339039c9747a2c3f09e0df5300842d7f97dee257c69f04eea4d01bb8ff01",
+      "../sql-translator/pinned_catalog.py": "4e9e5ad5733a0c64ae6cd76b4d9ee8328bd25b6413f571f761d864ca0a1e95ba",
+      "../sql-translator/bound_sql.py": "87906640eff49d0b2c91f3406e5ac55ba6c5e1ff37982014c898b4894e65f594",
+      "../youoagent-api/sql/20260828语义模型81治理.sql": "cf5492f083ee3ef5aa4e79b7b8a06cd0ef888993bd75a5923e48b381380fbc66"
+    },
+    "protocol": {
+      "asl": "2.0",
+      "translation": "translate_pinned_catalog",
+      "parameters": "PYMYSQL_PYFORMAT_V1",
+      "execution": "SQLTranslatorProd.execute_sql_on_data_source",
+      "public_execute_compatible": false,
+      "public_reason": "Public wrapper does not carry full pinned policy/parameter receipts and scoped execution retranslates against live metadata",
+      "scalar_internal_adapter": "Implemented; TEST_ONLY transport/store",
+      "strict_snapshot_mode": "require_consistent_snapshot=True; opt-in only",
+      "unsupported": [
+        "Grouped/detail/dataset execution adapter",
+        "DATE/TIMESTAMP storage",
+        "DST zones",
+        "Fiscal calendars",
+        "Temporal comparisons",
+        "Production persistence and public response wiring"
+      ]
+    }
+  },
+  "time_audit_receipt": {
+    "path": ".eval_private/time-execution-round5-9-20260910T123352Z/time_and_protocol_audit.json",
+    "sha256": "0cbf2cb78e1a5423fa3dffb1427b1f7f10ccafa74d3c8ba399b0260ae84b8086"
+  },
+  "declaration_boundary": "User declared Beijing time for the named field; historical migration and row conformity remain UNKNOWN, not certified by this declaration",
+  "candidate_identity": "Original semantic plan immutable; newly versioned compiler input includes the current declaration and field/scope/pin/evidence digest; no old snapshot was changed",
+  "vertical_slice": [
+    {
+      "case_id": "HC55-A",
+      "capture_key": "71ce0d55431c39cfad6a23ee",
+      "turn_index": 0,
+      "query": "查询去年江苏省订单笔数",
+      "original_no_time": false,
+      "logical_plan_hash": "23ba8ab33911df38fdfdf8506ec15cedf64943c52a485e404a0df856a0969d53",
+      "compilation_fingerprint": "43b06f54c244e015fb1490d2bf8d35a4fd3ce2760fa17258e48dd5b37a401538",
+      "original_blockers": [
+        "ASL2_TIME_STORAGE_TIMEZONE_UNPROVEN"
+      ],
+      "lowering": "SUPPORTED_PLAN_ONLY",
+      "native_sql_planning": "PASS",
+      "execution": "PASS_TEST_ONLY",
+      "stages": [
+        "PLAN_VALIDATED",
+        "INPUT_COMPILED",
+        "SUBMISSION_ATTEMPTED",
+        "EXECUTION_SUBMITTED",
+        "RESULT_RETURNED",
+        "RESULT_VALIDATED",
+        "SUCCESS_RECEIPT_SAVED"
+      ],
+      "time_evidence_provenance": "DECLARED",
+      "time_evidence_digest": "5a5dd8e05260684ee8ea96c2bd185e92edbb31c01cc9e3a4cb1a6339ffba468a",
+      "time_storage_receipt": {
+        "evidence_digest": "5a5dd8e05260684ee8ea96c2bd185e92edbb31c01cc9e3a4cb1a6339ffba468a",
+        "evidence_version": "round59-user-declaration-beijing-v1",
+        "provenance": "DECLARED",
+        "field_mapping": "sales_order.created_date",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "values": [
+          "2025-01-01 00:00:00",
+          "2026-01-01 00:00:00"
+        ]
+      },
+      "scope": {
+        "model": 81,
+        "domains": [
+          205
+        ],
+        "data_source_id": 58
+      },
+      "sql_digest": "7d49848a261c5a904a6112f6fe91ffc483e0a15cf6c536a9511db834d81019cc",
+      "local_seconds": {
+        "lowering_and_sql_planning": 0.048918499998762854,
+        "adapter_fake": 0.0036003999994136393
+      },
+      "receipt": {
+        "path": ".eval_private/time-execution-round5-9-20260910T123352Z/vertical-final-v3-71ce0d55431c39cfad6a23ee.json",
+        "sha256": "34454dff4eb61bdfe28961116768d10f12a831bf0540ee8bc1c4957911932ea4"
+      }
+    },
+    {
+      "case_id": "HC55-B",
+      "capture_key": "c8c010c9b2e5abd89e6058f6",
+      "turn_index": 0,
+      "query": "查询去年江苏省订单笔数",
+      "original_no_time": false,
+      "logical_plan_hash": "eae5cb2041e931b4eed891a0693899aa9bd9c39062e44dda477875ebf8c00682",
+      "compilation_fingerprint": "257d4f528dd85e3f37e9ff87e8cebde7ab191e03323e32ef4a6c62225ccf6ff9",
+      "original_blockers": [
+        "ASL2_TIME_STORAGE_TIMEZONE_UNPROVEN"
+      ],
+      "lowering": "SUPPORTED_PLAN_ONLY",
+      "native_sql_planning": "PASS",
+      "execution": "PASS_TEST_ONLY",
+      "stages": [
+        "PLAN_VALIDATED",
+        "INPUT_COMPILED",
+        "SUBMISSION_ATTEMPTED",
+        "EXECUTION_SUBMITTED",
+        "RESULT_RETURNED",
+        "RESULT_VALIDATED",
+        "SUCCESS_RECEIPT_SAVED"
+      ],
+      "time_evidence_provenance": "DECLARED",
+      "time_evidence_digest": "70aeddff55e31decc9c56b37d8354bc27dfd73c016af2382fc30786ab26f588b",
+      "time_storage_receipt": {
+        "evidence_digest": "70aeddff55e31decc9c56b37d8354bc27dfd73c016af2382fc30786ab26f588b",
+        "evidence_version": "round59-user-declaration-beijing-v1",
+        "provenance": "DECLARED",
+        "field_mapping": "sales_order.created_date",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "values": [
+          "2025-01-01 00:00:00",
+          "2026-01-01 00:00:00"
+        ]
+      },
+      "scope": {
+        "model": 81,
+        "domains": [
+          205
+        ],
+        "data_source_id": 58
+      },
+      "sql_digest": "7d49848a261c5a904a6112f6fe91ffc483e0a15cf6c536a9511db834d81019cc",
+      "local_seconds": {
+        "lowering_and_sql_planning": 0.044843800000307965,
+        "adapter_fake": 0.0037312999993446283
+      },
+      "receipt": {
+        "path": ".eval_private/time-execution-round5-9-20260910T123352Z/vertical-final-v3-c8c010c9b2e5abd89e6058f6.json",
+        "sha256": "c91ae7847e2016f78653342011cba0b51b198dd7565d13df15730708f11f0c25"
+      }
+    },
+    {
+      "case_id": "HC55-B",
+      "capture_key": "7686528e9346457cc6a4bf09",
+      "turn_index": 3,
+      "query": "换今年",
+      "original_no_time": false,
+      "logical_plan_hash": "5de49626f80d5149dab50e138f12df2f2aafcf4b7dff4d6886d9b3ee4fd2927a",
+      "compilation_fingerprint": "e1d6ffdcd34ab48163e8d4063e1df1a8335134316eee08c200cacf16fc7fd5d2",
+      "original_blockers": [
+        "ASL2_TIME_STORAGE_TIMEZONE_UNPROVEN"
+      ],
+      "lowering": "SUPPORTED_PLAN_ONLY",
+      "native_sql_planning": "PASS",
+      "execution": "PASS_TEST_ONLY",
+      "stages": [
+        "PLAN_VALIDATED",
+        "INPUT_COMPILED",
+        "SUBMISSION_ATTEMPTED",
+        "EXECUTION_SUBMITTED",
+        "RESULT_RETURNED",
+        "RESULT_VALIDATED",
+        "SUCCESS_RECEIPT_SAVED"
+      ],
+      "time_evidence_provenance": "DECLARED",
+      "time_evidence_digest": "5e389d91a7eae98860c9705e14a42cf29c58a60c1091ee50963d1dd84c70ed5a",
+      "time_storage_receipt": {
+        "evidence_digest": "5e389d91a7eae98860c9705e14a42cf29c58a60c1091ee50963d1dd84c70ed5a",
+        "evidence_version": "round59-user-declaration-beijing-v1",
+        "provenance": "DECLARED",
+        "field_mapping": "sales_order.created_date",
+        "boundary": "LEFT_CLOSED_RIGHT_OPEN",
+        "values": [
+          "2026-01-01 00:00:00",
+          "2027-01-01 00:00:00"
+        ]
+      },
+      "scope": {
+        "model": 81,
+        "domains": [
+          205
+        ],
+        "data_source_id": 58
+      },
+      "sql_digest": "4bc414f86bbecf9041112f0141eae370c5a7dc3d6f5d82dbfa9ca7ce0990ae6f",
+      "local_seconds": {
+        "lowering_and_sql_planning": 0.04539979999935895,
+        "adapter_fake": 0.007645300000149291
+      },
+      "receipt": {
+        "path": ".eval_private/time-execution-round5-9-20260910T123352Z/vertical-final-v3-7686528e9346457cc6a4bf09.json",
+        "sha256": "e601ce60178615e73a617b18e00866e5822afd195064fd2f46506f3ef6fa94de"
+      }
+    },
+    {
+      "case_id": "G81-015",
+      "capture_key": "G81-015",
+      "turn_index": 0,
+      "query": "查询含税销售总额",
+      "original_no_time": true,
+      "logical_plan_hash": "b817cad01c409007a05c022d4f8d1faa91cddc82b546df0118d7519e93166084",
+      "compilation_fingerprint": "ff1595d8d48d05a377523cb9c34998ad89e0545e90743db147a2a3c5c8dc0af6",
+      "original_blockers": [],
+      "lowering": "SUPPORTED_PLAN_ONLY",
+      "native_sql_planning": "PASS",
+      "execution": "PASS_TEST_ONLY",
+      "stages": [
+        "PLAN_VALIDATED",
+        "INPUT_COMPILED",
+        "SUBMISSION_ATTEMPTED",
+        "EXECUTION_SUBMITTED",
+        "RESULT_RETURNED",
+        "RESULT_VALIDATED",
+        "SUCCESS_RECEIPT_SAVED"
+      ],
+      "time_evidence_provenance": null,
+      "time_evidence_digest": null,
+      "time_storage_receipt": null,
+      "scope": {
+        "model": 81,
+        "domains": [
+          205
+        ],
+        "data_source_id": 58
+      },
+      "sql_digest": "7a1ffe68f3e542b1d7e8c9c37813add24daf252c9ac555bdf5fe6c1ca099fcc8",
+      "local_seconds": {
+        "lowering_and_sql_planning": 0.03562969999984489,
+        "adapter_fake": 0.0021578999985649716
+      },
+      "receipt": {
+        "path": ".eval_private/time-execution-round5-9-20260910T123352Z/vertical-final-v3-G81-015.json",
+        "sha256": "82c8a64d0c081c513e6dd61c746c1810b09279e50ac7286af306329d28f11cb3"
+      }
+    }
+  ],
+  "test_delta": {
+    "baseline": {
+      "passed": 3461,
+      "failed": 27
+    },
+    "final": {
+      "passed": 3525,
+      "failed": 27
+    },
+    "new_nodeids": [
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[columns]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[download]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[dtype]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[exception]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[failure]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[grain]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[invalid_metadata]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[nan]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[prepared]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[preview]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[provenance]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[quality]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[request]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[row_count]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[row_keys]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[scope]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[snapshot]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[source]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[submission]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[timeout]",
+      "tests/test_v2_isolated_execution.py::test_bad_transport_or_result_never_replaces_successful_dataset[truncated]",
+      "tests/test_v2_isolated_execution.py::test_grouped_shape_requires_a_separate_adapter_contract",
+      "tests/test_v2_isolated_execution.py::test_historical_task_execution_does_not_modify_other_task_or_active_topic",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[bindings]",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[parameters]",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[pin]",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[plan]",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[scope]",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[sql]",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[state_identity]",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[state_version]",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[task_plan]",
+      "tests/test_v2_isolated_execution.py::test_invalid_prepared_or_current_state_blocks_submission[task_version]",
+      "tests/test_v2_isolated_execution.py::test_newer_state_during_transport_is_preserved_and_same_message_never_reexecutes",
+      "tests/test_v2_isolated_execution.py::test_retry_while_original_submission_is_running_does_not_submit_twice",
+      "tests/test_v2_isolated_execution.py::test_same_message_cannot_retarget_another_plan",
+      "tests/test_v2_isolated_execution.py::test_snapshot_failure_prevents_the_native_driver_business_query",
+      "tests/test_v2_isolated_execution.py::test_typed_preparation_native_execution_result_and_saved_attempt[False]",
+      "tests/test_v2_isolated_execution.py::test_typed_preparation_native_execution_result_and_saved_attempt[True]",
+      "tests/test_v2_isolated_execution.py::test_unknown_time_evidence_never_reaches_sql_planner_or_transport",
+      "tests/test_v2_time_storage_lowering.py::test_annual_boundaries_actual_parameterized_sql[Asia/Shanghai-2025]",
+      "tests/test_v2_time_storage_lowering.py::test_annual_boundaries_actual_parameterized_sql[Asia/Shanghai-2026]",
+      "tests/test_v2_time_storage_lowering.py::test_annual_boundaries_actual_parameterized_sql[UTC-2025]",
+      "tests/test_v2_time_storage_lowering.py::test_annual_boundaries_actual_parameterized_sql[UTC-2026]",
+      "tests/test_v2_time_storage_lowering.py::test_distinct_query_zone_converts_boundary_once",
+      "tests/test_v2_time_storage_lowering.py::test_independent_no_time_query_uses_native_contract",
+      "tests/test_v2_time_storage_lowering.py::test_invalid_half_open_interval_never_enters_compiler[2024-01-01T00:00:00Z]",
+      "tests/test_v2_time_storage_lowering.py::test_invalid_half_open_interval_never_enters_compiler[2025-01-01T00:00:00Z]",
+      "tests/test_v2_time_storage_lowering.py::test_original_boolean_tree_and_time_are_conjoined",
+      "tests/test_v2_time_storage_lowering.py::test_physical_fraction_precision_is_preserved_or_rejected[0]",
+      "tests/test_v2_time_storage_lowering.py::test_physical_fraction_precision_is_preserved_or_rejected[3]",
+      "tests/test_v2_time_storage_lowering.py::test_physical_fraction_precision_is_preserved_or_rejected[6]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[digest]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[field]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[fiscal]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[period]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[physical]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[pin]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[precision]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[scope]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[source]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[test_optin]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[utc_zone]",
+      "tests/test_v2_time_storage_lowering.py::test_storage_evidence_cannot_relax_unknown_or_mismatched_contract[zone]"
+    ],
+    "new_count": 64,
+    "old_pass_new_fail": [],
+    "old_fail_new_pass": [],
+    "missing_old_tests": [],
+    "baseline_reconciliation": {
+      "obsolete_pre_baseline_node": "tests/test_v2_historical_reference_round58.py::test_historical_relation_never_waives_unconsumed_explicit_subject",
+      "reason": "Round58 committed four parametrized nodes; old source unchanged in Round59"
+    },
+    "failures": [
+      "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+      "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+      "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+      "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+      "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+      "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+      "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+      "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+      "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+      "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+      "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+      "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+      "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+      "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+      "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+      "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+      "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+      "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+      "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+      "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+      "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+      "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+      "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+      "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+      "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+      "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+      "tests/test_workflow.py::test_workflow_clarify_then_complete"
+    ],
+    "collection_errors": [],
+    "critical": {
+      "passed": 160
+    },
+    "context": {
+      "passed": 8
+    },
+    "context_turns": 18,
+    "full_candidate_v2_agent": {
+      "path": ".eval_private/time-execution-round5-9-20260910T123352Z/full-final-agent/aggregate.json",
+      "sha256": "1c39f1f2a6d68cb3c26dbcab7856e4a444994a6bae40ef1d14e73468b94ef6d0"
+    },
+    "final_result_basis": "Full candidate-v2 run plus candidate-v3 affected-module observation; only isolated_execution.py and its tests changed, with no other production importers",
+    "sql": {
+      "counts": {
+        "passed": 389
+      },
+      "new_count": 8,
+      "old_pass_new_fail": 0,
+      "receipt": {
+        "path": ".eval_private/time-execution-round5-9-20260910T123352Z/full-final-sql-translator/aggregate.json",
+        "sha256": "f6738b7a28209b08eca81173ce0ec1e8b4eee14c7ecc19b7f7ed52f39941b25c"
+      }
+    },
+    "Oagnet": {
+      "counts": {
+        "passed": 690,
+        "failed": 8
+      },
+      "mode": "REUSED_UNCHANGED_SOURCE",
+      "receipt": {
+        "path": ".eval_private/recovery-round5-8-20260910T113903Z/full-Oagnet/aggregate.json",
+        "sha256": "c0faf6bf01c38c2bc712c6f439cfa81081105f33cdc5fde063d7bdcd031fe06d"
+      }
+    },
+    "intermediate": {
+      "first_agent_full": {
+        "path": ".eval_private/time-execution-round5-9-20260910T123352Z/full-agent/aggregate.json",
+        "sha256": "485d8398ee60a1881eec76205605dc609c65dfd8c64a5b98a5136c53bc1ebbca"
+      },
+      "first_candidate": {
+        "path": ".eval_private/time-execution-round5-9-20260910T123352Z/candidate_freeze.json",
+        "sha256": "b06c19b0de0ebbf255bcc077303cad73d958cc41279fad693fd343e15f21f39d"
+      },
+      "reason": "Review found strict snapshot prerequisite; final candidate reran full Agent and SQL tests"
+    },
+    "focused": {
+      "path": ".eval_private/time-execution-round5-9-20260910T123352Z/focused-v5.json",
+      "sha256": "3e56eda40470d8b23f3e983e9a8343db0883dfc946c13f1f7172ff14273200ae"
+    },
+    "final_affected_counts": {
+      "passed": 229
+    }
+  },
+  "candidate_freeze": {
+    "path": ".eval_private/time-execution-round5-9-20260910T123352Z/candidate_freeze_v3.json",
+    "sha256": "5e32664cf38c70615a8fa27bbd875abd13248ed86c4c4aa1a12a7fdd57853e66"
+  },
+  "intermediate_receipts": [
+    {
+      "path": ".eval_private/time-execution-round5-9-20260910T123352Z/new-time-tests-v1.json",
+      "sha256": "32ad97fd2cf5ac58453183a78d5d85b6ef75bd6e863988b12814b25d5c8b5743"
+    },
+    {
+      "path": ".eval_private/time-execution-round5-9-20260910T123352Z/adapter-tests-v1.json",
+      "sha256": "bdb5b31f08a51485a4f8d13d726e39ae75efac0d41f2e37ebde26d191f963912"
+    },
+    {
+      "path": ".eval_private/time-execution-round5-9-20260910T123352Z/focused-v3.json",
+      "sha256": "0823d45a57f1e6471ebca3c3938162ca8ef24323f1c0d3fe03173fc6e3bce999"
+    },
+    {
+      "path": ".eval_private/time-execution-round5-9-20260910T123352Z/vertical_receipt.json",
+      "sha256": "1880584bfb767438ea06fd04e0f44c00df8b9a37ab358915cdb63f6fdbf8125a"
+    },
+    {
+      "path": ".eval_private/time-execution-round5-9-20260910T123352Z/vertical_final_receipt.json",
+      "sha256": "a630077687e7e8f143fd6e03532e56729ffc22da57089f3f8838a1d53a39240a"
+    }
+  ],
+  "review": {
+    "status": "PASS_WITH_EXPLICIT_LIMITS",
+    "fixed": [
+      "Result digest must be computed before success state CAS",
+      "Strict snapshot establishment before query submission",
+      "Submission attempt separated from matching transport acknowledgment"
+    ],
+    "boundaries": [
+      "No production store or result artifact bridge",
+      "Only scalar execution adapter",
+      "Caller-injected bounded transport required; no default HTTP/DB transport",
+      "Local receipt identity is not a signed remote proof",
+      "No historical migration certification"
+    ],
+    "source_scope": "Agent 4 production modules; SQL Translator 1 opt-in execution prerequisite; no Oagnet source change"
+  },
+  "safety": {
+    "model_calls": 0,
+    "real_business_sql": 0,
+    "source_sql": 0,
+    "production_state_writes": 0,
+    "catalog_writes": 0,
+    "index_rebuilds": 0,
+    "blind_access": 0,
+    "credentials_or_model_config_changes": 0,
+    "public_api_sse_ui_changes": 0,
+    "service_restarts": 0,
+    "V1_production_routing_changed": false,
+    "Oagnet_original_index_and_worktree_preserved": true,
+    "expected_config_files_unchanged": true
+  },
+  "gates": {
+    "time_storage": "USER_DECLARED_BEIJING; HISTORICAL_CONFORMANCE_UNKNOWN",
+    "time_lowering": "PASS_ON_DECLARED_CANDIDATE_AND_SYNTHETIC_CONTRACTS",
+    "unknown_storage_rejection": "PASS",
+    "scalar_adapter": "PASS_TEST_ONLY",
+    "independent_no_time": "PASS_NATIVE_COMPILATION_AND_SYNTHETIC_EXECUTION",
+    "CONTEXT_FOLLOWUP_READY": "NOT_READY_FULL_GATE",
+    "INTERNAL_DEMO_SEMANTIC_READY": "NO",
+    "READY_FOR_INTERNAL_DEMO_E2E_SMOKE": "NO",
+    "QUESTION_COMPLETION_CONTRACT_GAP": "OPEN_UNCHANGED",
+    "READY_FOR_USER_APPROVAL": "NO",
+    "PATH_READY_TO_REQUEST_ISOLATED_E2E": "NO; current production pin/source binding and bounded real transport not validated in this round"
+  },
+  "next_path": "Validate a narrowly scoped real transport/current pin/source and temporary result receipt boundary before proposing isolated read-only E2E; no automatic next round",
+  "rollback": "Revert this feature commit by explicit manifest. Keep restored keys/configuration and existing V1 processes unchanged.",
+  "final_runtime_verification": {
+    "final_health.json": {
+      "path": ".eval_private/time-execution-round5-9-20260910T123352Z/final_health.json",
+      "sha256": "a5b205176d20cfaeaf23795583479415c642b8f9de806fc4245ca2a8b3a5a770"
+    },
+    "final_processes.json": {
+      "path": ".eval_private/time-execution-round5-9-20260910T123352Z/final_processes.json",
+      "sha256": "45d5649ad7b1940bf2499833d79d5d0c8dbab6ff1dbaa3c18bf5156082775b4a"
+    }
+  }
+}

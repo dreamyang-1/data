@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "47608b0a8db4a20b54973d717bf4176e621d1b2a",
+  "feature_branch": "cutover-v2-recognition-20260908-01",
+  "base_branch": "cutover-v2-scope-bridge-20260908-02",
+  "implementation_commit": "ab3c7fe5613699872b5c5d5e048fff3b590708ee",
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

@@ -1,0 +1,16 @@
+{
+  "frozen_manifest_hash": "a2bf2cbd1564107101271139914165d3c8f45a1f992ca9ece554eebc0ff9e447",
+  "PRIVATE_VALIDATION": {
+    "case_count": 24,
+    "state": "EVALUATED_WITH_FROZEN_PROMPT",
+    "prompt_training_use": false,
+    "per_case_prompt_debug": false
+  },
+  "BLIND_HOLDOUT": {
+    "case_count": 24,
+    "state": "SEALED_NOT_VIEWED_OR_RUN",
+    "model_calls": 0,
+    "question_text_published": false,
+    "file_sha256": "206dcc76c50852bb2fd810ab04e3a1c8131d88dad674d343b37f2b60285233d1"
+  }
+}

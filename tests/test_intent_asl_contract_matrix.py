@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from app.domain.models import PrimaryIntent, SemanticFilterBinding, TrustedIdentity
+from app.domain.models import (
+    AnalysisOperator,
+    MetricRef,
+    PrimaryIntent,
+    SemanticFilterBinding,
+    TrustedIdentity,
+)
 from app.intent.classifier import RuleBasedIntentClassifier
 from app.services.intent_asl_contract import (
     build_intent_asl_contract,
@@ -203,6 +209,27 @@ def test_all_history_monthly_statistic_allows_time_projection_without_range():
     assert validate_intent_asl_contract_definition(contract) == []
 
 
+def test_province_filter_does_not_hide_city_grouping_or_query_object():
+    request = RuleBasedIntentClassifier().classify(
+        "查看2025年安徽省下各个城市每月销售趋势",
+        IDENTITY,
+        "province-city-trend-contract",
+    )
+    # Reproduce the structured model's provisional entity choice that used to
+    # override the explicit city grouping in the downstream ASL contract.
+    request.entity = "省份名称"
+    request.dimensions = ["城市"]
+    request.filters = [{
+        "field": "业务省份", "operator": "EQ", "value": "安徽省",
+    }]
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["query_object"] == "城市"
+    assert contract["required_groupings"] == ["城市"]
+    assert validate_intent_asl_contract_definition(contract) == []
+
+
 def test_canonical_detail_rewrite_does_not_disable_relationship_set_semantics():
     request = RuleBasedIntentClassifier().classify(
         "查询A产品合作经销商名单", IDENTITY, "canonical-detail-rewrite",
@@ -307,6 +334,37 @@ def test_contract_completeness_rejects_post_classification_filter_loss():
     ]
 
 
+def test_contract_query_object_accepts_catalog_code_of_chinese_slot():
+    """回归：意图槽位是中文实体名（医院），语义绑定产出英文目录编码（hospital），
+    完整性校验必须视为同一实体，不得误报 EXPLICIT_QUERY_OBJECT_MISSING。
+
+    49 环境在 2026-10-09 前的历史故障：任务级子请求 contract.query_object 为
+    英文编码 hospital，与准入槽位 医院 字面不等导致 SAFE_FALLBACK。
+    """
+    question = "上海销售规模最大的医院"
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "p0-code-equiv"
+    )
+    decision = TurnAdmissionGate().evaluate(
+        question=question,
+        current=request,
+        previous=None,
+        message_id="p0-code-equiv-message",
+    )
+    request.turn_admission = decision
+    contract = build_intent_asl_contract(request)
+    assert contract["query_object"] == "医院"
+
+    # 语义绑定把查询对象替换为目录实体编码，校验必须放行
+    contract["query_object"] = "hospital"
+    assert validate_intent_asl_contract_completeness(contract, request) == []
+
+    # 对照：真实对象漂移（编码指向另一实体）仍必须拦截
+    contract["query_object"] = "salesperson"
+    errors = validate_intent_asl_contract_completeness(contract, request)
+    assert [item["code"] for item in errors] == ["EXPLICIT_QUERY_OBJECT_MISSING"]
+
+
 def test_relationship_count_projection_is_an_audited_contract_transform():
     question = "统计上海市紫杉醇释放冠脉球囊导管已合作医院数。"
     request = RuleBasedIntentClassifier().classify(
@@ -383,6 +441,69 @@ def test_ranked_business_scale_contract_keeps_partner_grouping():
     assert validate_intent_asl_contract_definition(contract) == []
 
 
+def test_monthly_granularity_dimension_never_displaces_product_query_object():
+    # Real platform failure: “按月份分析上海地区费森尤斯产品最近一年的销售趋势。”
+    # ended in SAFE_FALLBACK with INTENT_ASL_CONTRACT_INCOMPLETE /
+    # EXPLICIT_QUERY_OBJECT_MISSING because the contract promoted the
+    # structured-model time-granularity dimension 月份 to query_object and the
+    # completeness gate rejected it against the explicit object 产品.
+    question = "按月份分析上海地区费森尤斯产品最近一年的销售趋势。"
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "monthly-grain-query-object"
+    )
+    # Reproduce the structured path's published shape: the month bucket is a
+    # time granularity, while 产品 is the explicit query object.
+    request.entity = "产品"
+    request.dimensions = ["月份"]
+    request.turn_admission = TurnAdmissionGate().evaluate(
+        question=question,
+        current=request,
+        previous=None,
+        message_id="monthly-grain-message",
+    )
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["intent"] == PrimaryIntent.TREND_ANALYSIS.value
+    assert contract["query_object"] == "产品"
+    assert "月份" not in contract["required_groupings"]
+    assert contract["time_dimension_required"] is True
+    assert validate_intent_asl_contract_definition(contract) == []
+    assert validate_intent_asl_contract_completeness(contract, request) == []
+
+
+def test_business_date_dimension_never_displaces_hospital_query_object():
+    # Real platform failure (2026-10-21): dependency task-2 “根据上述任务返回的
+    # 医院名称，查询该医院近12个月按业务日期（月）分组的含税销售总额趋势”
+    # ended in SAFE_FALLBACK with INTENT_ASL_CONTRACT_INCOMPLETE /
+    # EXPLICIT_QUERY_OBJECT_MISSING (expected 医院, actual 业务日期) because the
+    # planner's time-bucket label 业务日期 was not recognized as a time
+    # granularity and prefer_grouping_object promoted it to query_object.
+    question = "根据上述任务返回的医院名称，查询该医院近12个月按业务日期（月）分组的含税销售总额趋势"
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "business-date-grain-query-object"
+    )
+    # Reproduce the structured DAG path's published shape: 业务日期（月） is the
+    # time bucket, while 医院 is the explicit query object.
+    request.entity = "医院"
+    request.dimensions = ["业务日期"]
+    request.turn_admission = TurnAdmissionGate().evaluate(
+        question=question,
+        current=request,
+        previous=None,
+        message_id="business-date-grain-message",
+    )
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["intent"] == PrimaryIntent.TREND_ANALYSIS.value
+    assert contract["query_object"] == "医院"
+    assert "业务日期" not in contract["required_groupings"]
+    assert contract["time_dimension_required"] is True
+    assert validate_intent_asl_contract_definition(contract) == []
+    assert validate_intent_asl_contract_completeness(contract, request) == []
+
+
 def test_contract_completeness_accepts_authoritative_vector_filter_rebinding():
     request = RuleBasedIntentClassifier().classify(
         "按月分析费森尤斯产品的销售趋势", IDENTITY, "vector-filter-rebinding"
@@ -410,7 +531,49 @@ def test_contract_completeness_accepts_authoritative_vector_filter_rebinding():
         score=1.0,
         business_domain_id=205,
     )]
-
     contract = build_intent_asl_contract(request)
 
     assert validate_intent_asl_contract_completeness(contract, request) == []
+
+
+def _metricless_detail_ranking_request(question: str, message_id: str):
+    request = RuleBasedIntentClassifier().classify(question, IDENTITY, message_id)
+    request.primary_intent = PrimaryIntent.DETAIL_QUERY
+    request.metrics = []
+    request.ranking_limit = 1
+    request.operators = [*request.operators, AnalysisOperator.TOP_N]
+    return request
+
+
+def test_metricless_detail_task_does_not_require_inherited_ranking_sort():
+    # Real platform failure: task-2 “销售了哪些产品” inherits the top-1 ranking
+    # marker of task-1 (“金额最多的销售员”), but a row-level detail projects no
+    # aggregate.  Demanding canonical sorting can then only fail the contract.
+    request = _metricless_detail_ranking_request(
+        "查询上海经销商", "metricless-detail-ranking"
+    )
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["sorting"] is None
+    assert validate_intent_asl_contract_definition(contract) == []
+
+
+def test_detail_task_projecting_a_metric_keeps_the_ranking_contract():
+    request = _metricless_detail_ranking_request(
+        "查询上海经销商", "metric-detail-ranking"
+    )
+    request.metrics = [MetricRef(
+        input="整体业务规模",
+        metric_id="130:annual_total_sales",
+        canonical_name="整体业务规模",
+    )]
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["sorting"] == {
+        "required": True,
+        "direction": "DESC",
+        "limit": 1,
+    }
+    assert validate_intent_asl_contract_definition(contract) == []

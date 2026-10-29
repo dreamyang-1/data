@@ -1,0 +1,20 @@
+[
+  {
+    "executed_source": "profile_identities.py",
+    "executed_source_sha256": "b8f1bef365b2e720f25843bbee06e554eaa85e82d46243060690544047babaf5",
+    "reusable_tool": "tools/cutover/audit_identity_scope.py",
+    "change": "Explicit CLI + main guard; deployment token search excludes redispatch false positives"
+  },
+  {
+    "executed_source": "redis_audit.py",
+    "executed_source_sha256": "6c699bdb7881d5795a3d700cd6a4cbd4fea84d4f365ca11438dfd01471ea9694",
+    "reusable_tool": "tools/cutover/audit_redis_runtime.py",
+    "change": "Explicit CLI + main guard; deployment token search excludes redispatch false positives"
+  },
+  {
+    "executed_source": "deployment_audit.py",
+    "executed_source_sha256": "38ce463569d946b1fbbcc6a041236918a62f33c6f81650f2521ba9c5e316a63a",
+    "reusable_tool": "tools/cutover/audit_redis_deployment.py",
+    "change": "Explicit CLI + main guard; deployment token search excludes redispatch false positives"
+  }
+]

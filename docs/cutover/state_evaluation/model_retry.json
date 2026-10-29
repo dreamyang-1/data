@@ -1,0 +1,22 @@
+{
+  "model": "qwen3.6-plus",
+  "thinking": false,
+  "observed_at": "2026-09-09T02:46:37.291881+00:00",
+  "request_count": 1,
+  "response_usage": [
+    {
+      "status": 401,
+      "model": null,
+      "usage": null,
+      "provider_code": "invalid_api_key"
+    }
+  ],
+  "temperature": 0,
+  "retries": 0,
+  "timeout_seconds": 30.0,
+  "prompt_hash": "ff29f7c1ddffb368a48999dce8536231216f9f7bd1805f02b56c513668c8d1de",
+  "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+  "gold_hash": "b2db7b903c691d2f696edeba3dbb90e4e1af7da80566d2a0635e1a7c9fd381b6",
+  "sql_executions": 0,
+  "production_state_writes": 0
+}

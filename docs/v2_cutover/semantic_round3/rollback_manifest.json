@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "d01d305e23059d99d147aa4a5d2f1ff6022e02e1",
+  "production_rollback_required": false,
+  "procedure": [
+    "Resolve the one final commit with git_commit_manifest.json.",
+    "On an isolated review branch, git revert that commit.",
+    "Verify no production diff and rerun affected focused evidence checks."
+  ],
+  "production_logic_changed": false,
+  "database_migration": false,
+  "credentials_or_private_payloads_in_git": false,
+  "reset_clean_or_force_push_allowed": false
+}

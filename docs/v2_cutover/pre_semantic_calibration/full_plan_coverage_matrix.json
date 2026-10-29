@@ -1,0 +1,181 @@
+{
+  "rows": [
+    {
+      "capability": "single_metric",
+      "certified_case_count": 8,
+      "case_ids": [
+        "FP81-015",
+        "FP81-016",
+        "FP81-017",
+        "FP81-018",
+        "FP81-019",
+        "FP81-020",
+        "FP81-021",
+        "FP81-022"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "multi_metric",
+      "certified_case_count": 2,
+      "case_ids": [
+        "FP81-201",
+        "FP81-204"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "single_dimension",
+      "certified_case_count": 1,
+      "case_ids": [
+        "FP81-202"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "multi_dimension",
+      "certified_case_count": 1,
+      "case_ids": [
+        "FP81-203"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "region_filter",
+      "certified_case_count": 0,
+      "case_ids": [],
+      "status": "NOT_YET_CERTIFIED",
+      "next_action": "Certify independent complete labels and physical/identity/time/projection evidence before extending this slice",
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "entity_value_filter",
+      "certified_case_count": 0,
+      "case_ids": [],
+      "status": "NOT_YET_CERTIFIED",
+      "next_action": "Certify independent complete labels and physical/identity/time/projection evidence before extending this slice",
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "time",
+      "certified_case_count": 0,
+      "case_ids": [],
+      "status": "NOT_YET_CERTIFIED",
+      "next_action": "Certify independent complete labels and physical/identity/time/projection evidence before extending this slice",
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "ADD",
+      "certified_case_count": 1,
+      "case_ids": [
+        "FP81-204"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "REPLACE",
+      "certified_case_count": 1,
+      "case_ids": [
+        "FP81-089"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "REMOVE",
+      "certified_case_count": 1,
+      "case_ids": [
+        "FP81-079"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "CLEAR",
+      "certified_case_count": 1,
+      "case_ids": [
+        "FP81-205"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "ordinary_followup",
+      "certified_case_count": 4,
+      "case_ids": [
+        "FP81-079",
+        "FP81-089",
+        "FP81-204",
+        "FP81-205"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "historical_return",
+      "certified_case_count": 1,
+      "case_ids": [
+        "FP81-206"
+      ],
+      "status": "CERTIFIED_LABELS_RUNTIME_DRYPLAN_BLOCKED",
+      "next_action": null,
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "entity_list",
+      "certified_case_count": 0,
+      "case_ids": [],
+      "status": "NOT_YET_CERTIFIED",
+      "next_action": "Certify independent complete labels and physical/identity/time/projection evidence before extending this slice",
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "entity_count",
+      "certified_case_count": 0,
+      "case_ids": [],
+      "status": "NOT_YET_CERTIFIED",
+      "next_action": "Certify independent complete labels and physical/identity/time/projection evidence before extending this slice",
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "ranking",
+      "certified_case_count": 0,
+      "case_ids": [],
+      "status": "NOT_YET_CERTIFIED",
+      "next_action": "Certify independent complete labels and physical/identity/time/projection evidence before extending this slice",
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    },
+    {
+      "capability": "relationship_query",
+      "certified_case_count": 0,
+      "case_ids": [],
+      "status": "NOT_YET_CERTIFIED",
+      "next_action": "Certify independent complete labels and physical/identity/time/projection evidence before extending this slice",
+      "do_not_infer": "Order grain, identity uniqueness, default projection and metric business formulas cannot be guessed"
+    }
+  ],
+  "query_shapes": {
+    "SCALAR_AGGREGATE": 14,
+    "GROUPED_AGGREGATE": 2
+  },
+  "dry_plan_expected_outcomes": {
+    "SUCCESS": 14,
+    "FAIL_CLOSED_UNSUPPORTED": 2
+  },
+  "positive_semantics_and_safe_unsupported_contracts_separate": true,
+  "limits": "A minimal certified slice exists; it does not cover every desired capability or certify source-result accuracy."
+}

@@ -1,0 +1,11 @@
+{
+  "audited_runtime_commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
+  "feature_branch": "semantic-cutover-triage-20260909t074900z",
+  "final_commit": "Commit containing this manifest",
+  "planned_subject": "cutover: audit semantic root causes and freeze readiness",
+  "draft_pr_base": "cutover-source-alias-20260909t071700z",
+  "checkpoint_status": "SEMANTIC_TRIAGE_COMPLETE",
+  "semantic_freeze_gate": "FAIL",
+  "runtime_source_changed": false,
+  "evidence": "checkpoint_report.md and validation_receipt.json"
+}

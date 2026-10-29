@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from uuid import uuid4
 
@@ -110,13 +112,35 @@ async def test_orchestrator_records_trace_summary_after_final_event():
         sessions=InMemorySessionStore(), event_store=events,
     )
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app", conversation_id="conversation",
             message_id="m1", question="你好",
         ), TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
-    recorded = await events.list_events(
-        "tenant", "user", "app", "conversation", trace_id="m1"
+    recorded_all = await events.list_events(
+        "tenant", "user", "app", "conversation", limit=500
     )
-    assert recorded[-1].event_type == SessionEventType.TRACE_SUMMARY
+    mine = [item for item in recorded_all if item.message_id == "m1"]
+    assert mine, "a replayable request must append lifecycle events"
+    # Discover the canonical trace by message id first: one external
+    # request owns exactly one request-UUID trace id.
+    trace_ids = {item.trace_id for item in mine}
+    assert len(trace_ids) == 1
+    canonical_trace = next(iter(trace_ids))
+    uuid.UUID(canonical_trace)
+    assert canonical_trace != "m1"
+    recorded = await events.list_events(
+        "tenant", "user", "app", "conversation", trace_id=canonical_trace
+    )
+    assert len(recorded) == len(mine)
+    # TRACE_SUMMARY closes the trace: it is the last event, it comes after
+    # the final insight, and it shares the request's canonical identity.
+    event_types = [item.event_type for item in recorded]
+    assert event_types[-1] == SessionEventType.TRACE_SUMMARY
+    assert SessionEventType.FINAL_INSIGHT in event_types
+    assert (
+        event_types.index(SessionEventType.FINAL_INSIGHT) < len(event_types) - 1
+    )
+    assert recorded[-1].trace_id == canonical_trace
+    assert recorded[-1].message_id == "m1"
     assert recorded[-1].payload["latency_ms"] >= 0

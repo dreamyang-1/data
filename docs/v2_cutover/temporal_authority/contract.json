@@ -1,0 +1,35 @@
+{
+  "status": "CURRENT_EXPRESSION_DATE_AUTHORITY_VERIFIED_FOR_SUPPORTED_FORMS",
+  "initial": "Explicit TIME_RANGE and legacy complete TIME_FIELD expressions supply program dates; combined range plus grain consumed fully; a field name alone cannot authorize model dates",
+  "components": "RANGE and GRAIN are recomputed from current edit evidence after existing handle/authority/type checks. CLEAR/ANCHOR retain native rules, versions and dependencies.",
+  "comparison": "Explicit baseline dates derive from current comparison mention; PREVIOUS_YEAR/PREVIOUS_PERIOD keep existing deterministic calendar arithmetic",
+  "clock": "Existing business Asia/Shanghai clock, injected aware time; internal UTC instants; no history-derived now",
+  "literal_interval": "Two aware ISO endpoints separated by 至 with explicit exclusive-end marker; ordered/nonempty required",
+  "bounded_grammar": {
+    "assignment_prefixes": [
+      "设置为",
+      "换成",
+      "改为",
+      "改成",
+      "设为"
+    ],
+    "range_grain_separator": "按 once",
+    "comparison_prefix": "与 once",
+    "comparison_suffixes": [
+      "比较变化率",
+      "比较差值",
+      "比较"
+    ],
+    "counterexamples": "Embedded negation, repeated edit cues, unsupported qualifiers, alternatives, non-aware/reversed intervals, conflicting grains remain rejected"
+  },
+  "limits": [
+    "Unsupported date grammar fails closed; this does not claim every natural-language temporal form is recognized",
+    "Legacy TIME_FIELD compatibility retains the existing scoped time-field selection; semantic anchor-role/catalog selection quality is still a separate acceptance axis",
+    "No new fiscal calendar, watermark, system-default period, comparison rule inference or production route"
+  ],
+  "prompt_changes": 0,
+  "regex_changes": 0,
+  "public_API_changes": 0,
+  "model_default_changed": false,
+  "V1_routing_changed": false
+}

@@ -8,6 +8,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SERVICE_BUNDLE_ROOT = (
+    PROJECT_ROOT
+    if (PROJECT_ROOT / "Oagnet").is_dir() and (PROJECT_ROOT / "sql-translator").is_dir()
+    else PROJECT_ROOT.parent
+)
 PLATFORM_ENV = PROJECT_ROOT.parent / ".env"
 SHARED_PROJECT_ENV = PROJECT_ROOT.parent / "New_Agent" / ".env"
 
@@ -25,6 +30,38 @@ class Settings(BaseSettings):
     adapter_mode: Literal["mock", "http"] = "mock"
     redis_url: str | None = None
     session_store_mode: Literal["memory", "redis"] = "redis"
+    # The public service stays on V1 unless an operator selects the bounded
+    # candidate at process startup.  Request content can never change this.
+    runtime_mode: Literal[
+        "V1", "V2_LIMITED_SCALAR", "V2_CONTEXT_V1_EXECUTION"
+    ] = "V1"
+    # Explicit demo-only recovery behavior for the V2-context/V1-execution
+    # bridge.  The default remains disabled so normal production behavior and
+    # fail-closed execution-scope handling are unchanged.
+    demo_mode: bool = False
+    surface_asl_execution_enabled: bool = False
+    # Internal two-stage capability catalog; never changes API or semantic scope.
+    analysis_tool_catalog_enabled: bool = True
+    # Public thinking/progress text uses the same SSE ``message_chunk``
+    # contract as the final answer.  These settings control presentation only;
+    # model, ASL and SQL stages continue to consume complete validated values.
+    thinking_stream_chunk_size: int = Field(default=1, ge=1, le=64)
+    thinking_stream_max_chunks: int = Field(default=120, ge=1, le=1000)
+    thinking_stream_chunk_interval_seconds: float = Field(default=0.03, ge=0, le=0.2)
+    # A protocol-only ``updata_state`` heartbeat keeps the HTTP connection
+    # alive, but the platform does not render it as changing progress.  Emit an
+    # existing ``message_chunk`` stage marker at this interval while a long
+    # semantic/model/tool call has no new milestone.
+    thinking_stream_heartbeat_seconds: float = Field(default=1.0, ge=0.05, le=30)
+    # Stream structured recognition responses internally so the transport can
+    # publish real model-start milestones without weakening final JSON/schema
+    # validation. The complete payload is still assembled and validated before
+    # it can affect semantic state or execution.
+    intent_model_stream_enabled: bool = True
+    # Source tree for the existing semantic-catalog authority used by the
+    # context-only bridge.  It is read on each request and is independent of
+    # the Limited Scalar publication/pin configuration below.
+    context_catalog_root: Path = SERVICE_BUNDLE_ROOT / "Oagnet"
     # v2 separates fingerprint-aware idempotency records from pre-upgrade Redis
     # values that cannot prove which request payload produced a cached response.
     session_key_prefix: str = "youo:data-analysis:v2"
@@ -36,19 +73,69 @@ class Settings(BaseSettings):
     # Keep the idempotency record at least as long as the pending conversation.
     # Session stores enforce max(response_cache_ttl, session_ttl) as a second guard.
     response_cache_ttl_seconds: int = Field(default=7200, ge=300, le=86400)
+    # V2 limited-scalar deployment settings are deliberately separate from the
+    # V1 session namespace.  Empty identity/pins are valid while runtime_mode is
+    # V1 and are rejected by the V2 builder before it opens any dependency.
+    limited_scalar_store_namespace: str = ""
+    limited_scalar_deployment_id: str = ""
+    limited_scalar_session_ttl_seconds: int = Field(default=86400, ge=300, le=604800)
+    limited_scalar_idempotency_ttl_seconds: int = Field(default=604800, ge=300, le=2592000)
+    limited_scalar_running_review_seconds: int = Field(default=300, ge=30, le=86400)
+    limited_scalar_max_messages_per_session: int = Field(default=100, ge=1, le=1000)
+    limited_scalar_max_envelope_bytes: int = Field(default=4 * 1024 * 1024, ge=65536, le=32 * 1024 * 1024)
+    # BaseSettings reads scalar environment variables as text. Keep the
+    # positive-integer constraint while allowing the normal ``KEY=81``
+    # deployment representation. ChatRequest enforces request strictness.
+    limited_scalar_semantic_model_id: int = Field(default=81, gt=0)
+    limited_scalar_business_domain_ids: list[int] = Field(default_factory=lambda: [205])
+    limited_scalar_data_source_id: int = Field(default=58, gt=0)
+    limited_scalar_catalog_version: str = ""
+    limited_scalar_vector_index_version: str = ""
+    limited_scalar_catalog_target_identity_hash: str = ""
+    # The internal 8088 context trial may pin a fresh authoritative catalog
+    # snapshot in process memory.  It never creates or changes a Milvus
+    # collection.  The normal deployment path continues to require PUBLISHED.
+    limited_scalar_catalog_access: Literal[
+        "PUBLISHED", "LIVE_READ_ONLY_SNAPSHOT"
+    ] = "PUBLISHED"
+    limited_scalar_oagnet_root: Path = SERVICE_BUNDLE_ROOT / "Oagnet"
+    limited_scalar_sql_translator_root: Path = SERVICE_BUNDLE_ROOT / "sql-translator"
+    limited_scalar_oagnet_source_digest: str = ""
+    limited_scalar_sql_source_digest: str = ""
+    # Non-secret fingerprint of the approved execution target (driver, host,
+    # port, database, schema and account identity).  The password is excluded.
+    limited_scalar_data_source_target_digest: str = ""
+    limited_scalar_readiness_cache_seconds: float = Field(default=5, ge=1, le=30)
+    limited_scalar_cancellation_cleanup_seconds: float = Field(default=2, ge=0.1, le=10)
+    limited_scalar_time_field_canonical_id: str = ""
+    limited_scalar_time_field_mapping: str = "sales_order.created_date"
+    limited_scalar_time_field_id: int = Field(default=24400, gt=0)
+    limited_scalar_time_table_id: int = Field(default=1880, gt=0)
+    limited_scalar_time_storage_timezone: str = "Asia/Shanghai"
+    limited_scalar_time_evidence_version: str = "round59-user-declaration-beijing-v1"
     allow_missing_trusted_identity_headers: bool = False
     require_trusted_application_header: bool = False
     max_clarification_rounds: int = Field(default=3, ge=1, le=10)
-    # End-to-end budget. Oagnet performs one constrained LLM generation and can
-    # legitimately take longer than an ordinary HTTP dependency. Keep its own
-    # budget below this value so orchestration still has time to terminate and
-    # persist an idempotent response.
-    request_timeout_seconds: float = Field(default=120, gt=0, le=300)
+    # Individual dependency and duplicate-request coordination only; no answer deadline.
+    message_execution_lease_seconds: int = Field(default=305, gt=0)
+    duplicate_request_wait_seconds: float = Field(default=300, gt=0)
+    # 集中日志配置（app/logging_config.setup_logging 消费）。log_file 为空时
+    # 只写 stdout（systemd/journald 抓取）；非空时启用按大小轮转的文件输出。
+    log_level: str = Field(default="INFO")
+    log_file: str = Field(default="")
+    log_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
+    log_backup_count: int = Field(default=5, ge=0, le=100)
     business_question_collection_enabled: bool = True
     business_question_document_path: Path = PROJECT_ROOT / "实际业务问题.md"
     dynamic_skills_enabled: bool = True
     autonomous_tool_selection_enabled: bool = True
     autonomous_tool_selection_max_tools: int = Field(default=3, ge=1, le=5)
+    # Platform-configured MCP services may act as the primary executor only
+    # for a request that carries an uploaded file and exposes at least one
+    # file-analysis tool.  All ordinary semantic/SQL requests keep the V1
+    # execution path unchanged.
+    mcp_file_analysis_enabled: bool = True
+    mcp_file_analysis_max_turns: int = Field(default=8, ge=1, le=20)
     bocha_api_key: SecretStr | None = Field(
         default=None,
         validation_alias=AliasChoices("DATA_AGENT_BOCHA_KEY", "BOCHA_KEY"),
@@ -60,13 +147,15 @@ class Settings(BaseSettings):
             "BOCHA_SEARCH_URL",
         ),
     )
-    bocha_search_timeout_seconds: int = Field(default=10, ge=1, le=60)
     skills_root: Path = PROJECT_ROOT.parent / "NL_Agent" / "skills"
     skill_max_bytes: int = Field(default=128 * 1024, ge=1024, le=1024 * 1024)
     # Metric definition and lineage are exposed by the same semantic SQL
     # service that translates/executes ASL; keep one platform dependency rather
     # than pointing metadata intents at a non-existent standalone service.
     semantic_base_url: str = "http://192.168.1.49:48000"
+    # 平台 semantic_model.semantic_desc_file_url 的可信下载源；不再按ID拼接文件名。
+    semantic_description_base_url: str = "http://192.168.1.49:8012"
+    semantic_description_max_bytes: int = Field(default=1024 * 1024, ge=1024, le=8 * 1024 * 1024)
     policy_base_url: str = "http://localhost:8102"
     policy_authorize_path: str = "/v1/authorize"
     analysis_base_url: str = "http://localhost:8104"
@@ -76,13 +165,11 @@ class Settings(BaseSettings):
     # it is sent to the data source.
     asl_generator_base_url: str = "http://192.168.1.27:8021"
     asl_generator_path: str = "/agent/query"
-    asl_generation_timeout_seconds: float = Field(default=90, gt=0, le=180)
     asl_plan_cache_ttl_seconds: int = Field(default=300, ge=0, le=3600)
     asl_plan_cache_max_items: int = Field(default=256, ge=0, le=2048)
     question_rewrite_enabled: bool = True
     entity_attribute_search_path: str = "/vector/entity-attributes/search"
     semantic_display_resolve_path: str = "/vector/semantic-elements/resolve"
-    question_rewrite_timeout_seconds: float = Field(default=3.0, gt=0, le=15)
     question_rewrite_top_k: int = Field(default=5, ge=1, le=20)
     question_rewrite_search_threshold: float = Field(default=0.70, ge=0, le=1)
     question_rewrite_auto_threshold: float = Field(default=0.88, ge=0, le=1)
@@ -100,8 +187,10 @@ class Settings(BaseSettings):
         ),
     )
     knowledge_base_search_path: str = "/knowledge_base/search_docs"
-    knowledge_base_timeout_seconds: float = Field(default=30, gt=0, le=300)
     platform_api_key: SecretStr | None = None
+    # Matches the business backend's existing Authorization: Bearer authKey
+    # transport. It authenticates the service caller, never computes user ACLs.
+    trusted_backend_token: SecretStr | None = None
     http_max_retries: int = Field(default=2, ge=0, le=5)
     http_retry_backoff_seconds: float = Field(default=0.2, ge=0, le=5)
     semantic_resolve_path: str = "/v1/semantic/metrics/resolve"
@@ -129,27 +218,100 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("DATA_AGENT_INTENT_MODEL_API_KEY", "API_KEY"),
     )
-    intent_model_name: str = "qwen3.6-plus"
+    intent_model_name: str = "qwen3.7-max"
+    # V2 对话状态识别专用模型；不配置时回退 intent_model_name。
+    # 识别调用每轮必发且 prompt 随核心指令变长，可以用更快的型号压首屏时延。
+    v2_recognition_model_name: str | None = None
+    # 结构化参数提取单独使用的模型，不配置时回退 intent_model_*。
+    # 只影响任务参数提取这一处调用，意图识别、复合问题判断保持原模型。
+    extraction_model_base_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_EXTRACTION_MODEL_BASE_URL", "EXTRACTION_MODEL_BASE_URL"
+        ),
+    )
+    extraction_model_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_EXTRACTION_MODEL_API_KEY", "EXTRACTION_MODEL_API_KEY"
+        ),
+    )
+    extraction_model_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_EXTRACTION_MODEL_NAME", "EXTRACTION_MODEL_NAME"
+        ),
+    )
+    # 网关协议：openai 走 /chat/completions；workflow_chat 走平台
+    # /chat/workflow_chat（返回 SSE 形式的 answer 文本）
+    extraction_model_protocol: Literal["openai", "workflow_chat"] = Field(
+        default="openai",
+        validation_alias=AliasChoices(
+            "DATA_AGENT_EXTRACTION_MODEL_PROTOCOL", "EXTRACTION_MODEL_PROTOCOL"
+        ),
+    )
     intent_model_response_format: Literal["json_schema", "json_object"] = "json_object"
-    intent_model_timeout_seconds: float = Field(default=30, gt=0, le=60)
     intent_model_max_retries: int = Field(default=1, ge=0, le=2)
+    # 挂起分诊只判一次"是不是原话题的回复"，不该占满整个意图模型预算；
+    # 超时按新话题兜底，走正常新问流程。
     intent_model_enable_thinking: bool = False
     intent_model_min_confidence: float = Field(default=0.80, ge=0.5, le=1)
+    # 接入点A澄清判定开关：开启后规划前先经 app/clarification 判定
+    # （NEW_TASK/COMPLETE/CLARIFY），判定异常时降级为原流程，不阻断本轮
+    clarification_decider_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_CLARIFICATION_DECIDER_ENABLED",
+            "CLARIFICATION_DECIDER_ENABLED",
+        ),
+    )
+    # jev 决策模型（TypeSafe SystemOne）：门控判定与状态识别共用。
+    # 出网走本机反向隧道，可用性随隧道波动，调用失败一律静默回退原判定。
+    jev_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("DATA_AGENT_JEV_ENABLED", "JEV_ENABLED"),
+    )
+    jev_relation_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_JEV_RELATION_ENABLED",
+            "DATA_AGENT_JEV_STATE_SHADOW_ENABLED",
+            "JEV_RELATION_ENABLED",
+        ),
+    )
+    jev_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATA_AGENT_JEV_API_KEY", "JEV_API_KEY"),
+    )
+    jev_model: str = "jev-1.13.0"
+    jev_base_url: str = "https://api.typesafe.ai/v1/systemone"
+    # 空串=直连；默认指向 Windows 侧自由猫的 SSH 反向隧道入口
+    jev_proxy: str = "http://127.0.0.1:17890"
+    jev_min_confidence: float = Field(default=0.8, ge=0, le=1)
+    # 问题理解与补全前置门控：进理解节点前先按门控提示词判定六分类，
+    # 闲聊/危险/非业务/待定短路回复，业务类放行。默认关闭。判定模型由
+    # gate_judge 选择：jev 为结构化选项判定，失败、低置信、危险复核时
+    # 回退 qwen 全提示词；qwen 为直接使用全提示词判定。
+    gate_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("DATA_AGENT_GATE_ENABLED", "GATE_ENABLED"),
+    )
+    gate_judge: str = Field(
+        default="jev",
+        validation_alias=AliasChoices("DATA_AGENT_GATE_JUDGE", "GATE_JUDGE"),
+    )
+    # 门控语义规范按 model_id 拉取后的进程内缓存时长，避免每轮请求都查库下载
+    gate_spec_cache_seconds: int = Field(default=300, ge=30, le=3600)
     multi_question_enabled: bool = True
     multi_question_model_enabled: bool = True
     multi_question_max_tasks: int = Field(default=5, ge=2, le=5)
-    multi_question_model_timeout_seconds: float = Field(default=15, gt=0, le=30)
     # Qwen only verbalizes facts already produced by the deterministic analysis
     # engine. Its output is evidence-validated and safely falls back to the
     # deterministic answer when unavailable or ungrounded.
     analysis_synthesis_enabled: bool = True
-    analysis_synthesis_model_name: str = "qwen3.6-plus"
-    analysis_synthesis_timeout_seconds: float = Field(default=8, gt=0, le=20)
+    analysis_synthesis_model_name: str = "qwen3.7-max"
     analysis_synthesis_max_retries: int = Field(default=0, ge=0, le=1)
-    chat_model_enabled: bool = True
-    chat_model_name: str = "qwen3.6-plus"
-    chat_model_timeout_seconds: float = Field(default=8, gt=0, le=20)
-    chat_model_max_retries: int = Field(default=0, ge=0, le=1)
+    analysis_synthesis_validation_retries: int = Field(default=1, ge=0, le=1)
     # Optional Langfuse export. Content is hash/shape-only unless the explicit
     # capture flag is enabled; tests never export even when developer env files
     # contain shared Langfuse credentials.
@@ -243,8 +405,54 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DATA_AGENT_MYSQL_DATABASE", "MYSQL_DATABASE"),
     )
     mysql_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
-    mysql_read_timeout_seconds: int = Field(default=10, ge=1, le=60)
-    mysql_write_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    # ---------- 语义建模推荐接口（只读） ----------
+    # 元数据库：实体/关系推荐查询物理表、字段与实体关系配置（info_sec_kb_v3）。
+    metadata_mysql_host: str = Field(
+        default="192.168.1.223",
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_HOST", "METADATA_MYSQL_HOST"
+        ),
+    )
+    metadata_mysql_port: int = Field(
+        default=3306,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_PORT", "METADATA_MYSQL_PORT"
+        ),
+    )
+    metadata_mysql_user: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_USER", "METADATA_MYSQL_USER"
+        ),
+    )
+    metadata_mysql_password: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_PASSWORD", "METADATA_MYSQL_PASSWORD"
+        ),
+    )
+    metadata_mysql_database: str = Field(
+        default="info_sec_kb_v3",
+        validation_alias=AliasChoices(
+            "DATA_AGENT_METADATA_MYSQL_DATABASE", "METADATA_MYSQL_DATABASE"
+        ),
+    )
+    metadata_mysql_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
+    # 大模型增强走 49 网关 /chat/workflow_chat（与 Java langchain.base-url 同一入口），
+    # 鉴权 key 同 Java 的 langchain.auth-key；超时/异常静默降级为纯规则推荐。
+    semantic_recommend_llm_enabled: bool = True
+    model_gateway_base_url: str = "http://192.168.1.49:7873"
+    model_gateway_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATA_AGENT_MODEL_GATEWAY_API_KEY"),
+    )
+    # 必须是 49 网关 LLM_MODELS 支持的模型名；qwen3-max 不在列表，
+    # 网关会静默返回空答案导致 LLM 增强失效（2026-10-14 修正）。
+    model_gateway_model_name: str = "qwen3.7-max"
+    platform_upload_reference_resolution_enabled: bool = True
+    platform_upload_reference_max_age_seconds: int = Field(
+        default=600, ge=30, le=3600
+    )
     minio_dataset_enabled: bool = False
     minio_endpoint: str | None = Field(
         default=None,

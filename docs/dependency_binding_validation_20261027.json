@@ -1,0 +1,184 @@
+{
+  "date": "2026-10-27",
+  "status": "ORIGINAL_CASE_VERIFIED_WITH_REGRESSION_BLOCKERS",
+  "root_cause": {
+    "confidence": "PROVEN",
+    "findings": [
+      "Task dependencies were correct, but execution re-parsed task prose and selected the hospital family before the salesperson in one wording.",
+      "The extractor can name a requested display field while SQL exposes its exact physical field under a grouping label; that executed identity was not persisted."
+    ]
+  },
+  "change": [
+    "Planning boundaries and PLANNING_PROMPT remain unchanged. PARAMETER_PROMPT declares predecessor source bindings.",
+    "Query dependencies use declared task/column references; execution no longer guesses references or join-key families from question or answer prose.",
+    "Successful Oagnet bindings carry display-slot physical identity through the query result and calculations; only fields actually projected by SQL can match.",
+    "Distinct physical IDs/codes remain separate regardless of equal values or similar labels. Existing authorization and dataset completeness checks remain."
+  ],
+  "files": [
+    "app/planning/task_plan_stages.py",
+    "app/planning/task_dag.py",
+    "app/planning/calculation_bindings.py",
+    "app/planning/compound_question.py",
+    "app/services/orchestrator.py",
+    "tests/business_question_regression.json",
+    "tests/test_dependency_pronoun_handoff.py",
+    "tests/test_dependency_query_contract.py",
+    "tests/test_catalog_planning_conditions.py",
+    "tests/test_complex_execution_correctness.py",
+    "tests/test_planning_delivery_contract.py",
+    "tests/test_user_calculation_scenarios.py",
+    "tests/test_dependency_foundation_e2e.py",
+    "tests/test_task_dag.py",
+    "tests/test_composite_surface_execution.py",
+    "app/adapters/asl_notices.py",
+    "Oagnet/structured_binding.py",
+    "app/planning/query_dependency_bindings.py",
+    "tests/test_declared_dependency_binding.py",
+    "Oagnet/tests/test_projection_binding_provenance.py"
+  ],
+  "tests": {
+    "local_baseline": {
+      "tests": 6602,
+      "failures": 277,
+      "errors": 7,
+      "skipped": 0,
+      "passed": 6318
+    },
+    "local_final": {
+      "tests": 6612,
+      "failures": 277,
+      "errors": 7,
+      "skipped": 0,
+      "passed": 6328
+    },
+    "local_new_regressions": [],
+    "server_metadata_baseline": {
+      "tests": 480,
+      "failures": 160,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 320
+    },
+    "server_metadata_candidate": {
+      "tests": 498,
+      "failures": 160,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 338
+    },
+    "oagnet_baseline": {
+      "tests": 108,
+      "failures": 8,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 100
+    },
+    "oagnet_candidate": {
+      "tests": 110,
+      "failures": 8,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 102
+    },
+    "new_binding_tests_passed": 15,
+    "new_oagnet_tests_passed": 2,
+    "stale_test_classification": "STALE_TEST: assertions for removed prose-guessing helpers now exercise explicit bindings; five helper-only cases were removed. Pronoun cases retain dependency execution coverage.",
+    "index_verification": "61 passed and 4 failed because HEAD already imports an untracked dag_recovery module; 2 new Oagnet tests passed. This repository defect predates this change."
+  },
+  "original_case": {
+    "normal_entry": true,
+    "actual_model": true,
+    "scope_preserved": true,
+    "two_tasks_executed": true,
+    "sql_uses_actual_predecessor_code": true,
+    "hospital_and_year_preserved": true,
+    "complete_product_attachment": true,
+    "unit_present": true,
+    "no_report_description_sheet": true,
+    "stage_order_preserved": true,
+    "source_watermark_disclosed": true
+  },
+  "business_regression": {
+    "bounded_concurrency": 2,
+    "independent_sessions": true,
+    "cases": [
+      {
+        "id": "huashan_sales_products",
+        "state": "PASS"
+      },
+      {
+        "id": "company_top5",
+        "state": "FAIL",
+        "reason": "HTTP 500 in compound intent judgment, before task parameter extraction."
+      },
+      {
+        "id": "hospital_sales_products",
+        "state": "FAIL",
+        "reason": "HTTP 500 in compound intent judgment, before task parameter extraction."
+      },
+      {
+        "id": "shanghai_three_dealers_products",
+        "state": "FAIL",
+        "reason": "First turn fails compound judgment; follow-up has no completed predecessor. COMPLETED response is clarification, not a valid result."
+      },
+      {
+        "id": "shanghai_coverage",
+        "state": "CONTENT_ISSUE",
+        "reason": "Existing extra dealer grouping and inconsistent numeric/percentage narrative remain."
+      },
+      {
+        "id": "semantic_entities",
+        "state": "EXECUTION_PASS",
+        "reason": "Definitions returned without SQL."
+      },
+      {
+        "id": "orthopedics",
+        "state": "EXECUTION_PASS",
+        "reason": "Query and measures returned; default time scope still applies."
+      },
+      {
+        "id": "longest_cooperation",
+        "state": "EXECUTION_PASS"
+      },
+      {
+        "id": "cooperation_over_three_months",
+        "state": "CONTENT_ISSUE",
+        "reason": "Threshold query executes; completeness narrative treats a limited result as all dealers."
+      },
+      {
+        "id": "dealer_duration_exact",
+        "state": "CONTENT_ISSUE",
+        "reason": "Threshold query executes; complete-data and row-limit descriptions contradict each other."
+      },
+      {
+        "id": "dealer_duration_recent",
+        "state": "CONTENT_ISSUE",
+        "reason": "Threshold query executes; completeness narrative overstates coverage."
+      },
+      {
+        "id": "supplier_first_cooperation",
+        "state": "CONTENT_ISSUE",
+        "reason": "Date and duration returned, but table contains all dealers instead of only longest-cooperation winners."
+      }
+    ],
+    "recommendation_probe": "Historical model/entity request now returns entity type does not exist; recommendation behavior is not verified.",
+    "unverified": "Other relation cases lack complete original entity/scope; publication requires a separate write operation; receivables case lacks original application context."
+  },
+  "deployment": {
+    "merged_own_hunks_only": true,
+    "config_preserved": true,
+    "services_restarted": [
+      "DataAnalysis_Agent",
+      "Oagnet"
+    ],
+    "health_http_200": true,
+    "concurrent_changes_preserved": "Server analysis routing changes were merged around and preserved; compound-judgment failures occur in that unchanged route.",
+    "no_semantic_or_business_data_writes": true
+  },
+  "review": {
+    "old_runtime_guessing_deleted": true,
+    "no_cross_identity_value_matching": true,
+    "no_unrelated_dirty_files_staged": true,
+    "release_claim": "Original dependency bug verified. Historical business behavior and repository baseline are not fully passing."
+  }
+}

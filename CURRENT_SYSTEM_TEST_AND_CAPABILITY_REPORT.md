@@ -1058,3 +1058,24 @@ XLSX/DOCX/PDF真实导出：全部成功
 - 单个显式业务域继续作为严格检索范围传给Oagnet；多个显式ID会进入语义模型全域路由，并在响应中完整回显请求范围。跨域SQL是否成立仍以语义层关系配置为准。
 - 所有响应（包括澄清和兜底）新增`semantic_model_id`、`requested_business_domain_ids`和`business_domain_selection_mode`，便于后端确认路由方式。
 - 自动化回归结果：`540 passed, 1 warning`；真实8088接口验证未传业务域时返回`business_domain_selection_mode=AUTO`且正确回显`semantic_model_id=8`。
+
+---
+
+## 2026-09-15 V2 Context → V1 Execution 第二阶段
+
+生产主线继续使用 `V2_CONTEXT_V1_EXECUTION`，纯 V2 执行扩展保持暂停。本阶段新增
+内部 `SemanticDecision` 合同，统一保存对话状态、原始/完整问题、逐任务意图、指标、
+维度、字段、筛选、时间、业务对象、任务依赖、Semantic Scope 证明及澄清/降级原因。
+
+当 V2 已生成完整且属于当前授权目录的单任务计划时，V1 不再重复调用问题改写模型和
+意图识别模型，直接进入已有安全校验与执行链。计划不完整、不支持、低置信、Scope
+不一致或无法满足 V1 执行合同时，系统记录明确原因并恢复原有 V1 语义链，不改变当前
+用户可见输出格式和业务执行结果。
+
+详细合同、降级原因及验证方法见
+[`docs/bridge_phase2/semantic_decision_contract.md`](docs/bridge_phase2/semantic_decision_contract.md)。
+
+本阶段专项测试 `121 passed`，冻结关键集合 `159 passed`；全量离线回归
+`3881 passed / 91 existing failed / 0 collection errors`，与第一阶段基线相比没有新增
+失败节点。8088 已验证 V2 合同直通、明确 V1 降级和两任务拆分三类场景均能完成；
+直通场景的真实性能轨迹不再包含 V1 问题改写、意图识别和任务拆分模型调用。

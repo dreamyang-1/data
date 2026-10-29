@@ -1,0 +1,65 @@
+{
+  "metric_operations:ADD": {
+    "passed": 1,
+    "denominator": 1,
+    "cases": [
+      "S81-001"
+    ]
+  },
+  "metric_operations:REPLACE": {
+    "passed": 1,
+    "denominator": 1,
+    "cases": [
+      "S81-002"
+    ]
+  },
+  "metric_operations:REMOVE": {
+    "passed": 1,
+    "denominator": 1,
+    "cases": [
+      "S81-003"
+    ]
+  },
+  "region_operations:REPLACE": {
+    "passed": 0,
+    "denominator": 1,
+    "cases": [
+      "S81-006"
+    ]
+  },
+  "region_operations:ADD": {
+    "passed": 1,
+    "denominator": 1,
+    "cases": [
+      "S81-007"
+    ]
+  },
+  "region_operations:REMOVE": {
+    "passed": 0,
+    "denominator": 1,
+    "cases": [
+      "S81-008"
+    ]
+  },
+  "dimension_operations:ADD": {
+    "passed": 0,
+    "denominator": 1,
+    "cases": [
+      "S81-011"
+    ]
+  },
+  "dimension_operations:REPLACE": {
+    "passed": 1,
+    "denominator": 1,
+    "cases": [
+      "S81-012"
+    ]
+  },
+  "dimension_operations:REMOVE": {
+    "passed": 0,
+    "denominator": 1,
+    "cases": [
+      "S81-013"
+    ]
+  }
+}

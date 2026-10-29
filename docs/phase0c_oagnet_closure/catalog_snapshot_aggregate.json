@@ -1,0 +1,18 @@
+{
+  "evidence_kind": "LOCAL_CHROMA_SNAPSHOT_NOT_DEPLOYED_MILVUS",
+  "read_only": true,
+  "snapshot_rows_sha256": "c77af495111b85b97446f83d4e9ac6d841b763d1f7516c853db5b2e0fdc05916",
+  "record_count": 1836,
+  "shared_record_type_counts": {
+    "dimension": 66,
+    "enum": 70
+  },
+  "explicit_dimension_projection_count": 0,
+  "entity_records_with_governed_id": 0,
+  "entity_records_total": 126,
+  "dimensions_with_opaque_rules": 26,
+  "dimensions_with_hierarchy": 5,
+  "requires_catalog_republication": true,
+  "deployment_gate": "UNKNOWN",
+  "sensitive_records_exported": 0
+}

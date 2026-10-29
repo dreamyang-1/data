@@ -1,0 +1,133 @@
+{
+  "runtime_files": [
+    {
+      "service": "Agent",
+      "path": "app/adapters/http.py",
+      "git_path": "app/adapters/http.py",
+      "source_sha256": "725c6cb0c21166846b2202b5772688f9d43cc9dd1a2cfc1fcadf143b456f3a9b",
+      "git_sha256": "9539ab0a3a6b0d1d736c64b5121dea304dab644537d35dfc24ef7f593bb3b8d6",
+      "dev_sha256": "9539ab0a3a6b0d1d736c64b5121dea304dab644537d35dfc24ef7f593bb3b8d6",
+      "release_sha256": "9539ab0a3a6b0d1d736c64b5121dea304dab644537d35dfc24ef7f593bb3b8d6",
+      "preserves_remote_changes": false
+    },
+    {
+      "service": "Agent",
+      "path": "app/planning/task_plan_stages.py",
+      "git_path": "app/planning/task_plan_stages.py",
+      "source_sha256": "9129ed4d81f7f1e3a4ce24706586666ab7bf83e852e2fc92f02131632267a815",
+      "git_sha256": "07e57c5deb499d0048a28c22f84278a294f3962509514127ee0cd795a4a1f251",
+      "dev_sha256": "07e57c5deb499d0048a28c22f84278a294f3962509514127ee0cd795a4a1f251",
+      "release_sha256": "07e57c5deb499d0048a28c22f84278a294f3962509514127ee0cd795a4a1f251",
+      "preserves_remote_changes": false
+    },
+    {
+      "service": "Agent",
+      "path": "app/planning/task_dag.py",
+      "git_path": "app/planning/task_dag.py",
+      "source_sha256": "26bc320a448a378c2c0892683008264337468a096743a64a4b7ac7bb1c8b0893",
+      "git_sha256": "75e6fedd7fef5477ca9f3d645f4f3feb92476aacf97196e1a13246e758184139",
+      "dev_sha256": "75e6fedd7fef5477ca9f3d645f4f3feb92476aacf97196e1a13246e758184139",
+      "release_sha256": "75e6fedd7fef5477ca9f3d645f4f3feb92476aacf97196e1a13246e758184139",
+      "preserves_remote_changes": false
+    },
+    {
+      "service": "Agent",
+      "path": "app/planning/compound_question.py",
+      "git_path": "app/planning/compound_question.py",
+      "source_sha256": "b276acbcfebe0fab6e0ccf8ef9fbef364f2667ae7d37944874dde5ff2ef95ab8",
+      "git_sha256": "0db587c3601f08a41273aab9e785c9b134de004965d7e1a85e490ea3b62ec8a3",
+      "dev_sha256": "0db587c3601f08a41273aab9e785c9b134de004965d7e1a85e490ea3b62ec8a3",
+      "release_sha256": "0db587c3601f08a41273aab9e785c9b134de004965d7e1a85e490ea3b62ec8a3",
+      "preserves_remote_changes": false
+    },
+    {
+      "service": "Agent",
+      "path": "app/planning/dependency_contract.py",
+      "git_path": "app/planning/dependency_contract.py",
+      "source_sha256": "1de10457062ca48852c9fa034f09a6297980a95fff5b582f8ea5e83ca3eb1aba",
+      "git_sha256": "6c3548f09f8e9414f626777e242a21853c9a15724666757eee23226a1379e5e9",
+      "dev_sha256": "6c3548f09f8e9414f626777e242a21853c9a15724666757eee23226a1379e5e9",
+      "release_sha256": "6c3548f09f8e9414f626777e242a21853c9a15724666757eee23226a1379e5e9",
+      "preserves_remote_changes": false
+    },
+    {
+      "service": "Agent",
+      "path": "app/services/orchestrator.py",
+      "git_path": "app/services/orchestrator.py",
+      "source_sha256": "f54bc4eebb4089f20ae181b6f435c6f60fb67c48e7722f9e9e04f5d4ea0dc40d",
+      "git_sha256": "fd171b37f1f92eabe56041cdfd274292b71b84c5698737ca70720ddb3714f15f",
+      "dev_sha256": "fd171b37f1f92eabe56041cdfd274292b71b84c5698737ca70720ddb3714f15f",
+      "release_sha256": "3ae4c2afbbe28879ad220fa5ac39b25e6cfe134ed7e0b31faa77bd787c5d5d42",
+      "preserves_remote_changes": true
+    },
+    {
+      "service": "Agent",
+      "path": "app/services/intent_asl_contract.py",
+      "git_path": "app/services/intent_asl_contract.py",
+      "source_sha256": "c874282eb443922fbed33904f7e1ca91dbceb9cea09cc91abe69a92ed54d56b5",
+      "git_sha256": "32f3f3f6caf09fdae19b9d3d7bc79be2519c235d14ec46ae823a704e6ab59ae3",
+      "dev_sha256": "32f3f3f6caf09fdae19b9d3d7bc79be2519c235d14ec46ae823a704e6ab59ae3",
+      "release_sha256": "32f3f3f6caf09fdae19b9d3d7bc79be2519c235d14ec46ae823a704e6ab59ae3",
+      "preserves_remote_changes": false
+    },
+    {
+      "service": "Agent",
+      "path": "app/services/computation_delivery.py",
+      "git_path": "app/services/computation_delivery.py",
+      "source_sha256": "07164bcfd6101202b29ac25a6d5d3736d8ca80b5ce67fa4de9ec39ee56d49222",
+      "git_sha256": "bcba4179df4dd2207f1d39079b13d7d85256f27f4f89006c295a7ad1c06baac2",
+      "dev_sha256": "bcba4179df4dd2207f1d39079b13d7d85256f27f4f89006c295a7ad1c06baac2",
+      "release_sha256": "bcba4179df4dd2207f1d39079b13d7d85256f27f4f89006c295a7ad1c06baac2",
+      "preserves_remote_changes": false
+    },
+    {
+      "service": "Agent",
+      "path": "app/analysis/synthesis.py",
+      "git_path": "app/analysis/synthesis.py",
+      "source_sha256": "a0056b8b45453a1cf133878b88ed463ce9914f07e43ca3875b2c58d86daa5714",
+      "git_sha256": "1760302e3501382f7dc8483a97459da0b3f41bde39684ec5bcd59b84c5809256",
+      "dev_sha256": "1760302e3501382f7dc8483a97459da0b3f41bde39684ec5bcd59b84c5809256",
+      "release_sha256": "1760302e3501382f7dc8483a97459da0b3f41bde39684ec5bcd59b84c5809256",
+      "preserves_remote_changes": false
+    },
+    {
+      "service": "SQL",
+      "path": "sql_translator_prod.py",
+      "git_path": "sql-translator/sql_translator_prod.py",
+      "source_sha256": "c3f6588f11df0b9bdffcbd028ec13b02bec620666929e6c5c9e35d6035eff847",
+      "git_sha256": "d76d14d397aaadde104454b2f0490fe864eca06c276363323d1bdc4a4b450acd",
+      "dev_sha256": "d76d14d397aaadde104454b2f0490fe864eca06c276363323d1bdc4a4b450acd",
+      "release_sha256": "d76d14d397aaadde104454b2f0490fe864eca06c276363323d1bdc4a4b450acd",
+      "preserves_remote_changes": false
+    },
+    {
+      "service": "Oagnet",
+      "path": "agent.py",
+      "git_path": "Oagnet/agent.py",
+      "source_sha256": "b51cce84fa88875c372e518f83666b888121e98daacc34fe28e97021657a437f",
+      "git_sha256": "c96a8208d3e814f87e09785d5860ec188a33620508ade2e45a881dfccd0816a6",
+      "dev_sha256": "54663e2dd54293b13e2b8e455c8b691d0a20dd87f605ee6ff1c07d315933d3aa",
+      "release_sha256": "54663e2dd54293b13e2b8e455c8b691d0a20dd87f605ee6ff1c07d315933d3aa",
+      "preserves_remote_changes": true
+    }
+  ],
+  "new_test_files": [
+    "tests/test_catalog_planning_conditions.py",
+    "tests/test_computation_distribution.py",
+    "Oagnet/tests/test_aggregate_filter_contract.py",
+    "sql-translator/test_metric_global_filter_aggregation.py"
+  ],
+  "review": {
+    "seven_stage_order_verified": true,
+    "scope_and_vector_standardization_preserved": true,
+    "only_current_necessary_git_hunks": true,
+    "remote_changes_preserved_by_three_way_merge": true,
+    "configuration_and_credentials_excluded": true,
+    "real_business_rows_excluded": true,
+    "oagnet_changed_functions_match_development": true
+  },
+  "sync_exceptions": {
+    "Oagnet/agent.py": "Development and remote already contain frozen vector-value standardization outside the Git base. Commit only this task; six changed functions are byte-identical. The three-way release file preserves those existing changes.",
+    "app/services/orchestrator.py": "Development/Git match; release additionally preserves existing remote time and conversation changes."
+  }
+}

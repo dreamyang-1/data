@@ -1,0 +1,326 @@
+{
+  "failures": [
+    {
+      "failure_id": "PC-01",
+      "source": "PR #14 DM-A02 and current repeated boundary proofs",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "first_divergence_stage": "TURN_ADMISSION",
+      "secondary_stage": "SLOT_MERGE",
+      "failure_signature": "TURN_ADMISSION|METRIC_QUERY|CLEAR|filters.product|No referential dependency/CLEAR fact; incomplete standalone query asks for metric",
+      "history": [
+        "查询TDC-3产品销售额，2026年7月，地区上海"
+      ],
+      "current_utterance": "不限产品",
+      "expected": "Clear only product condition; preserve sales amount, July and Shanghai; later August cannot restore product",
+      "actual_before": "No referential dependency/CLEAR fact; incomplete standalone query asks for metric",
+      "status": "FIXED",
+      "repeatability": "DETERMINISTIC",
+      "evidence": [
+        "app/services/turn_admission.py::extract_current_turn_facts",
+        "app/intent/classifier.py::merge_clarification",
+        "app/services/legacy_guards.py::apply_product_clear_barrier",
+        "tests/test_product_clear_contract.py"
+      ],
+      "replays": [
+        {
+          "failure_id": "PC-01",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+          "attempt": 1,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-01",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+          "attempt": 2,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-01",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+          "attempt": 1,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-01",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u4e0d\\u9650\\u4ea7\\u54c1]",
+          "attempt": 2,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-01",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u4e0d\\u9650\\u4ea7\\u54c1]",
+          "attempt": 1,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-01",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u4e0d\\u9650\\u4ea7\\u54c1]",
+          "attempt": 2,
+          "baseline": "failed",
+          "final": "passed"
+        }
+      ]
+    },
+    {
+      "failure_id": "PC-02",
+      "source": "PR #14 DM-A02 and current repeated boundary proofs",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "first_divergence_stage": "TURN_ADMISSION",
+      "secondary_stage": "SLOT_MERGE",
+      "failure_signature": "TURN_ADMISSION|METRIC_QUERY|CLEAR|filters.product|Follow-up admitted but no product CLEAR fact; Legacy merge and verified restore keep product condition",
+      "history": [
+        "查询TDC-3产品销售额，2026年7月，地区上海"
+      ],
+      "current_utterance": "去掉产品条件",
+      "expected": "Clear only product condition; preserve sales amount, July and Shanghai; later August cannot restore product",
+      "actual_before": "Follow-up admitted but no product CLEAR fact; Legacy merge and verified restore keep product condition",
+      "status": "FIXED",
+      "repeatability": "DETERMINISTIC",
+      "evidence": [
+        "app/services/turn_admission.py::extract_current_turn_facts",
+        "app/intent/classifier.py::merge_clarification",
+        "app/services/legacy_guards.py::apply_product_clear_barrier",
+        "tests/test_product_clear_contract.py"
+      ],
+      "replays": [
+        {
+          "failure_id": "PC-02",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+          "attempt": 1,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-02",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[rule-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+          "attempt": 2,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-02",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+          "attempt": 1,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-02",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_executes_without_the_old_product[hybrid-\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+          "attempt": 2,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-02",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+          "attempt": 1,
+          "baseline": "failed",
+          "final": "passed"
+        },
+        {
+          "failure_id": "PC-02",
+          "nodeid": "tests/test_product_clear_contract.py::test_product_clear_http_payload_has_no_stale_constraint[\\u53bb\\u6389\\u4ea7\\u54c1\\u6761\\u4ef6]",
+          "attempt": 2,
+          "baseline": "failed",
+          "final": "passed"
+        }
+      ]
+    }
+  ],
+  "unique_failure_signatures": 2,
+  "root_cause_families": 1,
+  "provenance_comparison": {
+    "baseline": [
+      {
+        "question": "不限产品",
+        "raw_filters": [],
+        "raw_dimensions": [
+          "产品"
+        ],
+        "relation": "STANDALONE_NEW_TOPIC",
+        "followup_signals": [],
+        "legacy_merge_filters": [
+          {
+            "field": "业务城市",
+            "operator": "EQ",
+            "value": "上海市"
+          },
+          {
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "TDC-3"
+          }
+        ],
+        "admitted_filters": [],
+        "product_operations": []
+      },
+      {
+        "question": "去掉产品条件",
+        "raw_filters": [],
+        "raw_dimensions": [
+          "产品"
+        ],
+        "relation": "CURRENT_TOPIC_FOLLOWUP",
+        "followup_signals": [
+          "MODIFY",
+          "EXPLICIT_SLOT_CORRECTION"
+        ],
+        "legacy_merge_filters": [
+          {
+            "field": "业务城市",
+            "operator": "EQ",
+            "value": "上海市"
+          },
+          {
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "TDC-3"
+          }
+        ],
+        "admitted_filters": [
+          {
+            "field": "业务城市",
+            "operator": "EQ",
+            "value": "上海市"
+          },
+          {
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "TDC-3"
+          }
+        ],
+        "product_operations": []
+      }
+    ],
+    "final": [
+      {
+        "question": "不限产品",
+        "raw_filters": [],
+        "raw_dimensions": [
+          "产品"
+        ],
+        "relation": "CURRENT_TOPIC_FOLLOWUP",
+        "followup_signals": [
+          "CLEAR_PRODUCT_FILTER"
+        ],
+        "legacy_merge_filters": [
+          {
+            "field": "业务城市",
+            "operator": "EQ",
+            "value": "上海市"
+          }
+        ],
+        "admitted_filters": [
+          {
+            "field": "业务城市",
+            "operator": "EQ",
+            "value": "上海市"
+          }
+        ],
+        "product_operations": [
+          {
+            "slot": "product",
+            "operation": "CLEAR",
+            "old_value": [
+              {
+                "field": "商品名称",
+                "operator": "EQ",
+                "value": "TDC-3"
+              }
+            ],
+            "new_value": [],
+            "evidence_span": null,
+            "source": "CURRENT_EXPLICIT",
+            "confidence": 0.93,
+            "reason_code": "PRODUCT_INHERITANCE_BARRIER"
+          }
+        ]
+      },
+      {
+        "question": "去掉产品条件",
+        "raw_filters": [],
+        "raw_dimensions": [
+          "产品"
+        ],
+        "relation": "CURRENT_TOPIC_FOLLOWUP",
+        "followup_signals": [
+          "MODIFY",
+          "EXPLICIT_SLOT_CORRECTION",
+          "CLEAR_PRODUCT_FILTER"
+        ],
+        "legacy_merge_filters": [
+          {
+            "field": "业务城市",
+            "operator": "EQ",
+            "value": "上海市"
+          }
+        ],
+        "admitted_filters": [
+          {
+            "field": "业务城市",
+            "operator": "EQ",
+            "value": "上海市"
+          }
+        ],
+        "product_operations": [
+          {
+            "slot": "product",
+            "operation": "CLEAR",
+            "old_value": [
+              {
+                "field": "商品名称",
+                "operator": "EQ",
+                "value": "TDC-3"
+              }
+            ],
+            "new_value": [],
+            "evidence_span": null,
+            "source": "CURRENT_EXPLICIT",
+            "confidence": 0.93,
+            "reason_code": "PRODUCT_INHERITANCE_BARRIER"
+          }
+        ]
+      }
+    ]
+  },
+  "validation_boundary": "Real Rule/Hybrid classifier, deterministic QuestionRewriter and orchestrator; actual HTTP adapter stopped at offline ASL transport; no deployed catalog/model/SQL claim",
+  "review_resolutions": [
+    "Preserve grain and projection on direct Legacy merge of a complete condition clear",
+    "Use admitted explicit product filters, including lexical elliptical resolution, to reopen the barrier",
+    "Prune product semantic evidence and reindex retained bindings; keep shared literals owned by other filters",
+    "Canonical execution text also excludes the cleared product; no plan/result reuse of the old condition"
+  ],
+  "fixture_decisions": [
+    "The grouping journey uses explicit 产品/渠道 after a probe found 产品/商品 duplicate alias grouping; that separate observation is not fixed here",
+    "A temporary test edit misplaced a following-turn assertion; the fixture was corrected, not counted as a production defect"
+  ],
+  "unresolved_observations": [
+    {
+      "id": "PC-A01",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "Region additions/removals and general multi-region list parsing need independent root-cause/semantic-boundary proofs; initial journeys showed ignored additions or positive retention of removed values"
+    },
+    {
+      "id": "PC-A02",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "A product query grouped with the alternate 商品 label yielded both 产品 and 商品 in a mock journey; needs governed alias/grain evidence"
+    },
+    {
+      "id": "MG-A01",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "Broader discourse/compound commands and model-proposed typed filters retain prior evidence requirements"
+    }
+  ]
+}

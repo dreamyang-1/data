@@ -1,0 +1,54 @@
+{
+  "status": "DEPLOYED_AND_ACCEPTED",
+  "deployed_commit": "269abbafd46f65cce858b65f73a909dd3b4bf7f9",
+  "modified_runtime_files": 6,
+  "protected_configurations": 10,
+  "configurations_unchanged": true,
+  "source_fingerprints_verified": true,
+  "health": {
+    "SQL": 200,
+    "Oagnet": 200,
+    "Agent": 200,
+    "AgentLive": 200
+  },
+  "main_nodes": [
+    "意图识别",
+    "任务拆分与规划",
+    "解析校验",
+    "调度执行",
+    "结果校验",
+    "数据洞察分析",
+    "最终输出"
+  ],
+  "ranked_query": {
+    "status": "COMPLETED",
+    "task_count": 3,
+    "input_group_counts": [
+      89,
+      89
+    ],
+    "output_count": 5,
+    "identities_match_oracle": true,
+    "values_match_oracle": true,
+    "company_missing_disclosed": true
+  },
+  "analysis_query": {
+    "status": "COMPLETED",
+    "task_count": 2,
+    "query_row_counts": [
+      6
+    ],
+    "analysis_tool_completed": true,
+    "predeployment_runtime_exception_resolved": true,
+    "available_source_months": 6,
+    "month_coverage_matches_source": true
+  },
+  "legacy_asl_query": {
+    "status": "COMPLETED",
+    "group_count": 89,
+    "company_default_exclusion_removed": true,
+    "salesperson_identity_rule_preserved": true
+  },
+  "business_rows_persisted": false,
+  "signed_urls_persisted": false
+}

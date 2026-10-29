@@ -1,0 +1,41 @@
+{
+  "release": "inverse-display-20261008-112327",
+  "runtime_files": [
+    {
+      "path": "sql-translator/sql_translator_prod.py",
+      "canonical_sha256": "0e98ee75c45a3455decf5c3081072fb78ec2b93044ae301b837dd0af15f33f89",
+      "deployed_sha256": "0e98ee75c45a3455decf5c3081072fb78ec2b93044ae301b837dd0af15f33f89",
+      "previous_deployed_sha256": "687880b4736095adfe9cf03e29ec14c263f5b3d255fa26f371b1430655ebaf9c"
+    },
+    {
+      "path": "app/services/orchestrator.py",
+      "canonical_sha256": "648d75f72f3006b2673b34719bddf8e30cb38f887012beec0888adb468bdc042",
+      "deployed_sha256": "3ec48dc3e571b47ad2560b459337ccb901af857bc91b2a6a5461edec412f3c68",
+      "previous_deployed_sha256": "eb3833dc3179cb8045549cb6492f5de1933ae0edc27f7aab57c4ce60ca73f019",
+      "note": "Reviewed three-way merge preserves pre-existing remote-only changes outside this fix."
+    }
+  ],
+  "test_files": [
+    {"path": "sql-translator/test_aggregate_display_fields.py", "sha256": "64d42ff885f2562e816f47d244e10da0a64d6bf224078b9988120c31e4b67357"},
+    {"path": "tests/test_dependency_errors.py", "sha256": "fab99835d61c553edc92748b87e0ecc2e60ba0516d7bc47a119369e56bd1a3ea"},
+    {"path": "tests/test_remote_sync_attachment_contract.py", "sha256": "eda4c2799725fdc038ac8f47e8782476a52169e78d0d9b0ba6b88987d2caf80a"}
+  ],
+  "tests": {
+    "sql": {"baseline_passed": 610, "final_passed": 625, "new_tests": 15},
+    "data_analysis": {"previous_frozen_full_baseline_passed": 4567, "final_passed": 4589, "new_tests": 22, "critical_passed": 241},
+    "candidate": {"data_analysis_passed": 459, "sql_passed": 625, "sql_subtests_passed": 3, "oagnet_passed": 49},
+    "new_regressions": 0,
+    "collection_errors": 0,
+    "model_120_live_cases_passed": 4,
+    "model_81_live_regression_passed": 1,
+    "model_120_production_original_question_passed": true,
+    "production_artifact_equals_independent_sql": true
+  },
+  "restarted_services": ["data-analysis-agent", "sql-translator"],
+  "unchanged_services": ["oagnet-data-agent"],
+  "runtime_mode": "V2_CONTEXT_V1_EXECUTION",
+  "semantic_database_writes": 0,
+  "vector_rebuilds": 0,
+  "configuration_overwrites": 0,
+  "automatic_pr_merge": false
+}

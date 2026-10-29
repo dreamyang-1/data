@@ -1,0 +1,151 @@
+{
+  "baseline_commit": "f15969dcc0f90e75a399a3d80d4a489d58139dec",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline_counts": {
+        "passed": 2735,
+        "failed": 27
+      },
+      "final_counts": {
+        "passed": 2769,
+        "failed": 27
+      },
+      "baseline_report": "../evaluation_gates/final_DataAnalysis_Agent.json",
+      "baseline_receipt_sha256": "85e9d9a4217329d81eb5649f6e1b4cb329b6f1270c5bc763cb27ad170589c172",
+      "final_receipt_sha256": "ebe9e634a0367afb3b14bfc05bfc65b34c6b7a243000b4d53c7d416b6cd55b82",
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {
+        "tests/test_v2_raw_turn_recognition.py::test_unique_surface_span_repair_reaches_scoped_plan_and_preserves_add": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_exact_unique_surface_repairs_only_offsets[\\u8bf7\\u544a\\u8bc9\\u6211\\u9500\\u552e\\u603b\\u6210\\u672c-\\u9500\\u552e\\u603b\\u6210\\u672c-3-8-expected0]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_exact_unique_surface_repairs_only_offsets[\\u7ed3\\u679c\\u4e2d\\u53ea\\u8fd4\\u56de\\u9500\\u552e\\u5458\\u59d3\\u540d-\\u9500\\u552e\\u5458\\u59d3\\u540d-7-12-expected1]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_exact_unique_surface_repairs_only_offsets[\\U0001f4ca\\u9500\\u552e\\u989d-\\u9500\\u552e\\u989d-2-5-expected2]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_exact_unique_surface_repairs_only_offsets[\\u67e5\\u770bA\\u0301\\u7f16\\u7801-A\\u0301-1-3-expected3]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_valid_original_span_is_not_relocated[\\u9500\\u552e\\u989d\\u548c\\u9500\\u552e\\u984d-\\u9500\\u552e\\u989d-0-3]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_valid_original_span_is_not_relocated[\\u9500\\u552e\\u989d\\u4e0e\\u9500\\u552e\\u989d-\\u9500\\u552e\\u989d-4-7]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_ambiguous_absent_or_fuzzy_surface_stays_rejected[\\u9500\\u552e\\u989d\\u4e0e\\u9500\\u552e\\u989d-\\u9500\\u552e\\u989d-1-4]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_ambiguous_absent_or_fuzzy_surface_stays_rejected[aaa-aa-2-4]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_ambiguous_absent_or_fuzzy_surface_stays_rejected[\\u9500\\u552e\\u989d-\\u9500\\u552e\\u91cf-0-3]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_ambiguous_absent_or_fuzzy_surface_stays_rejected[\\u9500\\u552e\\u984d-\\u9500\\u552e\\u989d-0-3]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_foreign_turn_is_never_made_current_by_matching_text": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_negation_surface_maps_only_to_already_declared_unique_negated_mention": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_reference_repair_does_not_invent_or_discard_evidence[not_negated]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_reference_repair_does_not_invent_or_discard_evidence[missing_token]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_reference_repair_does_not_invent_or_discard_evidence[repeated_token]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_reference_repair_does_not_invent_or_discard_evidence[nested_negated]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_reference_repair_does_not_invent_or_discard_evidence[unknown_operation_reference]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_unknown_temporal_and_coordination_refs_are_not_repaired_or_dropped": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_temporal_token_needs_existing_time_role_and_unique_span[\\u6309\\u5b63\\u5ea6-\\u5b63\\u5ea6-TIME_GRAIN]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_temporal_token_needs_existing_time_role_and_unique_span[\\u672c\\u6708-\\u672c\\u6708-TIME_RANGE]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_repeated_time_token_cannot_select_an_occurrence": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_generation_schema_closes_slots_without_changing_frozen_models": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_unknown_limit_slot_is_never_guessed_as_ranking_or_display": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-020]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-040]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-056]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-072]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-074]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-076]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-083]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-093]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-099]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_actual_recorded_failure_replay_without_model_calls[G81-100]": "passed"
+      },
+      "removed_tests": [],
+      "unchanged_existing_node_outcomes": true,
+      "failed_nodeids": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]"
+      ],
+      "collection_errors": [],
+      "real_model_calls": 0,
+      "production_external_writes": 0,
+      "critical_suite": {
+        "passed": 160,
+        "failed": 0
+      },
+      "clarification_coverage": {
+        "public_clarification_responses": 89,
+        "with_reason_trace": 89
+      }
+    },
+    "Oagnet": {
+      "baseline_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "final_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "baseline_report": "../evaluation_gates/final_Oagnet.json",
+      "baseline_receipt_sha256": "816baabb67c02801fcfbb7934dc6147c52cb1247736ce0c3742d15aa015ce51f",
+      "final_receipt_sha256": "79b32909c6165535d980c2d31c84c79fa64f95c01b7a39adec3fed5a39b7c6a7",
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {},
+      "removed_tests": [],
+      "unchanged_existing_node_outcomes": true,
+      "failed_nodeids": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+      ],
+      "collection_errors": [],
+      "real_model_calls": 0,
+      "production_external_writes": 0
+    },
+    "SQL_Translator": {
+      "baseline_counts": {
+        "passed": 381
+      },
+      "final_counts": {
+        "passed": 381
+      },
+      "baseline_report": "../evaluation_gates/final_SQL_Translator.json",
+      "baseline_receipt_sha256": "a6aababcd1a79cfdb92eac2c520e8f435858f7b3c6c6a3db8608b4eebb7b4d7d",
+      "final_receipt_sha256": "ff47ab9bcb6773bb0421db0a9646800f27bf1c1f9f432901e13a9cd3f416abe1",
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {},
+      "removed_tests": [],
+      "unchanged_existing_node_outcomes": true,
+      "failed_nodeids": [],
+      "collection_errors": [],
+      "real_model_calls": 0,
+      "production_external_writes": 0
+    }
+  },
+  "full_receipt_policy": "Baseline committed full node outcomes plus the verified new-test delta reconstruct the final outcome map; final full receipt hash retained. No duplicated unchanged service result archives.",
+  "validation": "PASS_FOR_BOUNDED_REPRESENTATION_CHANGE_NOT_REPLACEMENT_ACCEPTANCE"
+}

@@ -1,0 +1,35 @@
+{
+  "status": "PASS_WITH_SAME_PREEXISTING_FAILURES",
+  "affected": {
+    "passed": 322,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "critical": {
+    "passed": 160,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "critical_initial_environment_run": {
+    "passed": 151,
+    "failed": 9,
+    "classification": "LOCAL_TRIAL_ENVIRONMENT_SELECTED_V2_FOR_V1_FIXTURES",
+    "production_defect": false
+  },
+  "agent_full": {
+    "passed": 3608,
+    "failed": 27,
+    "collection_errors": 0
+  },
+  "baseline_documented": {
+    "source": "context_completed_question_trial",
+    "full_before_compatibility_correction": {"passed": 3586, "failed": 37},
+    "new_failures_targeted_final": "10/10_PASS",
+    "known_legacy_failed": 27
+  },
+  "old_pass_to_new_fail_in_rerun_affected_sets": 0,
+  "old_test_expectation_changes": 0,
+  "new_test_functions": 8,
+  "oagnet_source_changes": 0,
+  "sql_translator_source_changes": 0
+}

@@ -1,0 +1,316 @@
+{
+  "request": "修复覆盖率文字错误提示缺少数值",
+  "root_cause": "报告生成对百分号形式的结果使用普通数字转换，转换失败误计为缺失；未改查询或业务规则。",
+  "change": "复用数值转换识别百分比，按百分数展示范围；真正缺失和非法值继续提示。",
+  "offline": {
+    "baseline": {
+      "PASS": 6208,
+      "FAIL": 567,
+      "ERROR": 7
+    },
+    "current": {
+      "PASS": 6210,
+      "FAIL": 567,
+      "ERROR": 7
+    },
+    "new_failures": []
+  },
+  "focused_local_passed": 72,
+  "focused_remote_merged_passed": 72,
+  "deployment": {
+    "deployed": true,
+    "service_restarted": true,
+    "ready": true,
+    "configuration_preserved": true
+  },
+  "original_acceptance": {
+    "question": "统计上海市区域医院覆盖率",
+    "status": "PARTIAL",
+    "task_statuses": [
+      "COMPLETED",
+      "COMPLETED",
+      "COMPLETED"
+    ],
+    "attachment_rows": 589,
+    "finite_values": 589,
+    "minimum_percent": 0.82,
+    "maximum_percent": 29.51,
+    "false_missing_warning_removed": true,
+    "unit_percent": true,
+    "remaining": "仍按经销商分组，未给上海整体值。"
+  },
+  "history": {
+    "bounded_concurrency": 2,
+    "independent_sessions": true,
+    "groups": 12,
+    "turns": 13,
+    "all_business_passed": false,
+    "cases": [
+      {
+        "id": "shanghai_coverage",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-3",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1474
+          }
+        ],
+        "elapsed": 75.4,
+        "business_review": "PARTIAL",
+        "review_detail": "文字缺失提示已修复、附件数值一致；仍按经销商分组，上海整体值未完成。"
+      },
+      {
+        "id": "cooperation_over_three_months",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 757
+          }
+        ],
+        "elapsed": 64.7,
+        "business_review": "PARTIAL",
+        "review_detail": "查询已完成；达到上限是否必然存在额外符合条件记录未证实。"
+      },
+      {
+        "id": "dealer_duration_exact",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1145
+          }
+        ],
+        "elapsed": 58.0,
+        "business_review": "PARTIAL",
+        "review_detail": "频数99.3%及7条与此前实际分布一致；是否存在额外记录未证实。"
+      },
+      {
+        "id": "dealer_duration_recent",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 795
+          }
+        ],
+        "elapsed": 48.3,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "正常返回；不将状态等同于全量业务验收。"
+      },
+      {
+        "id": "company_top5",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-3",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-4",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1477
+          }
+        ],
+        "elapsed": 125.4,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "4任务、人员公司对应、单位、排序及附件通过专项检查。"
+      },
+      {
+        "id": "huashan_sales_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1504
+          }
+        ],
+        "elapsed": 106.4,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "两个任务及产品明细已返回；未完整核实所有模型洞察措辞。"
+      },
+      {
+        "id": "shanghai_three_dealers_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 3023
+          },
+          {
+            "status": "NEEDS_CLARIFICATION",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 529
+          }
+        ],
+        "elapsed": 140.3,
+        "business_review": "FAIL_EXISTING",
+        "review_detail": "追问仍在参数绑定阶段暂停；第一轮范围需要继续核实。"
+      },
+      {
+        "id": "hospital_sales_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1136
+          }
+        ],
+        "elapsed": 108.8,
+        "business_review": "PASS_DELIVERABLES",
+        "review_detail": "两个任务及产品明细已返回。"
+      },
+      {
+        "id": "semantic_entities",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 658
+          }
+        ],
+        "elapsed": 14.4,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "实体解释已返回；未逐项核验全部语义目录。"
+      },
+      {
+        "id": "orthopedics",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 293
+          }
+        ],
+        "elapsed": 77.2,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "指标查询结果已返回；未逐项核对所有口径。"
+      },
+      {
+        "id": "longest_cooperation",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 254
+          }
+        ],
+        "elapsed": 50.9,
+        "business_review": "COMPLETED_REVIEW_LIMITED",
+        "review_detail": "Top1结果已返回；并列情况未经完整核对。"
+      },
+      {
+        "id": "supplier_first_cooperation",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1156
+          }
+        ],
+        "elapsed": 57.0,
+        "business_review": "UNVERIFIED",
+        "review_detail": "查询供应商返回经销商；对象映射与范围仍需核实。"
+      }
+    ],
+    "unresolved_context": [
+      {
+        "id": "department_hospital_relation",
+        "request": "医院与科室多对多判断",
+        "missing": "原文实体ID已省略，缺少完整实体ID及模型范围"
+      },
+      {
+        "id": "relation_model122",
+        "request": "实体关系推荐返回空数组",
+        "semantic_model_id": 122,
+        "business_domain_id": 307,
+        "entity_type_id": "45eae41b-82d6-4bf7-b608-8e341b77d0f8",
+        "expected": "直接同名字段关系推荐，不推荐中间表"
+      },
+      {
+        "id": "city_province_relation",
+        "request": "城市跟省份为什么没有推荐关系",
+        "missing": "原请求模型、业务域和实体ID"
+      },
+      {
+        "id": "company_salesperson_relation",
+        "request": "国药公司和销售员这两个表有相同字段，为什么没有推荐",
+        "missing": "原请求模型、业务域和实体ID"
+      },
+      {
+        "id": "publication_error",
+        "request": "发布失败报错中文化",
+        "missing": "发布操作的完整原始参数；不在本轮只读查询回归范围内"
+      }
+    ]
+  }
+}

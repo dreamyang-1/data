@@ -1,0 +1,127 @@
+{
+  "baseline_commit": "037839d7df9127fa946b1580363ddf84d32c50bb",
+  "feature_branch": "cutover-qwen37-benchmark-20260909t031600z",
+  "files": [
+    {
+      "repository_path": "app/semantic_v2/recognition.py",
+      "development_sha256": "40a9a36bba11355de21418ac1f1c8dab6ef17b845e6dbb986303acc389d41414",
+      "normalized_sha256": "40a9a36bba11355de21418ac1f1c8dab6ef17b845e6dbb986303acc389d41414",
+      "baseline_sha256": "829c39e4adba8bea2f0e1e1ab73d26192cb818177bed886a032565636b4396db"
+    },
+    {
+      "repository_path": "app/semantic_v2/recognition_repairs.py",
+      "development_sha256": "b92cf8d46bcaceced32c0593a9eec37f2a702a297510460280c5301055e2ad86",
+      "normalized_sha256": "b92cf8d46bcaceced32c0593a9eec37f2a702a297510460280c5301055e2ad86",
+      "baseline_sha256": "1506a10f90d6df40ffce46da2518d79330517a4ea315bc1e382ea3004205ec8a"
+    },
+    {
+      "repository_path": "tests/test_v2_raw_turn_recognition.py",
+      "development_sha256": "0b40033a93e44b6e205e96ded5fbcf6c072de3a4368122d29e54d17662d822ae",
+      "normalized_sha256": "0b40033a93e44b6e205e96ded5fbcf6c072de3a4368122d29e54d17662d822ae",
+      "baseline_sha256": "6ae761e2bd04d218536a824e1ae6963bf2a50acf289cc46bcd17d5903051c0be"
+    },
+    {
+      "repository_path": "tests/test_v2_model_parse_repairs.py",
+      "development_sha256": "3d121cb3e247a8dfd2bd0831d597e2829419b3ca000ef38f371973cd2bdf25c0",
+      "normalized_sha256": "3d121cb3e247a8dfd2bd0831d597e2829419b3ca000ef38f371973cd2bdf25c0",
+      "baseline_sha256": "c025a96b97a7355816fd12a0b0a60ee7a351d02f62453729c65064a68fd15c1f"
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.json",
+      "development_sha256": "3368f1f9c130a584c7f15fea4c4f13cbfd836dd8ca098316763d8ff4b1a5a419",
+      "normalized_sha256": "0cae664c3bbc2e938d4b622b5e93c9054c64f1addebbeedd18071d563e4bffad",
+      "baseline_sha256": "4a526657fa434cb89546991aa0654649d4076bcbd5309b0ce01e67824c49fe75"
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.csv",
+      "development_sha256": "281242333876a7f2e37a2329b1b1fcc387bc6cd8ba6391d8725c189a2ea81d9e",
+      "normalized_sha256": "d9823e07b7516aed937ff0792f89f2c019c98728e024a618aa60ce3ab7c85027",
+      "baseline_sha256": "bccd3b4a0e5dada0a94f3307232633b4d2a3d26e1d77c9cd8e1674eb62382ac7"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.json",
+      "development_sha256": "aef5de952b04a78ce7e009dac24a35fc51c5e83a339f73913feed994ba199214",
+      "normalized_sha256": "22f8c706f0123e5fd47a89633e647c71fc565f745087bdaf435968494a84e800",
+      "baseline_sha256": "e5cc3d8b614412d66deb430a8f8e4169443902fba08ba54c91874c6ddeab9ab7"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.csv",
+      "development_sha256": "23b71505e21cff3493fbe2b05bab7a8a09900800f0f223ebe768680bb16a6e41",
+      "normalized_sha256": "aa360aadabbcfc3e64111e3aa397c247097ab2c98c1087781ed5d9bc4fa9ba9e",
+      "baseline_sha256": "30b48ab5c2c43d661a0d2e682109d560725211f78e0ba994546b6f1e9d13787f"
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.md",
+      "development_sha256": "b3eae9c74020fb0cd6d36b99f8209672bbfdf6ac9b39ffed0988e415ab99e9f9",
+      "normalized_sha256": "b8cfb0a99a2c09836de5480c549902e59ac3ba47fd4cfdd967e7fe29142c8b44",
+      "baseline_sha256": "f61e5a07a50a9cadadeabb216932e9c1358feb8e7ca14f5a943abf18cfd989b8"
+    },
+    {
+      "repository_path": "docs/cutover/closure_report.md",
+      "development_sha256": "ffaab330a4eaa3883efdebc1e18f1ba6f5f1b074071b2bb8ef16f671e6011c98",
+      "normalized_sha256": "aae0c3fb5e90efe18c30fe65a1fa6ff02ffb31c553936f421c8d4b214f4865fd",
+      "baseline_sha256": "bf27a66dd3476f73ca1bcc55d12bd44760ae39534b2424302925a1dcc06117a4"
+    },
+    {
+      "repository_path": "docs/cutover/qwen37_benchmark/closure_report.md",
+      "development_sha256": "5187136bcba9e681876d361e79685cca8352d3125671f5836e3bbd0344a56e64",
+      "normalized_sha256": "5187136bcba9e681876d361e79685cca8352d3125671f5836e3bbd0344a56e64",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/qwen37_benchmark/parser_predictions.jsonl",
+      "development_sha256": "fc2e610e945eeeb0c3bdf3b02d1f16da397ab0f139042184fd5d2769f7ce6857",
+      "normalized_sha256": "18cacb90695d391ef8ad3322ceb0a5dced96e9adefd4cab9cd51df483226ecae",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/qwen37_benchmark/parser_evaluation.json",
+      "development_sha256": "cb5c5d7742b637178374292ac8e660ec0d66b80438c8a35853f21567e5098cff",
+      "normalized_sha256": "08e2872a2baf314583c3ed45ca71272039b726addbcf8dc824fe9e781f6a1c82",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/qwen37_benchmark/parser_comparison.json",
+      "development_sha256": "2a8ab9d575f7c995395f2738e6b65263d30c8218c746f9b2979afb283ba54c27",
+      "normalized_sha256": "80c145827491de918e161cd4b27330f3062d973e8ce08f896b1704ed972cf5e0",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/qwen37_benchmark/observed_axis_gaps.json",
+      "development_sha256": "4e15fd3113acf686ea09a28363c5c5ce93a6a1163e2ddc67598c46ac7d9adfec",
+      "normalized_sha256": "6062709114a3359b3f5254ab0939df5bdbd1ba47cced8bcd01c8766444ce76d3",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/qwen37_benchmark/observed_axis_gaps.csv",
+      "development_sha256": "5e8e0b0d4acc85646a7bb3f828ce4e872a17f43fcde5a474898b6129cf14822d",
+      "normalized_sha256": "6b3f2834417c0bb8e3589159ee76102ee34ada7539acfc04f627eab7d89ed932",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/qwen37_benchmark/full_plan_probe.json",
+      "development_sha256": "3b73cc1c087f749e603cf8c9fe7bed7dca6dee15ce44026f1a8008b05fa57a55",
+      "normalized_sha256": "9340e847f19a4733f1ff50b1b880e1d80dd1f1dbf7e472509f4d63bfd081b7ad",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/qwen37_benchmark/collection_failure_evidence.json",
+      "development_sha256": "90ba285a9ca7f5e35cdb06f35a1765b7479f1292ffc96e0b990b56131a0cb167",
+      "normalized_sha256": "e192624d5bac84653b70aec95110467d0cce19ee8ef4ee99e75f0b0b62cc3d10",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/qwen37_benchmark/test_delta.json",
+      "development_sha256": "315eefbc7dd689c756da8fe6b2677859338d587dd747c7a12c9a01e9144dc32d",
+      "normalized_sha256": "94d5429d22fc2afb1318d314b785bae9529e9dd9aa1cd4528aad59cab0dd6fa4",
+      "baseline_sha256": null
+    }
+  ],
+  "normalization": "CRLF to LF only",
+  "runtime_files_changed": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/recognition_repairs.py"
+  ],
+  "v1_routing_changed": false,
+  "private_snapshot_or_credentials_copied": false
+}

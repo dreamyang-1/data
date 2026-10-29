@@ -1,0 +1,67 @@
+{
+  "status": "SELF_REVIEW_PASS",
+  "baseline_commit": "ff389dc4cd3fe4e0dabe1c665e3672b80b445330",
+  "independent_reviewer": false,
+  "confidence": "PROVEN_SOURCE_AND_OFFLINE_ONLY",
+  "first_divergence": "SEMANTIC_GROUNDING",
+  "before": "Raw V2 could bind only static catalog candidates. Mutable source values had no authorized binding evidence, complete filter choice or current restore path.",
+  "after": "Raw field hypotheses and current value mentions lower through the pinned Oagnet exact source lookup into separate SourceValueBindingEvidence and existing EntityValueRef filters. Current plans/cache/selected Pending options revalidate mutable values; inactive history and exact removal identities are not source-existence claims.",
+  "service_ownership": {
+    "DataAnalysis_Agent": "Raw request/field-value proof/filter-choice/Pending/state/cache integration and old serialization compatibility",
+    "Oagnet": "Eligible implicit field discovery uses existing governed vectorization/search policy; explicit exact field lookup remains available",
+    "SQL_Translator": "No source change; legacy adapter still refuses safe execution of these source-value plans"
+  },
+  "safety_checks": [
+    "Current upstream model/domain/database/knowledge scope and conversation context bind every source receipt and restored artifact",
+    "Field owner/mapping/data source/pin/observation integrity checked; associated CatalogBindingEvidence required even for archived history",
+    "Raw model receives offered field handles and emits current mention references, never authority or source receipts",
+    "Database identity uses existing DatabaseLoadTool mapping",
+    "Implicit search eligibility is catalog-governed; is_main_attribute display default is not search permission",
+    "Incomplete/empty/foreign/over-budget source results fail closed; exact normalized collisions produce complete filter alternatives",
+    "ADD/REPLACE/REMOVE/CLEAR preserve operation semantics and Boolean structure; selected Pending option still must be applied by Reducer",
+    "CLEAR/NEW_TASK/exact REMOVE do not depend on a historical value still existing; active followup and historical return renew selected values",
+    "Cache/DAG/semantic binding artifact reuse requires current value proof; observation cache is per live pin with finish reobservation",
+    "Legacy mutation and Pending identity preserved when filter_choice is absent; all six frozen replay regressions repaired without fixture updates"
+  ],
+  "prompt_changes": {
+    "version": "v2-current-recognition-v7",
+    "scope": "One typed seam extension to TASK_PROMPT; PARSE_PROMPT unchanged",
+    "why_code_alone_insufficient": "The structured recognition model must name offered fields/current mentions in the newly defined request schema. All lookup, policy, integrity, choices and acceptance decisions remain deterministic code.",
+    "before_case": "Raw non-enum entity value has no source-proved canonical binding",
+    "positive_cases": [
+      "implicit exact current source value",
+      "explicit field exact lookup",
+      "referenced existing filter",
+      "real normalized collision"
+    ],
+    "contrast_cases": [
+      "unoffered field",
+      "unapplied request",
+      "foreign receipt",
+      "incomplete candidates",
+      "stale value",
+      "new task against stale pending"
+    ],
+    "accuracy_evidence": "Scripted HTTP mocks only; no real-model accuracy claim"
+  },
+  "regex_changes": 0,
+  "public_io_changed": false,
+  "v1_behavior_changed": false,
+  "production_v2_routing_changed": false,
+  "schema_decisions": [
+    {
+      "classification": "SCHEMA_EXTENSION",
+      "old": "Current draft v6 / value schema v4 equality check",
+      "actual": "Draft v7 / value schema v5 expose source_value_requests and typed references",
+      "authority": "Current source-value evidence contract in this report; previous schemas retained; existing test now checks current exports",
+      "decision": "No business assertion or frozen Phase2.5.1 fixture changed. Authorized 0.2.2 remains the evolving current schema; 0.2.1 unchanged."
+    }
+  ],
+  "remaining": [
+    "No actual business-source query or native publication in this stage; actual mapping evidence is inherited from PR28 metadata-only capture",
+    "Exact matches prove selected field/value existence, not completeness of model-selected field hypotheses; unqualified/fuzzy model accuracy remains unproven",
+    "Existing literal filters remain supported; omission of the source-value seam by a model requires Gold/model evaluation, not a claimed zero wrong-autoaccept rate",
+    "Source observation is rechecked at pin finish, not an atomic cross-source SQL transaction or guarantee after acceptance",
+    "Physical server identity, deployed state integration, ASL/SQL independent reads, Gold, real model and runtime shadow remain cutover gaps"
+  ]
+}

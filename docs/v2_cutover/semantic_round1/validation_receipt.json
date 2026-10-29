@@ -1,0 +1,39 @@
+{
+  "round1": {
+    "status": "PASS",
+    "stage_status": "SEMANTIC_ROOT_CLOSURE_ROUND_1_COMPLETE",
+    "conclusion": "NO_GENERIC_OPERATION_DEFECT_PROVEN",
+    "investigated_cases": 13,
+    "evidence_files": 16,
+    "evidence_hash": "fc0145c24e7acda27b599d2cbb0521e74f41496107243b516e0a93faeaaa39ef",
+    "parent_harness_status": "PASS",
+    "parent_calibration_status": "PASS",
+    "production_changes": 0,
+    "model_calls": 0,
+    "private_or_blind_payload_reads": 0,
+    "production_writes": 0
+  },
+  "engineering_tests": "test_delta.json",
+  "review": {
+    "all_original_cases_have_one_first_causal_divergence": true,
+    "operation_and_operand_separate": true,
+    "observer_unwrapped_frame_parity_13_of_13": true,
+    "oracle_changes_single_parse_artifact": true,
+    "second_model_output_and_candidates_frozen": true,
+    "source_capture_hashes_match_frozen_manifest": true,
+    "oracle_acceptances_not_gold_passes": true,
+    "full_plan_scores_exactly_equal_parent": true,
+    "private_promoted_before_inspection": true,
+    "remaining_private_aggregate_only": true,
+    "blind_payloads_viewed_or_run": 0,
+    "no_production_defect_manufactured": true,
+    "zero_denominator_not_pass": true,
+    "exact_rejection_reasons_and_valid_retry_checked": true,
+    "production_source_changes": 0,
+    "evaluator_changes": 0,
+    "V1_routing_changes": 0,
+    "live_model_calls": 0,
+    "new_operation_safety_tests": 21,
+    "owned_scripts_or_tests_still_running": 0
+  }
+}

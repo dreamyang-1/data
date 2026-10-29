@@ -1,0 +1,42 @@
+[
+  {
+    "test": "test_semantic_matches_are_retained_without_forcing_text_rewrite",
+    "domain": 205
+  },
+  {
+    "test": "test_high_confidence_typo_is_normalized",
+    "domain": 9
+  },
+  {
+    "test": "test_ambiguous_same_surface_candidates_are_not_rewritten",
+    "domain": 9
+  },
+  {
+    "test": "test_ambiguous_same_surface_candidates_are_not_rewritten",
+    "domain": 9
+  },
+  {
+    "test": "test_semantic_model_version_is_carried_into_live_ambiguity",
+    "domain": 205
+  },
+  {
+    "test": "test_semantic_model_version_is_carried_into_live_ambiguity",
+    "domain": 205
+  },
+  {
+    "test": "test_rewrite_that_destroys_intent_term_is_rejected",
+    "domain": 9
+  },
+  {
+    "test": "test_ambiguity_is_checked_for_each_surface",
+    "domain": 9
+  },
+  {
+    "test": "test_ambiguity_is_checked_for_each_surface",
+    "domain": 9
+  },
+  {
+    "test": "test_ambiguity_is_checked_for_each_surface",
+    "domain": 9
+  }
+]

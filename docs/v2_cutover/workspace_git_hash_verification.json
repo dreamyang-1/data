@@ -1,0 +1,9 @@
+{
+  "status": "PASS_PRECOMMIT_ALIGNMENT",
+  "baseline_commit": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28",
+  "feature_branch": "cutover-source-alias-20260909t071700z",
+  "tracked_and_manifest_files": 1319,
+  "unexpected_source_drift": 0,
+  "normalization": "CRLF to LF only",
+  "post_commit_gate": "Every mapped development file = repository file = Git blob; clean tree; original Oagnet HEAD/index preserved"
+}

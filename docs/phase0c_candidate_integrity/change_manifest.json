@@ -1,0 +1,82 @@
+{
+  "baseline_commit": "dfdcd1b76ab9f8dbdbfb8d88777abeabb7215f36",
+  "feature_branch": "phase0c-candidate-integrity-20260908-01",
+  "files": [
+    {
+      "repository_path": "app/domain/models.py",
+      "source_sha256": "2eecb2e1943cba3db0b0ce21365f392e90538dae509034a8d0966cc48aedddbf",
+      "published_sha256": "2eecb2e1943cba3db0b0ce21365f392e90538dae509034a8d0966cc48aedddbf",
+      "baseline_sha256": "a0c1c8d3b059785c5df5c9e402a20112d741cb6ad0e5144b4a4a91b7aa08d52a"
+    },
+    {
+      "repository_path": "app/services/orchestrator.py",
+      "source_sha256": "87c81c701f85b07517c3af9f7d55da296ad6f92bf40cee2ecaa53a428a202f99",
+      "published_sha256": "87c81c701f85b07517c3af9f7d55da296ad6f92bf40cee2ecaa53a428a202f99",
+      "baseline_sha256": "2a5e1c4e2c02674dc42296a43fa67f5eec30e8b2d26e900f35385e667b9c4206"
+    },
+    {
+      "repository_path": "app/services/clarification_policy.py",
+      "source_sha256": "2721b02d3324d868f694a2c8b5ffa956e8df579c061bc11da856e435c33ed5e3",
+      "published_sha256": "2721b02d3324d868f694a2c8b5ffa956e8df579c061bc11da856e435c33ed5e3",
+      "baseline_sha256": "c5cb27266557db35087f0bcc4ebab96b773f4a43d852bb9dfdfa77a3589f65ff"
+    },
+    {
+      "repository_path": "tests/test_candidate_integrity_contract.py",
+      "source_sha256": "c60cd24ea3b1f44234470c8db0d19c195f6b83be256d797b07a1fd2763a49ab2",
+      "published_sha256": "c60cd24ea3b1f44234470c8db0d19c195f6b83be256d797b07a1fd2763a49ab2",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_sha256": "3b0536104e0dcbb3972459108988986e888117eef50bd7a5770e285e916b9ae2",
+      "published_sha256": "3b0536104e0dcbb3972459108988986e888117eef50bd7a5770e285e916b9ae2",
+      "baseline_sha256": "a720dbf95a8b00e4a09eb375417fcb84b3fdaec65408793bfb1e407245be1ccf"
+    },
+    {
+      "repository_path": "docs/phase0c_candidate_integrity/audit_inventory.json",
+      "source_sha256": "5b7b51c37ae735b34c3d387d941d0c54ff9d7b7b855314c50071a5a234c38bab",
+      "published_sha256": "5b7b51c37ae735b34c3d387d941d0c54ff9d7b7b855314c50071a5a234c38bab",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_candidate_integrity/closure_report.md",
+      "source_sha256": "da1d76d537d0e3cb4122da04cd5f68fbac53128cadfc42e6142dbf4622edf29c",
+      "published_sha256": "da1d76d537d0e3cb4122da04cd5f68fbac53128cadfc42e6142dbf4622edf29c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_candidate_integrity/final_DataAnalysis_Agent.json",
+      "source_sha256": "569cfc3f1997263e7bf6f42ea432d537b3b7d3191f26781a551d4adfacea4310",
+      "published_sha256": "569cfc3f1997263e7bf6f42ea432d537b3b7d3191f26781a551d4adfacea4310",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_candidate_integrity/final_Oagnet.json",
+      "source_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "published_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_candidate_integrity/final_SQL_Translator.json",
+      "source_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "published_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_candidate_integrity/rollback_manifest.json",
+      "source_sha256": "49d24ed775e5d577a92a64ab5fed48beb34462d7d921998c63ecc5e08c2a3a6f",
+      "published_sha256": "49d24ed775e5d577a92a64ab5fed48beb34462d7d921998c63ecc5e08c2a3a6f",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_candidate_integrity/test_delta.json",
+      "source_sha256": "16b71d0275ff31346cc8e68d6ef0c64193dce8e8588f4c5c6784fa555e7aed92",
+      "published_sha256": "16b71d0275ff31346cc8e68d6ef0c64193dce8e8588f4c5c6784fa555e7aed92",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash"
+}

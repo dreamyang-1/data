@@ -1,0 +1,13 @@
+{
+  "status": "PASS_PRECOMMIT_WORKSPACE_ALIGNMENT",
+  "baseline_commit": "5583d8c48db49e22d236e2ee543b26dc89fa3264",
+  "implementation_commit": "0d156c066db4ab1ef1c9468bf581dfb5d1665e7e",
+  "oagnet_commit": "ce84736ab7878488595b1d470d9a4e87ba95dc86",
+  "agent_commit": "0d156c066db4ab1ef1c9468bf581dfb5d1665e7e",
+  "feature_branch": "cutover-v2-catalog-plans-20260908-01",
+  "tracked_and_manifest_files": 970,
+  "unexpected_source_drift": 0,
+  "normalization": "Development CRLF normalized to published LF; exact hashes in change_manifest.json",
+  "final_commit": "Commit containing this report",
+  "final_commit_gate": "Post-commit verification checks every Git blob, development file, clean version tree and original Oagnet staged diff"
+}

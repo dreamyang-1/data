@@ -49,6 +49,16 @@ def _is_negative_filter(item: dict[str, Any]) -> bool:
     }
 
 
+# Time-granularity labels must never be promoted to the query object.  The
+# vocabulary stays aligned with the governed granularity normalization set in
+# ``app/semantic_v2/context_question.py`` (月份→月, 星期→周, ...), so a
+# structured-model dimension such as ``月份`` remains a time bucket instead of
+# displacing the explicit business object (for example 产品).
+_TIME_GRANULARITY_LABELS = frozenset({
+    "时间", "日期", "业务日期", "年", "季度", "季", "月", "月份", "周", "星期", "日", "天",
+})
+
+
 def _query_object(
     request: CanonicalAnalysisRequest, *, prefer_grouping_object: bool = False
 ) -> str | None:
@@ -66,7 +76,7 @@ def _query_object(
     # the actual entity and display field from recalled metadata.
     candidates = [
         value for value in request.dimensions
-        if value not in {"时间", "日期", "年", "季度", "月", "周", "日"}
+        if value not in _TIME_GRANULARITY_LABELS
     ]
     if prefer_grouping_object and candidates:
         return candidates[-1]
@@ -99,6 +109,13 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         else AnalysisOperator.BOTTOM_N not in request.operators
     )
     detail_like = request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    # A row-level detail projects raw rows and no aggregate.  When such a task
+    # inherits a ranking marker from an upstream subtask (for example the top
+    # salesperson of task-1 followed by "which products did they sell"), no
+    # metric exists to order by, so demanding canonical sorting can only fail
+    # or force an invented ordering.  Detail tasks that genuinely project a
+    # metric keep the ranking requirement.
+    ranking_sortable = not (detail_like and not request.metrics)
     metric_required = request.primary_intent in {
         PrimaryIntent.METRIC_QUERY,
         PrimaryIntent.TREND_ANALYSIS,
@@ -136,8 +153,9 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         "品牌": "商品品牌", "品牌名称": "商品品牌", "母品牌": "商品品牌",
         "母厂牌": "商品品牌", "厂牌": "商品品牌",
         "品类": "商品品类", "商品分类": "商品品类", "产品分类": "商品品类",
-        "区域": "地区", "省份": "地区", "城市": "地区",
-        "业务省份": "地区", "业务城市": "地区",
+        "区域": "地区", "地区": "地区",
+        "省份": "省份", "业务省份": "省份",
+        "城市": "城市", "业务城市": "城市",
     }
 
     def normalized_role(value: str) -> str:
@@ -146,7 +164,7 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
     normalized_filter_roles = {normalized_role(value) for value in filter_roles}
     required_groupings = list(dict.fromkeys(
         value for value in request.dimensions
-        if value not in {"时间", "日期", "年", "季度", "月", "周", "日"}
+        if value not in _TIME_GRANULARITY_LABELS
         and normalized_role(value) not in normalized_filter_roles
     ))
     default_time_only = "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
@@ -161,7 +179,8 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         for value in request.assumptions
     )
     time_grouping_requested = (
-        AnalysisOperator.TIME_BUCKET in request.operators
+        request.primary_intent == PrimaryIntent.TREND_ANALYSIS
+        or AnalysisOperator.TIME_BUCKET in request.operators
         or any(
             value.startswith("DEFAULT_TIME_GRANULARITY=")
             for value in request.assumptions
@@ -182,14 +201,30 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         if request.time_range is not None
         else "OPTIONAL"
     )
+    # Metric queries can also explicitly request identity/display columns.
+    # Dropping those here makes the unchanged completeness gate reject a
+    # correctly extracted dependent query before ASL generation even begins.
+    projection_requested=bool(request.turn_admission is not None and
+        request.turn_admission.current_turn_facts.explicit_slots.get('projection'))
+    from app.planning.dependency_contract import key_kind
+    required_projections=list(dict.fromkeys(request.fields if detail_like else
+        [field for field in request.fields if key_kind(field)=='display']
+        if projection_requested and request.dimensions else []))
+    # Identity keys in an aggregate must remain grouping keys. Merely placing
+    # an ungrouped order ID in display projections cannot prove sample grain.
     return {
         "version": CONTRACT_VERSION,
         "intent": request.primary_intent.value,
-        "query_object": _query_object(request, prefer_grouping_object=ranking),
+        "query_object": _query_object(
+            request,
+            prefer_grouping_object=(
+                ranking or (not detail_like and bool(required_groupings))
+            ),
+        ),
         "metric_required": metric_required,
         "required_metrics": [metric.canonical_name or metric.input for metric in request.metrics],
         "required_metric_codes": metric_codes,
-        "required_projections": list(dict.fromkeys(request.fields if detail_like else [])),
+        "required_projections": required_projections,
         "required_groupings": required_groupings if not detail_like else [],
         "projection_mode": (
             "DISTINCT"
@@ -227,7 +262,8 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
                 "direction": "DESC" if descending else "ASC",
                 "limit": request.ranking_limit,
             }
-            if ranking else None
+            if ranking and ranking_sortable
+            else None
         ),
         "time_dimension_required": request.primary_intent == PrimaryIntent.TREND_ANALYSIS,
         "time_policy": time_policy,
@@ -270,7 +306,7 @@ def validate_intent_asl_contract_definition(contract: dict[str, Any]) -> list[st
         errors.append("TIME_DIMENSION_CONTRACT_INVALID")
     if contract.get("time_policy") not in {"REQUIRED", "OPTIONAL", "FORBIDDEN"}:
         errors.append("TIME_POLICY_INVALID")
-    if contract.get("time_dimension_required") and contract.get("time_policy") != "REQUIRED":
+    if contract.get("time_dimension_required") and contract.get("time_policy") == "FORBIDDEN":
         errors.append("TIME_POLICY_CONFLICT")
     canonical_time_range = contract.get("canonical_time_range")
     if contract.get("time_policy") == "REQUIRED" and not (
@@ -430,11 +466,39 @@ def validate_intent_asl_contract_completeness(
         "商品": "产品",
         "制造商": "厂家",
         "供应商": "经销商",
+        "生产厂家": "厂家",
+        "生产厂商": "厂家",
+    }
+
+    # 意图节点吐中文实体名，语义绑定产出英文实体编码，比对前统一到同一形态
+    entity_code_map = {
+        "医院": "hospital",
+        "经销商": "dealer",
+        "厂家": "manufacturer",
+        "产品": "product",
+        "商品": "product",
+        "科室": "department",
+        "省份": "province",
+        "市": "city",
+        "销售订单": "sales_order",
+        "订单": "sales_order",
+        "业务员": "salesperson",
+        "销售公司": "sales_company",
+        "销售项目": "project",
+        "产品分类": "product_category",
+        "产品线": "product_line",
     }
 
     def entity_key(value: Any) -> str:
         text = str(value or "").strip()
-        return entity_aliases.get(text, text)
+        text = entity_aliases.get(text, text)
+        if text in entity_code_map:
+            return entity_code_map[text]
+        folded = text.casefold()
+        # 生产厂家实体在语义目录里带主数据前缀，剥掉后再与中文映射值比对
+        if folded.startswith("main_data_domain_ent_"):
+            folded = folded[len("main_data_domain_ent_"):]
+        return entity_code_map.get(folded, folded)
 
     expected_object = explicit.get("query_object")
     if (
@@ -442,6 +506,12 @@ def validate_intent_asl_contract_completeness(
         and entity_key(contract.get("query_object"))
         != entity_key(expected_object.value)
         and not relationship_count_projection
+        # 一句话提到多个对象时（如"根据上述任务的查询结果，查询这些经销商
+        # 主要销售的产品"同时出现销售订单/经销商/商品），主查询对象由 ASL
+        # 层按问题语义选定；只要选中的对象在用户本轮显式提及的实体范围内，
+        # 就不算丢失显式条件，仍要求与单个槽位值强相等会把合法选择拦下
+        and entity_key(contract.get("query_object"))
+        not in {entity_key(mention) for mention in request.semantic_entity_mentions}
     ):
         add(
             "EXPLICIT_QUERY_OBJECT_MISSING",
@@ -452,7 +522,11 @@ def validate_intent_asl_contract_completeness(
 
     expected_projection = explicit.get("projection")
     if expected_projection is not None:
-        actual_projection = list(contract.get("required_projections") or [])
+        # Aggregate grouping keys are projected columns too. An explicitly
+        # requested order key is preserved when promised as a required grouping;
+        # detail-only projections need not duplicate that same requirement.
+        actual_projection = list(dict.fromkeys([*(contract.get("required_projections") or []),
+                                                *(contract.get("required_groupings") or [])]))
         missing_projection = [
             value for value in expected_projection.value
             if value not in actual_projection
@@ -469,7 +543,7 @@ def validate_intent_asl_contract_completeness(
         "NE", "!=", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
     }
 
-    def filter_signature(item: dict[str, Any]) -> tuple[str, bool, tuple[str, ...]]:
+    def filter_signature(item: dict[str, Any]) -> tuple[str, str, bool, tuple[str, ...]]:
         raw_value = item.get("value")
         values = raw_value if isinstance(raw_value, list) else [raw_value]
         normalized_values = tuple(sorted(
@@ -478,6 +552,7 @@ def validate_intent_asl_contract_completeness(
             if value not in (None, "")
         ))
         return (
+            str(item.get("entity") or "").strip(),
             str(item.get("field") or "").strip(),
             str(item.get("operator") or "").upper() in negative_operators,
             normalized_values,
@@ -539,20 +614,36 @@ def validate_intent_asl_contract_completeness(
                 if not canonical_fields:
                     continue
                 for actual in contract_filters:
-                    actual_field, actual_negative, actual_values = filter_signature(actual)
+                    actual_owner, actual_field, actual_negative, actual_values = filter_signature(actual)
                     if (
                         actual_field in canonical_fields
+                        and (not item.get("entity") or actual_owner == str(item["entity"]).strip())
                         and actual_negative == expected_negative
                         and canonical_value in set(actual_values)
                     ):
                         return True
             return False
 
+        def has_materialized_dependency_equivalent(item: dict[str, Any]) -> bool:
+            if not request.dependency_constraints:
+                return False
+            # Reuse the executor's reference normalization as an equivalence
+            # proof. Original turn facts remain untouched; every materialized
+            # key and any retained literal must be present in the contract.
+            from app.adapters.http import HttpDataRetrievalAdapter
+            candidate = request.model_copy(deep=True, update={"filters": [dict(item)]})
+            HttpDataRetrievalAdapter._merge_dependency_filters(candidate)
+            return item not in candidate.filters and all(
+                filter_signature(resolved) in actual_signatures
+                for resolved in candidate.filters
+            )
+
         missing_filters = [
             item for item in expected_filters.value
             if isinstance(item, dict)
             and filter_signature(item) not in actual_signatures
             and not has_grounded_equivalent(item)
+            and not has_materialized_dependency_equivalent(item)
         ]
         if missing_filters:
             add(

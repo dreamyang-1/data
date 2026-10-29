@@ -1,0 +1,62 @@
+[
+  {
+    "case_id": "S81-002",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "6644932f84d55bf644b0413bea9b50cb794f8e08805cb829127b389bbcbe2ac8",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 546,
+      "prompt_tokens": 2182,
+      "total_tokens": 2728
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "c38769ef45cc5e30f88708737e35ed42edac11862b177e376eac9b08788f5afd",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 208,
+      "prompt_tokens": 14500,
+      "total_tokens": 14708
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "01ea8243dc42fe54bc0de8ca4d6245815dabba9c94d231150aad7aeae5a8f061",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 469,
+      "prompt_tokens": 2182,
+      "total_tokens": 2651
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "99a364aa750c6c78b7c7208b01488842b3b6e63989a7691c43ec876a092ea28f",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 128,
+      "prompt_tokens": 14565,
+      "total_tokens": 14693
+    },
+    "finish_reason": "stop"
+  }
+]

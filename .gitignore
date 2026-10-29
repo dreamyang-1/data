@@ -1,12 +1,21 @@
+# 密钥与环境配置，不进库
 .env
-.venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.ruff_cache/
-coverage.xml
-htmlcov/
-dist/
-build/
-*.egg-info/
+.env.*
+!.env.example
+.langfuse.env
 
+# 日志
+logs/
+*.log
+nohup.out
+
+# Python 缓存与打包产物
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# 系统文件
+.DS_Store

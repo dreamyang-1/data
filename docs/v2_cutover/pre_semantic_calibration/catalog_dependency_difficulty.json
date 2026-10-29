@@ -1,0 +1,1280 @@
+{
+  "public_dev": {
+    "case_count": 100,
+    "metric_label_coverage": {
+      "n": 39,
+      "N": 100
+    },
+    "contains_multi_owner_metric": {
+      "n": 4,
+      "N": 39
+    },
+    "no_common_owner_for_multiple_metrics": {
+      "n": 0,
+      "N": 39
+    },
+    "rows": [
+      {
+        "case_id": "G81-001",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-002",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-003",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-004",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-005",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-006",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-007",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-008",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-009",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-010",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-011",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-012",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-013",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-014",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-015",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "80c2d23a7d115741a241277d853e40c0dba495040ce401a702ba521d93a10c1c"
+      },
+      {
+        "case_id": "G81-016",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "80c2d23a7d115741a241277d853e40c0dba495040ce401a702ba521d93a10c1c"
+      },
+      {
+        "case_id": "G81-017",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "3a08e9b4632619b6ff3bab6de2ded600965faa82434e54db3af81515d56737da"
+      },
+      {
+        "case_id": "G81-018",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "3a08e9b4632619b6ff3bab6de2ded600965faa82434e54db3af81515d56737da"
+      },
+      {
+        "case_id": "G81-019",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "d0e783c534164fd01c9a3a0aede87e72141cdb602da4294c276150b832cc0a1a"
+      },
+      {
+        "case_id": "G81-020",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "d0e783c534164fd01c9a3a0aede87e72141cdb602da4294c276150b832cc0a1a"
+      },
+      {
+        "case_id": "G81-021",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "2533acb989b4a228f35bf3a5ec9068ed04b2c15f55968e9d56a65962191ecdaa"
+      },
+      {
+        "case_id": "G81-022",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "2533acb989b4a228f35bf3a5ec9068ed04b2c15f55968e9d56a65962191ecdaa"
+      },
+      {
+        "case_id": "G81-023",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-024",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-025",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 2,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "406a6452a38ef43922cab9e4ae0f3f3e8b4709a80d511f34eb320f6de9086217"
+      },
+      {
+        "case_id": "G81-026",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 2,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "406a6452a38ef43922cab9e4ae0f3f3e8b4709a80d511f34eb320f6de9086217"
+      },
+      {
+        "case_id": "G81-027",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 2,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "affcff2221b6a03f094308aa686925d8d97533e66804290b00ec0f5e26241967"
+      },
+      {
+        "case_id": "G81-028",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 2,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "affcff2221b6a03f094308aa686925d8d97533e66804290b00ec0f5e26241967"
+      },
+      {
+        "case_id": "G81-029",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "2e8509d00e9521f34e40f10cf23ce3e98fd0888567c0342d705ae101ff6c9d4e"
+      },
+      {
+        "case_id": "G81-030",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "2e8509d00e9521f34e40f10cf23ce3e98fd0888567c0342d705ae101ff6c9d4e"
+      },
+      {
+        "case_id": "G81-031",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "becb231fb7b0c3a485a5896a1e3cc69bc97b26592605c8e3db446d969cb9afd1"
+      },
+      {
+        "case_id": "G81-032",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "becb231fb7b0c3a485a5896a1e3cc69bc97b26592605c8e3db446d969cb9afd1"
+      },
+      {
+        "case_id": "G81-033",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "cfda487c6fd450b6f62a5702ca9ab5c1b5fb6bb53c29d6bb8642a326abaeb27c"
+      },
+      {
+        "case_id": "G81-034",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "cfda487c6fd450b6f62a5702ca9ab5c1b5fb6bb53c29d6bb8642a326abaeb27c"
+      },
+      {
+        "case_id": "G81-035",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "d894d89497f503bf9bcc6c1dc587dccb9d69a66b2f88e3e9965e27ce3a9f744b"
+      },
+      {
+        "case_id": "G81-036",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "d894d89497f503bf9bcc6c1dc587dccb9d69a66b2f88e3e9965e27ce3a9f744b"
+      },
+      {
+        "case_id": "G81-037",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-038",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-039",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-040",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-041",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-042",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-043",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-044",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-045",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-046",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-047",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-048",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-049",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-050",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-051",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-052",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-053",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-054",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-055",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-056",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-057",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-058",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-059",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-060",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-061",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-062",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-063",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-064",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-065",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-066",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-067",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-068",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-069",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-070",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-071",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-072",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-073",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-074",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-075",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-076",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-077",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-078",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-079",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-080",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-081",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-082",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-083",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-084",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-085",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-086",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-087",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-088",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-089",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-090",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-091",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-092",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "G81-093",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-094",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-095",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "2533acb989b4a228f35bf3a5ec9068ed04b2c15f55968e9d56a65962191ecdaa"
+      },
+      {
+        "case_id": "G81-096",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-097",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-098",
+        "metric_label_available": false,
+        "metric_count": 0,
+        "metric_owner_union_count": null,
+        "common_owner_count": null,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "case_id": "G81-099",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "d0e783c534164fd01c9a3a0aede87e72141cdb602da4294c276150b832cc0a1a"
+      },
+      {
+        "case_id": "G81-100",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      }
+    ],
+    "basis": "FROZEN_CATALOG_SOURCE_DEPENDENCY_AND_INDEPENDENT_LISTED_METRIC_LABELS",
+    "limits": "Dependency breadth is a difficulty proxy, not proof that a metric/query is invalid or that an early semantic rejection was correct."
+  },
+  "private_validation": {
+    "case_count": 24,
+    "metric_label_coverage": {
+      "n": 24,
+      "N": 24
+    },
+    "contains_multi_owner_metric": {
+      "n": 9,
+      "N": 24
+    },
+    "no_common_owner_for_multiple_metrics": {
+      "n": 7,
+      "N": 24
+    },
+    "rows": [
+      {
+        "case_id": "PV81-001",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "3a08e9b4632619b6ff3bab6de2ded600965faa82434e54db3af81515d56737da"
+      },
+      {
+        "case_id": "PV81-002",
+        "metric_label_available": true,
+        "metric_count": 3,
+        "metric_owner_union_count": 3,
+        "common_owner_count": 0,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": true,
+        "catalog_evidence_hash": "07ae9b9b97a2216d845a621aff76cc2d6689822880ff002a78f7bb9b2bc3bd7a"
+      },
+      {
+        "case_id": "PV81-003",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 2,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "affcff2221b6a03f094308aa686925d8d97533e66804290b00ec0f5e26241967"
+      },
+      {
+        "case_id": "PV81-004",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 2,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "406a6452a38ef43922cab9e4ae0f3f3e8b4709a80d511f34eb320f6de9086217"
+      },
+      {
+        "case_id": "PV81-005",
+        "metric_label_available": true,
+        "metric_count": 3,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4d207c3100f82448d50103c01a22358ce982d420d7cef252ba9232297f02732a"
+      },
+      {
+        "case_id": "PV81-006",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "4236efba50bb2d569ac91e41bdc8e347dbff031ee8a283d2cfae835ad81b0ca5"
+      },
+      {
+        "case_id": "PV81-007",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "cfda487c6fd450b6f62a5702ca9ab5c1b5fb6bb53c29d6bb8642a326abaeb27c"
+      },
+      {
+        "case_id": "PV81-008",
+        "metric_label_available": true,
+        "metric_count": 3,
+        "metric_owner_union_count": 3,
+        "common_owner_count": 0,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": true,
+        "catalog_evidence_hash": "5d2a2937d66fb2c65ca07ecdcdc721763ed6fd48a1e1f66ef43537ffc5848aef"
+      },
+      {
+        "case_id": "PV81-009",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "cfda487c6fd450b6f62a5702ca9ab5c1b5fb6bb53c29d6bb8642a326abaeb27c"
+      },
+      {
+        "case_id": "PV81-010",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "d0e783c534164fd01c9a3a0aede87e72141cdb602da4294c276150b832cc0a1a"
+      },
+      {
+        "case_id": "PV81-011",
+        "metric_label_available": true,
+        "metric_count": 3,
+        "metric_owner_union_count": 3,
+        "common_owner_count": 0,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": true,
+        "catalog_evidence_hash": "ad8fb74329229995ded7b329b228021d5c392394a7f976c7afdcf0c042d4ded0"
+      },
+      {
+        "case_id": "PV81-012",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "becb231fb7b0c3a485a5896a1e3cc69bc97b26592605c8e3db446d969cb9afd1"
+      },
+      {
+        "case_id": "PV81-013",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "d894d89497f503bf9bcc6c1dc587dccb9d69a66b2f88e3e9965e27ce3a9f744b"
+      },
+      {
+        "case_id": "PV81-014",
+        "metric_label_available": true,
+        "metric_count": 3,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 0,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": true,
+        "catalog_evidence_hash": "ea18a5b026f6043889af5d4176a6549a31a9177ff6ee97f3e7257fe042b3cad6"
+      },
+      {
+        "case_id": "PV81-015",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 2,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "406a6452a38ef43922cab9e4ae0f3f3e8b4709a80d511f34eb320f6de9086217"
+      },
+      {
+        "case_id": "PV81-016",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "becb231fb7b0c3a485a5896a1e3cc69bc97b26592605c8e3db446d969cb9afd1"
+      },
+      {
+        "case_id": "PV81-017",
+        "metric_label_available": true,
+        "metric_count": 3,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 0,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": true,
+        "catalog_evidence_hash": "14d55055a364d214656bb2c723384d9f49fbe40e138f2d6b46d6dfff851b3c43"
+      },
+      {
+        "case_id": "PV81-018",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "becb231fb7b0c3a485a5896a1e3cc69bc97b26592605c8e3db446d969cb9afd1"
+      },
+      {
+        "case_id": "PV81-019",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 2,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "affcff2221b6a03f094308aa686925d8d97533e66804290b00ec0f5e26241967"
+      },
+      {
+        "case_id": "PV81-020",
+        "metric_label_available": true,
+        "metric_count": 3,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 0,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": true,
+        "catalog_evidence_hash": "37b4093d517cb7ffe09301c7de95034fd2cf5d31d13a61270640208d5ebf7a89"
+      },
+      {
+        "case_id": "PV81-021",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "2e8509d00e9521f34e40f10cf23ce3e98fd0888567c0342d705ae101ff6c9d4e"
+      },
+      {
+        "case_id": "PV81-022",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "2533acb989b4a228f35bf3a5ec9068ed04b2c15f55968e9d56a65962191ecdaa"
+      },
+      {
+        "case_id": "PV81-023",
+        "metric_label_available": true,
+        "metric_count": 3,
+        "metric_owner_union_count": 2,
+        "common_owner_count": 0,
+        "contains_multi_owner_metric": true,
+        "no_common_owner_for_multiple_metrics": true,
+        "catalog_evidence_hash": "93d55fd838aa4fb8d0a709b52d6f9ab2e44e77a93dc7a5246a8524a5d11b3d59"
+      },
+      {
+        "case_id": "PV81-024",
+        "metric_label_available": true,
+        "metric_count": 1,
+        "metric_owner_union_count": 1,
+        "common_owner_count": 1,
+        "contains_multi_owner_metric": false,
+        "no_common_owner_for_multiple_metrics": false,
+        "catalog_evidence_hash": "cfda487c6fd450b6f62a5702ca9ab5c1b5fb6bb53c29d6bb8642a326abaeb27c"
+      }
+    ],
+    "basis": "FROZEN_CATALOG_SOURCE_DEPENDENCY_AND_INDEPENDENT_LISTED_METRIC_LABELS",
+    "limits": "Dependency breadth is a difficulty proxy, not proof that a metric/query is invalid or that an early semantic rejection was correct."
+  }
+}

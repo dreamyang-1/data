@@ -7,7 +7,7 @@ from app.domain.models import ChatRequest, ToolConfig
 
 
 def request_payload(**overrides):
-    payload = {
+    payload = {"semantic_model_id": 81,
         "application_id": "app-1",
         "conversation_id": "conversation-1",
         "message_id": "message-1",

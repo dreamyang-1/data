@@ -1,0 +1,137 @@
+[
+  {
+    "path": "tests/test_orchestrator.py",
+    "test": "test_failed_provisional_frame_cannot_replace_verified_product_scope",
+    "explicit_fields": [
+      "semantic_model_id=81,"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_orchestrator.py",
+    "test": "test_recent_two_region_reference_builds_verified_set_aggregation",
+    "explicit_fields": [
+      "semantic_model_id=81,"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_department_followup_context_includes_semantic_entity_value",
+    "explicit_fields": [
+      "semantic_model_id=81,"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_context_is_added_before_intent_classification",
+    "explicit_fields": [
+      "semantic_model_id=5,",
+      "business_domain_ids=[9],"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_admitted_followup_can_force_context_for_model_completion",
+    "explicit_fields": [
+      "semantic_model_id=81,"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_granularity_only_followup_inherits_metric_and_period",
+    "explicit_fields": [
+      "semantic_model_id=5,",
+      "business_domain_ids=[9],"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_natural_granularity_followup_inherits_metric_and_period",
+    "explicit_fields": [
+      "semantic_model_id=81,",
+      "business_domain_ids=[205],"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_explicit_followup_month_replaces_previous_time_range",
+    "explicit_fields": [
+      "semantic_model_id=5,",
+      "business_domain_ids=[9],"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_dimension_and_top_n_modifier_inherits_previous_metric_and_time",
+    "explicit_fields": [
+      "semantic_model_id=6,"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_additive_metric_followup_keeps_previous_metric_and_grouping",
+    "explicit_fields": [
+      "semantic_model_id=81,"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_chinese_numeral_ranking_followup_inherits_context",
+    "explicit_fields": [
+      "semantic_model_id=81,"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_extrema_followup_uses_previous_detail_entity_as_dimension",
+    "explicit_fields": [
+      "semantic_model_id=81,"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_relationship_followup_does_not_inherit_old_metric_or_dimension",
+    "explicit_fields": [
+      "semantic_model_id=81,"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_closed_form_month_switch_skips_remote_entity_search",
+    "explicit_fields": [
+      "semantic_model_id=5,",
+      "business_domain_ids=[9],"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_explicit_current_metric_does_not_inherit_conflicting_previous_metric",
+    "explicit_fields": [
+      "semantic_model_id=6,",
+      "business_domain_ids=[9],"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  },
+  {
+    "path": "tests/test_question_rewriter.py",
+    "test": "test_alias_does_not_rewrite_appended_confirmed_context",
+    "explicit_fields": [
+      "semantic_model_id=6,",
+      "business_domain_ids=[9],"
+    ],
+    "reason": "Fixture state belongs to the current backend model/domain; business assertions unchanged."
+  }
+]

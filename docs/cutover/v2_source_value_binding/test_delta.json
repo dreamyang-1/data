@@ -1,0 +1,173 @@
+{
+  "baseline_commit": "ff389dc4cd3fe4e0dabe1c665e3672b80b445330",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline": {
+        "passed": 2573,
+        "failed": 27
+      },
+      "final": {
+        "passed": 2615,
+        "failed": 27
+      },
+      "new_tests": [
+        "tests/test_v2_source_value_binding.py::test_active_followup_cannot_reuse_deleted_value",
+        "tests/test_v2_source_value_binding.py::test_adding_deleted_member_cannot_use_removal_evidence",
+        "tests/test_v2_source_value_binding.py::test_ambiguous_replacement_keeps_the_old_filter_until_answer",
+        "tests/test_v2_source_value_binding.py::test_clear_does_not_require_an_old_business_value_to_still_exist",
+        "tests/test_v2_source_value_binding.py::test_database_selection_uses_existing_platform_mapping[7-True]",
+        "tests/test_v2_source_value_binding.py::test_database_selection_uses_existing_platform_mapping[9-False]",
+        "tests/test_v2_source_value_binding.py::test_deleted_value_cannot_restore_as_current_binding",
+        "tests/test_v2_source_value_binding.py::test_envelope_digest_covers_source_evidence",
+        "tests/test_v2_source_value_binding.py::test_equal_value_on_different_fields_requires_a_field_and_value_choice",
+        "tests/test_v2_source_value_binding.py::test_exact_explicit_field_and_later_reference_do_not_need_vector_enablement",
+        "tests/test_v2_source_value_binding.py::test_filter_value_cannot_be_applied_to_another_field",
+        "tests/test_v2_source_value_binding.py::test_foreign_source_receipt_is_rejected_before_plan_acceptance[attribute]",
+        "tests/test_v2_source_value_binding.py::test_foreign_source_receipt_is_rejected_before_plan_acceptance[mapping]",
+        "tests/test_v2_source_value_binding.py::test_foreign_source_receipt_is_rejected_before_plan_acceptance[pin]",
+        "tests/test_v2_source_value_binding.py::test_foreign_source_receipt_is_rejected_before_plan_acceptance[scope]",
+        "tests/test_v2_source_value_binding.py::test_historical_return_refreshes_only_selected_task_values[False]",
+        "tests/test_v2_source_value_binding.py::test_historical_return_refreshes_only_selected_task_values[True]",
+        "tests/test_v2_source_value_binding.py::test_incomplete_source_candidates_do_not_become_unique_by_truncation",
+        "tests/test_v2_source_value_binding.py::test_legacy_pending_identity_ignores_absent_new_filter_choice",
+        "tests/test_v2_source_value_binding.py::test_model_cannot_choose_unoffered_source_field",
+        "tests/test_v2_source_value_binding.py::test_model_cannot_use_an_unapplied_value_request",
+        "tests/test_v2_source_value_binding.py::test_multiple_source_ambiguities_preserve_all_filter_combinations",
+        "tests/test_v2_source_value_binding.py::test_new_task_does_not_refresh_or_inherit_deleted_historical_value",
+        "tests/test_v2_source_value_binding.py::test_proven_normalization_collision_asks_and_exact_option_completes",
+        "tests/test_v2_source_value_binding.py::test_proven_value_absence_is_a_system_reason_not_generic_clarification",
+        "tests/test_v2_source_value_binding.py::test_raw_exact_value_is_bound_to_current_field_and_scope[False]",
+        "tests/test_v2_source_value_binding.py::test_raw_exact_value_is_bound_to_current_field_and_scope[True]",
+        "tests/test_v2_source_value_binding.py::test_removing_deleted_member_uses_exact_current_filter_identity",
+        "tests/test_v2_source_value_binding.py::test_reusable_artifacts_require_fresh_values[DAG_RESUME]",
+        "tests/test_v2_source_value_binding.py::test_reusable_artifacts_require_fresh_values[RESPONSE_CACHE]",
+        "tests/test_v2_source_value_binding.py::test_reusable_artifacts_require_fresh_values[SEMANTIC_BINDINGS]",
+        "tests/test_v2_source_value_binding.py::test_same_pin_rechecks_each_source_value_once_at_acceptance",
+        "tests/test_v2_source_value_binding.py::test_scoped_source_receipt_cannot_move_to_another_conversation",
+        "tests/test_v2_source_value_binding.py::test_serialized_plan_source_proof_cannot_be_swapped[canonical_value]",
+        "tests/test_v2_source_value_binding.py::test_serialized_plan_source_proof_cannot_be_swapped[data_source_id]",
+        "tests/test_v2_source_value_binding.py::test_serialized_plan_source_proof_cannot_be_swapped[field_ref]",
+        "tests/test_v2_source_value_binding.py::test_source_pending_cannot_hijack_a_complete_new_task",
+        "tests/test_v2_source_value_binding.py::test_source_value_and_metric_ambiguities_each_resolve_once",
+        "tests/test_v2_source_value_binding.py::test_source_value_query_receipt_is_not_a_cross_scope_cache_key",
+        "tests/test_v2_source_value_binding.py::test_source_values_add_replace_remove_and_clear_do_not_revive",
+        "tests/test_v2_source_value_binding.py::test_source_values_cannot_be_reported_as_safe_legacy_sql",
+        "tests/test_v2_source_value_binding.py::test_stale_pending_choice_cannot_be_accepted"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ]
+    },
+    "Oagnet": {
+      "baseline": {
+        "passed": 625,
+        "failed": 8
+      },
+      "final": {
+        "passed": 633,
+        "failed": 8
+      },
+      "new_tests": [
+        "tests/test_catalog_value_sources.py::test_display_main_does_not_enable_implicit_source_lookup",
+        "tests/test_catalog_value_sources.py::test_governed_enabled_source_field_can_be_used_for_implicit_lookup[1_0]",
+        "tests/test_catalog_value_sources.py::test_governed_enabled_source_field_can_be_used_for_implicit_lookup[1_1]",
+        "tests/test_catalog_value_sources.py::test_governed_enabled_source_field_can_be_used_for_implicit_lookup[True]",
+        "tests/test_catalog_value_sources.py::test_unknown_search_policy_cannot_become_enabled_by_truthiness[2]",
+        "tests/test_catalog_value_sources.py::test_unknown_search_policy_cannot_become_enabled_by_truthiness[flag2]",
+        "tests/test_catalog_value_sources.py::test_unknown_search_policy_cannot_become_enabled_by_truthiness[flag3]",
+        "tests/test_catalog_value_sources.py::test_unknown_search_policy_cannot_become_enabled_by_truthiness[not-a-policy]"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter"
+      ]
+    },
+    "SQL_Translator": {
+      "baseline": {
+        "passed": 200
+      },
+      "final": {
+        "passed": 200
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": []
+    }
+  },
+  "critical_scenarios": {
+    "total": 160,
+    "passed": 160
+  },
+  "collection_errors": 0,
+  "old_pass_to_new_fail": 0,
+  "new_tests": 50,
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "intermediate_runs": {
+    "first_complete_agent": {
+      "passed": 2606,
+      "failed": 33
+    },
+    "compatibility_failure": "Six frozen Phase2.5.1 replay/idempotency assertions failed because absent filter_choice changed serialized mutation identity. Fixed option serialization to omit only the unused extension; frozen assertions and fixtures unchanged.",
+    "repaired_replay_and_source": {
+      "passed": 108
+    },
+    "final_focused": {
+      "passed": 81
+    },
+    "development_findings": [
+      "Fixed local hydrate_choice request-key shadowing and operation Enum comparison before final verification.",
+      "Corrected a new legacy identity fixture to offer the required two options; no existing expectation weakened."
+    ]
+  },
+  "mode": "Complete final three-service offline runs; Agent established serial batches cover all 102 test modules. Classifier clock fixed. No model/service network.",
+  "real_model_calls": 0,
+  "embedding_calls": 0,
+  "business_source_reads": 0,
+  "production_external_writes": 0
+}

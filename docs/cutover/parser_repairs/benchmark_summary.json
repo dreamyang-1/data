@@ -1,0 +1,646 @@
+{
+  "baseline_commit": "f15969dcc0f90e75a399a3d80d4a489d58139dec",
+  "baseline_report": "../evaluation_gates/benchmark_bench36.json",
+  "baseline_accepted": 65,
+  "studies": {
+    "intermediate": {
+      "contract": "semantic-axis-evaluation-v1",
+      "cases": 100,
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "missing_or_failed_predictions": 7,
+      "metrics": {
+        "critical_mention_recall": {
+          "passed": 76,
+          "denominator": 89,
+          "value": 0.8539325842696629
+        },
+        "critical_role_purity": {
+          "passed": 66,
+          "denominator": 89,
+          "value": 0.7415730337078652
+        },
+        "critical_role_recall": {
+          "passed": 67,
+          "denominator": 89,
+          "value": 0.7528089887640449
+        },
+        "operation": {
+          "passed": 11,
+          "denominator": 13,
+          "value": 0.8461538461538461
+        },
+        "query_shape": {
+          "passed": 39,
+          "denominator": 56,
+          "value": 0.6964285714285714
+        },
+        "turn_relation": {
+          "passed": 66,
+          "denominator": 72,
+          "value": 0.9166666666666666
+        }
+      },
+      "unlabeled_axes": [
+        "SQL_EXECUTION",
+        "RESULT_ACCURACY",
+        "FULL_STATE_MUTATION",
+        "CANONICAL_BINDING",
+        "EXACT_ENTITY_COUNT"
+      ],
+      "critical_mention_precision": "NOT_LABELED",
+      "end_to_end_acceptance": "NOT_EVALUATED",
+      "production_cutover_pass": false,
+      "component": "EXISTING_V2_CURRENT_TURN_PARSER",
+      "model": "qwen3.6-plus",
+      "thinking": false,
+      "observed_at": "2026-09-09T02:07:29.759296+00:00",
+      "prompt_version": "v2-current-recognition-v7",
+      "prompt_hash": "ff29f7c1ddffb368a48999dce8536231216f9f7bd1805f02b56c513668c8d1de",
+      "schema_hash": "33ff426f52da71efa99cf07a3aca1461ff5189ec4f3e7fa79974cb9f4924c2eb",
+      "gold_hash": "b2db7b903c691d2f696edeba3dbb90e4e1af7da80566d2a0635e1a7c9fd381b6",
+      "request_count": 100,
+      "temperature": 0,
+      "retries": 0,
+      "timeout_seconds": 30.0,
+      "production_default_model_changed": false,
+      "catalog_usage": "FROZEN_LABEL_EVIDENCE_ONLY_NO_RETRIEVAL_IN_CURRENT_TURN_STAGE",
+      "history_usage": "CURRENT_TURN_STAGE_DOES_NOT_RECEIVE_HISTORY",
+      "sql_executions": 0,
+      "production_state_writes": 0,
+      "latency_seconds": {
+        "mean": 7.81859,
+        "p95": 12.734
+      },
+      "http_status_counts": {
+        "200": 100
+      },
+      "accepted_predictions": 93,
+      "repair_counts": {
+        "EXACT_UNIQUE_CURRENT_SURFACE_SPAN": 33,
+        "EXACT_TOKEN_IN_UNIQUE_DECLARED_NEGATED_MENTION": 2
+      },
+      "repaired_cases": 32,
+      "failures": [
+        {
+          "case_id": "G81-074",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "input_repairs": [],
+          "status": "FAILED",
+          "error_type": "ValidationError",
+          "reason": "CURRENT_TURN_VALIDATION_FAILED",
+          "diagnostics": {
+            "invalid_surface_spans": 0,
+            "foreign_turn_mentions": 0,
+            "duplicate_mention_ids": 0,
+            "missing_mention_references": 1
+          },
+          "latency_seconds": 6.297
+        },
+        {
+          "case_id": "G81-076",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "input_repairs": [],
+          "status": "FAILED",
+          "error_type": "ValidationError",
+          "reason": "CURRENT_TURN_VALIDATION_FAILED",
+          "diagnostics": {
+            "invalid_surface_spans": 0,
+            "foreign_turn_mentions": 0,
+            "duplicate_mention_ids": 0,
+            "missing_mention_references": 1
+          },
+          "latency_seconds": 12.203
+        },
+        {
+          "case_id": "G81-088",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "input_repairs": [],
+          "status": "FAILED",
+          "error_type": "ValidationError",
+          "reason": "CURRENT_TURN_VALIDATION_FAILED",
+          "diagnostics": {
+            "invalid_surface_spans": 0,
+            "foreign_turn_mentions": 0,
+            "duplicate_mention_ids": 0,
+            "missing_mention_references": 1
+          },
+          "latency_seconds": 10.156
+        },
+        {
+          "case_id": "G81-090",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "input_repairs": [],
+          "status": "FAILED",
+          "error_type": "ValidationError",
+          "reason": "CURRENT_TURN_VALIDATION_FAILED",
+          "diagnostics": {
+            "invalid_surface_spans": 0,
+            "foreign_turn_mentions": 0,
+            "duplicate_mention_ids": 0,
+            "missing_mention_references": 0
+          },
+          "latency_seconds": 8.141
+        },
+        {
+          "case_id": "G81-092",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "input_repairs": [
+            {
+              "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+              "mention_id": "m3",
+              "field": "mention.span",
+              "before": [
+                6,
+                8
+              ],
+              "after": [
+                7,
+                9
+              ]
+            }
+          ],
+          "status": "FAILED",
+          "error_type": "ValidationError",
+          "reason": "CURRENT_TURN_VALIDATION_FAILED",
+          "diagnostics": {
+            "invalid_surface_spans": 0,
+            "foreign_turn_mentions": 0,
+            "duplicate_mention_ids": 0,
+            "missing_mention_references": 0
+          },
+          "latency_seconds": 14.86
+        },
+        {
+          "case_id": "G81-100",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "input_repairs": [
+            {
+              "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+              "mention_id": "G81-100-M1",
+              "field": "mention.span",
+              "before": [
+                0,
+                6
+              ],
+              "after": [
+                0,
+                7
+              ]
+            },
+            {
+              "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+              "mention_id": "G81-100-M2",
+              "field": "mention.span",
+              "before": [
+                7,
+                11
+              ],
+              "after": [
+                8,
+                12
+              ]
+            }
+          ],
+          "status": "FAILED",
+          "error_type": "ValidationError",
+          "reason": "CURRENT_TURN_VALIDATION_FAILED",
+          "diagnostics": {
+            "invalid_surface_spans": 0,
+            "foreign_turn_mentions": 0,
+            "duplicate_mention_ids": 0,
+            "missing_mention_references": 1
+          },
+          "latency_seconds": 10.0
+        },
+        {
+          "case_id": "G81-099",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "input_repairs": [],
+          "status": "FAILED",
+          "error_type": "ValidationError",
+          "reason": "CURRENT_TURN_VALIDATION_FAILED",
+          "diagnostics": {
+            "invalid_surface_spans": 0,
+            "foreign_turn_mentions": 0,
+            "duplicate_mention_ids": 0,
+            "missing_mention_references": 1
+          },
+          "latency_seconds": 12.937
+        }
+      ]
+    },
+    "final": {
+      "contract": "semantic-axis-evaluation-v1",
+      "cases": 100,
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "missing_or_failed_predictions": 6,
+      "metrics": {
+        "critical_mention_recall": {
+          "passed": 73,
+          "denominator": 89,
+          "value": 0.8202247191011236
+        },
+        "critical_role_purity": {
+          "passed": 67,
+          "denominator": 89,
+          "value": 0.7528089887640449
+        },
+        "critical_role_recall": {
+          "passed": 73,
+          "denominator": 89,
+          "value": 0.8202247191011236
+        },
+        "operation": {
+          "passed": 11,
+          "denominator": 13,
+          "value": 0.8461538461538461
+        },
+        "query_shape": {
+          "passed": 49,
+          "denominator": 56,
+          "value": 0.875
+        },
+        "turn_relation": {
+          "passed": 70,
+          "denominator": 72,
+          "value": 0.9722222222222222
+        }
+      },
+      "unlabeled_axes": [
+        "SQL_EXECUTION",
+        "RESULT_ACCURACY",
+        "FULL_STATE_MUTATION",
+        "CANONICAL_BINDING",
+        "EXACT_ENTITY_COUNT"
+      ],
+      "critical_mention_precision": "NOT_LABELED",
+      "end_to_end_acceptance": "NOT_EVALUATED",
+      "production_cutover_pass": false,
+      "component": "EXISTING_V2_CURRENT_TURN_PARSER",
+      "model": "qwen3.6-plus",
+      "thinking": false,
+      "observed_at": "2026-09-09T02:18:40.806763+00:00",
+      "prompt_version": "v2-current-recognition-v7",
+      "prompt_hash": "ff29f7c1ddffb368a48999dce8536231216f9f7bd1805f02b56c513668c8d1de",
+      "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+      "gold_hash": "b2db7b903c691d2f696edeba3dbb90e4e1af7da80566d2a0635e1a7c9fd381b6",
+      "request_count": 100,
+      "temperature": 0,
+      "retries": 0,
+      "timeout_seconds": 30.0,
+      "production_default_model_changed": false,
+      "catalog_usage": "FROZEN_LABEL_EVIDENCE_ONLY_NO_RETRIEVAL_IN_CURRENT_TURN_STAGE",
+      "history_usage": "CURRENT_TURN_STAGE_DOES_NOT_RECEIVE_HISTORY",
+      "sql_executions": 0,
+      "production_state_writes": 0,
+      "latency_seconds": {
+        "mean": 8.12403,
+        "p95": 11.937
+      },
+      "http_status_counts": {
+        "200": 96,
+        "401": 4
+      },
+      "accepted_predictions": 94,
+      "repair_counts": {
+        "EXACT_UNIQUE_CURRENT_SURFACE_SPAN": 35,
+        "EXACT_TOKEN_IN_UNIQUE_DECLARED_TEMPORAL_MENTION": 3,
+        "EXACT_TOKEN_IN_UNIQUE_DECLARED_NEGATED_MENTION": 2
+      },
+      "repaired_cases": 40,
+      "failures": [
+        {
+          "case_id": "G81-061",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "input_repairs": [
+            {
+              "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+              "mention_id": "G81-061-0",
+              "field": "mention.span",
+              "before": [
+                7,
+                13
+              ],
+              "after": [
+                6,
+                12
+              ]
+            }
+          ],
+          "status": "FAILED",
+          "error_type": "ValidationError",
+          "reason": "CURRENT_TURN_VALIDATION_FAILED",
+          "diagnostics": {
+            "invalid_surface_spans": 0,
+            "foreign_turn_mentions": 0,
+            "duplicate_mention_ids": 0,
+            "missing_mention_references": 1
+          },
+          "latency_seconds": 7.078
+        },
+        {
+          "case_id": "G81-082",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "input_repairs": [],
+          "status": "FAILED",
+          "error_type": "ValidationError",
+          "reason": "CURRENT_TURN_VALIDATION_FAILED",
+          "diagnostics": {
+            "invalid_surface_spans": 0,
+            "foreign_turn_mentions": 0,
+            "duplicate_mention_ids": 0,
+            "missing_mention_references": 1
+          },
+          "latency_seconds": 10.032
+        },
+        {
+          "case_id": "G81-096",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "status": "FAILED",
+          "error_type": "RecognitionFailure",
+          "reason": "V2_MODEL_TRANSPORT_FAILURE",
+          "latency_seconds": 0.078
+        },
+        {
+          "case_id": "G81-097",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "status": "FAILED",
+          "error_type": "RecognitionFailure",
+          "reason": "V2_MODEL_TRANSPORT_FAILURE",
+          "latency_seconds": 0.047
+        },
+        {
+          "case_id": "G81-098",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "status": "FAILED",
+          "error_type": "RecognitionFailure",
+          "reason": "V2_MODEL_TRANSPORT_FAILURE",
+          "latency_seconds": 0.047
+        },
+        {
+          "case_id": "G81-100",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "status": "FAILED",
+          "error_type": "RecognitionFailure",
+          "reason": "V2_MODEL_TRANSPORT_FAILURE",
+          "latency_seconds": 0.046
+        }
+      ]
+    },
+    "transport_recheck": {
+      "contract": "semantic-axis-evaluation-v1",
+      "cases": 4,
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "missing_or_failed_predictions": 4,
+      "metrics": {
+        "critical_mention_recall": {
+          "passed": 0,
+          "denominator": 4,
+          "value": 0.0
+        },
+        "critical_role_purity": {
+          "passed": 0,
+          "denominator": 4,
+          "value": 0.0
+        },
+        "critical_role_recall": {
+          "passed": 0,
+          "denominator": 4,
+          "value": 0.0
+        },
+        "query_shape": {
+          "passed": 0,
+          "denominator": 3,
+          "value": 0.0
+        }
+      },
+      "unlabeled_axes": [
+        "SQL_EXECUTION",
+        "RESULT_ACCURACY",
+        "FULL_STATE_MUTATION",
+        "CANONICAL_BINDING",
+        "EXACT_ENTITY_COUNT"
+      ],
+      "critical_mention_precision": "NOT_LABELED",
+      "end_to_end_acceptance": "NOT_EVALUATED",
+      "production_cutover_pass": false,
+      "component": "EXISTING_V2_CURRENT_TURN_PARSER",
+      "model": "qwen3.6-plus",
+      "thinking": false,
+      "observed_at": "2026-09-09T02:20:38.426688+00:00",
+      "prompt_version": "v2-current-recognition-v7",
+      "prompt_hash": "ff29f7c1ddffb368a48999dce8536231216f9f7bd1805f02b56c513668c8d1de",
+      "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+      "gold_hash": "b2db7b903c691d2f696edeba3dbb90e4e1af7da80566d2a0635e1a7c9fd381b6",
+      "request_count": 4,
+      "temperature": 0,
+      "retries": 0,
+      "timeout_seconds": 30.0,
+      "production_default_model_changed": false,
+      "catalog_usage": "FROZEN_LABEL_EVIDENCE_ONLY_NO_RETRIEVAL_IN_CURRENT_TURN_STAGE",
+      "history_usage": "CURRENT_TURN_STAGE_DOES_NOT_RECEIVE_HISTORY",
+      "sql_executions": 0,
+      "production_state_writes": 0,
+      "latency_seconds": {
+        "mean": 0.0785,
+        "p95": 0.125
+      },
+      "http_status_counts": {
+        "401": 4
+      },
+      "accepted_predictions": 0,
+      "repair_counts": {},
+      "repaired_cases": 0,
+      "failures": [
+        {
+          "case_id": "G81-096",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "status": "FAILED",
+          "error_type": "RecognitionFailure",
+          "reason": "V2_MODEL_TRANSPORT_FAILURE",
+          "latency_seconds": 0.125
+        },
+        {
+          "case_id": "G81-097",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "status": "FAILED",
+          "error_type": "RecognitionFailure",
+          "reason": "V2_MODEL_TRANSPORT_FAILURE",
+          "latency_seconds": 0.125
+        },
+        {
+          "case_id": "G81-098",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "status": "FAILED",
+          "error_type": "RecognitionFailure",
+          "reason": "V2_MODEL_TRANSPORT_FAILURE",
+          "latency_seconds": 0.032
+        },
+        {
+          "case_id": "G81-100",
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ],
+            "scope_mode": "EXPLICIT_DOMAINS"
+          },
+          "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+          "status": "FAILED",
+          "error_type": "RecognitionFailure",
+          "reason": "V2_MODEL_TRANSPORT_FAILURE",
+          "latency_seconds": 0.032
+        }
+      ]
+    }
+  },
+  "causal_scope": "Captured replay proves representation repair. Fresh live generations and final schema narrowing also differ; this is not a single-variable or held-out accuracy claim.",
+  "current_branch_model_requests": 217,
+  "request_breakdown": {
+    "initial_capture": 6,
+    "intermediate": 100,
+    "remaining_capture": 7,
+    "final": 100,
+    "transport_recheck": 4
+  },
+  "evaluation_acceptance": "NOT_PASSED",
+  "full_v1_v2_comparison": "NOT_EVALUATED",
+  "sql_executions": 0,
+  "production_state_writes": 0
+}

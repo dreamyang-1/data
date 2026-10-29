@@ -1,0 +1,31 @@
+{
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "entries": [
+    {
+      "attribute_id": "2094306753653587970",
+      "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016",
+      "observed_at": "2026-09-09T05:31:10.550773+00:00",
+      "limit": 64,
+      "distinct_count": 34,
+      "status": "BOUNDED_READ_ONLY_PROBE",
+      "values_hash": "cd1b351e7a83f93a2700b0cde55eaee6498ce1afee9edebf2b841ef88015fa2a"
+    },
+    {
+      "attribute_id": "2094307294823661570",
+      "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae",
+      "observed_at": "2026-09-09T05:31:10.785319+00:00",
+      "limit": 64,
+      "distinct_count": 396,
+      "status": "HIGH_CARDINALITY_PROBE_NOT_ALLOWED"
+    }
+  ],
+  "source_SQL_executions": 3,
+  "production_writes": 0
+}

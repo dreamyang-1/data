@@ -1,0 +1,1618 @@
+"""语义建模推荐接口（Python 版）单测与路由契约测试。
+
+覆盖：实体表推荐（建议实体名去重/关键词分组/limit/LLM 重排与降级）、
+属性推荐（主键优先/排序/enumValues）、关联检测（计数/related/skip 零）、
+关系推荐（已配置分组/反向交换/基数翻转/物理推导 PK-FK/LLM 语义增强）、
+路由层 Resp 包装与鉴权。
+"""
+from contextlib import contextmanager
+import json
+import logging
+
+import pytest
+from fastapi.testclient import TestClient as RawTestClient
+
+from app.config import Settings
+from app.main import create_app
+from app.services import semantic_recommend
+from app.services.semantic_recommend import (
+    SemanticRecommendError,
+    SemanticRecommendService,
+    _build_semantic_description,
+    _display_cardinality,
+    _derive_entity_name,
+    _is_foreign_key_to,
+    _normalize_cardinality,
+    _parse_llm_json_array,
+    _relation_category,
+    _split_table_column,
+)
+
+
+# ====================== 测试替身 ======================
+
+
+class FakeReader:
+    """按表驱动返回元数据行（snake_case，与数据库列同名）。
+
+    calls 记录每次读取的方法名，用于断言"固定查询次数"回归
+    （detect_relations 不随实体数增长 N+1）。
+    """
+
+    def __init__(self, *, entities=None, tables=None,
+                 fields=None, relations=None):
+        self._entities = entities or []
+        self._tables = tables or []
+        self._fields = fields or {}
+        self._relations = relations or []
+        self.field_calls = []
+        self.calls = []
+
+    def entities(self, semantic_model_id):
+        self.calls.append("entities")
+        return [dict(row) for row in self._entities]
+
+    def tables(self, semantic_model_id, data_source_id):
+        self.calls.append("tables")
+        rows = [dict(row) for row in self._tables]
+        if data_source_id is None:
+            return rows
+        return [row for row in rows if row.get("data_source_id") == data_source_id]
+
+    def field_counts(self, table_ids):
+        self.calls.append("field_counts")
+        self.field_calls.append(list(table_ids))
+        return {tid: len(self._fields.get(tid, [])) for tid in table_ids}
+
+    def fields(self, table_id):
+        self.calls.append("fields")
+        return [dict(row) for row in self._fields.get(table_id, [])]
+
+    def fields_batch(self, table_ids):
+        self.calls.append("fields_batch")
+        return {tid: [dict(row) for row in self._fields.get(tid, [])]
+                for tid in table_ids}
+
+    def relations(self, semantic_model_id):
+        self.calls.append("relations")
+        return [dict(row) for row in self._relations]
+
+
+class FakeGateway:
+    def __init__(self, answer=None):
+        self.answer = answer
+        self.calls = []
+
+    def complete(self, query, prompt):
+        self.calls.append((query, prompt))
+        return self.answer
+
+
+def field(fid, name, comment=None, ftype="varchar", enum_values=None):
+    return {"id": fid, "name": name, "comment": comment,
+            "type": ftype, "enum_values": enum_values}
+
+
+def base_reader(**overrides):
+    data = dict(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "customer", "comment": "客户信息表",
+             "data_source_id": 58},
+            {"id": 2, "name": "sales_order", "comment": "订单记录表",
+             "data_source_id": 58},
+            {"id": 3, "name": "log_record", "comment": None,
+             "data_source_id": 58},
+            {"id": 4, "name": "config_item", "comment": "系统配置",
+             "data_source_id": 59},
+        ],
+        fields={
+            1: [
+                field(11, "id", "主键", "bigint"),
+                field(12, "customer_name", "客户名称"),
+                field(13, "status", None, "varchar", "A,B"),
+            ],
+            2: [
+                field(21, "id", "主键", "bigint"),
+                field(22, "customer_id", "客户ID"),
+            ],
+        },
+        relations=[
+            {"id": 9, "name": "拥有", "category": "IDENTIFYING", "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+             "source_table_column_name": "customer-id",
+             "target_table_column_name": "sales_order-customer_id"},
+            {"id": 10, "name": "属于", "category": None, "type": "N:1",
+             "source_entity_type_id": "et-2", "target_entity_type_id": "et-1",
+             "source_table_column_name": "sales_order-order_no",
+             "target_table_column_name": "customer-id"},
+        ],
+    )
+    data.update(overrides)
+    return FakeReader(**data)
+
+
+# ====================== 纯函数 ======================
+
+
+def test_is_foreign_key_to_rules():
+    assert _is_foreign_key_to("customer_id", "customer", "id")
+    assert _is_foreign_key_to("CUSTOMER_ID", "customer", "id")
+    assert not _is_foreign_key_to("id", "customer", "id")
+    assert not _is_foreign_key_to(None, "customer", "id")
+    assert not _is_foreign_key_to("customer_name", "customer", "id")
+    # 去下划线后仍不匹配对方表名，也没有同名主键
+    assert not _is_foreign_key_to("cust_id", "customer", None)
+    # 与对方主键同名
+    assert _is_foreign_key_to("sales_order_id", None, "sales_order_id")
+    # 短表名（长度<=2 去下划线）不参与前缀判断
+    assert not _is_foreign_key_to("ab_id", "ab", None)
+
+
+def test_split_table_column():
+    assert _split_table_column("customer-id") == ("customer", "id")
+    assert _split_table_column("customer") == ("customer", None)
+    assert _split_table_column(None) == (None, None)
+    assert _split_table_column("  ") == (None, None)
+    assert _split_table_column("-id") == ("-id", None)  # idx=0 视为无分隔符
+
+
+def test_normalize_cardinality_reversal():
+    assert _normalize_cardinality("1:N", True) == "N:1"
+    assert _normalize_cardinality("N:1", True) == "1:N"
+    assert _normalize_cardinality("N:N", True) == "N:N"
+    assert _normalize_cardinality("1:N", False) == "1:N"
+    assert _normalize_cardinality(None, False) == "1:N"
+
+
+def test_build_semantic_description_sentences():
+    assert _build_semantic_description("客户", "订单", "1:1", "拥有") == (
+        "1 个【客户】拥有1 个【订单】"
+    )
+    assert _build_semantic_description("客户", "订单", "N:1", "隶属") == (
+        "多个【客户】隶属1 个【订单】"
+    )
+    assert _build_semantic_description("客户", "订单", "N:N", "关联") == (
+        "1 个【客户】可关联多个【订单】，1 个【订单】可被多个【客户】关联"
+    )
+    assert _build_semantic_description("客户", "订单", "1:N", "开设") == (
+        "1 个【客户】开设多个【订单】"
+    )
+
+
+def test_recommended_city_dealer_description_is_one_sentence():
+    reader = base_reader(relations=[])
+    reader._entities[0]["name"] = "城市"
+    reader._entities[1]["name"] = "经销商"
+    gateway = FakeGateway('[{"candidate":1,"relationName":"包含","semanticDescription":"不采用模型描述"}]')
+    result = SemanticRecommendService(reader, gateway).recommend_relations(81, "et-1", "et-2")
+    assert result[0]["semanticDescription"] == "1 个【城市】包含多个【经销商】"
+
+
+@pytest.mark.parametrize("cardinality", ["N:N", "M:N"])
+def test_configured_many_to_many_keeps_both_directions(cardinality):
+    reader = base_reader()
+    reader._relations = reader._relations[:1]
+    reader._relations[0]["type"] = cardinality
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    assert result
+    for candidate in result:
+        assert candidate["cardinality"] == "M:N"
+        assert candidate["semanticDescription"].count("，") == 1
+        assert not candidate.get("indirect")
+
+
+def test_display_cardinality_keeps_three_values():
+    """推荐关系对外只展示 1:1 / 1:N / M:N（N:1 归入一对多，N:N 记为 M:N）。"""
+    assert _display_cardinality("1:1") == "1:1"
+    assert _display_cardinality("1:N") == "1:N"
+    assert _display_cardinality("N:1") == "1:N"
+    assert _display_cardinality("N:N") == "M:N"
+    assert _display_cardinality("M:N") == "M:N"
+    assert _display_cardinality(None) == ""
+
+
+def test_derive_entity_name_suffixes():
+    assert _derive_entity_name("customer", "客户信息表") == "客户"
+    assert _derive_entity_name("sales_order", "订单记录表") == "订单"
+    assert _derive_entity_name("t_user", "用户数据表") == "用户"
+    assert _derive_entity_name("t_user", None) == "t_user"
+    assert _derive_entity_name("t_user", "") == "t_user"
+    assert _derive_entity_name("t_user", "配置") == "配置"
+
+
+def test_parse_llm_json_array():
+    assert _parse_llm_json_array(None) is None
+    assert _parse_llm_json_array("") is None
+    assert _parse_llm_json_array("说明文字") is None
+    assert _parse_llm_json_array("结果：[{'a':1}]") is None  # 非法 JSON
+    assert _parse_llm_json_array('前缀 [ {"a":1} ] 后缀') == [{"a": 1}]
+    assert _parse_llm_json_array('{"a":1}') is None  # 不是数组
+
+
+# ====================== 接口一：实体表推荐 ======================
+
+
+def test_recommend_tables_entity_name_dedup_and_keyword_limit():
+    # 2026-10-14 契约：实体唯一——建议实体名与已有实体重名的条目不返回；
+    # 表本身是否被映射不影响（一张表可派生多个实体）。
+    # fixture 中 et-1(客户)/et-2(订单) 使 customer/sales_order 的建议名撞车
+    reader = base_reader()
+    service = SemanticRecommendService(reader, None)
+
+    # 无关键词：有注释在前（按表名），无注释在后；字段数经一次 GROUP BY 查询
+    result = service.recommend_tables(81, None, None, None)
+    assert [vo["tableName"] for vo in result] == ["config_item", "log_record"]
+    assert reader.field_calls == [[1, 2, 3, 4]]
+    by_name = {vo["tableName"]: vo for vo in result}
+    assert by_name["config_item"]["suggestedEntityName"] == "系统配置"
+    assert by_name["config_item"]["fieldCount"] == 0
+    assert by_name["log_record"]["fieldCount"] == 0
+
+    # 关键词命中：名称命中 > 注释命中，未命中的被过滤；
+    # 命中表的建议名撞已有实体（sales_order→订单）同样不返回
+    result = service.recommend_tables(81, None, "订单", None)
+    assert result == []
+
+    # 关键词命中注释
+    result = service.recommend_tables(81, None, "系统", None)
+    assert [vo["tableName"] for vo in result] == ["config_item"]
+
+    # 关键词命中建议名未撞车的表
+    result = service.recommend_tables(81, None, "log", None)
+    assert [vo["tableName"] for vo in result] == ["log_record"]
+
+    # limit 截断
+    result = service.recommend_tables(81, None, None, 1)
+    assert [vo["tableName"] for vo in result] == ["config_item"]
+
+    # data_source 过滤
+    result = service.recommend_tables(81, 59, None, None)
+    assert [vo["tableName"] for vo in result] == ["config_item"]
+
+
+def test_recommend_tables_table_not_mapped_but_name_taken():
+    # 表未被任何实体映射，但建议实体名已存在 → 不返回（实体唯一）
+    reader = base_reader(tables=[
+        {"id": 1, "name": "customer", "comment": "客户信息表", "data_source_id": 58},
+        {"id": 2, "name": "sales_order", "comment": "订单记录表", "data_source_id": 58},
+        {"id": 5, "name": "merchant_order", "comment": "订单", "data_source_id": 58},
+        {"id": 3, "name": "log_record", "comment": None, "data_source_id": 58},
+        {"id": 4, "name": "config_item", "comment": "系统配置", "data_source_id": 59},
+    ])
+    service = SemanticRecommendService(reader, None)
+    # merchant_order 未被映射，但建议名"订单"与已有实体 et-2 重名 → 剔除
+    names = [vo["tableName"] for vo in service.recommend_tables(81, None, None, None)]
+    assert "merchant_order" not in names
+    assert names == ["config_item", "log_record"]
+
+
+def test_recommend_tables_llm_rename_into_existing_entity_dropped():
+    # 大模型把建议实体名改成已有实体名 → 返回前剔除
+    reader = base_reader()
+    gateway = FakeGateway('[{"tableName":"log_record","entityName":"客户"}]')
+    service = SemanticRecommendService(reader, gateway)
+    result = service.recommend_tables(81, None, None, None)
+    names = [vo["tableName"] for vo in result]
+    assert "log_record" not in names
+    assert names == ["config_item"]
+
+
+def test_recommend_tables_llm_reorder_and_entity_names():
+    reader = base_reader()
+    gateway = FakeGateway(
+        '[{"tableName":"config_item","entityName":"配置项"}]'
+    )
+    service = SemanticRecommendService(reader, gateway)
+    result = service.recommend_tables(81, None, None, None)
+    # 已配置表（customer/sales_order）不返回；LLM 返回的排在前
+    assert [vo["tableName"] for vo in result] == ["config_item", "log_record"]
+    by_name = {vo["tableName"]: vo for vo in result}
+    assert by_name["config_item"]["suggestedEntityName"] == "配置项"
+    assert "实体映射表推荐排序" == gateway.calls[0][0]
+
+
+def test_recommend_tables_llm_failure_falls_back_to_rules():
+    reader = base_reader()
+    service = SemanticRecommendService(reader, FakeGateway(None))
+    result = service.recommend_tables(81, None, None, None)
+    assert [vo["tableName"] for vo in result] == ["config_item", "log_record"]
+    assert result[0]["suggestedEntityName"] == "系统配置"
+
+
+def test_recommend_tables_llm_ignored_without_gateway():
+    reader = base_reader()
+    service = SemanticRecommendService(reader, None, llm_enabled=True)
+    # gateway 为 None 时 _llm_enabled 自动为 False，不应报错
+    assert service.recommend_tables(81, None, None, None)
+
+
+# ====================== 接口二：属性推荐 ======================
+
+
+def test_recommend_fields_primary_first_and_ordering():
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.recommend_fields(1)
+    assert [vo["name"] for vo in result] == ["id", "customer_name", "status"]
+    assert result[0]["primaryKey"] is True
+    assert result[0]["fieldId"] == 11
+    assert result[1]["primaryKey"] is False
+    # 无注释字段排在有注释字段之后
+    status = result[2]
+    assert status["comment"] is None
+    assert status["enumValues"] == "A,B"
+    assert status["suggestedAttrName"] == "status"
+    assert result[1]["suggestedAttrName"] == "客户名称"
+
+
+def test_recommend_fields_rejects_bad_table_id():
+    service = SemanticRecommendService(base_reader(), None)
+    with pytest.raises(SemanticRecommendError):
+        service.recommend_fields(0)
+    with pytest.raises(SemanticRecommendError):
+        service.recommend_fields(-1)
+
+
+def test_recommend_fields_llm_refines_names():
+    # 2026-10-14 契约：注释含字母/数字的字段必须由模型提炼为纯中文属性名
+    reader = base_reader(fields={
+        1: [
+            field(11, "id", "主键", "bigint"),
+            field(12, "customer_name", "客户名称"),
+            field(14, "level3_code", "customer_level3编码"),
+            field(13, "status", None, "varchar", "A,B"),
+        ],
+    })
+    answer = json.dumps([
+        {"name": "id", "attrName": "主键"},
+        {"name": "customer_name", "attrName": "客户名称"},
+        {"name": "level3_code", "attrName": "客户等级编码"},
+        {"name": "status", "attrName": "状态A"},  # 含字母，必须被拒绝
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(reader, FakeGateway(answer))
+    result = service.recommend_fields(1)
+    by_name = {vo["name"]: vo for vo in result}
+    assert by_name["level3_code"]["suggestedAttrName"] == "客户等级编码"
+    assert by_name["customer_name"]["suggestedAttrName"] == "客户名称"
+    # 模型输出含字母 → 拒绝，保留规则结果（原字段名）
+    assert by_name["status"]["suggestedAttrName"] == "status"
+    # 模型被调用过（属性名提炼入口）
+    gateway = service._gateway
+    assert gateway.calls and gateway.calls[0][0] == "实体属性名提炼"
+
+
+def test_recommend_fields_llm_invalid_answer_keeps_rule_names():
+    reader = base_reader(fields={
+        1: [field(12, "customer_name", "客户名称")],
+    })
+    # 网关返回空答案（如模型名不受支持）→ 静默降级为规则结果
+    service = SemanticRecommendService(reader, FakeGateway(None))
+    result = service.recommend_fields(1)
+    assert result[0]["suggestedAttrName"] == "客户名称"
+    assert len(service._gateway.calls) == 1
+
+
+def test_recommend_fields_llm_clean_name_kept_without_gateway_call_change():
+    # gateway 为 None 时 _llm_enabled 自动为 False，不应报错也不调模型
+    reader = base_reader(fields={1: [field(12, "customer_name", "客户名称")]})
+    service = SemanticRecommendService(reader, None)
+    result = service.recommend_fields(1)
+    assert result[0]["suggestedAttrName"] == "客户名称"
+
+
+# ====================== 接口二扩展：图谱节点显示标记 ======================
+
+
+def test_recommend_fields_marks_graph_node_display():
+    """需求 5：推荐属性中唯一标记一个「图谱节点显示」名称字段。"""
+    reader = base_reader(fields={
+        1: [
+            field(11, "id", "主键", "bigint"),
+            field(12, "customer_code", "客户编码"),
+            field(13, "customer_name", "客户名称"),
+            field(14, "status", None),
+        ],
+    })
+    result = SemanticRecommendService(reader, None).recommend_fields(1)
+    marked = [vo["name"] for vo in result if vo["graphNodeDisplay"]]
+    assert marked == ["customer_name"]
+
+    # 没有名称类字段：退化为首个非主键、非标识字段
+    reader = base_reader(fields={
+        1: [
+            field(11, "id", "主键", "bigint"),
+            field(12, "customer_code", "客户编码"),
+            field(13, "status", None, "varchar", "A,B"),
+        ],
+    })
+    result = SemanticRecommendService(reader, None).recommend_fields(1)
+    marked = [vo["name"] for vo in result if vo["graphNodeDisplay"]]
+    assert marked == ["status"]
+
+
+# ====================== 接口三：关联检测 ======================
+
+
+def test_detect_relations_filters_by_business_domain():
+    # 2026-10-14 契约：实体在业务域内配置，传 businessDomainId 时只检测同域实体
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58, "business_domain_id": 10},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58, "business_domain_id": 10},
+            {"id": "et-3", "name": "库存", "main_table_name": "stock",
+             "data_source_id": 58, "business_domain_id": 20},
+        ],
+        relations=[
+            {"id": 9, "name": "拥有", "category": "IDENTIFYING", "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+             "source_table_column_name": "customer-id",
+             "target_table_column_name": "sales_order-customer_id"},
+            {"id": 11, "name": "占用", "category": None, "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-3",
+             "source_table_column_name": "customer-stock_id",
+             "target_table_column_name": "stock-id"},
+        ],
+    )
+    service = SemanticRecommendService(reader, None)
+    # 不传参：自动按当前实体 et-1 所属域 10 过滤（STALE_TEST：2026-10-14 契约
+    # 从"不传=全模型"改为"不传=自动识别业务域"）
+    auto = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in auto] == ["et-2"]
+    # 显式传业务域 10：与自动识别结果一致
+    scoped = service.detect_relations(81, "et-1", business_domain_id=10)
+    assert [row["otherEntityTypeId"] for row in scoped] == ["et-2"]
+    assert scoped[0]["related"] is True
+    # 传其他域 20：只返回该域内的 et-3（它与当前实体有已配置关系）
+    other_domain = service.detect_relations(81, "et-1", business_domain_id=20)
+    assert [row["otherEntityTypeId"] for row in other_domain] == ["et-3"]
+    assert other_domain[0]["relationCount"] == 1
+
+
+def test_detect_relations_auto_derives_domain_from_current_entity():
+    # 2026-10-14 契约：进入业务域才能选实体，服务端按当前实体所属业务域自动过滤
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58, "business_domain_id": 10},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58, "business_domain_id": 10},
+            {"id": "et-3", "name": "库存", "main_table_name": "stock",
+             "data_source_id": 58, "business_domain_id": 20},
+        ],
+        relations=[
+            {"id": 9, "name": "拥有", "category": "IDENTIFYING", "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+             "source_table_column_name": "customer-id",
+             "target_table_column_name": "sales_order-customer_id"},
+            {"id": 11, "name": "占用", "category": None, "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-3",
+             "source_table_column_name": "customer-stock_id",
+             "target_table_column_name": "stock-id"},
+        ],
+    )
+    service = SemanticRecommendService(reader, None)
+    # 不传参：自动按 et-1 所属域 10 过滤，跨域 et-3 被剔除
+    scoped = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in scoped] == ["et-2"]
+    # 当前实体无业务域：不过滤（全模型行为）
+    reader._entities[0]["business_domain_id"] = None
+    service2 = SemanticRecommendService(reader, None)
+    all_ids = {row["otherEntityTypeId"]
+               for row in service2.detect_relations(81, "et-1")}
+    assert all_ids == {"et-2", "et-3"}
+
+
+def test_detect_relations_counts_configured_and_inferred():
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.detect_relations(81, "et-1")
+    assert len(result) == 1
+    row = result[0]
+    assert row["otherEntityTypeId"] == "et-2"
+    assert row["otherEntityName"] == "订单"
+    assert row["related"] is True
+    assert row["relationCount"] == 2  # 两条已配置关系（含反向）
+    assert row["inferred"] is True
+    assert row["inferredCount"] == 1  # sales_order.customer_id -> customer.id
+
+
+def test_detect_relations_skips_shared_dimension_key_when_configured():
+    """已有配置关系时，两端共用的第三个维度键不计入推导候选（不经中间表建关系）。"""
+    reader = base_reader(fields={
+        1: [field(11, "id", "主键", "bigint"),
+            field(12, "dept_id", "部门ID")],
+        2: [field(21, "id", "主键", "bigint"),
+            field(22, "customer_id", "客户ID"),
+            field(23, "dept_id", "部门ID")],
+    })
+    result = SemanticRecommendService(reader, None).detect_relations(81, "et-1")
+    assert len(result) == 1
+    # 只剩 customer.id -> sales_order.customer_id 一条；同名 dept_id 不再产出
+    assert result[0]["inferredCount"] == 1
+
+
+def test_detect_relations_skips_entities_without_evidence():
+    reader = base_reader(entities=[
+        {"id": "et-1", "name": "客户", "main_table_name": "customer",
+         "data_source_id": 58},
+        {"id": "et-3", "name": "孤立实体", "main_table_name": "no_such_table",
+         "data_source_id": 58},
+    ])
+    service = SemanticRecommendService(reader, None)
+    assert service.detect_relations(81, "et-1") == []
+
+
+def test_detect_relations_validates_input():
+    service = SemanticRecommendService(base_reader(), None)
+    with pytest.raises(SemanticRecommendError):
+        service.detect_relations(81, "")
+    with pytest.raises(SemanticRecommendError, match="实体类型不存在"):
+        service.detect_relations(81, "et-404")
+
+
+def test_detect_relations_fixed_reader_calls():
+    """回归：读取次数固定（entities/relations/tables/fields_batch）。
+
+    原实现逐实体查表清单和字段（85 实体模型约 173 条 SQL，实测 2.6s）。
+    无直接证据的对不再扫描中间表，读取次数保持固定。
+    """
+    entities = [
+        {"id": "et-1", "name": "客户", "main_table_name": "customer",
+         "data_source_id": 58},
+        {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+         "data_source_id": 58},
+        {"id": "et-3", "name": "无主表实体", "main_table_name": None,
+         "data_source_id": 58},
+        {"id": "et-4", "name": "主表缺失实体", "main_table_name": "missing",
+         "data_source_id": 58},
+        {"id": "et-5", "name": "日志", "main_table_name": "log_record",
+         "data_source_id": 58},
+    ]
+    reader = base_reader(entities=entities)
+    service = SemanticRecommendService(reader, None)
+    service.detect_relations(81, "et-1")
+    assert reader.calls == [
+        "entities", "relations", "tables", "fields_batch",
+    ]
+
+
+# ---------- 2026-10-24：取消中间表推荐的回归 ----------
+
+
+def bridge_reader(**overrides):
+    """三实体中间表场景：客户—订单—产品，客户与产品之间无直接关系。
+
+    规则命中：customer.id ↔ sales_order.customer_id（1:N）、
+    sales_order.product_id → product.id（N:1）、customer 与 product 无任何直接命中。
+    """
+    data = dict(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58},
+            {"id": "et-3", "name": "产品", "main_table_name": "product",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "customer", "comment": "客户信息表",
+             "data_source_id": 58},
+            {"id": 2, "name": "sales_order", "comment": "订单记录表",
+             "data_source_id": 58},
+            {"id": 5, "name": "product", "comment": "产品表",
+             "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint"),
+                field(12, "customer_name", "客户名称")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "customer_id", "客户ID"),
+                field(23, "product_id", "产品ID")],
+            5: [field(51, "id", "主键", "bigint"),
+                field(52, "product_name", "产品名称")],
+        },
+        relations=[],
+    )
+    data.update(overrides)
+    return FakeReader(**data)
+
+
+
+
+def test_detect_relations_omits_entity_bridge():
+    service = SemanticRecommendService(bridge_reader(), None)
+    result = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
+    assert result[0]["inferred"] is True
+    assert all(not row.get("indirect") for row in result)
+
+
+def test_detect_relations_indirect_from_configured_hops():
+    """两跳均已配置也不再推荐间接候选，直接配置关系仍保留。"""
+    reader = bridge_reader(
+        fields={
+            1: [field(11, "id", "主键", "bigint")],
+            2: [field(21, "id", "主键", "bigint")],
+            5: [field(51, "id", "主键", "bigint")],
+        },
+        relations=[
+            {"id": 9, "name": "下单", "category": None, "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+             "source_table_column_name": "customer-id",
+             "target_table_column_name": "sales_order-customer_id"},
+            {"id": 10, "name": "含产品", "category": None, "type": "1:N",
+             "source_entity_type_id": "et-2", "target_entity_type_id": "et-3",
+             "source_table_column_name": "sales_order-id",
+             "target_table_column_name": "product-order_id"},
+        ],
+    )
+    service = SemanticRecommendService(reader, None)
+    result = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
+    assert result[0]["related"] is True
+    assert service.recommend_relations(81, "et-1", "et-3") == []
+
+
+def test_detect_relations_no_indirect_when_direct_evidence():
+    """客户与产品有直接规则命中时不生成间接候选（不做重复建议）。"""
+    reader = bridge_reader()
+    reader._fields[1].append(field(13, "product_id", "产品ID"))
+    service = SemanticRecommendService(reader, None)
+    result = service.detect_relations(81, "et-1")
+    assert all(not row.get("indirect") for row in result)
+    assert {row["otherEntityTypeId"] for row in result} == {"et-2", "et-3"}
+
+
+def test_detect_relations_indirect_llm_denial_drops_row():
+    """模型否决经中间表的间接候选 → 该行整体移除。"""
+    answer = json.dumps([
+        {"otherEntityTypeId": "et-3", "confirmed": False,
+         "cardinality": None, "confidence": "low",
+         "reason": "两跳路径业务上不成立",
+         "fieldPairs": []},
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(bridge_reader(), FakeGateway(answer))
+    result = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
+
+
+def test_detect_relations_llm_cannot_restore_removed_bridge():
+    """模型返回间接实体也不能重新添加已取消的推荐。"""
+    answer = json.dumps([
+        {"otherEntityTypeId": "et-3", "confirmed": True,
+         "cardinality": "N:N", "confidence": "medium",
+         "reason": "订单表连接客户与产品",
+         "fieldPairs": [
+             {"sourceTableName": "customer", "sourceColumnName": "id",
+              "targetTableName": "product", "targetColumnName": "id"},
+         ]},
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(bridge_reader(), FakeGateway(answer))
+    result = service.detect_relations(81, "et-1")
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
+    query, prompt = service._gateway.calls[0]
+    assert "两跳间接关联" not in prompt
+
+
+def test_recommend_relations_omits_common_neighbor():
+    reader = bridge_reader()
+    service = SemanticRecommendService(reader, None)
+    assert service.recommend_relations(81, "et-1", "et-3") == []
+    assert reader.calls == ["entities", "relations", "tables", "fields_batch"]
+
+
+def test_recommend_relations_direct_result_skips_indirect():
+    """有直接推导时不触发间接路径，SQL 次数保持 4。"""
+    service = SemanticRecommendService(bridge_reader(), None)
+    result = service.recommend_relations(81, "et-1", "et-2")
+    assert result and all(not vo.get("indirect") for vo in result)
+    assert service._reader.calls == [
+        "entities", "relations", "tables", "fields_batch",
+    ]
+
+
+def test_detect_relations_indirect_fixed_reader_calls():
+    """取消间接推断后，关联检测只装载直接关系所需的元数据。"""
+    service = SemanticRecommendService(bridge_reader(), None)
+    result = service.detect_relations(81, "et-1")
+    assert not any(row.get("indirect") for row in result)
+    assert service._reader.calls == [
+        "entities", "relations", "tables", "fields_batch",
+    ]
+
+
+# ---------- 接口三：大模型复核（2026-10-15） ----------
+
+
+def test_detect_relations_llm_reviews_rule_pairs_and_ignores_suggestions():
+    """模型复核：确认规则对并给出字段对；对未命中/未配置的对不做新建议。"""
+    reader = base_reader(entities=[
+        {"id": "et-1", "name": "客户", "main_table_name": "customer",
+         "data_source_id": 58},
+        {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+         "data_source_id": 58},
+        {"id": "et-5", "name": "日志", "main_table_name": "log_record",
+         "data_source_id": 58},
+    ])
+    answer = json.dumps([
+        {"otherEntityTypeId": "et-2", "confirmed": True,
+         "cardinality": "N:1", "confidence": "high",
+         "reason": "订单表客户ID指向客户主键",
+         "fieldPairs": [
+             {"sourceTableName": "sales_order", "sourceColumnName": "customer_id",
+              "targetTableName": "customer", "targetColumnName": "id"},
+         ]},
+        # et-5 未配置且规则未命中：模型建议被忽略，整体不返回
+        {"otherEntityTypeId": "et-5", "confirmed": True,
+         "cardinality": "1:N", "confidence": "low",
+         "reason": "操作日志按客户维度记录",
+         "fieldPairs": [
+             {"sourceTableName": "customer", "sourceColumnName": "id",
+              "targetTableName": "log_record", "targetColumnName": "customer_id"},
+         ]},
+    ], ensure_ascii=False)
+    gateway = FakeGateway(answer)
+    service = SemanticRecommendService(reader, gateway)
+    result = service.detect_relations(81, "et-1")
+
+    # 单次批量调用
+    assert len(gateway.calls) == 1
+    # 2026-10-15 用户契约：没有关联关系的对不返回（et-5 建议不采纳）
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
+    confirmed = result[0]
+    assert confirmed["related"] is True
+    assert confirmed["inferred"] is True
+    assert confirmed["llmReviewed"] is True
+    assert confirmed["llmConfirmed"] is True
+    assert confirmed["llmConfidence"] == "high"
+    assert confirmed["llmCardinality"] == "N:1"
+    assert confirmed["llmFieldPairs"][0]["sourceColumnName"] == "customer_id"
+    assert confirmed["llmReason"] == "订单表客户ID指向客户主键"
+
+
+def test_detect_relations_llm_denial_keeps_direct_rule_pair():
+    """2026-10-24 用户要求：有直接字段关系必须推荐，模型否决不删除。"""
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "客户", "main_table_name": "customer",
+             "data_source_id": 58},
+            {"id": "et-3", "name": "库存", "main_table_name": "stock",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "customer_id", "客户ID")],
+            5: [field(51, "id", "主键", "bigint"),
+                field(52, "customer_id", "客户ID")],
+        },
+        tables=[
+            {"id": 1, "name": "customer", "comment": "客户信息表",
+             "data_source_id": 58},
+            {"id": 2, "name": "sales_order", "comment": "订单记录表",
+             "data_source_id": 58},
+            {"id": 5, "name": "stock", "comment": "库存表",
+             "data_source_id": 58},
+        ],
+        relations=[],
+    )
+    answer = json.dumps([
+        {"otherEntityTypeId": "et-3", "confirmed": False,
+         "cardinality": None, "confidence": "low", "reason": "客户与库存无直接业务关联",
+         "fieldPairs": []},
+        {"otherEntityTypeId": "et-2", "confirmed": True,
+         "cardinality": "N:1", "confidence": "high", "reason": "外键指向客户",
+         "fieldPairs": [
+             {"sourceTableName": "sales_order", "sourceColumnName": "customer_id",
+              "targetTableName": "customer", "targetColumnName": "id"},
+         ]},
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(reader, FakeGateway(answer))
+    result = service.detect_relations(81, "et-1")
+
+    # 模型置信度只影响排序，两个有直接字段证据的实体都保留。
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2", "et-3"]
+    assert result[0]["llmConfirmed"] is True
+    assert result[0]["llmFieldPairs"][0]["sourceColumnName"] == "customer_id"
+    assert result[1]["llmConfirmed"] is False
+    assert result[1]["inferredCount"] == 1
+
+
+def test_detect_relations_llm_failure_keeps_rule_result():
+    """网关失败/输出不可解析：静默降级，结果与纯规则完全一致且无 llm 字段。"""
+    for answer in (None, "不是JSON", "[]"):
+        service = SemanticRecommendService(base_reader(), FakeGateway(answer))
+        result = service.detect_relations(81, "et-1")
+        assert len(result) == 1
+        row = result[0]
+        assert row["otherEntityTypeId"] == "et-2"
+        assert row["inferredCount"] == 1
+        assert not any(k.startswith("llm") for k in row)
+
+
+def test_detect_relations_llm_invalid_suggestions_ignored():
+    """未确认/无字段对的建议、未知实体ID、字段对缺失键均被忽略。"""
+    reader = base_reader(entities=[
+        {"id": "et-1", "name": "客户", "main_table_name": "customer",
+         "data_source_id": 58},
+        {"id": "et-2", "name": "订单", "main_table_name": "sales_order",
+         "data_source_id": 58},
+        {"id": "et-5", "name": "日志", "main_table_name": "log_record",
+         "data_source_id": 58},
+    ])
+    answer = json.dumps([
+        # 未确认且无字段对：忽略
+        {"otherEntityTypeId": "et-5", "confirmed": False,
+         "confidence": "low", "fieldPairs": []},
+        # 未知实体ID：忽略
+        {"otherEntityTypeId": "et-999", "confirmed": True,
+         "confidence": "high",
+         "fieldPairs": [{"sourceTableName": "a", "sourceColumnName": "id",
+                         "targetTableName": "b", "targetColumnName": "a_id"}]},
+        # 字段对缺键：过滤为空
+        {"otherEntityTypeId": "et-2", "confirmed": True, "confidence": "high",
+         "fieldPairs": [{"sourceTableName": "sales_order"}]},
+    ], ensure_ascii=False)
+    service = SemanticRecommendService(reader, FakeGateway(answer))
+    result = service.detect_relations(81, "et-1")
+
+    assert [row["otherEntityTypeId"] for row in result] == ["et-2"]
+    row = result[0]
+    assert row["llmReviewed"] is True
+    assert row["llmConfirmed"] is True
+    assert row["llmFieldPairs"] == []
+
+
+# ====================== 接口四：关系推荐 ======================
+
+
+def test_recommend_relations_existing_grouping_and_reversal():
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.recommend_relations(81, "et-1", "et-2")
+
+    existing = [vo for vo in result if vo["fromExisting"]]
+    assert len(existing) == 2
+    by_id = {vo["relationId"]: vo for vo in existing}
+
+    forward = by_id[9]  # et-1 -> et-2 原方向
+    assert forward["relationName"] == "拥有"
+    assert forward["cardinality"] == "1:N"
+    assert forward["fieldPairs"] == [{
+        "sourceTableName": "customer", "sourceColumnName": "id",
+        "sourceColumnComment": None,
+        "targetTableName": "sales_order", "targetColumnName": "customer_id",
+        "targetColumnComment": None,
+    }]
+    assert forward["semanticDescription"] == (
+        "1 个【客户】拥有多个【订单】"
+    )
+
+    reversed_vo = by_id[10]  # et-2 -> et-1 存储方向，需翻转为请求视角
+    assert reversed_vo["cardinality"] == "1:N"  # N:1 反向翻转
+    # 字段对按请求方向交换：存储的 sales_order.order_no -> customer.id
+    # 展示为 customer.id -> sales_order.order_no
+    assert reversed_vo["fieldPairs"][0]["sourceTableName"] == "customer"
+    assert reversed_vo["fieldPairs"][0]["sourceColumnName"] == "id"
+    assert reversed_vo["fieldPairs"][0]["targetTableName"] == "sales_order"
+    assert reversed_vo["fieldPairs"][0]["targetColumnName"] == "order_no"
+
+
+def test_recommend_relations_inferred_aligns_description_with_own_name():
+    """推断候选沿用已配置关系的基数时，描述必须用自身关系名重建，不串用配置名。"""
+    reader = base_reader(relations=[
+        {"id": 9, "name": "拥有", "category": "IDENTIFYING", "type": "1:1",
+         "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+         "source_table_column_name": "customer-id",
+         "target_table_column_name": "sales_order-customer_id"},
+    ])
+    service = SemanticRecommendService(
+        reader, FakeGateway('[{"candidate":1,"relationName":"开设"}]')
+    )
+    inferred = [
+        vo for vo in service.recommend_relations(81, "et-1", "et-2")
+        if not vo["fromExisting"]
+    ][0]
+    assert inferred["cardinality"] == "1:1"
+    assert inferred["semanticDescription"] == (
+        "1 个【客户】开设1 个【订单】"
+    )
+    assert "拥有" not in inferred["semanticDescription"]
+
+
+def test_recommend_relations_source_many_side_still_shows_one_to_many():
+    """存储方向 N:1 的候选一律翻转为主实体(1)→目标实体(N)，不出现多对一。"""
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.recommend_relations(81, "et-2", "et-1")
+    by_id = {vo["relationId"]: vo for vo in result if vo["fromExisting"]}
+    source_many = by_id[10]
+    assert source_many["cardinality"] == "1:N"
+    # 翻转后主实体是客户（1 侧），目标实体是订单（N 侧）
+    assert source_many["sourceEntityTypeId"] == "et-1"
+    assert source_many["sourceEntityName"] == "客户"
+    assert source_many["targetEntityTypeId"] == "et-2"
+    assert source_many["targetEntityName"] == "订单"
+    assert source_many["fieldPairs"][0]["sourceTableName"] == "customer"
+    assert source_many["fieldPairs"][0]["targetTableName"] == "sales_order"
+    assert source_many["semanticDescription"] == (
+        "1 个【客户】关联多个【订单】"
+    )
+    # 推荐结果的关系类型只允许三种取值（同名业务键等无法确认的保持空串）
+    assert {vo["cardinality"] for vo in result} <= {"1:1", "1:N", "M:N", ""}
+
+
+def test_recommend_relations_inferred_candidates_and_llm_names():
+    # 模型只用于重命名；即使它返回了混入第三个实体的描述，也必须被忽略
+    gateway = FakeGateway(
+        '[{"candidate":1,"relationName":"开设",'
+        '"semanticDescription":"一个经销商可以销售多个商品"},'
+        '{"candidate":99,"relationName":"越界"}]'
+    )
+    service = SemanticRecommendService(base_reader(), gateway)
+    result = service.recommend_relations(81, "et-1", "et-2")
+
+    inferred = [vo for vo in result if not vo["fromExisting"]]
+    # 1:N（PK-FK）一条；无反向 FK、无同名外键
+    assert len(inferred) == 1
+    candidate = inferred[0]
+    assert candidate["relationName"] == "开设"
+    assert candidate["semanticDescription"] == (
+        "1 个【客户】开设多个【订单】"
+    )
+    assert "商品" not in candidate["semanticDescription"]
+    assert candidate["cardinality"] == "1:N"
+    assert candidate["fieldPairs"] == [{
+        "sourceTableName": "customer", "sourceColumnName": "id",
+        "sourceColumnComment": "主键",
+        "targetTableName": "sales_order", "targetColumnName": "customer_id",
+        "targetColumnComment": "客户ID",
+    }]
+
+
+def test_recommend_relations_same_name_fk_and_reverse_fk():
+    reader = base_reader(fields={
+        1: [
+            field(11, "id", "主键", "bigint"),
+            field(12, "dept_id", "部门ID"),
+            field(13, "region_id", "区域ID"),
+        ],
+        2: [
+            field(21, "id", "主键", "bigint"),
+            field(22, "customer_id", "客户ID"),
+            field(23, "dept_id", "部门ID"),
+        ],
+    })
+    service = SemanticRecommendService(reader, None)
+    result = service.recommend_relations(81, "et-1", "et-2")
+    inferred = [vo for vo in result if not vo["fromExisting"]]
+    # 只有 1:N（customer.id -> sales_order.customer_id）。
+    # 同名 dept_id 两侧都只指向部门维度（表名互不匹配），属于经中间表关联；
+    # 两实体已有直接证据时不再找中间表建关系（用户 2026-10-22）。
+    assert len(inferred) == 1
+    candidate = inferred[0]
+    assert candidate["cardinality"] == "1:N"
+    assert candidate["relationName"] == "关联"  # 无网关时保留模板
+    assert candidate["category"] == "关联关系"
+    assert candidate["fieldPairs"] == [{
+        "sourceTableName": "customer", "sourceColumnName": "id",
+        "sourceColumnComment": "主键",
+        "targetTableName": "sales_order", "targetColumnName": "customer_id",
+        "targetColumnComment": "客户ID",
+    }]
+
+
+def test_recommend_relations_existing_relation_suppresses_shared_dimension_key():
+    """已有配置关系时，两端共用的第三个维度键不再推荐（不经中间表另建关系）。"""
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "项目", "main_table_name": "project",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "医院科室", "main_table_name": "hospital_dept",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "project", "comment": "项目", "data_source_id": 58},
+            {"id": 2, "name": "hospital_dept", "comment": "医院科室",
+             "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint"),
+                field(12, "hospital_id", "医院标识")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "hospital_id", "医院标识")],
+        },
+        relations=[
+            {"id": 31, "name": "包含", "category": "ASSOCIATION", "type": "1:N",
+             "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+             "source_table_column_name": "project-id",
+             "target_table_column_name": "hospital_dept-project_id"},
+        ],
+    )
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    assert [vo["fromExisting"] for vo in result] == [True]
+    assert result[0]["relationName"] == "包含"
+
+
+def test_same_name_key_to_shared_dimension_is_not_direct_relation():
+    """两侧都指向同一外部维度（表名互不匹配）时不再当作直连多对多。
+
+    共用维度键不是实体间关系（用户 2026-10-23：医院↔经销商“同省”这类推荐是错的）。
+    """
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "项目", "main_table_name": "project",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "科室", "main_table_name": "hospital_dept_relation",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "project", "comment": "项目", "data_source_id": 58},
+            {"id": 2, "name": "hospital_dept_relation", "comment": "科室关联",
+             "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint"),
+                field(12, "hospital_id", "医院标识")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "hospital_id", "医院标识")],
+        },
+        relations=[],
+    )
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    assert result == []
+
+
+def test_existing_relation_without_category_is_filled():
+    reader = base_reader(relations=[
+        {"id": 9, "name": "拥有", "category": None, "type": "1:N",
+         "source_entity_type_id": "et-1", "target_entity_type_id": "et-2",
+         "source_table_column_name": "customer-id",
+         "target_table_column_name": "sales_order-customer_id"},
+    ])
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    existing = [vo for vo in result if vo["fromExisting"]]
+    assert existing[0]["category"] == "关联关系"
+
+
+def test_recommend_relations_without_llm_keeps_template():
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.recommend_relations(81, "et-1", "et-2")
+    inferred = [vo for vo in result if not vo["fromExisting"]]
+    assert inferred[0]["relationName"] == "关联"
+
+
+def test_recommend_relations_validates_input():
+    service = SemanticRecommendService(base_reader(), None)
+    with pytest.raises(SemanticRecommendError):
+        service.recommend_relations(81, "", "et-2")
+    with pytest.raises(SemanticRecommendError, match="实体类型不存在"):
+        service.recommend_relations(81, "et-1", "et-404")
+
+
+def test_recommend_relations_requires_both_entities():
+    reader = base_reader(entities=[])
+    service = SemanticRecommendService(reader, None)
+    with pytest.raises(SemanticRecommendError, match="实体类型不存在"):
+        service.recommend_relations(81, "et-1", "et-2")
+
+
+# ---------- 2026-10-22 用户需求：子表映射推荐 / 主目标实体 / 层级关系 ----------
+
+
+def test_recommend_relations_uses_sub_table_mapping():
+    """需求 2：实体配置子表映射后，连线时按子表字段与目标实体字段推荐。"""
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "订单", "main_table_name": "sales_order",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "产品", "main_table_name": "product",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "sales_order", "comment": "订单", "data_source_id": 58},
+            {"id": 2, "name": "order_item", "comment": "订单明细", "data_source_id": 58},
+            {"id": 5, "name": "product", "comment": "产品", "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint"),
+                field(12, "order_no", "订单号")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "product_id", "产品ID", "bigint")],
+            5: [field(51, "id", "主键", "bigint"),
+                field(52, "product_name", "产品名称")],
+        },
+        relations=[],
+    )
+    reader.sub_table_mappings = lambda model: [
+        {"entity_type_id": "et-1", "sub_table_name": "order_item"},
+    ]
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    assert len(result) == 1
+    vo = result[0]
+    # order_item.product_id → product.id（N:1）翻转为主实体=产品 → 目标实体=订单
+    assert vo["sourceEntityTypeId"] == "et-2"
+    assert vo["sourceEntityName"] == "产品"
+    assert vo["targetEntityTypeId"] == "et-1"
+    assert vo["targetEntityName"] == "订单"
+    assert vo["cardinality"] == "1:N"
+    assert vo["fieldPairs"] == [{
+        "sourceTableName": "product", "sourceColumnName": "id",
+        "sourceColumnComment": "主键",
+        "targetTableName": "order_item", "targetColumnName": "product_id",
+        "targetColumnComment": "产品ID",
+    }]
+
+
+def test_recommend_relations_flips_dealer_city_many_to_one():
+    """需求 3：经销商连线城市时不得出现“多个经销商存在1个城市”。"""
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "经销商", "main_table_name": "dealer",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "城市", "main_table_name": "city",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "dealer", "comment": "经销商", "data_source_id": 58},
+            {"id": 2, "name": "city", "comment": "城市", "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint"),
+                field(12, "dealer_name", "经销商名称"),
+                field(13, "city_id", "城市ID", "bigint")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "city_name", "城市名称")],
+        },
+        relations=[],
+    )
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    assert len(result) == 1
+    vo = result[0]
+    assert vo["cardinality"] == "1:N"
+    assert vo["sourceEntityTypeId"] == "et-2"
+    assert vo["sourceEntityName"] == "城市"
+    assert vo["targetEntityTypeId"] == "et-1"
+    assert vo["targetEntityName"] == "经销商"
+    assert vo["fieldPairs"] == [{
+        "sourceTableName": "city", "sourceColumnName": "id",
+        "sourceColumnComment": "主键",
+        "targetTableName": "dealer", "targetColumnName": "city_id",
+        "targetColumnComment": "城市ID",
+    }]
+    assert vo["semanticDescription"] == (
+        "1 个【城市】关联多个【经销商】"
+    )
+    assert not vo["semanticDescription"].startswith("多个【经销商】")
+
+
+def test_relation_category_hierarchy_rules():
+    """需求 6：树形/组织机构关系为层级关系，其余为关联关系。"""
+    assert _relation_category("组织", "部门") == "层级关系"
+    assert _relation_category("部门", "部门") == "层级关系"
+    assert _relation_category("经销商", "城市") == "关联关系"
+    assert _relation_category("客户", "订单") == "关联关系"
+    assert _relation_category(
+        "客户", "订单", [{"sourceColumnName": "parent_id"}]
+    ) == "层级关系"
+
+
+def test_recommend_relations_marks_hierarchy_category():
+    reader = base_reader(
+        entities=[
+            {"id": "et-1", "name": "组织部门", "main_table_name": "org_dept",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "部门层级", "main_table_name": "dept_level",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "org_dept", "comment": "组织部门", "data_source_id": 58},
+            {"id": 2, "name": "dept_level", "comment": "部门层级", "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "id", "主键", "bigint"),
+                field(12, "dept_code", "部门编码"),
+                field(13, "parent_id", "上级部门ID", "bigint")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "dept_code", "部门编码"),
+                field(23, "parent_id", "上级部门ID", "bigint")],
+        },
+        relations=[],
+    )
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    assert result
+    assert {vo["category"] for vo in result} == {"层级关系"}
+
+
+# ---------- 2026-10-22 用户需求：实体保存时的中间表关联建议 ----------
+
+
+def test_check_relation_suggestions_no_longer_reports_bridge():
+    reader = bridge_reader()
+    result = SemanticRecommendService(reader, None).check_relation_suggestions(81, "et-1")
+    assert result == {"entityTypeId": "et-1", "entityName": "客户", "hasSuggestion": False, "suggestions": []}
+    assert reader.calls == ["entities"]
+
+
+def test_check_relation_suggestions_none_without_bridge():
+    """需求 1：有直接字段证据或完全无关联时不提示。"""
+    # base_reader：客户-订单有直接字段证据（且已配置关系）
+    service = SemanticRecommendService(base_reader(), None)
+    result = service.check_relation_suggestions(81, "et-1")
+    assert result["hasSuggestion"] is False
+    assert result["suggestions"] == []
+    # 孤立实体：既无直接证据也无中间表 → 不提示
+    reader = base_reader(entities=[
+        {"id": "et-1", "name": "客户", "main_table_name": "customer",
+         "data_source_id": 58},
+        {"id": "et-3", "name": "孤立实体", "main_table_name": "no_such_table",
+         "data_source_id": 58},
+    ], relations=[])
+    assert SemanticRecommendService(
+        reader, None
+    ).check_relation_suggestions(81, "et-1")["hasSuggestion"] is False
+
+
+def table_bridge_reader(**overrides):
+    """医院-科室无直接字段、无子表映射，只能经物理中间表 hospital_dept_relation 关联。
+
+    科室主表 department 没有 id 主键，键为 dept_code；中间表同时含
+    hospital_id（指向医院）与 dept_code（指向科室）。
+    """
+    data = dict(
+        entities=[
+            {"id": "et-1", "name": "科室", "main_table_name": "department",
+             "data_source_id": 58},
+            {"id": "et-2", "name": "医院", "main_table_name": "hospital",
+             "data_source_id": 58},
+            {"id": "et-3", "name": "经销商", "main_table_name": "dealer",
+             "data_source_id": 58},
+        ],
+        tables=[
+            {"id": 1, "name": "department", "comment": "科室",
+             "data_source_id": 58},
+            {"id": 2, "name": "hospital", "comment": "医院",
+             "data_source_id": 58},
+            {"id": 3, "name": "hospital_dept_relation", "comment": "医院科室关联",
+             "data_source_id": 58},
+            {"id": 4, "name": "dealer", "comment": "经销商",
+             "data_source_id": 58},
+        ],
+        fields={
+            1: [field(11, "dept_code", "科室编码"),
+                field(12, "dept_name", "科室名称")],
+            2: [field(21, "id", "主键", "bigint"),
+                field(22, "hospital_id", "医院标识"),
+                field(23, "city_id", "城市ID", "bigint")],
+            3: [field(31, "id", "主键", "bigint"),
+                field(32, "hospital_id", "医院标识"),
+                field(33, "dept_code", "科室编码"),
+                field(34, "relation_type", "关系类型", "tinyint")],
+            4: [field(41, "id", "主键", "bigint"),
+                field(42, "dealer_name", "经销商名称")],
+        },
+        relations=[],
+    )
+    data.update(overrides)
+    return FakeReader(**data)
+
+
+def test_detect_relations_omits_physical_bridge():
+    reader = table_bridge_reader()
+    assert SemanticRecommendService(reader, None).detect_relations(81, "et-1") == []
+    assert reader.calls == ["entities", "relations", "tables", "fields_batch"]
+
+
+def test_recommend_relations_omits_physical_bridge():
+    reader = table_bridge_reader()
+    assert SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2") == []
+    assert reader.calls == ["entities", "relations", "tables", "fields_batch"]
+
+
+def test_recommend_relations_table_bridge_skipped_when_direct_relation():
+    """已有直接关系时不再找中间表（用户 2026-10-22）。"""
+    reader = table_bridge_reader(relations=[
+        {"id": 41, "name": "开设", "category": "ASSOCIATION", "type": "1:N",
+         "source_entity_type_id": "et-2", "target_entity_type_id": "et-1",
+         "source_table_column_name": "hospital-id",
+         "target_table_column_name": "department-id"},
+    ])
+    result = SemanticRecommendService(reader, None).recommend_relations(81, "et-1", "et-2")
+    assert [vo["fromExisting"] for vo in result] == [True]
+    assert all(not vo.get("indirect") for vo in result)
+
+
+def test_check_relation_suggestions_omits_physical_bridge():
+    result = SemanticRecommendService(table_bridge_reader(), None).check_relation_suggestions(81, "et-1")
+    assert result["hasSuggestion"] is False
+    assert result["suggestions"] == []
+
+
+def test_check_relation_suggestions_validates_input():
+    service = SemanticRecommendService(base_reader(), None)
+    with pytest.raises(SemanticRecommendError):
+        service.check_relation_suggestions(81, "")
+    with pytest.raises(SemanticRecommendError, match="实体类型不存在"):
+        service.check_relation_suggestions(81, "et-404")
+
+
+# ====================== 路由层契约 ======================
+
+
+HEADERS = {
+    "Authorization": "Bearer phase0c-fixture-token",
+    "X-Tenant-Id": "t1",
+    "X-User-Id": "u1",
+}
+
+
+@contextmanager
+def route_client(service):
+    """注入 fake 推荐服务并启动应用 lifespan（container 注入 trusted_backend）。"""
+    app = create_app(Settings(
+        env="test",
+        adapter_mode="mock",
+        intent_model_enabled=False,
+        business_question_collection_enabled=False,
+        trusted_backend_token="phase0c-fixture-token",
+    ))
+    original = semantic_recommend.get_service
+    semantic_recommend.get_service = lambda: service
+    try:
+        with RawTestClient(app) as client:
+            yield client
+    finally:
+        semantic_recommend.get_service = original
+
+
+def test_route_recommend_tables_resp_contract():
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81, "keyword": "log"},
+            headers=HEADERS,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["code"] == 200
+        assert body["msg"] == "成功"
+        assert isinstance(body["timestamp"], int)
+        assert [row["tableName"] for row in body["data"]] == ["log_record"]
+        assert all("configured" not in row for row in body["data"])
+
+
+def test_route_recommend_fields():
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendFields",
+            params={"tableId": 1},
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert body["code"] == 200
+        assert [row["name"] for row in body["data"]] == [
+            "id", "customer_name", "status",
+        ]
+
+
+def test_route_detect_relations_and_recommend_relations():
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        resp = client.get(
+            "/semanticModelRelationConfig/detectRelations",
+            params={"semanticModelId": 81, "entityTypeId": "et-1"},
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert body["code"] == 200
+        assert body["data"][0]["otherEntityTypeId"] == "et-2"
+
+        resp = client.get(
+            "/semanticModelRelationConfig/recommendRelations",
+            params={
+                "semanticModelId": 81,
+                "sourceEntityTypeId": "et-1",
+                "targetEntityTypeId": "et-2",
+            },
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert body["code"] == 200
+        assert any(vo["fromExisting"] for vo in body["data"])
+
+
+def test_route_relation_suggestions():
+    with route_client(SemanticRecommendService(bridge_reader(), None)) as client:
+        resp = client.get(
+            "/semanticModelEntityType/relationSuggestions",
+            params={"semanticModelId": 81, "entityTypeId": "et-1"},
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert body["code"] == 200
+        assert body["data"]["hasSuggestion"] is False
+        assert body["data"]["suggestions"] == []
+
+
+def test_route_business_error_maps_to_resp_500():
+    class FailingService:
+        def recommend_tables(self, *args):
+            raise SemanticRecommendError("物理表ID不能为空")
+
+    with route_client(FailingService()) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81},
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert resp.status_code == 200
+        assert body["code"] == 500
+        assert body["msg"] == "物理表ID不能为空"
+        assert body["data"] is None
+
+
+def test_route_unexpected_error_maps_to_internal_message():
+    class FailingService:
+        def recommend_tables(self, *args):
+            raise RuntimeError("db down")
+
+    with route_client(FailingService()) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81},
+            headers=HEADERS,
+        )
+        body = resp.json()
+        assert body["code"] == 500
+        assert body["msg"] == "推荐服务内部错误"
+
+
+def test_route_allows_anonymous_access():
+    # STALE_TEST: 2026-10-14 用户决定 4 个推荐接口去鉴权（只读元数据，内网供 Java 后端调用），
+    # 旧断言“无鉴权返回 401”按新契约改为可直接 200。
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 200
+
+
+def test_route_query_validation():
+    with route_client(SemanticRecommendService(base_reader(), None)) as client:
+        # 缺少必填 semanticModelId
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables", headers=HEADERS
+        )
+        assert resp.status_code == 422
+        # limit 超上限
+        resp = client.get(
+            "/semanticModelEntityType/recommendTables",
+            params={"semanticModelId": 81, "limit": 201},
+            headers=HEADERS,
+        )
+        assert resp.status_code == 422
+
+
+# ====================== 软删除过滤与网关告警回归 ======================
+
+
+class _CaptureCursor:
+    def __init__(self, captured):
+        self._captured = captured
+
+    def execute(self, sql, params):
+        self._captured.append(sql)
+
+    def fetchall(self):
+        return []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+class _CaptureConn:
+    def __init__(self, captured, **kwargs):
+        self._captured = captured
+
+    def cursor(self, cursorclass=None):
+        return _CaptureCursor(self._captured)
+
+    def close(self):
+        pass
+
+
+def test_pymysql_reader_filters_soft_deleted(monkeypatch):
+    """回归：所有元数据 SQL 必须过滤 is_deleted = 0。
+
+    实测 223 元数据库 37% 表 / 52% 实体 / 37% 字段 / 53% 关系配置
+    处于已删除状态（模型 84 全部 793 张表已删除），不过滤会大量泄漏。
+    """
+    captured: list[str] = []
+    monkeypatch.setattr(
+        "pymysql.connect", lambda **kwargs: _CaptureConn(captured)
+    )
+    reader = semantic_recommend.PymysqlMetadataReader(
+        host="h", port=3306, user="u", password="p", database="d")
+    reader.entities(1)
+    reader.tables(1, None)
+    reader.tables(1, 58)
+    reader.field_counts([1, 2])
+    reader.fields(1)
+    reader.fields_batch([1, 2])
+    reader.relations(1)
+    # field_counts([]) / fields_batch([]) 不应发 SQL
+    assert reader.field_counts([]) == {}
+    assert reader.fields_batch([]) == {}
+    assert captured, "应发出 SQL"
+    assert len(captured) == 7
+    for sql in captured:
+        assert "is_deleted = 0" in sql, f"缺少软删除过滤: {sql}"
+
+
+def test_pymysql_reader_excludes_abnormal_status(monkeypatch):
+    """回归（2026-10-22）：表/字段四态中只有 0 存在、2 新增、3 恢复参与推荐。
+
+    exist_status = 1（源库中已不存在的异常记录）不得进入推荐，
+    因此 tables / field_counts / fields / fields_batch 的 SQL 必须排除 1。
+    """
+    captured: list[str] = []
+    monkeypatch.setattr(
+        "pymysql.connect", lambda **kwargs: _CaptureConn(captured)
+    )
+    reader = semantic_recommend.PymysqlMetadataReader(
+        host="h", port=3306, user="u", password="p", database="d")
+    reader.tables(1, None)
+    reader.tables(1, 58)
+    reader.field_counts([1, 2])
+    reader.fields(1)
+    reader.fields_batch([1, 2])
+    assert len(captured) == 5
+    for sql in captured:
+        assert "COALESCE(exist_status, 0) <> 1" in sql, f"缺少异常状态过滤: {sql}"
+    # 实体与关系配置本身没有 exist_status 列，不应误加过滤
+    reader.entities(1)
+    reader.relations(1)
+    assert "exist_status" not in captured[-2]
+    assert "exist_status" not in captured[-1]
+
+
+def test_gateway_empty_answer_returns_none_and_logs(monkeypatch, caplog):
+    """回归：网关空答案必须返回 None 并留 WARNING（qwen3-max 事故根因）。"""
+    class _Resp:
+        status_code = 200
+        text = 'data: {"answer": ""}'
+
+    monkeypatch.setattr("httpx.post", lambda *args, **kwargs: _Resp())
+    gateway = semantic_recommend.WorkflowChatGateway(
+        base_url="http://gw", api_key="k", model_name="qwen3-max")
+    with caplog.at_level(
+        logging.WARNING, logger="app.services.semantic_recommend"
+    ):
+        assert gateway.complete("query", "prompt") is None
+    assert any("空答案" in record.getMessage() for record in caplog.records)
+
+
+def test_gateway_non_200_returns_none_and_logs(monkeypatch, caplog):
+    class _Resp:
+        status_code = 502
+        text = "bad gateway"
+
+    monkeypatch.setattr("httpx.post", lambda *args, **kwargs: _Resp())
+    gateway = semantic_recommend.WorkflowChatGateway(
+        base_url="http://gw", api_key=None, model_name="qwen3.7-max")
+    with caplog.at_level(
+        logging.WARNING, logger="app.services.semantic_recommend"
+    ):
+        assert gateway.complete("query", "prompt") is None
+    assert any("HTTP 502" in record.getMessage() for record in caplog.records)

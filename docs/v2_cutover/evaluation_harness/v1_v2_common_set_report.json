@@ -1,0 +1,170 @@
+{
+  "evaluator": {
+    "evaluator_version": "runtime-evaluation-harness-v1",
+    "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+    "evaluator_files": {
+      "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+      "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+      "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+      "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+      "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+      "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+      "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+      "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+      "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+      "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+      "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+      "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+      "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+      "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+      "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+      "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+      "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+    }
+  },
+  "status": "EVALUATOR_GAP",
+  "corpora": {
+    "public_dev": {
+      "COMMON_EVALUABLE_SET": [],
+      "comparison_valid": false,
+      "parity_gaps": [
+        "runtime_parity_verified"
+      ],
+      "V1": {
+        "n": 0,
+        "N": 0,
+        "value": null,
+        "evidence": "EVIDENCE_INSUFFICIENT"
+      },
+      "V2": {
+        "n": 0,
+        "N": 0,
+        "value": null,
+        "evidence": "EVIDENCE_INSUFFICIENT"
+      },
+      "V1_ONLY_EVALUABLE": [],
+      "V2_ONLY_EVALUABLE": [
+        "G81-005",
+        "G81-006",
+        "G81-015",
+        "G81-016",
+        "G81-017",
+        "G81-018",
+        "G81-019",
+        "G81-020",
+        "G81-021",
+        "G81-022",
+        "G81-023",
+        "G81-024",
+        "G81-025",
+        "G81-026",
+        "G81-027",
+        "G81-028",
+        "G81-031",
+        "G81-032",
+        "G81-035",
+        "G81-036",
+        "G81-037",
+        "G81-038",
+        "G81-039",
+        "G81-041",
+        "G81-042",
+        "G81-043",
+        "G81-044",
+        "G81-045",
+        "G81-046",
+        "G81-047",
+        "G81-048",
+        "G81-049",
+        "G81-072",
+        "G81-077",
+        "G81-079",
+        "G81-083",
+        "G81-086",
+        "G81-089",
+        "G81-095",
+        "G81-097",
+        "G81-100"
+      ]
+    },
+    "transition": {
+      "COMMON_EVALUABLE_SET": [],
+      "comparison_valid": false,
+      "parity_gaps": [
+        "runtime_parity_verified"
+      ],
+      "V1": {
+        "n": 0,
+        "N": 0,
+        "value": null,
+        "evidence": "EVIDENCE_INSUFFICIENT"
+      },
+      "V2": {
+        "n": 0,
+        "N": 0,
+        "value": null,
+        "evidence": "EVIDENCE_INSUFFICIENT"
+      },
+      "V1_ONLY_EVALUABLE": [],
+      "V2_ONLY_EVALUABLE": [
+        "S81-001",
+        "S81-002",
+        "S81-003",
+        "S81-011",
+        "S81-013",
+        "S81-014",
+        "S81-017"
+      ]
+    },
+    "private_validation": {
+      "COMMON_EVALUABLE_SET": [],
+      "comparison_valid": false,
+      "parity_gaps": [
+        "runtime_parity_verified"
+      ],
+      "V1": {
+        "n": 0,
+        "N": 0,
+        "value": null,
+        "evidence": "EVIDENCE_INSUFFICIENT"
+      },
+      "V2": {
+        "n": 0,
+        "N": 0,
+        "value": null,
+        "evidence": "EVIDENCE_INSUFFICIENT"
+      },
+      "V1_ONLY_EVALUABLE": [],
+      "V2_ONLY_EVALUABLE": [
+        "PV81-005"
+      ]
+    }
+  },
+  "COMMON_EVALUABLE_SET_COUNT": 0,
+  "V1_common": {
+    "n": 0,
+    "N": 0
+  },
+  "V2_common": {
+    "n": 0,
+    "N": 0
+  },
+  "V1_ONLY_EVALUABLE_COUNT": 0,
+  "V2_ONLY_EVALUABLE_COUNT": 49,
+  "evidence": [
+    "app/dependencies.py::build_container",
+    "app/services/orchestrator.py::handle",
+    "app/services/orchestrator.py::_handle",
+    "tools/cutover/run_transition_baseline.py::run",
+    "tools/cutover/transition_observations.py::observe_legacy_rules"
+  ],
+  "reason": "Existing V1 baseline manually sequences rule services. Production entry also uses HybridIntentClassifier, QuestionRewriter and HTTP semantic/ASL contracts; no equivalent frozen-response adapter/captured successful history exists for this catalog baseline.",
+  "required_work": [
+    "Frozen V1 HTTP semantic/ASL observation adapter at actual orchestrator entry",
+    "Same independent observable-axis labels and fixed clock",
+    "Actual successful V1 history state without fabricated execution receipts"
+  ],
+  "historical_V1_report_reused_as_current_baseline": false,
+  "mock_rule_baseline_claimed_production_equivalent": false
+}

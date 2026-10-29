@@ -1,0 +1,103 @@
+{
+  "baseline_commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
+  "feature_branch": "semantic-cutover-triage-20260909t074900z",
+  "files": [
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/case_inventory.csv",
+      "normalized_sha256": "68da6a895aa2697f30efe11ab6ad8f99ca6d9aed02c2ce7badd3f7e8c6762836",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/case_inventory.json",
+      "normalized_sha256": "3a011619883a23474474d5a5e53cc71535f04027b4c9b1cff2d1b4768a791e74",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/checkpoint_report.md",
+      "normalized_sha256": "a57a146c5158e0d10e572a35bf520fcd0267a1d75fe1ddd0d4fca1e6b813dc04",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/checkpoint_summary.json",
+      "normalized_sha256": "fdd2cfcc7e6846acf31c5098db206378c2fa6163903a076ef5428628c2017538",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/deterministic_fix_review.md",
+      "normalized_sha256": "c79275463ee5711db9c034a6cf1eed8c9edf1b4c6d31e051fd648285e06e12c7",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/evaluator_fixture_gaps.md",
+      "normalized_sha256": "f3e2dca0e60f298f3dd90f77f576bf08589bb5ccb3a427017ba0f0e1eb809b7d",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/evidence_inventory.json",
+      "normalized_sha256": "f2ea7c264afd4b3fb75c4a1259810975a4b75d5ca0ccd8c50f4f8cca164a451d",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/first_divergence_distribution.csv",
+      "normalized_sha256": "e677881c5d29bf4fff730e56ab4f2096d5a876a2c90ee5f0764f3f8f1f00fe39",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/first_divergence_distribution.json",
+      "normalized_sha256": "f4b81976deadee3de86d7f6f0075ec09f0209f7f04e86322bc4446f306b417c9",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/rescored_single_axes.json",
+      "normalized_sha256": "dbd8649e8fc4f09df73acdbc284c10090bb5acf123c5a003290109ac296028b0",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/rescored_transition_axes.json",
+      "normalized_sha256": "d612f7b7c6b5607ca927698594876d1743b8cc62e6ecad72e2e64942b9cb7729",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/root_cause_inventory.csv",
+      "normalized_sha256": "f5d48be31c249106c80e6036802cd9612a29d71749e1f2f1a994a3c5b67634a1",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/root_cause_inventory.json",
+      "normalized_sha256": "4fd1dd58c7c30b91593714669fbd52bed76d05cbc8bbdbe6d0c053c35bf20497",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/rule_growth_audit.json",
+      "normalized_sha256": "a91618b72bfd00c351ac0ba56c55bc4a70bef36199e1d6f2bb51e9856d17353d",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/semantic_freeze_gate.json",
+      "normalized_sha256": "c980b5bf93c9c8b5dca0c4758d6ae0a4f68ad990e5c10193666c99cc0f995ce9",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/verify_checkpoint.py",
+      "normalized_sha256": "629a4fdd879de867f887ca9c55df02b0511d17a405131dac00a0d281a4243515",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/cutover_readiness_matrix.json",
+      "normalized_sha256": "5a96f6c5d7c4c3e0066ac8b4b84f9144b9378426307d9781bb0bdcd738b2e52a",
+      "baseline_sha256": "a0a7b43bd0f7266e94c21f22d6a1352b02f8d0fdd937c354bfade8d8bc812ec3"
+    },
+    {
+      "repository_path": "docs/v2_cutover/semantic_triage/validation_receipt.json",
+      "normalized_sha256": "96fdc556cae0eeffe549e7744862a1326724ec7e1b54875cb62f828f73489137",
+      "baseline_sha256": null
+    }
+  ],
+  "normalization": "CRLF to LF only",
+  "runtime_files_changed": [],
+  "production_code_changed": false,
+  "gold_expectations_changed": false,
+  "prompt_schema_changed": false,
+  "v1_routing_changed": false,
+  "private_snapshot_or_credentials_copied": false
+}

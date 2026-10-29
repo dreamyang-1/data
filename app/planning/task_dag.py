@@ -1,743 +1,1783 @@
-from __future__ import annotations
+"""单一问题链路：任务意图识别与结构化参数提取。
 
-import asyncio
+职责边界：
+- 本模块只处理“一个可独立验收的业务目标”：意图识别、参数提取、
+  指标名归一与带反馈重试；
+- “是否拆分、拆成什么子问题”的前置判断与多任务规划在
+  compound_question.py
+- 本模块同时承载两条链路共用的基础件：提取规范加载、extraction 清洗、
+  指标目录解析、语义规范注入。
+"""
+
+import copy
 import json
+import logging
 import re
+from dataclasses import dataclass, replace
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import Settings
-from app.observability.langfuse_client import trace_generation
-from app.domain.models import AtomicTask, TaskPlan
+from app.observability.langfuse_client import (
+    ensure_structural_span,
+    structural_child,
+    trace_generation,
+)
+from app.domain.models import PlannerExtraction, PrimaryIntent
+from app.planning.dependency_contract import projection
+from app.analysis.chain_tools.temporal_window import (
+    parse_absolute_range,
+    period_change_series_question as _period_change_series_question,
+)
+
+logger = logging.getLogger(__name__)
+
+
+# 不查业务库的闲聊类意图：参数提取强制为空，与编排器展示守卫保持一致；
+_METADATA_INTENTS = {
+    PrimaryIntent.METRIC_DEFINITION,
+    PrimaryIntent.DATA_LINEAGE,
+    PrimaryIntent.SEMANTIC_CATALOG_QUERY,
+}
+
+_PARAMETER_PATTERN = re.compile(r"^(.+?)（(.+?)）$")
+
+
+def parse_parameter_mentions(parameters: list[str]) -> list[dict[str, str]]:
+    """把“词（角色）”格式的参数解析成 mentions 通道需要的字典结构。"""
+    mentions: list[dict[str, str]] = []
+    for value in parameters:
+        match = _PARAMETER_PATTERN.match(value.strip())
+        if match is None:
+            continue
+        text, role = match.group(1).strip(), match.group(2).strip()
+        if text:
+            mentions.append({"text": text, "role_hint": role})
+    return mentions
+
+
+# 系统意图枚举对应的展示契约中文意图键：根意图下沉到任务时用来
+# 同步覆写提取JSON的意图键，保证中文键与任务意图一致。
+# 同名多键（统计查询/指标查询/排名分析都映射METRIC_QUERY）取提示词
+# 主键"指标查询"（2026-10-23 起意图统一来自意图识别节点，不再采信
+# 提取模型输出的意图键）。
+_PRIMARY_INTENT_LABELS = {
+    PrimaryIntent.METRIC_QUERY: "指标查询",
+    PrimaryIntent.DETAIL_QUERY: "明细查询",
+    PrimaryIntent.TREND_ANALYSIS: "趋势分析",
+    PrimaryIntent.COMPARISON_ANALYSIS: "对比分析",
+    PrimaryIntent.COMPOSITION_ANALYSIS: "占比分析",
+    PrimaryIntent.ANOMALY_ANALYSIS: "异常分析",
+    PrimaryIntent.ROOT_CAUSE_ANALYSIS: "归因分析",
+    PrimaryIntent.FORECAST_ANALYSIS: "预测分析",
+    PrimaryIntent.METRIC_DEFINITION: "解释口径",
+    PrimaryIntent.DATA_LINEAGE: "数据血缘",
+}
+
+# 结构化参数提取的提示词与出口逻辑已独立到 app.structured_extraction；
+# 这里保留同名引用，既有调用方与测试不受影响。
+from app.structured_extraction.extractor import (  # noqa: E402
+    CHINESE_INTENT_LABELS as _CHINESE_INTENT_LABELS,
+    CHINESE_INTENT_TO_PRIMARY as _CHINESE_INTENT_TO_PRIMARY,
+    EXTRACTION_INTENT_KEY as _EXTRACTION_INTENT_KEY,
+    NO_DATA_INTENTS as _NO_DATA_INTENTS,
+    clean_extraction_text,
+    database_query_choice,
+    extraction_to_parameters,
+    normalize_extraction_metrics as _normalize_extraction_metrics,
+    normalize_metric_name as _normalize_metric_name,
+    sanitize_extraction,
+    strip_prose_placeholder_filters as _strip_prose_placeholder_filters,
+)
+from app.structured_extraction.prompts import (  # noqa: E402
+    EXTRACTION_EMBEDDED_SPEC,
+    EXTRACTION_PARSER_PROMPT,
+    EXTRACTION_SYSTEM_PROMPT,
+)
+
+
+def extraction_parser_prompt() -> str:
+    """结构化提取解析器规范（键定义、判定规则、示例），不含业务语义快照。"""
+    return EXTRACTION_PARSER_PROMPT
+
+
+def extraction_embedded_spec() -> str:
+    """提示词里内置的语义快照，仅在未配置任何语义来源时兜底。"""
+    return EXTRACTION_EMBEDDED_SPEC
+
+
+def _clean_extraction_text(value: Any) -> str:
+    return clean_extraction_text(value)
+
+
+
+
+def _ground_location_owners(extraction: dict[str, Any] | None, question: str) -> None:
+    """Correct only explicit location modifiers at the NL extraction boundary.
+
+    A model can still pick the wrong catalog parent despite prompt examples.
+    Do not infer ownership from grouping alone, and never alter fields/values.
+    """
+    if not extraction or not question:
+        return
+    candidates = {item for section in ('实体', '维度') for item in extraction.get(section) or []
+                  if isinstance(item, str) and len(item) >= 2}
+    candidates.update(item.get('entity') for section in ('过滤条件', '展示字段')
+                      for item in extraction.get(section) or []
+                      if isinstance(item, dict) and isinstance(item.get('entity'), str))
+    for item in extraction.get('过滤条件') or []:
+        if not isinstance(item, dict) or not re.search(
+                r'省份|城市|地区|区域|所在地|province|city|region', str(item.get('field') or ''), re.I):
+            continue
+        raw = item.get('value')
+        values = raw if isinstance(raw, list) else [raw]
+        owners = set()
+        for owner in candidates:
+            for value in values:
+                if not isinstance(value, str) or len(value.strip()) < 2:
+                    continue
+                place, entity = re.escape(value.strip()), re.escape(owner)
+                if re.search(entity + r'(?:的)?(?:所在地|所在省份|所在城市|所在地区|省份|城市)'
+                             + r'(?:为|是|在|等于|=|：|:)?\s*' + place, question) or re.search(
+                                 place + r'(?:市|省)?(?:的)?(?:各个|各家|所有|每个|每家|各)?' + entity,
+                                 question):
+                    owners.add(owner)
+        if len(owners) == 1:
+            item['entity'] = next(iter(owners))
+
+
+def _strip_json_fences(text: str) -> str:
+    """剥离模型输出外层的 markdown 代码围栏。"""
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```[a-zA-Z]*\s*", "", stripped)
+        stripped = re.sub(r"\s*```$", "", stripped)
+    return stripped
+
+
+def _gateway_answer(text: str) -> str:
+    """取模型网关 SSE 响应里的 answer 文本，解析不出返回空串。"""
+    body = text
+    marker = body.find("data:")
+    if marker >= 0:
+        body = body[marker + 5:]
+    try:
+        payload = json.loads(body.strip())
+    except ValueError:
+        return ""
+    answer = payload.get("answer")
+    return answer if isinstance(answer, str) else ""
+
+
+_SEMANTIC_SPEC_MARKERS = ("# 业务语义规范", "## 业务语义规范")
+_SEMANTIC_SPEC_MAX_CHARS = 12000
+
+
+def extract_semantic_spec_section(agent_prompt: str) -> str:
+    """从核心指令里截取业务语义规范段，供拆分与提取模型对齐参数口径。
+
+    核心指令开头通常是角色设定，只取“业务语义规范”标题起的内容；
+    没有该标题时返回空，避免把整段角色设定塞进提示词。
+    """
+    from app.services.general_rules import rule_section, without_rule_section
+    rules = rule_section(agent_prompt or "")
+    text = without_rule_section(agent_prompt or "").strip()
+    if not text:
+        return rules
+    positions = [
+        pos for marker in _SEMANTIC_SPEC_MARKERS
+        if (pos := text.find(marker)) >= 0
+    ]
+    if not positions:
+        return rules
+    return text[min(positions):].strip()[:_SEMANTIC_SPEC_MAX_CHARS] + rules
+
+
+def _semantic_context_section(semantic_context: str, *, origin: str = "智能体配置") -> str:
+    return (
+        f"\n以下平台业务语义规范摘自{origin}，是当前问题判断指标、实体、维度、"
+        "同义词与口径的唯一业务依据；优先于通用知识与示例，不得改写登记名；"
+        "规范中未出现的对象、指标、维度或取值不得自行引入，"
+        "用户说法是某个登记指标的同义词时归一为该指标的登记原名；"
+        "与任何登记指标都对应不上时置空，不得把用户提到的属性说法"
+        "归到语义相近的注册指标名上。用户只问含义、口径或公式时，"
+        "无论指标是否登记，都按METRIC_DEFINITION解释，不查询实际数值；"
+        "未登记且无法派生的纯概念词也保留原文用于口径检索：\n"
+        + semantic_context.strip()
+        + "\n"
+    )
+
+
+@dataclass(frozen=True)
+class PlannerOutcome:
+    """单一路径一次规划的全部产出：意图、参数与结构化提取。"""
+
+    single_intent: PrimaryIntent | None = None
+    single_parameters: tuple[str, ...] = ()
+    single_structured: dict[str, Any] | None = None
+    # 模型生成的任务名称（陈述句），缺省时展示层按规则从问题文本转换
+    single_task_name: str | None = None
+    # 拆解模型输出的任务问题文本：追问复用轮带"复用上一轮查询结果"前缀
+    # 和具体参数值，展示与任务表按它判断参数提取型复用
+    single_task_question: str | None = None
+    # 本次注入规范解析出的指标目录（登记名集合 + 别名映射），供归一与重试判定
+    metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None
+
+    @property
+    def single_extraction(self) -> PlannerExtraction | None:
+        if (
+            self.single_intent is None
+            and not self.single_parameters
+            and self.single_structured is None
+        ):
+            return None
+        return PlannerExtraction(
+            intent=self.single_intent,
+            parameters=list(self.single_parameters),
+            structured=self.single_structured,
+        )
+
+
+@dataclass(frozen=True)
+class DecomposedTask:
+    """任务拆解产出的单个任务：问题文本、任务内依赖与结构化提取。"""
+
+    question: str
+    depends_on: tuple[int, ...] = ()
+    expected_output: str | None = None
+    intent: PrimaryIntent | None = None
+    parameters: tuple[str, ...] = ()
+    structured: dict[str, Any] | None = None
+    dependency_bindings: list[dict[str, Any]] | None = None
+    name: str | None = None
+
+
+@dataclass(frozen=True)
+class QuestionDecomposition:
+    """单个问题的任务拆解结果：问题级意图与1到4个任务。"""
+
+    intent: PrimaryIntent | None = None
+    tasks: tuple[DecomposedTask, ...] = ()
+    metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None
+    # 规范指标表里依赖指标列非空的复合指标：登记名 -> 成分指标
+    metric_dependencies: dict[str, tuple[str, ...]] | None = None
+    grounding_default_times: tuple[str, ...] = ()
+    grounding_registered_conditions: tuple[str, ...] = ()
+    shared_region_denominator: bool = False
+    boundary_plan_complete: bool = False
+
+
+_NO_DATABASE_QUERY = re.compile(r"(?:不|无需|无须|别)(?:要|用|得|需要)?(?:再)?(?:查询|访问|查)(?:业务)?(?:数据库|库)")
+
+
+def _repair_unavailable_local_projection(decomposition, question):
+    """A planner-invented local projection cannot supply a new related field."""
+    if _NO_DATABASE_QUERY.search(question):
+        return decomposition  # An explicit user restriction remains authoritative.
+    tasks = list(decomposition.tasks)
+    for index, task in enumerate(tasks):
+        structured = task.structured or {}
+        local = str(structured.get('是否查询数据库') or '').startswith('否') or _NO_DATABASE_QUERY.search(task.question)
+        wanted = [(owner, field) for owner, field in projection(structured) if owner]
+        if not (local and task.depends_on and wanted) or structured.get('计算绑定'):
+            continue
+        if structured.get('指标') and not structured.get('结果操作'):
+            continue  # Preserve existing metric calculations without a projection operation.
+        available = {item for dep in task.depends_on if 0 <= dep < index
+                     for item in projection(tasks[dep].structured)}
+        if all(item in available for item in wanted):
+            continue
+        corrected = copy.deepcopy(structured)
+        corrected['是否查询数据库'] = '是'
+        corrected['意图'] = '明细查询'
+        corrected['指标'] = []
+        corrected.pop('结果操作', None)
+        # Render this child's fields and conditions, not the predecessor's
+        # repeated Top N wording (which would become a new ranking constraint).
+        text = '查询' + '、'.join(f'{owner}的{field}' for owner, field in wanted)
+        period = (corrected.get('时间粒度') or {}).get('time_range')
+        if period:
+            text += '，时间范围：' + str(period)
+        for condition in corrected.get('过滤条件') or []:
+            value = condition.get('value')
+            values = value if isinstance(value, list) else [value]
+            text += '，' + str(condition.get('entity') or '') + str(condition.get('field') or '')
+            text += str(condition.get('op') or condition.get('operator') or '=') + '、'.join(map(str, values))
+        tasks[index] = replace(task, question='根据上述任务的查询结果，' + text, name=text.split('，', 1)[0],
+            intent=PrimaryIntent.DETAIL_QUERY, structured=corrected,
+            parameters=tuple(extraction_to_parameters(corrected)))
+    return replace(decomposition, tasks=tuple(tasks))
+
+
+# 指标目录解析要识别的表头词：命中其一视为表头行，防止把下一张表的表头当指标
+_TABLE_HEADER_WORDS = {
+    "指标", "指标名称", "维度", "维度名称", "实体", "实体名称",
+    "业务域", "业务域名称", "属性", "属性名称", "别名", "标准名称",
+    "序号", "名称", "关系", "规则", "同义词",
+}
+# 规范里同义词列的常见占位写法，不是别名
+_METRIC_ALIAS_PLACEHOLDERS = {"", "无", "-", "—", "/"}
+
+
+def _parse_metric_catalog(spec_text: str) -> tuple[frozenset[str], dict[str, str]]:
+    """从注入的语义规范解析指标目录：登记名集合 + 别名到登记名的映射。
+
+    识别两类表：指标表（表头首格为“指标/指标名称”，第二格是同义词）和
+    别名映射表（第三格为“指标”，第二格登记名、第一格别名列表）。
+    """
+    registered: set[str] = set()
+    aliases: dict[str, str] = {}
+
+    def _split_aliases(cell: str) -> list[str]:
+        return [
+            alias.strip()
+            for alias in re.split(r"[,，、/]", cell)
+            if alias.strip() not in _METRIC_ALIAS_PLACEHOLDERS
+        ]
+
+    in_metric_table = False
+    for raw_line in spec_text.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("|"):
+            in_metric_table = False
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 2 or set("".join(cells)) <= {"-", ":", " "}:
+            continue
+        if cells[0] in _TABLE_HEADER_WORDS:
+            in_metric_table = cells[0] in {"指标", "指标名称"}
+            continue
+        if in_metric_table and cells[0]:
+            registered.add(cells[0])
+            for alias in _split_aliases(cells[1]):
+                aliases.setdefault(alias, cells[0])
+            continue
+        if len(cells) >= 3 and cells[2] == "指标" and cells[1]:
+            registered.add(cells[1])
+            for alias in _split_aliases(cells[0]):
+                aliases.setdefault(alias, cells[1])
+    return frozenset(registered), aliases
+
+
+def _parse_metric_dependencies(spec_text: str) -> dict[str, tuple[str, ...]]:
+    """从注入规范的指标表解析依赖指标列：复合口径指标登记名 -> 成分指标元组。
+
+    只认表头同时含"指标"与"依赖指标"的表；成分按逗号分隔，
+    "无"/空等占位不算成分。指标表没有依赖指标列时返回空映射。
+    """
+    dependencies: dict[str, tuple[str, ...]] = {}
+    in_metric_table = False
+    dep_index = -1
+    for raw_line in spec_text.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("|"):
+            in_metric_table = False
+            dep_index = -1
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 2 or set("".join(cells)) <= {"-", ":", " "}:
+            continue
+        if cells[0] in _TABLE_HEADER_WORDS:
+            in_metric_table = (
+                cells[0] in {"指标", "指标名称"}
+                and any("依赖指标" in cell for cell in cells)
+            )
+            dep_index = next(
+                (i for i, cell in enumerate(cells) if "依赖指标" in cell), -1
+            )
+            continue
+        if in_metric_table and cells[0] and 0 < dep_index < len(cells):
+            components = [
+                dep.strip()
+                for dep in re.split(r"[,，、/]", cells[dep_index])
+                if dep.strip() not in _METRIC_ALIAS_PLACEHOLDERS
+            ]
+            if components:
+                dependencies[cells[0]] = tuple(components)
+    return dependencies
+
+
+# 环比/同比问题的形态判别已挪到 temporal_window（与词表同处），
+
+
+# 时间维度字段识别用词；规划器排序归一与引擎的时间列识别保持同一口径
+_TEMPORAL_DIMENSION_TOKENS = (
+    "日期", "时间", "月份", "季度", "年份", "周期",
+    "date", "time", "month", "quarter", "year", "period", "week",
+)
+
+
+def _normalize_trend_time_order(structured: dict[str, Any] | None) -> None:
+    """趋势意图下把排序统一改成时间维度升序。
+
+    模型会把环比/趋势类问题的排序写成指标降序，SQL 按指标值返回后
+    时间乱序，趋势引擎按相邻行算逐期变化时直接拒算。趋势分析只认
+    时间升序，这里在提取出口统一纠正。
+    """
+    if not structured:
+        return
+    dimensions = [
+        str(item) for item in structured.get("维度") or [] if str(item).strip()
+    ]
+    temporal = [
+        item for item in dimensions
+        if any(token in item.lower() for token in _TEMPORAL_DIMENSION_TOKENS)
+    ]
+    if not temporal:
+        return
+    time_field = temporal[0]
+    sorts = structured.get("排序")
+    if isinstance(sorts, list) and any(
+        isinstance(item, dict) and item.get("field") == time_field
+        and str(item.get("order") or "").lower() == "asc"
+        for item in sorts
+    ):
+        return
+    structured["排序"] = [{"field": time_field, "order": "asc"}]
+    structured["排序类型"] = "升序"
+
+
+def _shared_region_denominator_from_spec(spec_text: str) -> bool:
+    """Recognize the same published rule after the document is regenerated."""
+    if '[dealer_shared_region_denominator:v1]' in spec_text:
+        return True
+    dependencies = _parse_metric_dependencies(spec_text)
+    if '区域全部医院总数' not in dependencies.get('区域医院覆盖率', ()):
+        return False
+    definitions = {}
+    in_metrics = False
+    for line in spec_text.splitlines():
+        cells = [cell.strip() for cell in line.strip().strip('|').split('|')]
+        if not line.strip().startswith('|'):
+            in_metrics = False
+        elif cells[0] in _TABLE_HEADER_WORDS:
+            in_metrics = cells[0] in {'指标', '指标名称'} and '业务口径' in cells
+        elif in_metrics and len(cells) >= 3:
+            definitions[cells[0]] = re.sub(r'\s+', '', cells[2])
+    return (
+        '所有经销商共用同一分母' in definitions.get('区域医院覆盖率', '')
+        and '销售订单无关' in definitions.get('区域全部医院总数', '')
+        and '不接受经销商条件' in definitions.get('区域全部医院总数', '')
+    )
+
+
+def _confirmed_hospital_department_scope(task_question, source_question, structured, model_id):
+    """Carry the user's confirmed model-81 product-applicability meaning.
+
+    Hospital order questions use product applicable departments in this
+    business workflow. Explicit order/administrative department requests keep
+    their own scope; physical binding remains the original ASL's job.
+    """
+    if (model_id != 81 or not structured or '医院' not in source_question
+            or not re.search(r'订单|销售', source_question)
+            or re.search(r'业务科室|business_department|行政科室|院属科室|下辖科室|医院下属科室', source_question, re.I)):
+        return task_question
+    department_filter = False
+    for item in structured.get('过滤条件') or []:
+        if isinstance(item, dict) and item.get('field') in {
+            '业务科室', '销售订单.业务科室', 'sales_order.business_department',
+            '科室', '科室名称', '适用科室',
+        }:
+            item['entity'] = '商品科室关联'
+            item['field'] = '科室编码'
+            department_filter = True
+    if department_filter:
+        task_question = task_question.replace('业务科室', '商品适用科室')
+        if '商品适用科室' not in task_question:
+            task_question += '，科室按商品适用科室筛选订单'
+    return task_question
+
+
+def _ground_inferred_hospital_location(structured, source_question, model_id):
+    """Use hospital geography when the model invents a business-area qualifier."""
+    if (model_id != 81 or not structured
+            or re.search(r'业务(?:省份?|城?市|地区|区域)', source_question)):
+        return
+    for item in structured.get('过滤条件') or []:
+        if (isinstance(item, dict) and item.get('entity') == '医院'
+                and item.get('field') in {'业务市', '业务省'}):
+            item['field'] = {'业务市': '城市', '业务省': '省份'}[item['field']]
+
+
 
 
 class TaskPlanningError(RuntimeError):
     pass
 
 
-class _ModelTask(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    question: str = Field(min_length=2, max_length=1000)
-    depends_on: list[int] = Field(default_factory=list)
+class TaskInputBindingError(TaskPlanningError):
+    """A calculation cannot name inputs outside its task dependency contract."""
 
 
-class _ModelPlan(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    is_multi_question: bool
-    tasks: list[_ModelTask] = Field(default_factory=list, max_length=5)
-
-
-_SYSTEM_PROMPT = """你是企业数据分析任务拆分器，只输出JSON，不回答问题。
-判断用户输入是否包含多个可以分别交付结果的数据任务。
-规则：
-1. 单个目标的连续步骤（例如“查询销售额并分析趋势”）通常是一个任务。
-2. 不同指标、不同实体、不同时间目标或不同交付物且可分别回答时，拆成多个任务。
-3. 只有一个查询动作，但明确列出同一语义属性下需要分别返回的多个分类、关系类型、状态或时间切片，也要拆分。例如“查询TDC-3产品的主要适用科室、次要适用科室”必须拆成两个独立任务。
-4. 普通返回字段列表或共同分组维度不得拆分。例如“查询产品名称、规格型号”和“按城市和品牌统计销售额”都仍是一个任务；“所有适用科室”也不是多个任务。
-5. 每个任务必须补全原句中共享的指标、时间、对象和筛选值，使其脱离其他任务也能理解；不得创造原文没有的信息。
-6. depends_on使用从0开始的任务下标。只有“基于上一步结果、再从其中、对上述结果”等确需复用前序结果时才建立依赖；并列分类分支之间没有依赖。
-7. 最多5个任务，保持用户原始顺序，不输出推理过程。
-"""
+_ANALYSIS_QUESTION_INTENTS = {
+    PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
+    PrimaryIntent.COMPOSITION_ANALYSIS, PrimaryIntent.ANOMALY_ANALYSIS,
+    PrimaryIntent.ROOT_CAUSE_ANALYSIS, PrimaryIntent.FORECAST_ANALYSIS,
+}
 
 
-class MultiQuestionPlanner:
-    """LLM-assisted atomic task planning with deterministic validation/fallback."""
+# 同比/对比计算任务的期间提及解析：
+# - 绝对期间：2025年 / 2025年11月（兼容"年度/月份"写法）；
+# - 相对基期：去年同期 / 上年同期 / 上一年 / 去年 等。相对说法锚定上下文
+#   里的绝对期间统一前推一年；锚定不了就不产出期间，不猜年份。
+_ABSOLUTE_PERIOD_MENTION = re.compile(r"(20\d{2})\s*年(?:\s*(\d{1,2})\s*月(?:份)?)?")
+_RELATIVE_BASELINE_MENTION = re.compile(r"去年同期|上年同期|上一年度|上一年|上年度|上年|去年")
 
-    _REPORT_FACET = re.compile(
-        r"(?:整体)?(?:销售|订单|收入|利润|成本|库存|业务|业绩)(?:趋势|走势|变化)"
-        r"|(?:医院|客户|门店|地区|区域|渠道|品类|商品|经销商|供应商)"
-        r"(?:覆盖(?:情况|数据)?|分布)"
-        r"|(?:合作)?(?:经销商|供应商|客户|医院|门店|渠道)"
-        r"(?:数据|情况|清单|名单|画像|表现)"
-        r"|(?:销售|订单|收入|利润|成本|库存|业务|业绩)"
-        r"(?:规模|汇总|概览|构成|结构|排名)"
+
+def _period_sort_key(period: tuple[int, int | None]) -> tuple[int, int]:
+    year, month = period
+    return (year, 0 if month is None else month)
+
+
+def _period_label(period: tuple[int, int | None]) -> str:
+    year, month = period
+    return f"{year}年{month}月" if month else f"{year}年"
+
+
+def _task_period_text(task) -> str:
+    """任务的期间语料：问题文本 + 交付物说明 + 结构化时间范围。"""
+    structured = task.structured if isinstance(task.structured, dict) else {}
+    granularity = structured.get('时间粒度')
+    time_range = granularity.get('time_range') if isinstance(granularity, dict) else None
+    return ' '.join(
+        str(part) for part in (task.question, task.expected_output, time_range) if part
     )
+
+
+def _mentioned_absolute_periods(text: str) -> list[tuple[int, int | None]]:
+    periods: list[tuple[int, int | None]] = []
+    for match in _ABSOLUTE_PERIOD_MENTION.finditer(str(text or '')):
+        month = match.group(2)
+        periods.append((int(match.group(1)), int(month) if month else None))
+    return periods
+
+
+def _covered_periods(task) -> set[tuple[int, int | None]]:
+    """取数任务已覆盖的期间：结构化时间范围的绝对区间 + 文本期间提及。"""
+    covered: set[tuple[int, int | None]] = set()
+    structured = task.structured if isinstance(task.structured, dict) else {}
+    granularity = structured.get('时间粒度')
+    time_range = str(granularity.get('time_range') or '') if isinstance(granularity, dict) else ''
+    absolute = parse_absolute_range(time_range)
+    if absolute is not None:
+        covered.update(
+            (year, None) for year in range(absolute[0].year, absolute[1].year + 1)
+        )
+    covered.update(_mentioned_absolute_periods(_task_period_text(task)))
+    return covered
+
+
+def _period_uncovered(
+    period: tuple[int, int | None], covered: set[tuple[int, int | None]]
+) -> bool:
+    """整年取数覆盖该年任意期间；单月取数只覆盖同一期间。"""
+    year, month = period
+    if (year, None) in covered:
+        return False
+    if month is None:
+        return True
+    return (year, month) not in covered
+
+
+def _baseline_periods_referenced_by(dropped, anchor_fallback):
+    """被丢弃计算任务声明的期间：绝对期间 + 相对基期（锚定最近绝对期间）。
+
+    相对基期锚定同一任务文本里最晚的绝对期间；该文本没有绝对期间时
+    锚定现有取数任务已覆盖的最晚期间。两处都锚定不了就不产出。
+    """
+    referenced: list[tuple[int, int | None]] = []
+    seen: set[tuple[int, int | None]] = set()
+
+    def _add(period: tuple[int, int | None]) -> None:
+        if period not in seen:
+            seen.add(period)
+            referenced.append(period)
+
+    for task in dropped:
+        text = _task_period_text(task)
+        absolutes = _mentioned_absolute_periods(text)
+        anchor = max(absolutes, key=_period_sort_key) if absolutes else anchor_fallback
+        for period in absolutes:
+            _add(period)
+        if anchor is not None and _RELATIVE_BASELINE_MENTION.search(text):
+            _add((anchor[0] - 1, anchor[1]))
+    return referenced
+
+
+def _replace_period_label(text: str | None, base_label: str) -> str | None:
+    """把文本里的绝对期间写法替换为基期标签；没有期间写法时返回 None。"""
+    source = str(text or '')
+    matches = sorted(
+        _ABSOLUTE_PERIOD_MENTION.finditer(source),
+        key=lambda match: len(match.group(0)), reverse=True,
+    )
+    for match in matches:
+        for token in {match.group(0), re.sub(r'\s+', '', match.group(0))}:
+            if token and token in source:
+                return source.replace(token, base_label, 1)
+    return None
+
+
+def _structured_metric_clause(structured: dict[str, Any] | None) -> str:
+    """从既有结构化参数渲染指标从句，不引入新的业务名词。"""
+    if not isinstance(structured, dict):
+        return ''
+    metrics = '、'.join(
+        str(item.get('name') if isinstance(item, dict) else item).strip()
+        for item in structured.get('指标') or []
+        if (item.get('name') if isinstance(item, dict) else item)
+    )
+    dimensions = '、'.join(
+        str(item).strip() for item in structured.get('维度') or [] if str(item).strip()
+    )
+    grouping = f"各{dimensions}" if dimensions else ''
+    if metrics:
+        return f"{grouping}的{metrics}" if grouping else metrics
+    return f"{grouping}的查询结果" if grouping else ''
+
+
+def _baseline_retrieval_task(first, period: tuple[int, int | None]):
+    """为缺失期间合成独立取数任务：口径复制当前期任务，只替换时间范围。
+
+    结构化参数整体深拷贝当前期取数任务（实体/指标/维度/筛选等目录绑定
+    字段原样保留），仅时间范围写为基期期间；问题文本按同口径改写。
+    """
+    label = _period_label(period)
+    structured = (
+        copy.deepcopy(first.structured) if isinstance(first.structured, dict) else None
+    )
+    if structured is not None:
+        granularity = structured.get('时间粒度')
+        if isinstance(granularity, dict):
+            structured['时间粒度'] = {**granularity, 'time_range': label}
+        else:
+            structured['时间粒度'] = {'unit': None, 'time_range': label, 'anchor': None}
+        parameters = tuple(extraction_to_parameters(structured))
+    else:
+        parameters = ()
+    question = _replace_period_label(first.question, label)
+    if question is None:
+        clause = _structured_metric_clause(structured)
+        question = f"查询{label}{clause}" if clause else f"查询{label}数据"
+    name = _replace_period_label(first.name, label)
+    return DecomposedTask(
+        question=question, depends_on=(), expected_output=None,
+        intent=PrimaryIntent.METRIC_QUERY, parameters=parameters,
+        structured=structured, name=name,
+    )
+
+
+def _missing_baseline_retrieval_tasks(first, dropped):
+    """对比计算任务声明了多个期间时，为未被取数覆盖的期间合成基期任务。
+
+    同比/对比计算由系统分析工具完成，但其声明的每个期间都必须有独立
+    取数任务：缺少基期取数时基期从未被查询，同比只能回答"缺基期"。
+    期间从被丢弃计算任务的问题文本、交付物说明与结构化时间参数解析；
+    解析不了的期间不猜，维持原有单取数折叠结果。
+    """
+    covered = _covered_periods(first)
+    anchor_fallback = max(covered, key=_period_sort_key) if covered else None
+    referenced = _baseline_periods_referenced_by(dropped, anchor_fallback)
+    missing = sorted(
+        (period for period in referenced if _period_uncovered(period, covered)),
+        key=_period_sort_key,
+    )
+    return [_baseline_retrieval_task(first, period) for period in missing]
+
+
+def _uses_analysis_tool_gap_operations(structured: dict) -> bool:
+    """计算结构是否使用分析工具不具备的操作能力（monthly_growth/extrema等）。
+
+    这些统计操作只存在于计算执行器；subtract/divide/derive/aggregate
+    属于分析型计算，由趋势/对比等分析工具按口径完成并校验。
+    """
+    gap_types = {"monthly_growth", "extrema", "extrema_difference"}
+    spec = structured.get("结果操作")
+    if not isinstance(spec, dict):
+        return False
+    operation = spec.get("operation")
+    if not isinstance(operation, dict):
+        return False
+    if operation.get("type") == "pipeline":
+        steps = operation.get("operations") or operation.get("steps") or []
+    else:
+        steps = [operation]
+    return any(
+        isinstance(step, dict) and step.get("type") in gap_types
+        for step in steps
+    )
+
+
+def _collapse_analysis_computation_tasks(decomposition):
+    """分析类问题只保留取数任务：模型自造的分析计算任务交给分析工具。
+
+    同比/环比/趋势等分析计算由系统分析工具完成。模型把这类计算拆成
+    "不再查询数据库"的任务时会自造非法结果操作（实测两轮重试均复发），
+    这里直接丢弃这些任务、保留首个取数任务，由分析任务规划器按登记
+    模板补充规范的分析任务，提示词约束作为第一道防线而不是唯一防线。
+    被丢弃的计算任务声明了对比基期期间（如"基于2025年和2024年"、
+    "去年同期"）时，为现有取数未覆盖的期间合成基期取数任务：基期查询
+    即使返回空也如实呈现"基期无数据"，而不是基期从未被查询。
+    """
+    tasks = list(decomposition.tasks)
+    if len(tasks) <= 1:
+        return decomposition
+    intent = (decomposition.intent if decomposition.intent in _ANALYSIS_QUESTION_INTENTS else None) or next(
+        (task.intent for task in tasks if task.intent in _ANALYSIS_QUESTION_INTENTS),
+        None,
+    )
+    if intent not in _ANALYSIS_QUESTION_INTENTS:
+        return decomposition
+    # A registered formula remains a calculator deliverable even when the
+    # root intent is comparison/trend. Do not replace an average with a diff.
+    from app.planning.task_plan_stages import targets_in_text
+    registered, aliases = decomposition.metric_catalog or (frozenset(), {})
+    compounds = decomposition.metric_dependencies or {}
+    for task in tasks:
+        if task.depends_on and any(name in compounds for name in targets_in_text(
+                task.question + ' ' + (task.expected_output or ''), registered, aliases)):
+            return decomposition
+    def local_calculation(task):
+        return ("不再查询数据库" in task.question
+                or database_query_choice(task.structured) is False)
+    # Explicit calculator/statistical deliverables must be repaired, not
+    # silently replaced with a generic analysis of the first query.
+    if any(re.search(r'平方|立方|开根|方差|标准差|中位数|分位数|协方差|相关系数|对数|取余|阶乘|绝对值',
+                     task.question+' '+(task.expected_output or '')) for task in tasks
+           if local_calculation(task)):
+        return decomposition
+    data_tasks = [task for task in tasks if not local_calculation(task)]
+    if len(data_tasks) == len(tasks) or not data_tasks:
+        return decomposition
+    # The analysis-tool fallback is only for one retrieval and unsupported
+    # model-invented analysis steps. Never erase a complete calculation or a
+    # second retrieval: both carry real business dependencies and deliverables.
+    if len(data_tasks)!=1 or data_tasks[0].depends_on:
+        return decomposition
+    for index, task in enumerate(tasks):
+        value=task.structured or {}
+        if not (value.get('计算绑定') or value.get('结果操作')):
+            continue
+        try:
+            materialize_computation_binding(value,task_index=index,
+                dependencies=[f'task-{dep+1}' for dep in task.depends_on])
+        except TaskInputBindingError:
+            continue
+        # 登记复合指标的计算绑定是既有合同（冻结测试覆盖其完整计划），
+        # 不参与"规整给分析工具"的丢弃；只有模型自造的结果操作才按
+        # 分析工具缺口判定：subtract/divide/derive 等分析型计算规整给
+        # 分析工具，monthly_growth/extrema 等统计操作保留计算链路。
+        if value.get('计算绑定') or _uses_analysis_tool_gap_operations(value):
+            return decomposition
+        spec = value.get('结果操作') or {}
+        operation = spec.get('operation') or {}
+        steps = operation.get('operations') or operation.get('steps') or [operation]
+        if operation and not any(step.get('type') == 'derive'
+            and step.get('operator') in {'add', 'subtract', 'multiply', 'divide'}
+            for step in steps if isinstance(step, dict)):
+            # A standalone sort/TopN/filter or aggregate is a deliverable,
+            # not a substitute for one of the six analysis tools.
+            return decomposition
+    dropped = [task for task in tasks if local_calculation(task)]
+    logger.info(
+        "analysis computation tasks collapsed: intent=%s kept=%r dropped=%r",
+        intent, data_tasks[0].question[:80],
+        [task.question[:60] for task in dropped],
+    )
+    first = replace(data_tasks[0], intent=intent)
+    if first.depends_on:
+        first = replace(first, depends_on=())
+    # Retrieval windows are rebuilt from the immutable analysis requirements.
+    # Dropped prose may mix target, baseline and forecast horizons and must not
+    # be reused to synthesize historical queries.
+    return replace(decomposition, intent=intent, tasks=(first,))
+
+
+from app.planning.calculation_bindings import materialize_computation_binding
+
+
+def _registered_default_times(source: str, spec: str) -> tuple[str, ...]:
+    """Only the current model's declared defaults can supplement user text."""
+    if re.search(
+        r"\d{4}|(?:\d+|[一二三四五六七八九十两]+)(?:年|个月|月份|月|季度|周|日|天)"
+        r"|今天|昨天|前天|本周|上周|下周|本月|上月|下月|今年|去年|前年|明年|最近|近期|近来",
+        source,
+    ):
+        return ()
+    defaults = re.findall(
+        r"未指定时间(?:范围)?[^。；\n]{0,30}?默认(?:取|为|使用)?\s*"
+        r"(最近\s*\d+\s*个?\s*(?:月|周|天|年))",
+        spec,
+    )
+    return tuple(re.sub(r"\s+", "", default) for default in defaults)
+
+
+def _respect_shared_region_denominator(decomposition, source):
+    """Apply the existing versioned catalog rule to the proven bad component."""
+    if not decomposition.shared_region_denominator or '经销商' not in source or re.search(
+            r"按(?:省份|城市)|各(?:省|市)|每(?:个)?(?:省份|城市)", source):
+        return decomposition
+    tasks = []
+    for task in decomposition.tasks:
+        data = task.structured
+        names = [item.get('name') if isinstance(item, dict) else item
+                 for item in (data or {}).get('指标', [])]
+        if names != ['区域全部医院总数'] or (data or {}).get('是否查询数据库') == '否':
+            tasks.append(task)
+            continue
+        wrong_grouping = bool(data.get('维度'))
+        wrong_entity = any(entity in ('经销商', '销售订单') for entity in data.get('实体', []))
+        wrong_filters = any(item.get('entity') == '经销商' for item in data.get('过滤条件', [])
+                            if isinstance(item, dict))
+        wrong_period = bool((data.get('时间粒度') or {}).get('time_range')) and (
+            (data.get('时间粒度') or {}).get('time_range') != '全部历史')
+        if not (wrong_grouping or wrong_entity or wrong_filters or wrong_period):
+            tasks.append(task)
+            continue
+        fixed = copy.deepcopy(data)
+        fixed['维度'] = []
+        fixed['实体'] = [entity for entity in fixed.get('实体', []) if entity not in ('经销商', '销售订单')]
+        fixed['过滤条件'] = [item for item in fixed.get('过滤条件', [])
+                             if not isinstance(item, dict) or item.get('entity') != '经销商']
+        fixed['展示字段'] = [item for item in fixed.get('展示字段', [])
+                             if not isinstance(item, dict) or item.get('entity') != '经销商']
+        # A master-data denominator is independent of transaction activity time.
+        fixed['时间粒度'] = {'unit': None, 'time_range': '全部历史', 'anchor': None}
+        period = '全部历史'
+        filters = '；'.join(
+            f"{item.get('entity') or ''}{item.get('field') or ''}"
+            f"{item.get('op') or item.get('operator') or '='}"
+            + '、'.join(str(value) for value in (
+                item.get('value') if isinstance(item.get('value'), list) else [item.get('value')]))
+            for item in fixed.get('过滤条件') or [] if isinstance(item, dict)
+        )
+        question = f'查询{period}区域全部医院总数'
+        if fixed.get('过滤条件'):
+            question += '，筛选条件：' + filters
+        if task.depends_on:
+            question = '根据上述任务的查询结果，' + question
+        tasks.append(replace(task, question=question, name=f'查询{period}区域全部医院总数',
+                             structured=fixed, parameters=tuple(extraction_to_parameters(fixed))))
+    return replace(decomposition, tasks=tuple(tasks))
+
+
+def _align_task_names_with_scope(decomposition):
+    """规划后校验兜底：任务名与自身等值过滤矛盾时按过滤值修正展示名。
+
+    规划器偶发把带具体区域限定的任务写成“各省份”式泛化描述——可执行
+    question 与结构化过滤条件仍保留具体地区（SQL 口径正确），但任务卡
+    展示名与抽取自相矛盾会误导用户。仅修正展示名，不改结构化参数、
+    可执行 question 与任何执行行为；无等值过滤的任务不受影响。
+    """
+    from app.planning.task_plan_stages import filter_scope_text
+    tasks = []
+    for task in decomposition.tasks:
+        name = task.name
+        data = task.structured if isinstance(task.structured, dict) else {}
+        for item in data.get('过滤条件') or []:
+            if not isinstance(item, dict) or not name:
+                continue
+            op = str(item.get('op') or item.get('operator') or '=').strip()
+            value = item.get('value')
+            # 抽取的等值过滤值常落成单元素列表（fingerprint 渲染成裸值）
+            if isinstance(value, list) and len(value) == 1:
+                value = value[0]
+            if op not in {'=', '=='} or not isinstance(value, str):
+                continue
+            value = value.strip()
+            if not value or value.startswith('${'):
+                continue
+            dim_word = re.sub(r'(?:名称|编码|编号)$', '',
+                              str(item.get('field') or item.get('entity') or ''))
+            if not dim_word:
+                continue
+            generalized = re.compile(r'[各每]\s*' + re.escape(dim_word))
+            if generalized.search(name):
+                name = generalized.sub(value, name)
+        if name:
+            # 名称里尚未出现的筛选条件必须补上：这些条件是该任务真正执行的
+            # 查询范围（含系统补的地区/时间口径），原问题没有也要让用户看见。
+            scope = filter_scope_text(data, existing=name)
+            if scope:
+                suffix = f'（{scope}）'
+                room = 60 - len(suffix)
+                if room >= 2:
+                    name = (name if len(name) <= room else name[:room]) + suffix
+        if name != task.name:
+            logger.warning('task name aligned with equality filter: %r -> %r',
+                           task.name, name)
+            tasks.append(replace(task, name=name))
+        else:
+            tasks.append(task)
+    return replace(decomposition, tasks=tuple(tasks))
+
+
+_EXTRACTION_SCHEMA_DESCRIPTION = (
+    "结构化提取JSON，严格按系统提示词中的结构化提取规范输出，"
+    "固定键：意图/业务域/实体/指标/维度/展示字段/过滤条件/时间粒度/排序/限制/输出要求/是否去重/是否查询数据库；"
+    "意图取值限定为 指标查询、趋势分析、对比分析、占比分析、异常分析、归因分析、预测分析、排名分析、明细查询 之一。"
+    "数据查询任务的指标名：用户说法是某个登记指标的同义词时输出该指标的登记原名，"
+    "与任何登记指标都对应不上时置空，不得用语义相近的指标顶替，不得自造指标名；"
+    "不需要查询业务数据的问题（闲聊、超出业务范围）输出null；"
+    "指标口径解释任务按规范完整提取参数，指标名保留用户原文，"
+    "意图键固定输出“解释口径”"
+)
+
+
+class _PlannedTask(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(
+        min_length=2,
+        max_length=1000,
+        description="必填；该任务完整可独立执行的问题文本",
+    )
+    name: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=60,
+        description="该任务的名称：动词+业务指标+过滤条件的陈述句，"
+            "概括任务要得到的业务结果，不得照抄用户问题原文，"
+            "不带疑问词（是多少、有哪些等），结尾不加标点",
+    )
+    depends_on: list[int] = Field(
+        default_factory=list,
+        description="必填；默认空数组；依赖同问题内前序任务时填从0开始的任务下标",
+    )
+    expected_output: str | None = Field(
+        default=None,
+        max_length=300,
+        description="该任务可独立验收的交付物说明",
+    )
+    dependency_bindings: list[dict[str, Any]] | None = None
+    extraction: dict[str, Any] | None = Field(
+        default=None,
+        description=_EXTRACTION_SCHEMA_DESCRIPTION,
+    )
+    postprocess: dict[str, Any] | None = None
+    clarification: dict[str, Any] | None = None
+
+
+_SINGLE_SYSTEM_PROMPT = EXTRACTION_SYSTEM_PROMPT
+
+
+class SingleQuestionPlanner:
+    """先规划任务与依赖，再批量提取参数；意图由识别节点提供。"""
 
     def __init__(
         self,
         settings: Settings,
+        *,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.settings = settings
         self._transport = transport
 
-    async def plan(self, question: str) -> TaskPlan | None:
-        ranked_relation_plan = self._ranked_relation_plan(question)
-        if ranked_relation_plan is not None:
-            self.validate(ranked_relation_plan, source_question=question)
-            return ranked_relation_plan
-        report_plan = self._report_plan(question)
-        if report_plan is not None:
-            self.validate(report_plan, source_question=question)
-            return report_plan
-        parallel_ranking_plan = self._parallel_ranking_plan(question)
-        if parallel_ranking_plan is not None:
-            self.validate(parallel_ranking_plan, source_question=question)
-            return parallel_ranking_plan
-        if not self._candidate(question):
-            return None
-        plan: TaskPlan | None = None
-        if self.settings.multi_question_model_enabled and self.settings.intent_model_api_key:
+    async def plan_question(
+        self,
+        question: str,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+        root_intent: PrimaryIntent | None = None,
+        analysis_chain: str | None = None,
+    ) -> QuestionDecomposition:
+        """问题级入口：任务拆解 + 逐任务意图识别与参数提取，带一次纠错重试。
+
+        root_intent 是意图识别节点判定的根意图：提供时整轮规划不再做
+        意图判断，问题意图与全部任务意图直接取根意图。
+        """
+        retry_feedback: str | None = None
+        last_result = QuestionDecomposition()
+        from app.analysis.tools.registry import chain_for_intent
+        if analysis_chain is None:
+            analysis_chain = chain_for_intent(root_intent)
+        if not (
+            self.settings.intent_model_enabled
+            and self.settings.multi_question_model_enabled
+            and self.settings.intent_model_api_key
+        ):
+            # 提取模型未启用时不发请求，直接返回空结果由调用方走兜底
+            return last_result
+        attempts = 2
+        for attempt in range(attempts):
             try:
-                plan = await self._model_plan(question)
-                if plan is not None:
-                    self.validate(plan, source_question=question)
-            except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError):
-                plan = None
-        if plan is None:
-            plan = self._rule_plan(question)
-        if plan is None or len(plan.tasks) < 2:
-            return None
-        # Structured-model plans are validated inside the guarded block above so
-        # an ungrounded model split can safely fall back to deterministic rules.
-        # Rule plans must still pass the same dependency and grounding checks.
-        if plan.planner != "STRUCTURED_MODEL":
-            self.validate(plan, source_question=question)
-        return plan
+                decomposition = await self._model_decompose(
+                    question,
+                    semantic_context=semantic_context,
+                    semantic_model_id=semantic_model_id,
+                    retry_feedback=retry_feedback,
+                    root_intent=root_intent,
+                    **({'analysis_chain': analysis_chain} if analysis_chain is not None else {}),
+                )
+            except TaskInputBindingError as exc:
+                if attempt == attempts - 1:
+                    raise
+                retry_feedback = '任务规划或计算结构无效，请修正后重新输出完整计划：' + str(exc)
+                continue
+            except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+                # 传输、Schema 或解析失败先整体重试一次，仍失败返回空结果
+                logger.warning(
+                    "single planner decompose failed attempt=%s error=%r",
+                    attempt, exc,
+                )
+                if attempt == attempts - 1:
+                    return last_result
+                continue
+            decomposition = _repair_unavailable_local_projection(decomposition, question)
+            discovered_chain = chain_for_intent(decomposition.intent)
+            if discovered_chain and not any((item.structured or {}).get('_analysis_tool_plan') for item in decomposition.tasks):
+                if attempt == attempts - 1:
+                    raise TaskInputBindingError('ANALYSIS_TOOL_PLAN_REQUIRED: 分析任务必须由模型选择工具并声明数据需求')
+                root_intent = decomposition.intent
+                analysis_chain = discovered_chain
+                retry_feedback = '已由模型识别分析链路，请依据该链路工具目录输出analysis_plan，不生成隐式分析任务。'
+                continue
+            decomposition = _collapse_analysis_computation_tasks(decomposition)
+            last_result = decomposition
+            off_data, off_meta = self._normalize_decomposition_metrics(decomposition)
+            unsplit_compound = list(self._unsplit_compound_metrics(decomposition))
+            empty_extraction = (
+                not any(task.structured is not None for task in decomposition.tasks)
+                and decomposition.intent not in _NO_DATA_INTENTS
+            )
+            if attempt == 0 and (empty_extraction or off_data or off_meta):
+                # 全部任务提取为空或指标名目录外，说明这次输出不可信，
+                # 带纠错说明重试一次
+                retry_feedback = self._retry_feedback(
+                    off_data, off_meta, empty_extraction=empty_extraction,
+                )
+                continue
+            if unsplit_compound:
+                if decomposition.boundary_plan_complete:
+                    if attempt == attempts - 1:
+                        raise TaskInputBindingError('任务计划遗漏复合指标依赖，未执行不完整计划')
+                    retry_feedback = '请在参数提取之前完整规划这些登记指标的成分及计算任务：' + '、'.join(
+                        name + '（' + '、'.join(parts) + '）' for name, parts in unsplit_compound)
+                    continue
+                # 复合指标按登记成分在代码层确定性拆分：每个成分一个查询任务，
+                # 再加依赖全部成分的计算任务。不走模型重试——提示词里的拆分
+                # 条款会反过来干扰指标选择（实测多次复现）
+                decomposition = self._split_compound_metric_tasks(
+                    decomposition, unsplit_compound
+                )
+                last_result = decomposition
+            from app.planning.calculation_bindings import materialize_declared_division, materialize_declared_result_operation, materialize_computation_binding, validate_computation_column_lineage
+            try:
+                if not decomposition.boundary_plan_complete:
+                    # Compatibility for legacy combined planners only. New
+                    # boundaries already include local result operations.
+                    last_result = materialize_declared_result_operation(materialize_declared_division(last_result))
+                for index, task in enumerate(last_result.tasks):
+                    if task.depends_on:
+                        try:
+                            materialize_computation_binding(task.structured, task_index=index,
+                                dependencies=[f'task-{dep + 1}' for dep in task.depends_on])
+                        except TaskInputBindingError as exc:
+                            # 打出任务级上下文：模型给哪个任务发明了什么计算结构，
+                            # 规划拒绝时不用翻模型原始输出就能定位
+                            logger.warning(
+                                "computation binding rejected: task=%r question=%r error=%s extraction_keys=%s",
+                                task.name or task.question[:60], task.question[:120], exc,
+                                sorted((task.structured or {}).keys()),
+                            )
+                            raise
+                validate_computation_column_lineage(last_result)
+            except TaskInputBindingError as exc:
+                if attempt == attempts - 1:
+                    # 2026-10-21 用户裁决：校验尽可能宽松，任务只要能输出
+                    # 就输出。重试耗尽后只丢弃自身绑定无法落地的任务的结果
+                    # 操作/计算绑定，其余任务保持既有绑定继续执行；执行期
+                    # 无公式的任务由计算执行器透传依赖数据集兜底。
+                    logger.warning(
+                        "computation binding degraded after retries: %s", exc,
+                    )
+                    for degraded_index, degraded in enumerate(last_result.tasks):
+                        degraded_structured = degraded.structured
+                        if (not isinstance(degraded_structured, dict)
+                                or not degraded.depends_on
+                                or not ({'结果操作', '计算绑定'} & set(degraded_structured))):
+                            continue
+                        try:
+                            materialize_computation_binding(
+                                degraded_structured, task_index=degraded_index,
+                                dependencies=[f'task-{dep + 1}' for dep in degraded.depends_on])
+                        except TaskInputBindingError as task_exc:
+                            degraded_structured.pop('结果操作', None)
+                            degraded_structured.pop('计算绑定', None)
+                            logger.warning(
+                                "computation binding dropped: task=%r question=%r error=%s",
+                                degraded.name or degraded.question[:60],
+                                degraded.question[:120], task_exc,
+                            )
+                    return _align_task_names_with_scope(
+                        _respect_shared_region_denominator(last_result, question))
+                retry_feedback = '计算操作不完整或无效，请修正后重新输出完整计划：' + str(exc)
+                continue
+            return _align_task_names_with_scope(
+                _respect_shared_region_denominator(last_result, question))
+        return last_result
 
     @staticmethod
-    def _ranked_relation_plan(question: str) -> TaskPlan | None:
-        match = re.fullmatch(
-            r"(?P<ranking>(?:查询|找出|列出).+?(?:最高|最低|最大|最小)"
-            r"(?:的)?(?:前)?[一二两三四五六七八九十\d]*个?(?:产品|商品))"
-            r"(?:，|,)?(?:并|再|然后)(?P<relation>列出|查询|找出)"
-            r"(?P<tail>(?:涉及|关联|对应).+)",
-            question.strip(" 。"),
-        )
-        if match is None:
-            return None
-        return TaskPlan(
-            tasks=[
-                AtomicTask(task_id="task-1", question=match.group("ranking")),
-                AtomicTask(
-                    task_id="task-2",
-                    question=f"{match.group('relation')}上述产品{match.group('tail')}",
-                    depends_on=["task-1"],
-                ),
-            ],
-            planner="DETERMINISTIC_RULE",
-        )
+    def _unsplit_compound_metrics(
+        decomposition: QuestionDecomposition,
+    ) -> list[tuple[str, tuple[str, ...]]]:
+        """找出数据查询任务里未按公式拆分的复合指标：返回（指标, 成分）列表。
 
-    def _parallel_ranking_plan(self, question: str) -> TaskPlan | None:
-        """Split two independently ranked targets even when the verb is shared."""
-        normalized = question.strip(" ，,。")
-        # “分别查询A和B” and “查询A，以及B” commonly omit the second verb.
-        # Only accept a split when both operands contain an explicit ranking
-        # shape, avoiding splits of ordinary metric/dimension lists.
-        match = re.match(
-            r"^(?P<prefix>分别)?(?P<verb>查询|统计|找出|列出)"
-            r"(?P<left>.+?(?:前[一二两三四五六七八九十\d]+|最高|最多|最低|最少).+?)"
-            r"(?:，|,)?(?:以及|同时(?:查询|统计)?|和|与)"
-            r"(?P<right>.+(?:前[一二两三四五六七八九十\d]+|最高|最多|最低|最少).*)$",
-            normalized,
-        )
-        if match is None:
-            return None
-        verb = match.group("verb")
-        left = match.group("left").strip(" ，,")
-        right = re.sub(r"^(?:查询|统计|找出|列出)", "", match.group("right")).strip(" ，,")
-        if not left or not right:
-            return None
-        return TaskPlan(
-            tasks=[
-                AtomicTask(task_id="task-1", question=f"{verb}{left}"),
-                AtomicTask(task_id="task-2", question=f"{verb}{right}"),
-            ],
-            planner="DETERMINISTIC_RULE",
-        )
-
-    def _report_plan(self, question: str) -> TaskPlan | None:
-        """Split an explicitly multi-facet report into independently provable queries.
-
-        A report is a final deliverable, not a query shape.  Collapsing several
-        requested facets into one exploratory ASL can silently return only one
-        aggregate.  This deterministic path keeps the shared subject/filter text
-        and executes every named facet as its own query before report assembly.
+        计算任务（问题含"不再查询数据库"）本来就携带复合指标名，
+        口径解释任务保留用户原文，二者都不算未拆分。
         """
-        if not re.search(r"(?:分析)?报告|报表", question, re.IGNORECASE):
-            return None
-        facet_report = re.fullmatch(
-            r"(?:请|帮我|给我)?(?:生成|制作|输出)?"
-            r"(?P<scope>.+?)(?:销售)?分析(?:报告|报表)[，,；;]?"
-            r"(?:包含|包括)(?P<facets>.+)",
-            question.strip(" 。"),
-        )
-        if facet_report is not None:
-            scope = facet_report.group("scope").strip(" ，,")
-            facets = facet_report.group("facets")
-            tasks: list[AtomicTask] = []
-            for label, task_text in (
-                ("趋势", f"分析{scope}销售趋势"),
-                ("排名", f"分析{scope}销售排名"),
-                ("异常", f"分析{scope}销售异常"),
-            ):
-                if label in facets:
-                    tasks.append(AtomicTask(
-                        task_id=f"task-{len(tasks) + 1}", question=task_text,
-                    ))
-            if len(tasks) >= 2:
-                return TaskPlan(
-                    tasks=tasks,
-                    planner="DETERMINISTIC_RULE",
-                    final_deliverable="COMBINED_REPORT",
-                )
-        body = re.sub(
-            r"[，,；;]?\s*(?:(?:并|再)?(?:输出|生成|形成|制作|导出)|给我)"
-            r".{0,24}?(?:分析)?(?:报告|报表).*$",
-            "",
-            question.strip(),
-            flags=re.IGNORECASE,
-        ).strip(" ，,；;。")
-        matches = list(self._REPORT_FACET.finditer(body))
-        # Resolve defensive overlap if a future facet expression is extended.
-        selected: list[re.Match[str]] = []
-        for match in matches:
-            if selected and match.start() < selected[-1].end():
-                if match.end() - match.start() > selected[-1].end() - selected[-1].start():
-                    selected[-1] = match
+        dependencies = decomposition.metric_dependencies
+        if not dependencies:
+            return []
+        catalog = decomposition.metric_catalog
+        if catalog is None:
+            return []
+        registered, aliases = catalog
+        findings: list[tuple[str, tuple[str, ...]]] = []
+        for task in decomposition.tasks:
+            if "不再查询数据库" in task.question or task.intent in _METADATA_INTENTS:
                 continue
-            selected.append(match)
-        if len(selected) < 2:
-            return None
-
-        prefix = body[: selected[0].start()]
-        prefix = re.sub(
-            r"^\s*(?:请|麻烦|帮我|给我|请帮我)?\s*"
-            r"(?:分析|查询|统计|查看|看看|梳理)?\s*(?:一下|下)?\s*(?:关于)?",
-            "",
-            prefix,
-        ).strip(" ，,；;、")
-        if not prefix:
-            return None
-
-        tasks: list[AtomicTask] = []
-        uses_default_history = not re.search(
-            r"(?:19|20)\d{2}年|最近|过去|近(?:一|二|三|四|五|六|七|八|九|十|\d+)"
-            r"(?:天|日|周|个月|月|季度|年)|本(?:周|月|季度|年)|上(?:周|月|季度|年)",
-            question,
-        )
-        selected = selected[: self.settings.multi_question_max_tasks]
-        for index, match in enumerate(selected):
-            end = selected[index + 1].start() if index + 1 < len(selected) else len(body)
-            facet = body[match.start():end].strip(" ，,；;、和及与")
-            if not facet:
+            structured = task.structured
+            if not isinstance(structured, dict):
                 continue
-            matched_facet = match.group(0)
-            explicit_detail = bool(re.search(r"清单|名单|明细", matched_facet))
-            report_object = re.search(
-                r"医院|客户|门店|地区|区域|渠道|品类|商品|经销商|供应商",
-                matched_facet,
-            )
-            bounded_count_facet = bool(
-                report_object
-                and not explicit_detail
-                and re.search(r"覆盖|分布|数据|情况|表现", matched_facet)
-            )
-            if bounded_count_facet:
-                object_name = report_object.group(0)
-                if "覆盖" in matched_facet:
-                    task_question = f"统计{prefix}已合作{object_name}数"
-                elif matched_facet.startswith("合作"):
-                    task_question = f"统计{prefix}已合作{object_name}数"
-                else:
-                    task_question = f"统计{prefix}{facet}中的唯一{object_name}总数"
-            elif explicit_detail:
-                task_question = f"列出{prefix}{facet}明细"
-            else:
-                task_question = f"分析{prefix}{facet}"
-            if uses_default_history:
-                task_question += "，使用数据源全部可用历史"
-            tasks.append(AtomicTask(
-                task_id=f"task-{len(tasks) + 1}",
-                question=task_question,
+            if str(structured.get('是否查询数据库') or '').startswith('否'):
+                continue
+            metrics = structured.get("指标")
+            if not isinstance(metrics, list):
+                continue
+            for item in metrics:
+                name = item.get("name") if isinstance(item, dict) else item
+                if not isinstance(name, str) or not name.strip():
+                    continue
+                normalized = _normalize_metric_name(name.strip(), registered, aliases)
+                components = dependencies.get(normalized)
+                if components and all(dep in registered for dep in components):
+                    findings.append((normalized, components))
+        return findings
+
+    @staticmethod
+    def _split_compound_metric_tasks(
+        decomposition: QuestionDecomposition,
+        findings: list[tuple[str, tuple[str, ...]]],
+    ) -> QuestionDecomposition:
+        """把未拆分的复合指标任务按登记成分拆成查询任务+计算任务。
+
+        成分任务沿用原任务的过滤条件与时间范围，指标换成成分登记原名，
+        排序字段同步替换、行数限制清空；计算任务保留原排序与限制，
+        依赖全部成分任务，问题文本按原链路口径写"不再查询数据库"。
+        """
+        if not findings:
+            return decomposition
+        split_by_metric = dict(findings)
+        new_tasks: list[DecomposedTask] = []
+        old_to_new: dict[int, int] = {}
+        inherited_dependencies: set[int] = set()
+        for old_index, task in enumerate(decomposition.tasks):
+            structured = task.structured if isinstance(task.structured, dict) else None
+            metric = None
+            if structured:
+                for item in structured.get("指标") or []:
+                    name = item.get("name") if isinstance(item, dict) else item
+                    if isinstance(name, str) and name.strip() in split_by_metric:
+                        metric = name.strip()
+                        break
+            if metric is None or not structured:
+                inherited_dependencies.add(len(new_tasks))
+                new_tasks.append(task)
+                old_to_new[old_index] = len(new_tasks) - 1
+                continue
+            components = split_by_metric[metric]
+
+            def _condition_text(base: dict[str, Any]) -> str:
+                parts: list[str] = []
+                time_granularity = base.get("时间粒度")
+                if isinstance(time_granularity, dict) and time_granularity.get("time_range"):
+                    parts.append(str(time_granularity["time_range"]))
+                for item in base.get("过滤条件") or []:
+                    if isinstance(item, dict):
+                        values = item.get("value")
+                        if isinstance(values, list) and values:
+                            parts.append("".join(str(v) for v in values))
+                return "".join(parts)
+
+            condition = _condition_text(structured)
+            component_start = len(new_tasks)
+            for comp in components:
+                comp_structured = copy.deepcopy(structured)
+                comp_structured.pop('计算绑定', None)
+                comp_structured.pop('结果操作', None)
+                comp_structured["指标"] = [{"name": comp}]
+                comp_structured['是否查询数据库'] = '是'
+                for sort_item in comp_structured.get("排序") or []:
+                    if isinstance(sort_item, dict) and sort_item.get("field") == metric:
+                        sort_item["field"] = comp
+                comp_structured["限制"] = None
+                inherited_dependencies.add(len(new_tasks))
+                dimensions = [str(item.get('name') or item.get('field') or '') if isinstance(item, dict) else str(item)
+                              for item in comp_structured.get('维度') or []]
+                grouping = '各' + '、'.join(dimensions) + '的' if dimensions else ''
+                display = [str(item.get('field') or item.get('name') or '') if isinstance(item, dict) else str(item)
+                           for item in comp_structured.get('展示字段') or []]
+                new_tasks.append(DecomposedTask(
+                    question=("根据上述任务的查询结果，" if task.depends_on else "") + f"统计{condition}{grouping}{comp}"
+                        + ('，同时返回' + '、'.join(display) if display else ''),
+                    name=f"统计{condition}{grouping}{comp}"[:60],
+                    intent=task.intent,
+                    depends_on=task.depends_on,
+                    parameters=tuple(extraction_to_parameters(comp_structured)),
+                    structured=comp_structured,
+                ))
+            calc_structured = copy.deepcopy(structured)
+            calc_structured["指标"] = [{"name": metric}]
+            calc_structured["意图"] = "指标计算"
+            calc_structured['是否查询数据库'] = '否'
+            binding = calc_structured.get('计算绑定')
+            if isinstance(binding, dict):
+                from app.planning.calculation_bindings import arithmetic_roles
+                for role in arithmetic_roles(binding):
+                    operand = binding.get(role)
+                    if isinstance(operand,dict) and set(operand)=={'value'}:
+                        continue
+                    if not isinstance(operand, dict) or operand.get('column') not in components:
+                        raise TaskInputBindingError('复合指标运算必须绑定登记的成分指标')
+                    operand.pop('source_task_id', None)
+                    operand['source_task_index'] = component_start + components.index(operand['column'])
+            new_tasks.append(DecomposedTask(
+                question=f"根据上述任务的查询结果计算{metric}，完成原要求：{task.question}，不再查询数据库",
+                depends_on=tuple(range(component_start, component_start + len(components))),
+                name=f"计算{metric}",
+                intent=task.intent,
+                parameters=tuple(extraction_to_parameters(calc_structured)),
+                structured=calc_structured,
             ))
-        if len(tasks) < 2:
-            return None
-        return TaskPlan(
-            tasks=tasks,
-            planner="DETERMINISTIC_RULE",
-            final_deliverable="COMBINED_REPORT",
+            old_to_new[old_index] = len(new_tasks) - 1
+        if len(new_tasks) == len(decomposition.tasks):
+            return decomposition
+        new_tasks = [replace(task, depends_on=tuple(old_to_new.get(dep, dep) for dep in task.depends_on))
+                     if index in inherited_dependencies else task
+                     for index, task in enumerate(new_tasks)]
+        return replace(decomposition, tasks=tuple(new_tasks))
+
+    async def plan_single(
+        self,
+        question: str,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> PlannerOutcome:
+        """兼容入口：问题按单任务消费，返回首个任务的意图与提取。"""
+        decomposition = await self.plan_question(
+            question,
+            semantic_context=semantic_context,
+            semantic_model_id=semantic_model_id,
+        )
+        first = next(iter(decomposition.tasks), None)
+        if first is None:
+            return PlannerOutcome(
+                single_intent=decomposition.intent,
+                metric_catalog=decomposition.metric_catalog,
+            )
+        return PlannerOutcome(
+            single_intent=first.intent or decomposition.intent,
+            single_parameters=first.parameters,
+            single_structured=first.structured,
+            single_task_name=first.name,
+            metric_catalog=decomposition.metric_catalog,
         )
 
-    async def _model_plan(self, question: str) -> TaskPlan | None:
-        schema = _ModelPlan.model_json_schema()
+    async def extract_for_task(
+        self,
+        question: str,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+    ) -> tuple[PrimaryIntent | None, tuple[str, ...], dict[str, Any] | None]:
+        """兼容入口：返回首个任务的意图与结构化提取。"""
+        decomposition = await self.plan_question(
+            question,
+            semantic_context=semantic_context,
+            semantic_model_id=semantic_model_id,
+        )
+        first = next(iter(decomposition.tasks), None)
+        if first is None:
+            return decomposition.intent, (), None
+        return first.intent, first.parameters, first.structured
+
+    @staticmethod
+    def _normalize_decomposition_metrics(
+        decomposition: QuestionDecomposition,
+    ) -> tuple[list[str], list[str]]:
+        """逐任务做指标名归一：返回（数据问题目录外指标，口径问题目录外指标）。"""
+        off_data: list[str] = []
+        off_meta: list[str] = []
+        for task in decomposition.tasks:
+            task_off_data, task_off_meta = SingleQuestionPlanner._normalize_single_metrics(
+                task.intent, task.structured, decomposition.metric_catalog
+            )
+            off_data.extend(task_off_data)
+            off_meta.extend(task_off_meta)
+        return off_data, off_meta
+
+    @staticmethod
+    def _normalize_single_metrics(
+        intent: PrimaryIntent | None,
+        structured: dict[str, Any] | None,
+        catalog: tuple[frozenset[str], dict[str, str]] | None,
+    ) -> tuple[list[str], list[str]]:
+        """单一路径的指标名归一：返回（数据问题目录外指标，口径问题目录外指标）。
+
+        计算/筛选任务（“不再查询数据库”）的指标名允许带用户原文叫法，
+        只归一不计入目录外。
+        """
+        if catalog is None or structured is None:
+            return [], []
+        registered, aliases = catalog
+        question_text = str(structured.get(_EXTRACTION_INTENT_KEY) or "")
+        if "指标计算" in question_text:
+            _normalize_extraction_metrics(
+                structured, registered, aliases, report_off_catalog=False
+            )
+            return [], []
+        off_catalog = _normalize_extraction_metrics(
+            structured, registered, aliases, report_off_catalog=True
+        )
+        if intent in _METADATA_INTENTS:
+            return [], off_catalog
+        return off_catalog, []
+
+    @staticmethod
+    def _retry_feedback(
+        off_data: list[str],
+        off_meta: list[str],
+        *,
+        empty_extraction: bool,
+    ) -> str | None:
+        """重试时附带的纠错说明：指出问题，给两条合法出路，不点名该选哪个指标。"""
+        parts: list[str] = []
+        if empty_extraction:
+            parts.append(
+                "上一轮没有输出任何结构化提取参数。该问题属于业务问题，"
+                "必须按结构化提取规范完整输出参数；仅当问题确与业务无关时才允许输出null。"
+            )
+        if off_data:
+            parts.append(
+                "指标名“"
+                + "、".join(off_data)
+                + "”不在注入规范指标层级表中。确属某个登记指标的同义词时，"
+                "输出该指标的登记原名；与任何登记指标都对应不上时，指标通道置空，"
+                "不得用语义相近的指标顶替，不得自造指标名。"
+            )
+        if off_meta:
+            parts.append(
+                "指标名“"
+                + "、".join(off_meta)
+                + "”不在注入规范指标层级表中。若该说法可由规范内指标派生，"
+                "按正常任务意图处理并输出派生来源指标的登记原名，派生口径写入“输出要求”；"
+                "但任务本身只要求解释口径时保持METRIC_DEFINITION及用户指标原文，"
+                "不得因为存在派生公式就改成取数或计算任务。"
+            )
+        return "\n".join(parts) if parts else None
+
+    def _extraction_model(self) -> tuple[str, str, str, str]:
+        """参数提取模型：单独配置优先，未配置时整体回退意图模型。"""
+        settings = self.settings
+        key = settings.extraction_model_api_key or settings.intent_model_api_key
+        return (
+            (settings.extraction_model_base_url or settings.intent_model_base_url).rstrip('/'),
+            key.get_secret_value() if key is not None else '',
+            settings.extraction_model_name or settings.intent_model_name,
+            settings.extraction_model_protocol,
+        )
+
+    async def _gateway_json(self, base_url, api_key, model_name, name,
+                            system_content, user_content, timeout=None):
+        """平台模型网关调用：系统提示走 prompt，用户内容走 query，回包取 answer。"""
+        payload = {
+            'query': user_content,
+            'model_name': model_name,
+            'prompt': system_content,
+            'stream': False,
+            'output_format': True,
+        }
+        headers = {'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'}
+        with trace_generation(name=name, model=model_name,
+                messages=[{'role': 'system', 'content': system_content},
+                          {'role': 'user', 'content': user_content}]) as generation:
+            async with httpx.AsyncClient(base_url=base_url,
+                    timeout=None,
+                    transport=self._transport) as client:
+                response = await client.post('/chat/workflow_chat', headers=headers, json=payload)
+                response.raise_for_status()
+                content = _gateway_answer(response.text)
+                # 网关回包是 SSE answer，补成 OpenAI 结构后 Langfuse 才能展示正文
+                generation.set_response({'choices': [{
+                    'message': {'role': 'assistant', 'content': content}}]})
+        if not content:
+            raise ValueError(name + ' returned empty content')
+        result = json.loads(_strip_json_fences(content))
+        if not isinstance(result, dict):
+            raise ValueError(name + ' must return a JSON object')
+        return result
+
+    async def _task_model_json(self, name, system_content, user_content, *, timeout=None):
+        """One model operation, shared transport/settings and no public I/O change."""
+        base_url, api_key, model_name, protocol = self._extraction_model()
+        if protocol == 'workflow_chat':
+            return await self._gateway_json(base_url, api_key, model_name, name,
+                                            system_content, user_content, timeout)
         body = {
-            "model": self.settings.intent_model_name,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": _SYSTEM_PROMPT + "\nJSON Schema：" + json.dumps(
-                        schema, ensure_ascii=False, separators=(",", ":")
-                    ),
-                },
-                {"role": "user", "content": question},
-            ],
-            "temperature": 0,
-            "enable_thinking": False,
-            "response_format": {"type": "json_object"},
+            'model': model_name,
+            'messages': [{'role': 'system', 'content': system_content},
+                         {'role': 'user', 'content': user_content}],
+            'temperature': 0, 'enable_thinking': False,
         }
-        headers = {
-            "Authorization": (
-                "Bearer " + self.settings.intent_model_api_key.get_secret_value()
-            ),
-            "Content-Type": "application/json",
-        }
-        with trace_generation(
-            name="task-dag-planning",
-            model=body.get("model"),
-            messages=body.get("messages"),
-        ) as generation:
-            async with httpx.AsyncClient(
-                base_url=self.settings.intent_model_base_url.rstrip("/"),
-                timeout=self.settings.multi_question_model_timeout_seconds,
-                transport=self._transport,
-            ) as client:
-                response = await client.post(
-                    "/chat/completions", headers=headers, json=body
-                )
+        headers = {'Authorization': 'Bearer ' + api_key,
+                   'Content-Type': 'application/json'}
+        with trace_generation(name=name, model=body['model'], messages=body['messages']) as generation:
+            async with httpx.AsyncClient(base_url=base_url,
+                    timeout=None, transport=self._transport) as client:
+                response = await client.post('/chat/completions', headers=headers, json=body)
                 response.raise_for_status()
                 payload = response.json()
                 generation.set_response(payload)
-        content = payload["choices"][0]["message"].get("content")
+        content = payload['choices'][0]['message'].get('content')
         if not content:
-            raise ValueError("task planner returned empty content")
-        result = _ModelPlan.model_validate(json.loads(content))
-        if not result.is_multi_question or len(result.tasks) < 2:
-            return None
-        tasks = [
-            AtomicTask(
-                task_id=f"task-{index + 1}",
-                question=item.question.strip(),
-                depends_on=[f"task-{value + 1}" for value in item.depends_on],
-            )
-            for index, item in enumerate(result.tasks)
-        ]
-        return TaskPlan(tasks=tasks, planner="STRUCTURED_MODEL")
+            raise ValueError(name + ' returned empty content')
+        result = json.loads(_strip_json_fences(content))
+        if not isinstance(result, dict):
+            raise ValueError(name + ' must return a JSON object')
+        return result
 
-    def _rule_plan(self, question: str) -> TaskPlan | None:
-        qualified_facet_plan = self._parallel_qualified_facet_plan(question)
-        if qualified_facet_plan is not None:
-            return qualified_facet_plan
-        normalized = re.sub(r"\r\n?", "\n", question).strip()
-        normalized = re.sub(
-            r"(?:^|[\s;；])[一二三四五12345][、.)．]\s*", "\n", normalized
-        )
-        if not re.search(r"[;；?？\n]", normalized):
-            dependent_plan = self._inline_dependent_plan(normalized)
-            if dependent_plan is not None:
-                return dependent_plan
-        pieces = re.split(
-            r"[;；?？\n]+|(?:，|,)?(?:另外|同时|此外|然后|再帮我|还要|以及还要)",
-            normalized,
-        )
-        pieces = [piece.strip(" ，,。.") for piece in pieces if piece.strip(" ，,。.")]
-        actionable = [piece for piece in pieces if self._has_action(piece)]
-        if len(actionable) < 2:
-            return None
-        tasks: list[AtomicTask] = []
-        shared_metrics = self._unique_mentions(
-            normalized,
-            (
-                "销售额", "订单量", "订单", "销售量", "销量", "客户数", "客单价",
-                "退款额", "退款率", "退款", "毛利额", "毛利率", "利润额", "利润率",
-                "库存量", "库存", "转化率",
-            ),
-        )
-        shared_periods = self._unique_mentions(
-            normalized,
-            (
-                "今天", "昨天", "本周", "上周", "本月", "上月", "本季度", "上季度",
-                "今年", "去年", "最近一周", "最近一个月", "最近三个月", "最近半年",
-                "最近一年",
-            ),
-        )
-        explicit_periods = re.findall(
-            r"(?:19|20)\d{2}年(?:1[0-2]|0?[1-9])月份?"
-            r"|(?:19|20)\d{2}年"
-            r"|(?:19|20)\d{2}[-/.](?:1[0-2]|0?[1-9])",
-            normalized,
-        )
-        if not shared_periods and explicit_periods:
-            shared_periods = list(dict.fromkeys(explicit_periods))
-        for index, piece in enumerate(actionable[: self.settings.multi_question_max_tasks]):
-            dependency = (
-                [f"task-{index}"]
-                if index > 0 and self._depends_on_previous(piece)
-                else []
-            )
-            enriched = piece
-            if len(shared_metrics) == 1 and shared_metrics[0] not in enriched:
-                enriched += f"，指标为{shared_metrics[0]}"
-            if len(shared_periods) == 1 and shared_periods[0] not in enriched:
-                enriched += f"，时间范围为{shared_periods[0]}"
-            tasks.append(
-                AtomicTask(
-                    task_id=f"task-{index + 1}",
-                    question=enriched,
-                    depends_on=dependency,
-                )
-            )
-        return TaskPlan(tasks=tasks, planner="DETERMINISTIC_RULE")
-
-    @classmethod
-    def _parallel_qualified_facet_plan(cls, question: str) -> TaskPlan | None:
-        """Split one shared action into independently requested category facets.
-
-        This is a deterministic safety fallback for the structured planner. It
-        deliberately recognises only contrasting business qualifiers and never
-        splits an ordinary projection list such as ``名称、规格型号``.
-        """
-        parts = cls._qualified_facet_parts(question)
-        if parts is None:
-            return None
-        prefix, facets = parts
-        tasks = [
-            AtomicTask(
-                task_id=f"task-{index + 1}",
-                question=(prefix + facet).strip(),
-            )
-            for index, facet in enumerate(facets)
-        ]
-        return TaskPlan(tasks=tasks, planner="DETERMINISTIC_RULE")
-
-    @staticmethod
-    def _qualified_facet_parts(
+    async def _model_decompose(
+        self,
         question: str,
-    ) -> tuple[str, list[str]] | None:
-        """Return shared prefix and two contrasting, grounded facet phrases."""
-        normalized = question.strip(" ，,。！？?；;")
-        qualifier_groups = (
-            ("主要", "次要"),
-            ("正常", "异常"),
-            ("新增", "存量"),
-            ("线上", "线下"),
-            ("有效", "无效"),
-            ("合作", "未合作"),
-        )
-        qualifier_to_group = {
-            qualifier: frozenset(group)
-            for group in qualifier_groups
-            for qualifier in group
-        }
-        qualifier_pattern = re.compile("|".join(
-            re.escape(value)
-            for value in sorted(qualifier_to_group, key=len, reverse=True)
-        ))
-        split_match = re.search(r"(?:、|，|,|以及|和|与|及)", normalized)
-        if split_match is None:
-            return None
-        left = normalized[:split_match.start()].strip()
-        right = normalized[split_match.end():].strip()
-        if not left or not right or not MultiQuestionPlanner._has_action(left):
-            return None
+        *,
+        semantic_context: str = "",
+        semantic_model_id: int | None = None,
+        retry_feedback: str | None = None,
+        root_intent: PrimaryIntent | None = None,
+        analysis_chain: str | None = None,
+    ) -> QuestionDecomposition:
+        from app.domain.semantic_description import load_semantic_description
 
-        right_match = qualifier_pattern.match(right)
-        right_qualifier = right_match.group(0) if right_match is not None else None
-        if right_qualifier is None:
-            return None
-        left_matches = list(qualifier_pattern.finditer(left))
-        if not left_matches:
-            return None
-        left_match = left_matches[-1]
-        left_start, left_qualifier = left_match.start(), left_match.group(0)
-        if (
-            left_qualifier == right_qualifier
-            or qualifier_to_group[left_qualifier]
-            != qualifier_to_group[right_qualifier]
-        ):
-            return None
+        from app.services.general_rules import rule_section, without_rule_section
+        general_rules = rule_section(semantic_context)
+        semantic_context = without_rule_section(semantic_context)
+        # 上一轮任务表块不是业务语义规范：远程规范存在时上面会跳过
+        # semantic_context 的注入，追问轮的复用规则与上轮采样不能跟着
+        # 一起被丢掉，单独拆出来无条件送达
+        prior_block = ""
+        prior_marker = "[上一轮任务表]"
+        if prior_marker in semantic_context:
+            prior_start = semantic_context.index(prior_marker)
+            prior_block = semantic_context[prior_start:]
+            semantic_context = semantic_context[:prior_start].rstrip()
 
-        prefix = left[:left_start]
-        left_tail = left[left_start + len(left_qualifier):].strip()
-        right_tail = right[len(right_qualifier):].strip()
-        if left_tail and right_tail:
-            if left_tail != right_tail:
-                return None
-            suffix = left_tail
-        elif not left_tail and right_tail:
-            suffix = right_tail
+        system_content = ""
+        if root_intent is not None:
+            system_content += (
+                "\n已识别任务意图：" + root_intent.value
+                + "。整轮意图已确定，不要重新判断；"
+                "意图标签不能替代问题中的筛选、排名和依赖条件。\n"
+            )
+        # 通用规则块放在前部：贴着Schema末尾时会干扰指标选择，
+        # 使模型在多个可对应的登记指标之间选错（实测多次复现）
+        system_content += general_rules
+        # 有模型标识时只读取当前模型的平台注册文件；文件不可用时，
+        # 不把智能体配置中可能属于另一模型的旧规范当作替代文件。
+        reference = await load_semantic_description(self.settings, semantic_model_id)
+        remote_spec = reference["content"] if reference.get("available") else ""
+        if remote_spec:
+            system_content += _semantic_context_section(
+                remote_spec, origin="语义模型描述文件"
+            )
+            spec_for_catalog = remote_spec
+        elif semantic_model_id is None and semantic_context.strip():
+            system_content += _semantic_context_section(semantic_context)
+            spec_for_catalog = semantic_context
         else:
-            return None
-        if not suffix or len(suffix) > 40:
-            return None
-        return prefix, [left_qualifier + suffix, right_qualifier + suffix]
-
-    def _inline_dependent_plan(self, question: str) -> TaskPlan | None:
-        """Split explicit query→calculation chains even without punctuation."""
-        dependent_filter = re.fullmatch(
-            r"(.+?)(?:，|,)?并根据(.{1,80}?)(筛选出|过滤出)(.+)", question
+            spec_for_catalog = ""
+        if prior_block:
+            system_content += "\n" + prior_block + "\n"
+        metric_catalog = _parse_metric_catalog(spec_for_catalog)
+        from app.planning.metric_thresholds import metric_units as _spec_metric_units
+        # 语义文件里指标登记的单位：结构化提取出口按它归一阈值与相对时间
+        spec_metric_units = _spec_metric_units(spec_for_catalog)
+        from app.planning.task_plan_stages import (
+            PLANNING_PROMPT, TaskOutlines, TaskBoundary,
+            complete_boundaries, parameter_items, registered_metric_conditions,
+            component_task_title,
         )
-        if dependent_filter:
-            pieces = [
-                dependent_filter.group(1),
-                "根据" + dependent_filter.group(2)
-                + dependent_filter.group(3) + dependent_filter.group(4),
-            ]
-        else:
-            pieces = re.split(
-                r"(?:(?:，|,)?(?:并(?:再)?|然后|再)|(?:，|,))(?="
-                r"(?:计算|算(?:出|一下)?|找出|筛选|过滤|排序).{0,80}"
-                r"(?:差|客单价|占比|最高|最低|最大|最小|排序|筛选|过滤))",
+        dependencies = _parse_metric_dependencies(spec_for_catalog)
+        from app.planning.metric_target_contract import object_average_contract
+        target_contract = object_average_contract(
+            question, spec_for_catalog, metric_catalog, dependencies)
+        if target_contract is not None:
+            system_content += target_contract.instruction()
+        from app.analysis.tools.registry import chain_for_intent, planning_section
+        from app.analysis.tools.plans import PLAN_KEY, AnalysisToolPlan, plan_schema
+        if analysis_chain is not None and chain_for_intent(root_intent) != analysis_chain:
+            raise TaskInputBindingError('分析链路与补全阶段意图不一致')
+        if analysis_chain:
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            clock=datetime.now(ZoneInfo('Asia/Shanghai'))
+            system_content += ('\n本轮规划时间基准（Asia/Shanghai）：'+clock.isoformat()
+                +'。相对时间以此为准；目标窗口与辅助基期分离，日期结束值为不包含的右端点。\n')
+            system_content += planning_section(analysis_chain)
+        planning_schema = TaskOutlines.model_json_schema()
+        if analysis_chain:
+            tool_schema = plan_schema(analysis_chain)
+            planning_schema['properties']['analysis_plan'] = {key: value for key, value in tool_schema.items() if key != '$defs'}
+            planning_schema.setdefault('$defs', {}).update(tool_schema.get('$defs', {}))
+            planning_schema.setdefault('required', []).append('analysis_plan')
+        planning_question = question
+        if retry_feedback:
+            planning_question += "\n上一轮需要修正：" + retry_feedback
+        # 步骤层只归拢树形展示：结构节点全轮共享（复合问题并行规划时
+        # 不会各开节点），每个子问题的两次模型调用收进各自的子节点
+        ensure_structural_span("task_planning", name="任务拆分与规划")
+        with structural_child("task_planning", as_type="span", name="子问题规划：" + str(question)[:24]):
+            planned = await self._task_model_json(
+                "single-question-task-plan",
+                PLANNING_PROMPT + system_content + "\nJSON Schema："
+                + json.dumps(planning_schema, ensure_ascii=False),
+                planning_question,
+            )
+            model_tool_plan = None
+            if analysis_chain:
+                try:
+                    model_tool_plan = AnalysisToolPlan.model_validate(planned.get('analysis_plan'))
+                    if model_tool_plan.chain != analysis_chain:
+                        raise ValueError('ANALYSIS_CHAIN_CHANGED_AFTER_RECOGNITION')
+                except (ValueError, TypeError) as exc:
+                    raise TaskInputBindingError('分析工具规划合同无效：' + str(exc)) from exc
+            boundary_plan_complete = bool(planned.get('tasks')) and all(
+                isinstance(item, dict) and 'extraction' not in item for item in planned.get('tasks', []))
+            # The legacy top-level single form is accepted as a boundary only;
+            # its combined extraction is deliberately ignored until phase two.
+            if not planned.get('tasks'):
+                if 'extraction' not in planned and ('intent' not in planned or 'split' in planned):
+                    raise ValueError('任务规划没有返回任务列表')
+                planned = {**planned, 'tasks': [{'question': question}]}
+            planned_boundaries = [TaskBoundary(**item.model_dump(exclude_none=True))
+                                  for item in TaskOutlines.model_validate(planned).tasks]
+            boundaries = complete_boundaries(planned_boundaries,
+                spec=spec_for_catalog, catalog=metric_catalog, dependencies=dependencies, source_question=question,
+                default_times=_registered_default_times(question,spec_for_catalog))
+            if target_contract is not None and boundary_plan_complete:
+                from app.planning.task_plan_stages import boundary_targets
+                try:
+                    target_contract.validate(boundaries, metric_catalog, boundary_targets)
+                except ValueError as exc:
+                    raise TaskInputBindingError(str(exc)) from exc
+            from app.planning.calculation_plan import plan_calculations
+            calculations = await plan_calculations(boundaries, question=question,
+                system_content=system_content, spec=spec_for_catalog, catalog=metric_catalog,
+                dependencies=dependencies, request_model=self._task_model_json)
+            parameter_request = json.dumps({
+                'original_question': question,
+                'calculation_task_indices': list(calculations),
+                'analysis_plan': model_tool_plan.model_dump(mode='json') if model_tool_plan else None,
+                'tasks': [dict(task_index=index, **task.model_dump(exclude_none=True))
+                          for index, task in enumerate(boundaries)],
+            }, ensure_ascii=False)
+            # Intent is returned with extraction; no separate intent model call.
+            extracted = await self._task_model_json(
+                "single-question-task-parameters",
+                _SINGLE_SYSTEM_PROMPT + system_content + '\n已规划任务JSON：\n' + parameter_request,
                 question,
-            )
-        pieces = [piece.strip(" ，,。.") for piece in pieces if piece.strip(" ，,。.")]
-        if len(pieces) < 2 or not self._has_action(pieces[0]):
-            return None
-        if not all(self._has_action(piece) for piece in pieces[1:]):
-            return None
-        if (
-            any("差" in piece for piece in pieces[1:])
-            and len(re.findall(r"(?:1[0-2]|0?[1-9])月", pieces[0])) >= 2
-            and not re.search(r"按月|每月|分月|分别", pieces[0])
-        ):
-            pieces[0] += "，分别按月返回"
-        tasks = [
-            AtomicTask(
-                task_id=f"task-{index + 1}",
-                question=piece,
-                depends_on=[] if index == 0 else [f"task-{index}"],
-            )
-            for index, piece in enumerate(pieces[: self.settings.multi_question_max_tasks])
-        ]
-        return TaskPlan(tasks=tasks, planner="DETERMINISTIC_RULE")
 
-    @staticmethod
-    def validate(plan: TaskPlan, *, source_question: str | None = None) -> None:
-        if not 2 <= len(plan.tasks) <= 5:
-            raise TaskPlanningError("任务计划必须包含2到5个原子任务")
-        task_ids = [task.task_id for task in plan.tasks]
-        if len(task_ids) != len(set(task_ids)):
-            raise TaskPlanningError("任务ID重复")
-        known: set[str] = set()
-        for task in plan.tasks:
-            if not task.question.strip():
-                raise TaskPlanningError("原子任务问题不能为空")
-            if task.task_id in task.depends_on:
-                raise TaskPlanningError("任务不能依赖自身")
-            unknown = set(task.depends_on) - known
-            if unknown:
-                raise TaskPlanningError(
-                    "任务依赖必须引用排在其前面的任务：" + ",".join(sorted(unknown))
+            )
+        try:
+            parameters = parameter_items(extracted, boundaries, calculation_indices=calculations)
+        except ValueError as exc:
+            raise TaskInputBindingError(str(exc)) from exc
+        if root_intent is not None:
+            # 意图识别节点的根意图即整轮规划的唯一意图来源：
+            # 任务拆分与参数提取阶段不再做意图判断，
+            # 提取模型输出的顶层意图一并忽略（2026-10-23 用户要求）
+            question_intent = root_intent
+        else:
+            question_intent = self._sanitize_intent(extracted.get('intent') or planned.get('intent'))
+            from app.analysis.intents import resolve_analysis_intent
+            question_intent = resolve_analysis_intent(question_intent, question)
+        raw_tasks = []
+        from app.planning.calculation_plan import planned_calculation_parameters
+        for index, (boundary, parameters_for_task) in enumerate(zip(boundaries, parameters)):
+            value = copy.deepcopy(parameters_for_task)
+            if index in calculations:
+                value = planned_calculation_parameters(boundary, calculations[index])
+            elif isinstance(value, dict):
+                # Extraction cannot introduce a calculator task or override planning.
+                value.pop('计算绑定', None)
+                value.pop('结果操作', None)
+            if boundary.definition_only:
+                value = value if isinstance(value, dict) else {}
+                value['意图'] = '解释口径'
+                value['是否查询数据库'] = '否'
+                value.pop('计算绑定', None)
+                value.pop('结果操作', None)
+            planned_task = boundary.model_dump(exclude={
+                'metric_targets', 'grain', 'sample_requirements', 'component_input', 'preserve_ranking', 'definition_only'})
+            if isinstance(value, dict):
+                planned_task['name'] = component_task_title(boundary, value)
+            raw_tasks.append(_PlannedTask(**planned_task, extraction=value))
+        tasks: list[DecomposedTask] = []
+        for task_index, item in enumerate(raw_tasks):
+            task_question = item.question.strip() or question
+            if root_intent is not None:
+                # 任务意图直接取根意图，不再采信提取JSON里的意图键
+                task_intent = root_intent
+            else:
+                task_intent = self._sanitize_intent(
+                    str((item.extraction or {}).get(_EXTRACTION_INTENT_KEY) or '')
+                ) or question_intent
+            structured = self._sanitize_extraction(
+                item.extraction, intent=task_intent,
+                metric_catalog=metric_catalog,
+                metric_units=spec_metric_units,
+                preserve_query_fields=True,
+            )
+            if model_tool_plan is not None and structured is not None:
+                structured[PLAN_KEY] = model_tool_plan.model_dump(mode='json')
+            _strip_prose_placeholder_filters(structured)
+            _ground_location_owners(structured, task_question)
+            _ground_inferred_hospital_location(structured, question, semantic_model_id)
+            task_question = _confirmed_hospital_department_scope(
+                task_question, question, structured, semantic_model_id
+            )
+            if (
+                root_intent is None
+                and structured is not None
+                and task_intent in {
+                    None, *_CHINESE_INTENT_TO_PRIMARY.values(),
+                }
+            ):
+                # 提取JSON里的中文意图键是最终展示契约，可回填任务意图
+                task_intent = _CHINESE_INTENT_TO_PRIMARY.get(
+                    str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip(),
+                    task_intent,
                 )
-            known.add(task.task_id)
-        if source_question is not None:
-            MultiQuestionPlanner._validate_grounding(plan, source_question)
+            if (
+                structured is not None
+                and "不再查询数据库" in task_question
+                and not str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip()
+            ):
+                # 计算/筛选任务的意图键固定为指标计算，模型漏填时补上
+                structured[_EXTRACTION_INTENT_KEY] = "指标计算"
+            if "不再查询数据库" in task_question:
+                # 本地执行方式不是业务意图。计算、排序和分析节点都继承
+                # 问题级目标，具体路由只由计算/结果/分析绑定决定。
+                task_intent = question_intent or (
+                    None
+                    if structured is not None
+                    and structured.get(_EXTRACTION_INTENT_KEY) == '指标计算'
+                    and task_intent is PrimaryIntent.COMPARISON_ANALYSIS
+                    else task_intent
+                )
+                if structured is not None:
+                    if root_intent is None:
+                        structured[_EXTRACTION_INTENT_KEY] = '指标计算'
+                    structured['是否查询数据库'] = '否'
+            if "不再查询数据库" not in task_question:
+                if root_intent is None:
+                    task_intent = resolve_analysis_intent(task_intent, task_question)
+                if structured is not None:
+                    from app.analysis.intents import LABELS
+                    if task_intent in LABELS:
+                        structured[_EXTRACTION_INTENT_KEY] = LABELS[task_intent]
+                    elif root_intent is not None and task_intent in _PRIMARY_INTENT_LABELS:
+                        # 根意图下沉时中文意图键与根意图保持一致
+                        structured[_EXTRACTION_INTENT_KEY] = _PRIMARY_INTENT_LABELS[task_intent]
+            if task_intent is PrimaryIntent.TREND_ANALYSIS:
+                # 趋势引擎按相邻行计算逐期变化，时间乱序直接拒算，
+                # 排序统一在提取出口归一为时间升序
+                _normalize_trend_time_order(structured)
+            # 口径/血缘解释问题保留完整参数；若模型仍输出null提取，则至少把
+            # 原文指标名带进参数通道，否则下游解析不到指标，追问门禁会引导
+            # 用户换成规范里的指标，违背“不得用语义相近指标替代”的约束。
+            metadata_parameters: tuple[str, ...] = ()
+            if task_intent in _METADATA_INTENTS:
+                raw_metrics = (
+                    item.extraction.get("指标")
+                    if isinstance(item.extraction, dict)
+                    else None
+                ) or []
+                metadata_parameters = tuple(
+                    extraction_to_parameters({"指标": raw_metrics})
+                )
+            parameters = (
+                tuple(extraction_to_parameters(structured)) or metadata_parameters
+            )
+            tasks.append(DecomposedTask(
+                question=task_question,
+                depends_on=tuple(
+                    dep for dep in item.depends_on
+                    if isinstance(dep, int) and 0 <= dep < len(raw_tasks)
+                ),
+                expected_output=(
+                    item.expected_output.strip()
+                    if item.expected_output and item.expected_output.strip()
+                    else None
+                ),
+                intent=task_intent,
+                parameters=parameters,
+                structured=structured,
+                dependency_bindings=copy.deepcopy(item.dependency_bindings),
+                name=(
+                    item.name.strip()
+                    if item.name and item.name.strip()
+                    else None
+                ),
+            ))
+        return QuestionDecomposition(
+            intent=question_intent,
+            tasks=tuple(tasks),
+            metric_catalog=metric_catalog,
+            metric_dependencies=dependencies,
+            grounding_default_times=_registered_default_times(question, spec_for_catalog),
+            grounding_registered_conditions=registered_metric_conditions(spec_for_catalog,
+                [name for boundary in boundaries for name in boundary.metric_targets], metric_catalog),
+            shared_region_denominator=_shared_region_denominator_from_spec(spec_for_catalog),
+            boundary_plan_complete=boundary_plan_complete,
+        )
 
     @staticmethod
-    def _unique_mentions(text: str, candidates: tuple[str, ...]) -> list[str]:
-        # Prefer the longest term so aliases nested in a canonical metric (for
-        # example ``退款`` inside ``退款率``) do not look like two independent
-        # metrics and suppress safe shared-context propagation.
-        selected: list[str] = []
-        for value in sorted(candidates, key=len, reverse=True):
-            if value in text and not any(value in existing for existing in selected):
-                selected.append(value)
-        return sorted(selected, key=lambda value: text.find(value))
-
-    @staticmethod
-    def _validate_grounding(plan: TaskPlan, source_question: str) -> None:
-        """Reject model-created dates, numbers, metrics and quoted filters."""
-        source_for_grounding = re.sub(
-            r"(?:^|[;；\n])\s*[一二三四五1-5][、.)．]\s*",
-            " ",
-            source_question,
-        )
-        source_compact = re.sub(r"\s+", "", source_for_grounding).casefold()
-        planned_compact = "".join(
-            re.sub(r"\s+", "", task.question).casefold() for task in plan.tasks
-        )
-        source_numbers = set(re.findall(r"\d+(?:\.\d+)?", source_compact))
-        metric_terms = (
-            "销售额", "订单量", "销售量", "客户数", "客单价", "退款额", "退款率",
-            "毛利额", "毛利率", "利润额", "利润率", "库存量", "转化率",
-        )
-        temporal_terms = (
-            "今天", "昨天", "本周", "上周", "本月", "上月", "本季度", "上季度",
-            "今年", "去年", "明年", "最近一周", "最近一个月", "最近三个月",
-            "最近半年", "最近一年",
-        )
-        source_metrics = {value for value in metric_terms if value in source_compact}
-        source_temporal = {value for value in temporal_terms if value in source_compact}
-        source_quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", source_question))
-        shared_identifiers = set(re.findall(
-            r"(?<![0-9A-Za-z])(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
-            r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
-            source_question.translate(str.maketrans({
-                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
-                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
-                "\uff0d": "-",
-            })),
-        ))
-        for task in plan.tasks:
-            compact = re.sub(r"\s+", "", task.question).casefold()
-            if not set(re.findall(r"\d+(?:\.\d+)?", compact)).issubset(source_numbers):
-                raise TaskPlanningError("子任务包含原问题中不存在的数字或日期")
-            if not {value for value in metric_terms if value in compact}.issubset(source_metrics):
-                raise TaskPlanningError("子任务包含原问题中不存在的指标")
-            if not {value for value in temporal_terms if value in compact}.issubset(source_temporal):
-                raise TaskPlanningError("子任务包含原问题中不存在的时间条件")
-            quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", task.question))
-            if not quoted.issubset(source_quoted):
-                raise TaskPlanningError("子任务包含原问题中不存在的过滤值")
-            normalized_task = task.question.translate(str.maketrans({
-                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
-                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
-                "\uff0d": "-",
-            }))
-            if not shared_identifiers.issubset(set(re.findall(
-                r"(?<![0-9A-Za-z])(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
-                r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
-                normalized_task,
-            ))):
-                raise TaskPlanningError("子任务遗漏共享的业务型号或编码")
-
-        # Grounding must be bidirectional: preventing invented information is
-        # insufficient if a plan silently drops one part of the user's request.
-        if not source_numbers.issubset(set(re.findall(r"\d+(?:\.\d+)?", planned_compact))):
-            raise TaskPlanningError("任务计划遗漏原问题中的数字或日期")
-        if not source_metrics.issubset({value for value in metric_terms if value in planned_compact}):
-            raise TaskPlanningError("任务计划遗漏原问题中的指标")
-        if not source_temporal.issubset({value for value in temporal_terms if value in planned_compact}):
-            raise TaskPlanningError("任务计划遗漏原问题中的时间条件")
-        if not source_quoted.issubset(set(re.findall(
-            r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", " ".join(task.question for task in plan.tasks)
-        ))):
-            raise TaskPlanningError("任务计划遗漏原问题中的过滤值")
-
-        facet_parts = MultiQuestionPlanner._qualified_facet_parts(source_question)
-        if facet_parts is not None:
-            _, required_facets = facet_parts
-            coverage = {
-                facet: sum(facet in task.question for task in plan.tasks)
-                for facet in required_facets
-            }
-            if any(count != 1 for count in coverage.values()):
-                raise TaskPlanningError("任务计划遗漏或重复了并列业务分支")
-
-        source_goals = MultiQuestionPlanner._goal_signals(source_compact)
-        if plan.final_deliverable == "COMBINED_REPORT":
-            # Delivery is performed once by the root DAG after every analytical
-            # child succeeds; forcing “报告” into each child would incorrectly
-            # trigger one export per dataset.
-            source_goals.discard("DELIVERY")
-        planned_goals = MultiQuestionPlanner._goal_signals(planned_compact)
-        if not source_goals.issubset(planned_goals):
-            raise TaskPlanningError("任务计划遗漏原问题中的分析目标")
-        constraint_markers = {
-            marker for marker in ("不要", "不看", "不查", "排除", "剔除", "只看", "仅看")
-            if marker in source_compact
-        }
-        if not constraint_markers.issubset({marker for marker in constraint_markers if marker in planned_compact}):
-            raise TaskPlanningError("任务计划遗漏原问题中的排除或限定条件")
-
-    @staticmethod
-    def _goal_signals(text: str) -> set[str]:
-        patterns = {
-            "TREND": r"趋势|走势|按(?:日|周|月|季|年)变化",
-            "COMPARE": r"同比|环比|对比|比较|差多少|增长率",
-            "COMPOSITION": r"占比|构成|份额|结构",
-            "ANOMALY": r"异常|突增|突降|离群|不正常",
-            "ROOT_CAUSE": r"归因|原因|为什么|影响因素",
-            "FORECAST": r"预测|预估|预计|推算",
-            "DETAIL": r"明细|名单|逐笔|每一条|列表",
-            "RANK": r"前\d+|后\d+|最高|最低|排名|排序",
-            "DEFINITION": r"口径|定义|公式|怎么算",
-            "LINEAGE": r"血缘|来源表|来源字段|来自哪",
-            "QUALITY": r"数据质量|缺失|重复|空值|对账|延迟",
-            "DELIVERY": r"报告|报表|导出|下载|生成(?:excel|xlsx|pdf|word|docx)",
-        }
-        return {name for name, pattern in patterns.items() if re.search(pattern, text)}
-
-    @staticmethod
-    def execution_layers(plan: TaskPlan) -> list[list[AtomicTask]]:
-        remaining = {task.task_id: task for task in plan.tasks}
-        completed: set[str] = set()
-        layers: list[list[AtomicTask]] = []
-        while remaining:
-            ready = [
-                task for task in remaining.values()
-                if set(task.depends_on).issubset(completed)
-            ]
-            if not ready:
-                raise TaskPlanningError("任务DAG存在环路或无效依赖")
-            layers.append(ready)
-            completed.update(task.task_id for task in ready)
-            for task in ready:
-                remaining.pop(task.task_id)
-        return layers
+    def _sanitize_intent(value: str | None) -> PrimaryIntent | None:
+        """模型输出的意图字符串归一成枚举，非法取值直接丢弃回退规则分类。"""
+        if not value:
+            return None
+        chinese = {**_CHINESE_INTENT_TO_PRIMARY,
+                   '解释口径': PrimaryIntent.METRIC_DEFINITION,
+                   '数据血缘': PrimaryIntent.DATA_LINEAGE,
+                   '闲聊': PrimaryIntent.CHAT,
+                   '非数据任务': PrimaryIntent.OUT_OF_SCOPE}.get(value.strip())
+        if chinese is not None:
+            return chinese
+        normalized = value.strip().upper()
+        try:
+            return PrimaryIntent(normalized)
+        except ValueError:
+            return None
 
     @classmethod
-    def deduplicate(cls, plan: TaskPlan) -> tuple[TaskPlan, dict[str, str]]:
-        """Merge identical atomic queries while retaining aliases for final output."""
-        canonical_by_key: dict[tuple[str, tuple[str, ...]], str] = {}
-        aliases: dict[str, str] = {}
-        unique: list[AtomicTask] = []
-        resolved: dict[str, str] = {}
-        for task in plan.tasks:
-            dependencies = tuple(dict.fromkeys(resolved.get(dep, dep) for dep in task.depends_on))
-            key = (cls.query_fingerprint(task.question), dependencies)
-            existing = canonical_by_key.get(key)
-            if existing is not None:
-                aliases[task.task_id] = existing
-                resolved[task.task_id] = existing
-                continue
-            canonical_by_key[key] = task.task_id
-            resolved[task.task_id] = task.task_id
-            unique.append(task.model_copy(update={"depends_on": list(dependencies)}))
-        # TaskPlan normally requires at least two nodes. An all-duplicate plan is
-        # executed as one task by the orchestrator without weakening that public contract.
-        if len(unique) == len(plan.tasks):
-            return plan, aliases
-        return plan.model_copy(update={"tasks": unique}, deep=True), aliases
-
-    @staticmethod
-    def query_fingerprint(question: str) -> str:
-        normalized = question.casefold().strip()
-        normalized = re.sub(r"[\s，。！？；、,.!?;:：]+", "", normalized)
-        normalized = re.sub(r"^(?:请|帮我|麻烦|请帮我)+", "", normalized)
-        return normalized
-
-    @staticmethod
-    def _candidate(question: str) -> bool:
-        action_count = len(re.findall(
-            r"查询|查一下|统计|分析|比较|对比|占比|预测|解释|口径|血缘|"
-            r"生成|导出|下载|检查|找出|列出|筛选|匹配|拆分|计算|算(?:出|一下)?|(?:再)?加(?:上)?|是多少",
-            question,
-        ))
-        separators = bool(re.search(
-            r"[;；?？\n、]|(?:另外|同时|此外|然后|再帮我|还要|以及还要|以及|和|与|及)", question
-        ))
-        numbered = len(re.findall(r"(?:^|\s)[一二三四五12345][、.)．]", question)) >= 2
-        inline_dependency = bool(re.search(
-            r"(?:"
-            r"(?:并(?:再)?|然后|再)(?:计算|算(?:出|一下)?|找出|筛选|过滤|排序)"
-            r".{0,80}(?:差|客单价|占比|最高|最低|最大|最小|排序|筛选|过滤)"
-            r"|匹配.{1,80}(?:所属|适用).{1,40}(?:并|然后|再).{0,20}(?:筛选|过滤)"
-            r"|(?:再)?加(?:上)?.{0,40}[，,](?:计算|算).{0,40}客单价"
-            r")",
-            question,
-        ))
-        qualified_facets = MultiQuestionPlanner._qualified_facet_parts(question) is not None
-        return (
-            action_count >= 2 and (separators or numbered or inline_dependency)
-        ) or qualified_facets
-
-    @staticmethod
-    def _has_action(text: str) -> bool:
-        return bool(re.search(
-            r"查询|查一下|统计|分析|比较|对比|占比|预测|解释|口径|血缘|"
-            r"生成|导出|下载|检查|找出|列出|筛选|匹配|拆分|计算|算(?:出|一下)?|(?:再)?加(?:上)?|是多少",
-            text,
-        ))
-
-    @staticmethod
-    def _depends_on_previous(text: str) -> bool:
-        return bool(re.search(
-            r"基于(?:上一步|前面|上述|这个结果)|从中|其中|这些结果|"
-            r"再对(?:它|其)|(?:再|并)?(?:找出|计算|算).*(?:最高|最低|差|结果)|"
-            r"最高比最低", text
-        ))
+    def _sanitize_extraction(
+        cls,
+        value: dict[str, Any] | None,
+        *,
+        intent: PrimaryIntent | None,
+        metric_catalog: tuple[frozenset[str], dict[str, str]] | None = None,
+        metric_units: dict[str, str] | None = None,
+        required_metrics: tuple[str, ...] = (),
+        preserve_query_fields: bool = False,
+    ) -> dict[str, Any] | None:
+        """清洗模型输出的结构化提取；实现见 app.structured_extraction.extractor。"""
+        return sanitize_extraction(
+            value,
+            intent=intent,
+            metric_catalog=metric_catalog,
+            metric_units=metric_units,
+            required_metrics=required_metrics,
+            preserve_query_fields=preserve_query_fields,
+        )

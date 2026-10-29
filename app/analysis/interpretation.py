@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.analysis.engine import AnalysisOutput
 from app.domain.models import CanonicalAnalysisRequest, PrimaryIntent
+from app.presentation.summary import result_introduction
 
 
 class InsightNature(StrEnum):
@@ -43,6 +44,21 @@ class StructuredAnalysisResult(BaseModel):
     internal_diagnostics: dict[str, Any] = Field(default_factory=dict)
 
 
+def _compact_lines(items: list[object], limit: int = 0) -> list[str]:
+    """按原文去重、合并换行并限制条数；不做改写，只压缩排版。"""
+    kept: list[str] = []
+    for item in items:
+        text = " ".join(str(item or "").split()).rstrip("。；;")
+        if not text:
+            continue
+        if any(text in existing or existing in text for existing in kept):
+            continue
+        kept.append(text)
+        if limit and len(kept) >= limit:
+            break
+    return kept
+
+
 class AnswerPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -64,6 +80,34 @@ class AnswerPlan(BaseModel):
         if self.limitations:
             sections.append("分析边界：" + "；".join(self.limitations) + "。")
         return "\n".join(sections)
+
+    def render_report(
+        self, *, question: str, table: str = "", chart: str = "",
+        notes: list[str] | None = None, analysis: bool = False,
+    ) -> str:
+        """Arrange the final answer only; keep insight/evidence rendering intact.
+
+        Tables and charts are already rendered from the executed result. Do not
+        regenerate numbers, sum non-additive metrics or rewrite model analysis.
+        One continuous summary block (headline, table, then boundaries and
+        findings as plain paragraphs) followed by the chart; no sectional
+        headings and no placeholder filler when there is nothing to add.
+        """
+        summary = "\n\n".join(item.strip() for item in (self.headline, table) if item.strip())
+        # 表格后的说明合并成两段：结论要点一段，口径与边界一段。逐条分行
+        # 会把同义提示铺成很多段，读起来重复；合并不丢内容。
+        findings = _compact_lines(
+            [*self.key_facts, *self.interpretations, *self.priorities], limit=4
+        )
+        limits = _compact_lines([*self.limitations, *(notes or [])], limit=3)
+        sections = [summary]
+        if findings:
+            sections.append("；".join(findings) + "。")
+        if limits:
+            sections.append("说明：" + "；".join(limits) + "。")
+        sections.append(chart.strip())
+        return result_introduction(question, analysis=analysis) + "\n\n" + "\n\n".join(
+            section for section in sections if section)
 
 
 class InsightInterpretationLayer:
@@ -186,7 +230,7 @@ class InsightInterpretationLayer:
         ])
         if abnormal_changes:
             abnormal_summary = "；".join(
-                f"{item['from']}至{item['to']}变化{abs(float(item['delta'])):,.2f}"
+                f"{item['from']}至{item['to']}变化{abs(float(item['absolute_change'])):,.2f}"
                 for item in abnormal_changes[:2]
             )
             insights.append(InterpretedInsight(
@@ -196,6 +240,73 @@ class InsightInterpretationLayer:
                 priority=85,
                 evidence_fields=["period_changes"],
             ))
+        edge = facts.get("edge_bucket_integrity") or {}
+        partial_labels = [
+            edge.get(key)
+            for key in ("first_partial_label", "last_partial_label")
+            if edge.get(key)
+        ]
+        if partial_labels:
+            insights.append(InterpretedInsight(
+                category="limitation",
+                statement=(
+                    "、".join(partial_labels)
+                    + "为查询窗口边界截断的不完整期间，相关环比已剔除，"
+                    "整体首尾变化需结合剔除后对照解释"
+                ),
+                nature=InsightNature.LIMITATION,
+                priority=82,
+                evidence_fields=["edge_bucket_integrity"],
+            ))
+        pop = facts.get("period_over_period")
+        if isinstance(pop, dict) and pop.get("changes"):
+            valid_changes = [
+                item for item in pop["changes"] if item.get("change_rate") is not None
+            ]
+            if valid_changes:
+                largest_pop = max(valid_changes, key=lambda item: abs(item["change_rate"]))
+                insights.append(InterpretedInsight(
+                    category="period_over_period",
+                    statement=(
+                        f"环比变动最大的一期：{largest_pop['from']}至{largest_pop['to']}，"
+                        f"{largest_pop['base']:,.2f}→{largest_pop['current']:,.2f}，"
+                        f"变化{largest_pop['absolute_change']:+,.2f}"
+                        f"（{largest_pop['change_rate']:+.2%}）"
+                    ),
+                    nature=InsightNature.FACT,
+                    priority=88,
+                    evidence_fields=["period_over_period"],
+                ))
+        yoy = facts.get("year_over_year")
+        if isinstance(yoy, dict):
+            if yoy.get("status") == "NOT_COMPUTABLE":
+                insights.append(InterpretedInsight(
+                    category="limitation",
+                    statement=f"同比不可计算：{yoy.get('reason')}",
+                    nature=InsightNature.LIMITATION,
+                    priority=83,
+                    evidence_fields=["year_over_year"],
+                ))
+            elif yoy.get("changes"):
+                computable = [
+                    item for item in yoy["changes"]
+                    if item.get("status") == "COMPUTABLE"
+                    and item.get("change_rate") is not None
+                ]
+                if computable:
+                    largest_yoy = max(computable, key=lambda item: abs(item["change_rate"]))
+                    insights.append(InterpretedInsight(
+                        category="year_over_year",
+                        statement=(
+                            f"同比变动最大的月份：{largest_yoy['label']}，"
+                            f"上年同期{largest_yoy['base']:,.2f}→本期{largest_yoy['current']:,.2f}，"
+                            f"变化{largest_yoy['absolute_change']:+,.2f}"
+                            f"（{largest_yoy['change_rate']:+.2%}）"
+                        ),
+                        nature=InsightNature.FACT,
+                        priority=88,
+                        evidence_fields=["year_over_year"],
+                    ))
         limitation = (
             "当前结果只能验证时间变化，未包含产品、医院、经销商或地区贡献拆分，"
             "不能据此认定具体业务原因"

@@ -1,0 +1,338 @@
+{
+  "request": "删除数据智能体所有阶段执行时限",
+  "scope": [
+    "门控/问题补全/意图/规划/参数提取",
+    "ASL客户端/SQL调用/检索",
+    "依赖执行/工具/MCP/文件分析",
+    "洞察生成/修正/核验/异常解释"
+  ],
+  "preserved": [
+    "用户取消",
+    "真实上游错误",
+    "有限次数重试",
+    "依赖顺序与并发上限",
+    "授权与向量标准化",
+    "心跳/缓存/协调租约/健康探测/连接建立超时"
+  ],
+  "offline": {
+    "main_suite_passed_after_targeted_retest": 6204,
+    "existing_failures": 567,
+    "existing_collection_errors": 7,
+    "new_failures_after_retest": 0,
+    "exception_explainer_additional_passed": 23,
+    "renamed_existing_failures": 3
+  },
+  "server_candidate": {
+    "passed": 275,
+    "existing_failures": 1,
+    "new_failures": 0
+  },
+  "deployment": {
+    "status": "DEPLOYED",
+    "service_restart": "2026-10-27T16:33:18+08:00",
+    "health": "READY",
+    "configuration_preserved": true,
+    "merge_files": 50,
+    "later_external_restart": "2026-10-27T16:43:20+08:00",
+    "concurrent_changes_preserved": [
+      "app/semantic_v2/context_v1_execution.py",
+      "app/api.py"
+    ],
+    "note": "后续外部改动未恢复阶段时限；不同轮次的回归结果分别保留，不宣称全部基于同一不可变版本。"
+  },
+  "business_acceptance": {
+    "original_question": "给出2025年订单平均金额最高的前五位销售人员，以及他们所在的销售公司",
+    "status": "COMPLETED",
+    "all_four_tasks_completed": true,
+    "company_rows": 5,
+    "same_person_codes_and_names": true,
+    "descending_average": true,
+    "units_present": true,
+    "attachments": [
+      {
+        "readable": true,
+        "sheets": 2,
+        "no_notes_sheet": true
+      }
+    ]
+  },
+  "limitations": [
+    "上游服务和网关主动返回的错误不受本项目客户端取消时限的控制",
+    "原有业务及测试失败未在本次时限变更中修复"
+  ],
+  "history_regression": {
+    "groups_executed": 12,
+    "turns_executed": 13,
+    "all_returned_completed_after_retry": true,
+    "not_all_business_checks_passed": true,
+    "transport_retry": "外部重启导致5组连接拒绝，恢复后已补测；不是阶段超时。",
+    "results": [
+      {
+        "id": "company_top5",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-3",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-4",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1460
+          }
+        ],
+        "elapsed": 250.9,
+        "business_review": "OUTPUT_REVIEWED",
+        "issue": null
+      },
+      {
+        "id": "huashan_sales_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1509
+          }
+        ],
+        "elapsed": 224.9,
+        "business_review": "OUTPUT_REVIEWED",
+        "issue": null
+      },
+      {
+        "id": "shanghai_three_dealers_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 3008
+          },
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1531
+          }
+        ],
+        "elapsed": 191.9,
+        "business_review": "ISSUE_FOUND",
+        "issue": "首轮按经销商属地筛选，未按用户要求的医院所在地筛选；后续查询完成不能弥补首轮范围偏差。"
+      },
+      {
+        "id": "shanghai_coverage",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-3",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1451
+          }
+        ],
+        "elapsed": 150.3,
+        "business_review": "ISSUE_FOUND",
+        "issue": "原问整体上海覆盖率，返回589条经销商明细；结果中有数值却文字声称全部缺失。"
+      },
+      {
+        "id": "hospital_sales_products",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [
+              {
+                "task_id": "task-1",
+                "status": "COMPLETED"
+              },
+              {
+                "task_id": "task-2",
+                "status": "COMPLETED"
+              }
+            ],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1139
+          }
+        ],
+        "elapsed": 164.4,
+        "business_review": "OUTPUT_REVIEWED",
+        "issue": null
+      },
+      {
+        "id": "semantic_entities",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 587
+          }
+        ],
+        "elapsed": 12.9,
+        "business_review": "OUTPUT_REVIEWED",
+        "issue": null
+      },
+      {
+        "id": "orthopedics",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 240
+          }
+        ],
+        "elapsed": 105.3,
+        "business_review": "OUTPUT_REVIEWED",
+        "issue": null
+      },
+      {
+        "id": "longest_cooperation",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 249
+          }
+        ],
+        "elapsed": 57.6,
+        "business_review": "OUTPUT_REVIEWED",
+        "issue": null
+      },
+      {
+        "id": "cooperation_over_three_months",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 867
+          }
+        ],
+        "elapsed": 80.2,
+        "business_review": "ISSUE_FOUND",
+        "issue": "汇总称996条375天，与表格中7条非375天冲突。"
+      },
+      {
+        "id": "dealer_duration_exact",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 914
+          }
+        ],
+        "elapsed": 72.4,
+        "business_review": "ISSUE_FOUND",
+        "issue": "未截断与上限外有记录两种断言同时出现，未有全量计数证据。"
+      },
+      {
+        "id": "dealer_duration_recent",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 808
+          }
+        ],
+        "elapsed": 88.6,
+        "business_review": "ISSUE_FOUND",
+        "issue": "汇总称995条375天及5条更长，与表格不符。"
+      },
+      {
+        "id": "supplier_first_cooperation",
+        "turns": [
+          {
+            "status": "COMPLETED",
+            "tasks": [],
+            "error_code": null,
+            "detail": null,
+            "answer_length": 1264
+          }
+        ],
+        "elapsed": 70.1,
+        "business_review": "ISSUE_FOUND",
+        "issue": "用户问供应商，返回经销商；语义映射及为何返回1000条而非仅最长对象仍需核实。"
+      }
+    ],
+    "unknown_regression_causality": "未证明这些业务问题由取消时限引入，期间有并发变更，不作归因。",
+    "missing_context": [
+      {
+        "id": "department_hospital_relation",
+        "request": "医院与科室多对多判断",
+        "missing": "原文实体ID已省略，缺少完整实体ID及模型范围"
+      },
+      {
+        "id": "relation_model122",
+        "request": "实体关系推荐返回空数组",
+        "semantic_model_id": 122,
+        "business_domain_id": 307,
+        "entity_type_id": "45eae41b-82d6-4bf7-b608-8e341b77d0f8",
+        "expected": "直接同名字段关系推荐，不推荐中间表"
+      },
+      {
+        "id": "city_province_relation",
+        "request": "城市跟省份为什么没有推荐关系",
+        "missing": "原请求模型、业务域和实体ID"
+      },
+      {
+        "id": "company_salesperson_relation",
+        "request": "国药公司和销售员这两个表有相同字段，为什么没有推荐",
+        "missing": "原请求模型、业务域和实体ID"
+      },
+      {
+        "id": "publication_error",
+        "request": "发布失败报错中文化",
+        "missing": "发布操作的完整原始参数；不在本轮只读查询回归范围内"
+      }
+    ]
+  }
+}
