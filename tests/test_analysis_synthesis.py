@@ -240,11 +240,11 @@ async def test_nl_context_driven_style_is_used_without_importing_its_tool_workfl
     assert "如果有工具执行结果，优先基于结果回答" in prompt
     assert "用户需求的核心目标、约束条件和关键变量" in prompt
     assert "不固定套用章节" in prompt and "保留有数据支持的发现和表述" in prompt
-    assert "不发起追问、不重新规划或调用工具" in prompt
+    assert "需要补充数值分析时可调用本轮计算器" in prompt
     assert "禁止在末尾追加" in prompt
     assert "趋势关注全期方向" not in prompt  # Retired fixed intent recipe.
     assert "可用工具" not in prompt and "<<CLARIFICATION>>" not in prompt
-    assert "tools" not in body
+    assert [tool["function"]["name"] for tool in body["tools"]] == ["insight_calculator"]
     assert "semantic_reference" in json.loads(body["messages"][1]["content"])
 
 

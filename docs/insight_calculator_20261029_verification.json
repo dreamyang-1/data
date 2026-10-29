@@ -1,0 +1,225 @@
+{
+  "phase": "final4",
+  "deployment": {
+    "hashes_match": true,
+    "ready": 200,
+    "live": 200
+  },
+  "stream_contract": {
+    "display_matches_execution": true,
+    "old_name_view_present": false,
+    "stages": [
+      "意图识别",
+      "任务拆分与规划",
+      "解析校验",
+      "调度执行",
+      "结果校验",
+      "数据洞察分析"
+    ],
+    "complete": true
+  },
+  "business_requests": [
+    {
+      "id": "shanghai_fresenius_exact_asl_display",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "error": null,
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 234
+        }
+      ],
+      "elapsed": 82.6
+    },
+    {
+      "id": "two_brands_tier_two_enum_display_overlap",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "error": null,
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 2555
+        }
+      ],
+      "elapsed": 86.0
+    },
+    {
+      "id": "tier_three_hospital_count",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "error": null,
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 166
+        }
+      ],
+      "elapsed": 63.2
+    },
+    {
+      "id": "unbilled_shipped_amount",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "error": null,
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 207
+        }
+      ],
+      "elapsed": 60.7
+    },
+    {
+      "id": "two_brands_manufacturers_multirow",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "error": null,
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 880
+        }
+      ],
+      "elapsed": 121.1
+    },
+    {
+      "id": "two_brands_tier_two_hospitals",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "error": null,
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 3839
+        }
+      ],
+      "elapsed": 105.8
+    },
+    {
+      "id": "shanghai_dealer_sales_total_threshold",
+      "turns": [
+        {
+          "status": null,
+          "error": "<urlopen error [Errno 111] Connection refused>",
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 0
+        }
+      ],
+      "elapsed": 0.0
+    },
+    {
+      "id": "shanghai_pharma_company_details",
+      "turns": [
+        {
+          "status": null,
+          "error": "<urlopen error [Errno 111] Connection refused>",
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 0
+        }
+      ],
+      "elapsed": 0.0
+    }
+  ],
+  "unverified_ids": [
+    "huashan_sales_products",
+    "shanghai_three_dealers_products",
+    "company_top5",
+    "shanghai_coverage",
+    "hospital_sales_products",
+    "semantic_entities",
+    "orthopedics",
+    "longest_cooperation",
+    "cooperation_over_three_months",
+    "dealer_duration_exact",
+    "dealer_duration_recent",
+    "supplier_first_cooperation",
+    "metric_filter_empty_metric_list_20261027",
+    "structured_stop_after_pending_20261026",
+    "earliest_dealer_amount_20261027",
+    "largest_order_after_pending_20261027",
+    "department_hospital_relation",
+    "relation_model122",
+    "city_province_relation",
+    "company_salesperson_relation",
+    "publication_error"
+  ],
+  "tests": {
+    "latest_focused_passed": 127,
+    "earlier_expanded": {
+      "passed": 153,
+      "existing_failures": 5
+    },
+    "common_full_before": {
+      "passed": 6127,
+      "failed": 635,
+      "errors": 8
+    },
+    "common_full_candidate_before_final_parser_fix": {
+      "passed": 6126,
+      "failed": 636,
+      "errors": 8
+    },
+    "delta_note": "Only new failure was obsolete no-tools assertion; updated for explicit requested calculator support and passed targeted tests. Full suite not rerun after final parser correction."
+  },
+  "original_question": {
+    "status": "COMPLETED",
+    "all_12_manufacturer_rows": true,
+    "brand_row_counts_correct": true,
+    "totals_match_original_evidence": true,
+    "acceptance": "PARTIAL: numerical totals, ratio and all manufacturer rows verified; unsupported entity-identity inference remains in prose.",
+    "actual_tool_call_rounds": {
+      "analysis-synthesis": 1,
+      "analysis-evidence-review": 6
+    }
+  },
+  "connection_refused_retests": [
+    {
+      "id": "shanghai_dealer_sales_total_threshold",
+      "turns": [
+        {
+          "status": "COMPLETED",
+          "error": null,
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 273
+        }
+      ],
+      "elapsed": 76.2
+    },
+    {
+      "id": "shanghai_pharma_company_details",
+      "turns": [
+        {
+          "status": "NEEDS_CLARIFICATION",
+          "error": null,
+          "tasks": [],
+          "error_code": null,
+          "detail": null,
+          "answer_length": 161
+        }
+      ],
+      "elapsed": 72.3
+    }
+  ],
+  "limitations": [
+    "21 historical entries lack original model/domain/context and were not executed.",
+    "Company name grounding clarification is a pre-existing possible blocker, not bypassed.",
+    "A manufacturer-name variation is still described as a master-data split without independent identity evidence; do not mark all report content accepted.",
+    "Watermark completeness wording and upstream scope/plan variability remain outside this calculator change.",
+    "Two final-version requests initially encountered connection refusal during a service restart; explicit fresh-session retests are recorded separately.",
+    "Threshold query returned 29 rows in an earlier run and 1 row in final retest. Upstream query output changed; semantic equivalence and historical regression are not accepted."
+  ]
+}
