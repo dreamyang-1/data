@@ -23,8 +23,8 @@ def _product_dealer_knowledge():
     ]
     return {
         'entities': [
-            Obj(metadata={'entity_code': 'product', 'attributes': attrs_product}),
-            Obj(metadata={'entity_code': 'dealer', 'attributes': attrs_dealer}),
+            Obj(metadata={'entity_code': 'product', 'entity_name': '商品', 'attributes': attrs_product}),
+            Obj(metadata={'entity_code': 'dealer', 'entity_name': '经销商', 'attributes': attrs_dealer}),
         ],
         'metrics': [
             Obj(metadata={'metric_code': 'sales_including_tax',
@@ -110,7 +110,7 @@ def test_logical_product_group_still_allows_label_display():
 
 def test_brand_dimension_retains_its_authorized_manufacturer_brand_field():
     knowledge = _product_dealer_knowledge()
-    knowledge['entities'].append(Obj(metadata={'entity_code': 'manufacturer', 'attributes': [
+    knowledge['entities'].append(Obj(metadata={'entity_code': 'manufacturer', 'entity_name': '生产厂家', 'attributes': [
         {'attr_code': 'parent_brand', 'attr_name': '母厂牌',
          'field_mapping': 'manufacturer.parent_brand'}]}))
     knowledge['dimensions'].append(Obj(metadata={'dim_code': 'product_brand', 'dim_name': '商品品牌',
@@ -131,7 +131,7 @@ def test_cross_entity_display_is_deferred_to_join_resolution():
     """跨实体展示保留字段；是否存在关联路径由翻译器检查。"""
     knowledge = _product_dealer_knowledge()
     knowledge['_vector_authorized_fields'].append('hospital.hospital_name')
-    knowledge['entities'].append(Obj(metadata={'entity_code': 'hospital', 'attributes': [
+    knowledge['entities'].append(Obj(metadata={'entity_code': 'hospital', 'entity_name': '医院', 'attributes': [
         {'attr_code': 'hospital_name', 'attr_name': '医院名称',
          'field_mapping': 'hospital.hospital_name', 'is_main_attribute': True}]}))
     plan = _metric_plan('product.product_code')
@@ -150,7 +150,7 @@ def _amount_extraction(field='含税金额', intent='明细查询'):
 
 def _amount_knowledge(formula):
     knowledge = _product_dealer_knowledge()
-    knowledge['entities'].append(Obj(metadata={'entity_code': 'sales_order', 'attributes': [
+    knowledge['entities'].append(Obj(metadata={'entity_code': 'sales_order', 'entity_name': '销售订单', 'attributes': [
         {'attr_code': 'amount_with_tax', 'attr_name': '含税金额',
          'field_mapping': 'sales_order.amount_with_tax'},
         {'attr_code': 'net_amount', 'attr_name': '不含税金额',
@@ -282,7 +282,7 @@ def _salesperson_id_knowledge():
     ]
     return {
         'entities': [
-            Obj(metadata={'entity_code': 'salesperson', 'attributes': attrs_salesperson}),
+            Obj(metadata={'entity_code': 'salesperson', 'entity_name': '业务员', 'attributes': attrs_salesperson}),
             Obj(metadata={'entity_code': 'guoyao_company', 'attributes': attrs_company}),
         ],
         'metrics': [

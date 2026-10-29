@@ -81,7 +81,7 @@ def test_value_id_from_other_dictionary_cannot_override_resolved_field():
 
 
 @pytest.mark.parametrize('current_has_value', [False, True])
-def test_text_field_expands_only_when_current_field_has_no_value(current_has_value):
+def test_text_field_never_switches_to_sibling_value_domain(current_has_value):
     extraction, knowledge, decision, *_ = case()
     extraction['过滤条件'][0].update(field='名称', value=['正常'])
     knowledge['entity_attribute_values'].append(Obj(metadata={'entity_code': 'hospital',
@@ -91,13 +91,15 @@ def test_text_field_expands_only_when_current_field_has_no_value(current_has_val
         knowledge['entity_attribute_values'].append(Obj(metadata={'entity_code': 'hospital',
             'attr_code': 'name', 'source_field': 'hospital.name', 'attr_value': '正常'}))
     ast = run(extraction, knowledge, decision)
-    assert not ast['ambiguity']
-    assert ast['filters'] == [{'field': 'hospital.name' if current_has_value else 'hospital.status',
-                               'operator': '=', 'value': '正常'}]
+    if current_has_value:
+        assert not ast['ambiguity']
+        assert ast['filters'] == [{'field': 'hospital.name', 'operator': '=', 'value': '正常'}]
+    else:
+        assert ast['ambiguity'] and not ast['filters']
 
 
 @pytest.mark.parametrize('missing', ['relation', 'authorized_field', 'value'])
-def test_empty_bound_dictionary_can_expand_within_authorized_scope(missing):
+def test_empty_bound_dictionary_cannot_switch_to_another_dictionary(missing):
     extraction, knowledge, decision, _, name_field, other = case()
     if missing == 'relation':
         knowledge['relations'] = knowledge['relations'][1:]
@@ -106,8 +108,7 @@ def test_empty_bound_dictionary_can_expand_within_authorized_scope(missing):
     else:
         knowledge['entity_attribute_values'] = knowledge['entity_attribute_values'][1:]
     ast = run(extraction, knowledge, decision)
-    assert not ast['ambiguity']
-    assert ast['filters'] == [{'field': other, 'operator': '=', 'value': '上海市'}]
+    assert ast['ambiguity'] and not ast['filters']
 
 
 def test_partial_in_match_does_not_switch_to_another_dictionary():

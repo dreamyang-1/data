@@ -125,20 +125,18 @@ def test_top_level_entities_only_break_a_real_same_name_tie():
     assert not ast['ambiguity'] and ast['filters'][0]['field'] == 'dealer.level'
 
 
-def test_empty_name_value_domain_can_recover_same_owner_model_number():
+def test_bound_name_cannot_switch_to_same_owner_model_number():
     e, k, p = fixture()
     e['过滤条件'][0].update(field='名称', value=['TDC-3'])
     ast, _ = run(e, k, p)
-    assert not ast['ambiguity']
-    assert ast['filters'] == [{'field': 'dealer.model', 'operator': '=', 'value': 'TDC-3'}]
+    assert ast['ambiguity'] and not ast['filters']
 
 
-def test_empty_value_domain_without_explicit_owner_can_expand_to_unique_catalog_match():
+def test_model_selected_field_cannot_borrow_another_fields_value():
     e, k, p = fixture()
     e['过滤条件'] = [{'field': '商品名称', 'op': '=', 'value': ['TDC-3']}]
     ast, _ = run(e, k, p)
-    assert not ast['ambiguity']
-    assert ast['filters'] == [{'field': 'dealer.model', 'operator': '=', 'value': 'TDC-3'}]
+    assert ast['ambiguity'] and not ast['filters']
 
 
 @pytest.mark.parametrize('fault', ['owner', 'unknown_owner', 'attribute'])
@@ -287,7 +285,7 @@ def test_having_does_not_shift_the_owner_of_subsequent_dictionary_predicate():
     from test_query_binding_review import catalog
     e, _, p = fixture()
     k = catalog()
-    k['metrics'][0].metadata.update(metric_name='已合作医院数', calc_formula='已合作医院数 = COUNT(DISTINCT hospital.hospital_id)')
+    k['metrics'][0].metadata.update(source_dependency={'bind_entity': ['hospital']}, metric_name='已合作医院数', calc_formula='已合作医院数 = COUNT(DISTINCT hospital.hospital_id)')
     k['entity_attribute_values'] = [Obj(metadata={'entity_code': 'province', 'source_field': 'dim_province.province_name', 'attr_value': '上海市'})]
     e.update(指标=[{'name': '已合作医院数'}], 维度=[{'entity': '经销商', 'name': '经销商'}], 展示字段=[])
     e['过滤条件'] = [{'entity': '医院', 'field': '已合作医院数', 'op': '>', 'value': 3},

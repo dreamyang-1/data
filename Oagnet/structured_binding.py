@@ -528,20 +528,6 @@ def _vector_matches(field, surface, catalog):
     return matches
 
 
-def _filter_value_catalog(key, values, catalog, operator):
-    """Prefer the resolved field; expand only when its value domain has no hits."""
-    bound = bound_filter_catalog(catalog, key)
-    if (operator not in {'=', '!=', 'IN', 'NOT IN'} or not values
-            or any(not isinstance(value, str) or _temporal_bounds(value) for value in values)):
-        return bound
-    if _field_is_identifier(key, catalog['fields'].get(key)) and all(
-            re.fullmatch(r'[0-9A-Za-z][0-9A-Za-z\-/\.]*', value or '') for value in values):
-        return bound  # Explicit identifiers stay on the selected field.
-    if any(_vector_matches(field, value, bound) for field in bound['fields'] for value in values):
-        return bound  # Partial matches and ambiguity are not an empty domain.
-    return catalog  # Only the original authorized, owner-scoped candidate pool.
-
-
 def _vector_locate_value(values, catalog):
     """字段没绑上时，过滤值在授权字段上唯一命中即视为字段+值可代绑定；多义维持澄清。"""
     selected, corrected = None, []
@@ -781,17 +767,6 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
         ast['filters'].append(predicate)
         knowledge['_structured_filter_origins'].append(index)
 
-    def locate_filter_slot(original, scope_catalog):
-        """声明字段名 + 值唯一命中时返回 (field, values)，多义返回 None。"""
-        if not isinstance(original, dict):
-            return None
-        operator = str(original.get('op') or original.get('operator') or '').upper()
-        if operator not in {'=', '!=', 'IN', 'NOT IN'}:
-            return None
-        raw_vals = original.get('value')
-        raw_vals = raw_vals if isinstance(raw_vals, list) else [raw_vals]
-        return (_declared_field_locate(original.get('field'), raw_vals, scope_catalog)
-                or _vector_locate_value(raw_vals, scope_catalog))
     for source, target in SECTIONS.items():
         rows = plan.get(target) or []
         if not isinstance(rows, list): rows = []
@@ -800,27 +775,6 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
             owner_candidates = slot_catalog.get('_parameter_owner_candidates')
             owner_error = slot_catalog.get('_parameter_owner_error')
             if owner_candidates or owner_error:
-                # 2026-10-23 用户要求：结构化过滤参数作为硬约束优先确定性绑定。
-                # 字段名+值在授权目录里唯一命中时直接落 ASL，不再因实体归属
-                # 追问，避免同一问题反复重新生成 ASL；多义仍保持澄清。
-                located = (locate_filter_slot(original, catalog)
-                           if target == 'filters' else None)
-                if located:
-                    located_field, fixed_vals = located
-                    operator = str(original.get('op') or original.get('operator') or '').upper()
-                    if len(fixed_vals) > 1 and operator in {'=', '!='}:
-                        operator = 'IN' if operator == '=' else 'NOT IN'
-                    append_filter({'field': located_field, 'operator': operator,
-                                   'value': fixed_vals if operator in {'IN', 'NOT IN', 'BETWEEN'}
-                                   else fixed_vals[0]})
-                    repairs.append({'type': 'VECTOR_FILTER_VALUE_CORRECTED',
-                                    'source': 'VECTOR_CATALOG_HARD_CONSTRAINT',
-                                    'original_field': original.get('field'),
-                                    'field': located_field,
-                                    'values': fixed_vals})
-                    knowledge.setdefault('_hard_constraint_filter_indices', set()).add(
-                        len(ast['filters']) - 1)
-                    continue
                 ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
                     owner_error or '该名称或别名对应多个实体，尚未明确参数归属', owner_candidates or []))
                 continue
@@ -903,7 +857,7 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 if resolved:
                     key = resolved
             # 已选指标的阈值按完整目录公式处理，不能把日期差等行级指标误判成不支持。
-            if target == 'filters' and isinstance(key, str) and key in catalog['metrics']:
+            if target == 'filters' and isinstance(key, str) and key in slot_catalog['metrics']:
                 having_expr = _metric_having_expression(key, original, catalog) if extraction['指标'] else None
                 if having_expr:
                     ast['having'].append(having_expr)
@@ -911,9 +865,9 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
                     '该指标的筛选公式或数值阈值未能绑定到当前授权目录，请核对指标定义和条件值'))
                 continue
-            allowed = (catalog['metrics'] if target == 'metrics' else
-                       {**catalog['dimensions'], **slot_catalog['fields']} if target == 'dimensions' else
-                       {**catalog['metrics'], **catalog['dimensions'], **slot_catalog['fields']} if target == 'sort' else slot_catalog['fields'])
+            allowed = (slot_catalog['metrics'] if target == 'metrics' else
+                       {**slot_catalog['dimensions'], **slot_catalog['fields']} if target == 'dimensions' else
+                       {**slot_catalog['metrics'], **slot_catalog['dimensions'], **slot_catalog['fields']} if target == 'sort' else slot_catalog['fields'])
             if target == 'filters' and isinstance(original, dict):
                 # 依赖任务的筛选值常被规划器写成占位引用，抽取阶段落成空列表。
                 # 空列表无法生成有效 SQL，剥离该条件继续执行；
@@ -932,18 +886,11 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     raw_vals = original.get('value')
                     raw_vals = raw_vals if isinstance(raw_vals, list) else [raw_vals]
                     fallback_key = exact_keys[0] if len(exact_keys) == 1 else None
-                    located = ((_declared_field_locate(original.get('field'), raw_vals, slot_catalog)
-                                or _vector_correct_filter(fallback_key, raw_vals, slot_catalog, op_)
-                                or _vector_locate_value(raw_vals, slot_catalog))
+                    recovery_catalog = bound_filter_catalog(slot_catalog, fallback_key) if fallback_key in slot_catalog['fields'] else slot_catalog
+                    located = ((_declared_field_locate(original.get('field'), raw_vals, recovery_catalog)
+                                or _vector_correct_filter(fallback_key, raw_vals, recovery_catalog, op_)
+                                or _vector_locate_value(raw_vals, recovery_catalog))
                                if op_ in {'=','!=','IN','NOT IN'} else None)
-                    if located is None and op_ in {'=', '!=', 'IN', 'NOT IN'}:
-                        # 声明实体与字段归属不一致时（例如维度字段“城市名称”被
-                        # 挂在“销售订单”实体下），槽位目录里没有该字段；改在
-                        # 完整授权目录里按声明字段名+值唯一命中绑定，不再为同一
-                        # 问题整轮重新生成 ASL。多义仍保持澄清。
-                        located = (_declared_field_locate(
-                                       original.get('field'), raw_vals, catalog)
-                                   or _vector_locate_value(raw_vals, catalog))
                     if located:
                         located_field, fixed_vals = located
                         operator2 = op_
@@ -1043,8 +990,8 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 value = original.get('value'); vals = value if isinstance(value, list) else [value]
                 if operator not in OPERATORS or not vals or any(v is None or isinstance(v, (dict,list,bool)) or v == '' for v in vals):
                     ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '运算符或条件值缺失/不支持'));continue
-                # Prefer this field; only a complete miss permits expansion.
-                slot_catalog = _filter_value_catalog(key, vals, slot_catalog, operator)
+                # Once bound, values cannot change the field or its owner.
+                slot_catalog = bound_filter_catalog(slot_catalog, key)
                 corrected = _vector_correct_filter(key, vals, slot_catalog, operator)
                 vector_repaired = False
                 if corrected is not None:
@@ -1176,7 +1123,10 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                                                'value': start if operator in {'>=', '>'} else end})
                     continue
                 elif operator in {'=','!=','IN','NOT IN'} and any(
-                    isinstance(v,str) and re.search(r'[\u4e00-\u9fff]',v) for v in vals
+                    isinstance(v, str) and (re.search(r'[\u4e00-\u9fff]', v)
+                        or (not _field_is_identifier(key, slot_catalog['fields'].get(key))
+                            and any(c['value'] == v and c['field'] != key for c in catalog['values'])))
+                    for v in vals
                 ) and not all(any(value_allowed(c, slot_catalog) and c['field']==key and c['value']==v for c in catalog['values']) for v in vals):
                     # 沿用前面选定的范围；当前字段有候选时不得扩大范围。
                     located = (_vector_correct_filter(key, vals, slot_catalog, operator)

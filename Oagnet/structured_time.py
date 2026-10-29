@@ -3,6 +3,7 @@ import calendar
 import json
 import re
 from datetime import date, datetime, time, timedelta
+from binding_ownership import matching_fields, matching_dimensions, parameter_catalog, field_owners
 
 
 UNITS = {
@@ -307,6 +308,14 @@ def bounds(value, today):
 
 
 def time_anchor(temporal, ast, catalog, knowledge, model_time):
+    explicit = temporal.get('anchor') or temporal.get('field')
+    original = {'field': explicit}
+    if temporal.get('entity'):
+        original['entity'] = temporal['entity']
+    scoped = parameter_catalog(catalog, original, {}, 'time')
+    if scoped.get('_parameter_owner_error') or scoped.get('_parameter_owner_candidates'):
+        raise ValueError('时间字段的归属实体未在当前授权目录中唯一匹配')
+    catalog = scoped
     fields = catalog['fields']
     time_dims = {k: dimension_fields(v) & fields.keys() for k, v in catalog['dimensions'].items() if is_temporal(v)}
     typed = {k for k, v in fields.items() if is_temporal(v)} | set().union(set(), *time_dims.values())
@@ -314,18 +323,43 @@ def time_anchor(temporal, ast, catalog, knowledge, model_time):
     def resolve(label):
         if not isinstance(label, str):
             return set()
-        result = {label} if label in typed else set()
-        for key, meta in catalog['dimensions'].items():
-            if label in {key, meta.get('dim_name')}:
-                result.update(time_dims.get(key, set()))
-        for key in typed:
-            if label in {fields[key].get('attr_name'), fields[key].get('attr_code')}:
-                result.add(key)
+        result = set(matching_fields(label, catalog, aliases=False)
+                     or matching_fields(label, catalog)) & typed
+        for key in matching_dimensions(label, catalog):
+            result.update(time_dims.get(key, set()))
         return result
 
-    explicit = temporal.get('anchor') or temporal.get('field')
     if explicit:
         candidates = resolve(explicit)
+        # Retain explicit business meaning; use already-bound evidence only
+        # to distinguish homonyms, never to substitute another date concept.
+        if len(candidates) > 1:
+            selected_fields = set()
+            for dim in ast.get('dimensions', []):
+                definition = catalog['dimensions'].get(dim['name'], {})
+                bindings = _object(definition.get('bind_entities')) or []
+                if dim.get('attr') is not None:
+                    bindings = [b for b in bindings if str(b.get('attr')) == str(dim['attr'])]
+                    selected_fields.update(dimension_fields({'bind_entities': bindings}))
+                else:
+                    selected_fields.update(dimension_fields(definition))
+                if dim['name'] in typed:
+                    selected_fields.add(dim['name'])
+            evidence = candidates & selected_fields
+            if evidence:
+                candidates = evidence
+            metric_fields = set()
+            for item in ast.get('metrics', []):
+                caliber = _object(catalog['metrics'].get(item['name'], {}).get('time_caliber')) or {}
+                if isinstance(caliber, dict) and caliber.get('time_anchor'):
+                    metric_fields.add(_physical(caliber['time_anchor']))
+            if len(candidates) > 1 and candidates & metric_fields:
+                candidates &= metric_fields
+            if len(candidates) > 1:
+                subject = (ast.get('subject') or {}).get('entity')
+                owned = {field for field in candidates if subject in field_owners(fields[field])}
+                if owned:
+                    candidates = owned
     else:
         metric_anchors = set()
         for item in ast['metrics']:
@@ -368,10 +402,6 @@ def time_anchor(temporal, ast, catalog, knowledge, model_time):
                 candidates = published or reachable
     if len(candidates) == 1:
         return next(iter(candidates))
-    # Model can disambiguate a catalog field, not create or change a time value.
-    selected = resolve(model_time.get('anchor')) & candidates
-    if not explicit and len(selected) == 1 and not ast['metrics']:
-        return next(iter(selected))
     if candidates:
         raise ValueError('存在多个可用时间字段，请明确按哪种业务日期筛选；起止日期已经明确，无需重复提供')
     raise ValueError('当前查询的授权语义目录缺少可关联的时间字段，请核对时间维度及关联配置；时间范围已经明确，无需重新提供')

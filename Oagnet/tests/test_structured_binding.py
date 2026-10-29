@@ -76,7 +76,7 @@ def dealer_list_fixture():
     e.update(实体=['商品', '经销商'], 指标=[],
              展示字段=[{'entity': '经销商', 'field': '经销商名称'}],
              过滤条件=[{'field': '商品名称', 'op': '=', 'value': ['空心纤维血液透析器']}])
-    k = {'entities': [Obj(metadata={'entity_code': code, 'attributes': [
+    k = {'entities': [Obj(metadata={'entity_code': code, 'entity_name': {'product': '商品', 'dealer': '经销商', 'sales_order': '销售订单'}[code], 'attributes': [
              {'attr_code': column, 'field_mapping': f'{code}.{column}'}]})
              for code, column in [('product', 'product_name'), ('dealer', 'dealer_name'), ('sales_order', 'order_id')]],
          'relations': [Obj(metadata={'join_key': {'source_field': a, 'target_field': b}})
@@ -383,7 +383,7 @@ def _test_enum_labels_are_available_to_vector_binding():
     assert ast['filters'][0]['value'] == ['3', '5']
 
 
-def test_alphanumeric_literal_can_expand_when_bound_field_has_no_value_match():
+def test_alphanumeric_value_cannot_change_bound_field():
     """A complete miss permits a unique match in the original authorized pool."""
     extraction, knowledge, plan = dealer_list_fixture()
     product = next(
@@ -414,11 +414,7 @@ def test_alphanumeric_literal_can_expand_when_bound_field_has_no_value_match():
 
     ast, repairs = run(extraction, knowledge, plan)
 
-    assert not any(item.get('type') == 'filter' for item in ast['ambiguity'])
-    assert ast['filters'] == [{
-        'field': 'product.product_model', 'operator': '=', 'value': 'TDC-3',
-    }]
-    assert any(item['type'] == 'VECTOR_FILTER_VALUE_CORRECTED' for item in repairs)
+    assert ast['ambiguity'] and not ast['filters']
 
 
 def test_structured_time_unit_overrides_model_temporal_grain():

@@ -15,7 +15,7 @@ def catalog():
                'dealer': ['dealer_code', 'dealer_name']}
     edges = [('sales_order.product_code', 'product.product_code'),
              ('sales_order.dealer_code', 'dealer.dealer_code')]
-    return {'entities': [Doc(metadata={'entity_code': code, 'entity_name': code,
+    return {'entities': [Doc(metadata={'entity_code': code, 'entity_name': {'product': '商品', 'sales_order': '销售订单', 'dealer': '经销商'}[code],
             'attributes': [{'attr_code': col, 'field_mapping': code+'.'+col} for col in cols]})
             for code, cols in columns.items()],
         'relations': [Doc(metadata={'join_key': {'source_field': a, 'target_field': b}}) for a, b in edges],

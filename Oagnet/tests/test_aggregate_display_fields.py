@@ -8,7 +8,7 @@ def test_catalog_related_attribute_is_display_not_group(card):
     attrs=[{'attr_code':'staff_code','attr_name':'人员编号','field_mapping':'staff.staff_code'},
            {'attr_code':'staff_name','attr_name':'人员姓名','field_mapping':'staff.staff_name'}]
     knowledge={'entities':[Obj(metadata={'entity_code':'staff','attributes':attrs}),
-                           Obj(metadata={'entity_code':'company','attributes':[{'attr_name':'所属公司','field_mapping':'company.name'}]})],
+                           Obj(metadata={'entity_code':'company','entity_name':'公司','attributes':[{'attr_name':'所属公司','field_mapping':'company.name'}]})],
         'metrics':[Obj(metadata={'metric_code':'sales','metric_name':'销售额','entity_code':'staff'})],
         'dimensions':[Obj(metadata={'dim_code':'staff','bind_entities':[{'mappingTable':'staff','mappingColumn':'staff_code'}]})],
         'relations':[Obj(metadata={'relation_type':card,'join_key':{'source_field':'staff.company_code','target_field':'company.code'}})],

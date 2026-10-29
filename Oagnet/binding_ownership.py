@@ -117,15 +117,11 @@ def parameter_catalog(catalog, original, extraction, target):
     dictionary can still bind through a published edge to the requested owner.
     Global value IDs remain stable; value matching also checks retained fields.
     """
-    if target == 'metrics':
-        return catalog
     owners = parameter_owners(original, catalog)
-    dimensions = matching_dimensions(original, catalog) if target == 'dimensions' else []
+    dimensions = matching_dimensions(original, catalog)
     exact = (matching_fields(original, catalog, aliases=False)
              or matching_fields(original, catalog))
-    if (isinstance(original, dict) and original.get('entity') and not owners
-            and (target == 'filters' or entity_label_candidates(
-                original.get('field') or original.get('name'), catalog['entities']))):
+    if isinstance(original, dict) and original.get('entity') and not owners:
         # Do not silently substitute the label's entity for a contradictory,
         # unresolved explicit owner. Legacy field-only grounding is unchanged.
         candidates = entity_label_candidates(original['entity'], catalog['entities'])
@@ -146,6 +142,21 @@ def parameter_catalog(catalog, original, extraction, target):
         matched_owners = {owner for field in exact for owner in field_owners(catalog['fields'][field])}
         if len(hinted & matched_owners) == 1:
             owners = hinted & matched_owners
+    if not owners and target == 'metrics':
+        # Registered metric/dimension homonyms need the same owner tie-break
+        # as physical attributes. Never restrict a unique cross-entity field
+        # merely because the query subject belongs to another entity.
+        label = original.get('name') or original.get('field') if isinstance(original, dict) else original
+        category = 'metrics'
+        name_key = 'metric_name'
+        matches = [meta for key, meta in catalog.get(category, {}).items()
+                   if normalized(label) in {normalized(key), normalized(meta.get(name_key)),
+                       *(normalized(v) for v in registered_terms(meta.get('synonyms')))}]
+        if len(matches) > 1:
+            hinted = resolve_entities(extraction.get('实体') or [], catalog['entities'])
+            matching_owners = set().union(set(), *(semantic_owners(meta, category, catalog) for meta in matches))
+            if len(hinted & matching_owners) == 1:
+                owners = hinted & matching_owners
     if not owners:
         return catalog
     fields = {}
@@ -166,7 +177,32 @@ def parameter_catalog(catalog, original, extraction, target):
                            choice['field'] in direct and choice['owner_entity'] in owners
                            for choice in catalog['_dictionary_choices'].get(key, [])))})
     result = dict(catalog, fields=fields, _parameter_owners=owners)
+    for category in ('metrics', 'dimensions'):
+        result[category] = {key: meta for key, meta in catalog.get(category, {}).items()
+                            if semantic_owners(meta, category, catalog) & owners
+                            or (category == 'dimensions' and key in owners)}
     return result
+
+
+def semantic_owners(meta, category, catalog):
+    """Read registered ownership, never infer it from names or vector rank."""
+    if category == 'metrics':
+        dependency = decoded(meta.get('source_dependency')) or {}
+        return resolve_entities(decoded(dependency.get('bind_entity')) or [], catalog['entities']) if isinstance(dependency, dict) else set()
+    owners = set()
+    bindings = decoded(meta.get('bind_entities')) or []
+    for binding in bindings if isinstance(bindings, list) else []:
+        if not isinstance(binding, dict):
+            continue
+        owners.update(resolve_entities(binding.get('entity') or binding.get('entity_code'), catalog['entities']))
+        field = f"{binding.get('mappingTable')}.{binding.get('mappingColumn')}"
+        owners.update(field_owners(catalog['fields'].get(field, {})))
+    mapping = decoded(meta.get('field_mapping'))
+    if isinstance(mapping, dict):
+        mapping = f"{mapping.get('mappingTable')}.{mapping.get('mappingColumn')}"
+    if isinstance(mapping, str):
+        owners.update(field_owners(catalog['fields'].get(mapping, {})))
+    return owners
 
 
 def bound_filter_catalog(catalog, field):
